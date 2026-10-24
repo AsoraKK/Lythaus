@@ -195,22 +195,57 @@ consumes the reservation and blocks further qualification mutations.
 
 ## Evidence boundary and separate cleanup
 
-Reserve the reviewer/operator before spending. The qualification receipt sets
-escalation at 45 minutes, evidence review by 60 minutes, cleanup start before
-105 minutes and an overall 120-minute deadline. There is no automatic deletion
+Reserve the reviewer/operator before spending. Qualification stops starting new
+work at 20 minutes; its runner step has a 22-minute timeout, the always-run
+checkpoint finalizer and artifact upload have two minutes each, and the whole
+qualification job has a 35-minute timeout. These leave reserve before escalation
+at 45 minutes and evidence review by 60 minutes. Cleanup must start before
+105 minutes and retains the original overall 120-minute deadline. No phase
+resets that clock. There is no automatic deletion
 at a deadline. Human review and guaranteed deletion within two hours cannot both
 be guaranteed during GitHub/provider outages. Escalate early; if an operator
 window, durable evidence path or bounded cost/retention plan is unavailable,
 defer creation. Outages may leave a billable target beyond the budget/window;
 that is an incident requiring immediate owner/operator attention, not implicit
 permission to skip review, extend spending or retry an uncertain DELETE.
+The read-only checkout/main guard/Node setup have one minute each and locked
+dependency installation has four minutes. All step budgets total 34 minutes,
+leaving one minute inside the 35-minute job for teardown; slow preparation fails
+before provider access rather than consuming the finalization reserve.
+
+Long operations also have internal cancellation budgets: each catalog snapshot,
+Worker build and application smoke is capped at two minutes; the extension
+authority probe at 30 seconds and named extension installation at one minute.
+Every phase is further clamped to the remaining 20-minute qualification budget.
+Cancellation ends the active PostgreSQL connection, cancels/disposes the build
+context, or disposes the Worker runtime before returning failure evidence.
+An interrupted extension COMMIT remains UNKNOWN and is never retried. Fixed
+provider/GitHub requests retain their individual 15-second timeouts and bounded
+pagination. A hung cancellation still falls under the runner/job timeouts;
+the always-run finalizer preserves a retained UNKNOWN checkpoint where possible.
+No claim of durable evidence or successful recovery survives a failed upload.
+
+Qualification and cleanup use separate fixed concurrency groups, each with
+`cancel-in-progress: false`. A pending qualification environment approval cannot
+hold cleanup's concurrency slot. Cleanup proves the original qualification run
+has completed, including its immutable upload, before becoming eligible for
+DELETE. Qualification refuses a preexisting fixed target, and every mutation
+rechecks its reserved cleanup permit. The operator must reserve this window
+without other qualification or cleanup dispatches: an intervening cleanup run
+consumes the one-use permit, and unrelated target activity is not excluded by a
+workflow lock. GitHub queue/environment-approval waits and outages are not bounded
+by an executing job's timeout. A delayed cleanup still checks the original
+105/120-minute cutoffs and blocks destruction if they are missed; it never
+creates a fresh deadline. Escalation and operator cost containment remain
+necessary when finalization, upload, CI, review or approval cannot complete.
 
 After qualification completes, use this operator-controlled sequence:
 
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `nxqskcldn8yk.json` record in an evidence-only PR.
+   Commit it with the canonical `nxqskcldn8yk.json` record in an evidence-only PR
+   and merge it into protected main after all normal required checks pass.
    Both must be tracked regular files, unchanged in the checkout. The record
    binds source, backup, acknowledged target ID/creation time, verification
    time, byte hash, actual verified scope and unresolved gates. For failed or
@@ -222,8 +257,8 @@ After qualification completes, use this operator-controlled sequence:
    and run number, qualification artifact ID/archive SHA-256 and exact evidence
    outcome. Compute the normal `recordSha256` over the complete record,
    including this intent. This committed pending intent precedes any DELETE.
-3. The reserved human reviews the two canonical data files at the exact
-   evidence PR head and posts the **exact unedited** text produced by
+3. The reserved human reviews the two canonical data files at the exact merged
+   evidence commit on current protected main and posts the **exact unedited** text produced by
    `reviewAttestation(evidenceSha, record, report)` in
    `scripts/ci/planetscale-native-restore-evidence.mjs`. A generic approval,
    bot, edited comment, missing record, failed upload or hash mismatch cannot
@@ -232,12 +267,13 @@ After qualification completes, use this operator-controlled sequence:
 4. Obtain separate owner approval for irreversible deletion of **only** the
    original acknowledged target ID, plus normal protected production review.
    Dispatch the cleanup workflow once with `mode=cleanup`, current protected
-   main `release_sha`, exact `evidence_sha`, evidence PR/comment IDs and original
+   main `release_sha`, identical `evidence_sha`, merged evidence PR/comment IDs and original
    qualification run ID. Cleanup code always comes from reviewed main; code
-   from the evidence checkout is never executed. A committed evidence-only PR
-   provides durable tracked review before deletion without requiring two full
-   CI/merge cycles inside the cost window. Later release acceptance still
-   requires normal evidence integration and every existing release gate.
+   from the evidence checkout is never executed. An uploaded artifact or
+   unmerged PR cannot substitute for the canonical tracked record on protected
+   main. Allow for the normal evidence PR checks/merge in the reserved window;
+   delays can exhaust that window and require immediate operator escalation.
+   Later release acceptance still requires every existing release gate.
 5. Cleanup revalidates evidence/provenance and actual GitHub production review,
    downloads the immutable qualification artifact and compares its bytes, then
    uploads and downloads a separate immutable pending-attempt artifact before
@@ -245,7 +281,8 @@ After qualification completes, use this operator-controlled sequence:
    separate `cleanup.json` receipt; never edit qualification bytes to insert a
    cleanup result. A missing receipt cannot be reported as verified cleanup.
 
-Qualification SHA, evidence SHA and cleanup code SHA are separate. Evidence
+Qualification SHA is retained separately from the later evidence/cleanup SHA.
+The evidence SHA must equal the current protected main cleanup SHA. Evidence
 commits may advance main; cleanup permits only the two canonical data-file
 changes since qualification, so such advancement does not deadlock deletion.
 Any code change requires reconciliation; cleanup never accepts arbitrary new
@@ -256,7 +293,7 @@ Separate cleanup approval JSON (all fields bind the reviewed record):
 ```json
 {
   "action": "delete_only_original_acknowledged_target_once",
-  "cleanupSha": "CURRENT_PROTECTED_MAIN_SHA", "evidenceSha": "REVIEWED_EVIDENCE_PR_HEAD",
+  "cleanupSha": "CURRENT_PROTECTED_MAIN_SHA", "evidenceSha": "SAME_REVIEWED_MERGED_EVIDENCE_SHA",
   "qualificationRunId": "ORIGINAL_RUN_ID", "targetId": "ACKNOWLEDGED_NEW_PROVIDER_ID",
   "recordSha256": "CANONICAL_RECORD_HASH", "operator": "OWNER_GITHUB_LOGIN",
   "maximumUsd": 5, "reference": "SEPARATE_OWNER_DELETION_APPROVAL",
@@ -292,14 +329,27 @@ Only an explicit GET 404 or a valid UTC deletion timestamp for the exact owned
 identity, plus backup binding and a complete branch-inventory readback, confirms
 cleanup. GET 204, omitted/malformed timestamps and changed
 identities keep cleanup unresolved and potentially billable.
+The backup's exact restored-target relationship and protection are checked
+before DELETE. Post-delete checks preserve backup/source identity and verify
+target absence; they do not assume the provider retains a deleted target in
+its backup relationship list.
 It never retries a denied/uncertain DELETE. Failed binding, failed cleanup,
 cancelled jobs, runner crashes, API outages and artifact failures require the
 named operator to inspect the provider and escalate ongoing charges. A software
 deadline cannot enforce a provider spending cap or guarantee cleanup after
 machine loss. Keep the checkpoint's exact target ID; reconcile before manual
 deletion, and never delete an unrelated resource. `mode=reconcile` is GET-only:
-it can report observed absence but never invent a DELETE acknowledgment or a
-verified cleanup receipt. It cannot reset credentials, install extensions,
+it proves the original acknowledged create, tracked immutable qualification
+bytes, original completed run/upload provenance and fresh artifact download.
+It permits an older evidence commit in protected main's history and does not
+require a timely cleanup review, unchanged qualification code or deletion
+consent. Normal protected production approval remains required. This allows
+responders to inspect a retained target after deadlines or code changes without
+authorizing DELETE. It uses immutable backup/source binding rather than
+requiring the old backup still to exist. A missing/expired qualification artifact,
+changed identity or uncertain create remains blocked; it never discovers a new
+owner by name. It can report target presence or observed absence but never invent
+a DELETE acknowledgment or verified cleanup receipt. It cannot reset credentials, install extensions,
 create resources or rerun qualification. Preserve receipts before
 cleanup, including partial/uncertain outcomes. Source backup protection is
 deliberately not rolled back automatically.
@@ -316,6 +366,9 @@ The one-use reservation follows GitHub's documented
 [`GITHUB_RUN_NUMBER` and `GITHUB_RUN_ATTEMPT`](https://docs.github.com/en/actions/reference/workflows-and-actions/variables#default-environment-variables)
 semantics. Evidence review reads the exact PR/comment through the existing
 read-only GitHub token; neither workflow adds write permissions or new secrets.
+Build cancellation uses esbuild's documented
+[context cancellation/disposal](https://esbuild.github.io/api/#cancel); the
+SQL and Worker cancellation adapters are verified with synthetic failure tests.
 These contracts do not prove the existing token has those rights.
 
 Focused tests use mocks for denial, stale/budget failures, partial resets,

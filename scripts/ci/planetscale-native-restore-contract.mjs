@@ -6,6 +6,7 @@ export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lytha
   recoveryPoint: '2026-10-23T14:29:11.907Z',
   target: 'lythaus-0021-native-restore-check-20261022', cluster: 'PS_5_AWS_ARM', region: 'eu-central',
   bytes: 21474836480, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
+  qualificationStopMs: 20 * 60000, escalationMs: 45 * 60000, reviewMs: 60 * 60000, cleanupStartMs: 105 * 60000,
   setup: 'pscale_api_47syed2xlt6p', runtime: 'pscale_api_ysl604shosjg', admin: 'pscale_api_3vzps7bu44vo',
   jobs: 'pscale_api_9jfbtij9y4b2', privacy: 'pscale_api_wv7rzyuejknl',
 });

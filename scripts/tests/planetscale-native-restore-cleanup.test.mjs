@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import YAML from 'yaml';
 import { RESTORE, RestoreApi, RestoreCleanupApi, RestoreFailure, CREATE_TARGET_BODY } from '../ci/planetscale-native-restore-contract.mjs';
 import { REQUIRED_0021_RESTORE_SCOPE, hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
 import { QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, RECORD_PATH, artifactPath, sha256, readTrackedEvidence,
@@ -13,7 +14,7 @@ import { proveCleanupContext, pendingReceipt, pendingName, deleteReviewedTarget,
 
 const start = Date.parse('2026-10-23T17:00:00Z'), instant = start + 35 * 60000;
 const time = minutes => new Date(start + minutes * 60000).toISOString();
-const targetId = 'newrestore123', qualificationSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), cleanupSha = 'c'.repeat(40);
+const targetId = 'newrestore123', qualificationSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), cleanupSha = evidenceSha;
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const branch = () => ({ id: targetId, name: RESTORE.target, created_at: time(1), deleted_at: null,
   default: false, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false });
@@ -27,7 +28,7 @@ function fixture() {
       createdAt: time(1), kind: 'postgresql', default: false },
     providerMutations: [{ action: 'create_fixed_restore', outcome: 'ACKNOWLEDGED' }],
     cleanupPermit: { workflowId: 42, runNumber: 1 }, approvalExpiresAt: time(120),
-    escalationAt: time(45), reviewByAt: time(60), cleanupStartByAt: time(105), cleanupDeadlineAt: time(120),
+    qualificationStopAt: time(20), escalationAt: time(45), reviewByAt: time(60), cleanupStartByAt: time(105), cleanupDeadlineAt: time(120),
     reviewWindow: { reviewer: 'owner', operator: 'owner' } };
   const record = { schemaVersion: 'lythaus-0021-restore-evidence-v1', sourceBranch: { id: RESTORE.sourceId, name: 'main' },
     selectedBackupId: RESTORE.backupId, restoredBranch: { id: targetId, name: RESTORE.target, state: 'ready', createdAt: time(1) },
@@ -40,16 +41,18 @@ function fixture() {
   const evidence = { report, record };
   const env = { RELEASE_SHA: cleanupSha, EVIDENCE_SHA: evidenceSha, EVIDENCE_PR: '999', REVIEW_COMMENT_ID: '88',
     QUALIFICATION_RUN_ID: report.runId, GITHUB_RUN_ID: '23456', GITHUB_RUN_NUMBER: '1', GITHUB_RUN_ATTEMPT: '1',
-    GITHUB_REPOSITORY: 'AsoraKK/Lythaus', PENDING_ARTIFACT_ID: '52', PENDING_ARTIFACT_DIGEST: 'e'.repeat(64) };
+    GITHUB_REPOSITORY: 'SyntheticOwner/Lythaus', PENDING_ARTIFACT_ID: '52', PENDING_ARTIFACT_DIGEST: 'e'.repeat(64) };
   const calls = [], checkpoints = [], overrides = new Map(); let deleted = false;
   const read = async suffix => {
     calls.push(`GITHUB ${suffix}`);
     if (overrides.has(suffix)) return structuredClone(overrides.get(suffix));
-    if (suffix === '/pulls/999') return { state: 'open', head: { repo: { id: 1010752912 }, sha: evidenceSha } };
+    if (suffix === '/pulls/999') return { state: 'closed', merged: true, merge_commit_sha: evidenceSha,
+      head: { repo: { id: 1010752912 }, sha: 'f'.repeat(40) }, base: { repo: { id: 1010752912 }, ref: 'main' } };
     if (suffix === `/compare/${qualificationSha}...${evidenceSha}` || suffix === `/compare/${qualificationSha}...${cleanupSha}`)
       return { merge_base_commit: { sha: qualificationSha }, files: [RECORD_PATH, artifactPath(report.runId)].map(filename => ({ filename, status: 'added' })) };
+    if (suffix === `/compare/${evidenceSha}...${env.RELEASE_SHA}`) return { merge_base_commit: { sha: evidenceSha }, files: [] };
     if (suffix === '/issues/comments/88') return { user: { type: 'User', login: 'owner' },
-      issue_url: 'https://api.github.com/repos/AsoraKK/Lythaus/issues/999', body: reviewAttestation(evidenceSha, record, report),
+      issue_url: 'https://api.github.com/repos/SyntheticOwner/Lythaus/issues/999', body: reviewAttestation(evidenceSha, record, report),
       created_at: time(26), updated_at: time(26) };
     if (suffix === `/actions/runs/${report.runId}`) return { id: Number(report.runId), workflow_id: 41,
       path: QUALIFICATION_WORKFLOW, head_sha: qualificationSha, head_branch: 'main', event: 'workflow_dispatch',
@@ -64,7 +67,7 @@ function fixture() {
       name: pendingName(report, record.nativeRestoreCleanup), expired: false,
       digest: `sha256:${'e'.repeat(64)}`, size_in_bytes: 500 };
     if (suffix === `/actions/runs/${env.GITHUB_RUN_ID}`) return { id: Number(env.GITHUB_RUN_ID), workflow_id: 42,
-      head_sha: cleanupSha, head_branch: 'main', path: CLEANUP_WORKFLOW, event: 'workflow_dispatch', run_attempt: 1,
+      head_sha: env.RELEASE_SHA, head_branch: 'main', path: CLEANUP_WORKFLOW, event: 'workflow_dispatch', run_attempt: 1,
       run_number: Number(env.GITHUB_RUN_NUMBER), repository: { id: 1010752912 } };
     if (suffix === `/actions/runs/${env.GITHUB_RUN_ID}/approvals`) return [{ state: 'approved',
       user: { type: 'User', login: 'owner' }, environments: [{ name: 'production' }] }];
@@ -78,7 +81,7 @@ function fixture() {
       assert.equal(method, 'GET');
       if (suffix === `/branches/${RESTORE.target}`) return deleted ? null : branch();
       if (suffix === `/branches/main/backups/${RESTORE.backupId}`) return { id: RESTORE.backupId,
-        database_branch: { id: RESTORE.sourceId, name: 'main' }, restored_branches: [{ id: targetId, name: RESTORE.target }] };
+        database_branch: { id: RESTORE.sourceId, name: 'main' }, protected: true, restored_branches: [{ id: targetId, name: RESTORE.target }] };
       throw new Error(`unexpected synthetic provider path ${suffix}`);
     } };
   const options = { env, evidence, evidenceHead: evidenceSha, read, assertMain: async () => { calls.push('MAIN'); },
@@ -142,6 +145,7 @@ for (const [name, change] of [
 for (const [name, suffix, value] of [
   ['qualification upload failed', '/actions/runs/12345/jobs?per_page=100', { total_count: 1, jobs: [{ name: 'Qualify isolated native restore without cleanup', status: 'completed', steps: [{ name: 'Upload immutable qualification evidence', conclusion: 'failure' }] }] }],
   ['qualification artifact unavailable', '/actions/artifacts/51', {}],
+  ['unmerged evidence PR', '/pulls/999', { state: 'open', merged: false, head: { repo: { id: 1010752912 }, sha: evidenceSha } }],
   ['pending upload not durable', '/actions/artifacts/52', {}],
   ['pending upload expired', '/actions/artifacts/52', { id: 52, expired: true }],
   ['unapproved production environment', '/actions/runs/23456/approvals', []],
@@ -197,6 +201,16 @@ test('lost acknowledgment can be resolved only by independent absence readback, 
   const result = await deleteReviewedTarget(f.options);
   assert.equal(result.state, 'DELETED_READBACK_VERIFIED_ACK_UNCERTAIN'); assert.equal(result.deletionVerified, true);
   assert.equal(deletions(f), 1);
+});
+test('post-delete backup inventory need not retain a deleted relationship; original binding is proven before DELETE', async () => {
+  const f = fixture(), original = f.options.api.request; let attempted = false;
+  f.options.api.request = async (suffix, options = {}) => {
+    if (options.method === 'DELETE') attempted = true;
+    const result = await original(suffix, options);
+    return attempted && suffix.includes('/backups/') ? { ...result, restored_branches: [] } : result;
+  };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.deletionVerified, true); assert.equal(result.preDeleteBindingVerified, true); assert.equal(deletions(f), 1);
 });
 
 const malformed = [
@@ -272,6 +286,7 @@ test('interrupted qualification finalizes once as retained UNKNOWN; final bytes 
   const digest = finalizeQualificationEvidence(root, instant), bytes = fs.readFileSync(path.join(root, 'qualification.json'));
   const report = JSON.parse(bytes); assert.equal(report.state, 'TARGET_RETAINED_PENDING_REVIEW');
   assert.equal(report.qualificationOutcome, 'UNKNOWN'); assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED');
+  assert.equal(report.qualificationStopAt, time(20)); assert.equal(report.cleanupDeadlineAt, time(120));
   assert.equal(finalizeQualificationEvidence(root, instant + 60000), digest);
   assert.deepEqual(fs.readFileSync(path.join(root, 'qualification.json')), bytes);
 });
@@ -297,7 +312,7 @@ test('cleanup reservation rejects incomplete history or recreated workflow ident
     ? { id: 42, path: CLEANUP_WORKFLOW, state: 'active' } : { total_count: 101, workflow_runs: [] }), /history_incomplete/);
 });
 test('GitHub evidence reads reject redirects and redact transport details', async () => {
-  const env = { GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GH_TOKEN: 'synthetic-secret' };
+  const env = { GITHUB_REPOSITORY: 'SyntheticOwner/Lythaus', GH_TOKEN: 'synthetic-secret' };
   await assert.rejects(() => githubRead(env, '/actions/runs/1', async () => { throw new Error(env.GH_TOKEN); }),
     error => error.code === 'github_evidence_transport_failed' && !error.message.includes(env.GH_TOKEN));
   await assert.rejects(() => githubRead(env, '/actions/runs/1', async () => ({ status: 200, redirected: true })), /evidence_read_failed/);
@@ -309,4 +324,61 @@ test('workflow phase boundary uploads pending evidence before DELETE and never e
   assert.ok(cleanup.indexOf('Persist pending deletion before any DELETE') < cleanup.indexOf('Delete original acknowledged target once'));
   assert.match(cleanup, /default: reconcile/); assert.doesNotMatch(cleanup, /PLANETSCALE_SCHEMA_READ_DATABASE_URL|working-directory: restore-review/);
   assert.match(cleanup, /persist-credentials: false/); assert.doesNotMatch(cleanup, /contents: write|actions: write/);
+  assert.notEqual(qualificationSha, evidenceSha); assert.equal(cleanupSha, evidenceSha);
+});
+test('qualification work and finalization have independent budgets before escalation; phase locks cannot block each other', () => {
+  const qualification = YAML.parse(fs.readFileSync(new URL('../../.github/workflows/planetscale-native-restore-check.yml', import.meta.url), 'utf8'));
+  const cleanup = YAML.parse(fs.readFileSync(new URL('../../.github/workflows/planetscale-native-restore-cleanup.yml', import.meta.url), 'utf8'));
+  const job = qualification.jobs.qualify;
+  const runner = job.steps.find(step => step.name === 'Run fixed-target runner using only existing protected access');
+  const finalizer = job.steps.find(step => step.name === 'Finalize immutable qualification evidence without provider access');
+  const upload = job.steps.find(step => step.name === 'Upload immutable qualification evidence');
+  assert.equal(RESTORE.qualificationStopMs, 20 * 60000); assert.equal(runner['timeout-minutes'], 22);
+  assert.equal(finalizer['timeout-minutes'], 2); assert.equal(upload['timeout-minutes'], 2);
+  assert.equal(finalizer.if, 'always()'); assert.equal(upload.if, 'always()');
+  assert.ok(runner['timeout-minutes'] + finalizer['timeout-minutes'] + upload['timeout-minutes'] < job['timeout-minutes']);
+  assert.ok(job.steps.every(step => Number.isInteger(step['timeout-minutes']) && step['timeout-minutes'] > 0));
+  assert.ok(job.steps.reduce((total, step) => total + step['timeout-minutes'], 0) < job['timeout-minutes']);
+  assert.equal(job['timeout-minutes'], 35); assert.ok(job['timeout-minutes'] * 60000 < RESTORE.escalationMs);
+  assert.ok(RESTORE.escalationMs < RESTORE.reviewMs); assert.ok(RESTORE.reviewMs < RESTORE.maximumMs);
+  assert.equal(qualification.concurrency.group, 'lythaus-fixed-native-restore-qualification');
+  assert.equal(cleanup.concurrency.group, 'lythaus-fixed-native-restore-cleanup');
+  assert.notEqual(qualification.concurrency.group, cleanup.concurrency.group);
+  assert.equal(qualification.concurrency['cancel-in-progress'], false); assert.equal(cleanup.concurrency['cancel-in-progress'], false);
+});
+test('cleanup queued past its original start cutoff cannot reset the qualification clock', async () => {
+  const f = fixture(), bytes = Buffer.from(f.evidence.bytes);
+  f.options.now = () => start + RESTORE.cleanupStartMs;
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
+  assert.equal(f.report.cleanupDeadlineAt, time(120)); assert.deepEqual(f.evidence.bytes, bytes);
+});
+test('GET-only reconciliation permits late review and later protected code without relaxing any DELETE prerequisite', async () => {
+  const f = fixture(); f.record.review.reviewedAt = time(150); f.refresh();
+  f.env.RELEASE_SHA = 'c'.repeat(40); f.options.now = () => start + 180 * 60000;
+  delete f.env.CLEANUP_APPROVAL_JSON; delete f.env.EVIDENCE_PR; delete f.env.REVIEW_COMMENT_ID;
+  const result = await reconcileReviewedTarget(f.options);
+  assert.equal(result.state, 'TARGET_PRESENT_READ_ONLY'); assert.equal(result.targetId, targetId);
+  assert.equal(result.providerMutations, false); assert.equal(result.deletionVerified, false); assert.equal(deletions(f), 0);
+  assert.equal(f.calls.some(call => call.includes('/issues/comments/')), false);
+  assert.equal(f.calls.some(call => call.startsWith('GET ') && call.includes('/backups/')), false);
+  const deletion = await deleteReviewedTarget(f.options); assert.equal(deletion.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
+});
+test('GET-only reconciliation preserves historical phase metadata without treating it as a new deletion budget', async () => {
+  const f = fixture(); delete f.report.qualificationStopAt; f.report.reviewByAt = time(55); f.refresh();
+  const observed = await reconcileReviewedTarget(f.options);
+  assert.equal(observed.state, 'TARGET_PRESENT_READ_ONLY'); assert.equal(observed.deletionVerified, false);
+  const blocked = await deleteReviewedTarget(f.options);
+  assert.equal(blocked.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
+});
+for (const [name, change] of [
+  ['uncertain original create', f => { f.report.creation.acknowledged = false; f.refresh(); }],
+  ['changed downloaded qualification bytes', f => { f.options.downloadedQualification = Buffer.from('{}'); }],
+  ['unproven protected-main ancestry', f => { f.overrides.set(`/compare/${evidenceSha}...${f.env.RELEASE_SHA}`, { merge_base_commit: { sha: 'f'.repeat(40) } }); }],
+]) test(`read-only reconciliation refuses unproven provenance: ${name}`, async () => {
+  const f = fixture(); change(f);
+  const result = await reconcileReviewedTarget(f.options);
+  assert.equal(result.state, 'TARGET_PRESENT_OR_BINDING_UNCERTAIN'); assert.equal(result.providerMutations, false);
+  assert.equal(result.deletionVerified, false); assert.equal(deletions(f), 0);
+  assert.equal(f.calls.filter(call => call.startsWith('GET ')).length, 0);
 });

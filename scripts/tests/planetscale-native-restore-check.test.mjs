@@ -122,6 +122,7 @@ for (const [mode, blocker, cleanup] of [
   const mutations = f.calls.filter(value => /^(POST|PATCH|DELETE) /.test(value));
   assert.equal(new Set(mutations).size, mutations.length);
   if (['authority_denied','preexisting','stale','unprotected'].includes(mode)) assert.equal(mutations.length, 0);
+  if (mode === 'unknown_create') assert.equal(report.costEscalationRequired, true);
   assert.equal(mutations.filter(value => /^(DELETE|PATCH)/.test(value)).length, 0);
 });
 
@@ -155,11 +156,58 @@ test('missing, stale, wrong-target, broader-role and unbounded tax/budget record
 test('deadline reserves cleanup time and changed protected main blocks before spending', async () => {
   const f = fixture(); let counter = 0;
   f.options.now = () => instant + (counter++ > 0 ? 116 * 60000 : 0);
-  assert.ok((await runNativeRestore(f.options)).blockers.includes('test_deadline_cleanup_reserve_reached'));
+  assert.ok((await runNativeRestore(f.options)).blockers.includes('qualification_phase_review_reserve_reached'));
   const second = fixture(); second.options.assertMain = async () => { throw new RestoreFailure('current_protected_main_changed'); };
   const report = await runNativeRestore(second.options); assert.equal(report.providerMutations.length, 0);
 });
+test('qualification stops at its own boundary without extending review or the original two-hour deadline', async () => {
+  for (const offset of [RESTORE.qualificationStopMs - 1, RESTORE.qualificationStopMs, RESTORE.qualificationStopMs + 1]) {
+    const f = fixture(); let first = true;
+    f.options.now = () => { if (first) { first = false; return instant; } return instant + offset; };
+    const report = await runNativeRestore(f.options);
+    assert.equal(report.qualificationStopAt, new Date(instant + RESTORE.qualificationStopMs).toISOString());
+    assert.equal(report.reviewByAt, new Date(instant + RESTORE.reviewMs).toISOString());
+    assert.equal(report.cleanupDeadlineAt, new Date(instant + RESTORE.maximumMs).toISOString());
+    if (offset < RESTORE.qualificationStopMs) assert.equal(report.qualificationOutcome, 'PASSED');
+    else {
+      assert.ok(report.blockers.includes('qualification_phase_review_reserve_reached'));
+      assert.equal(f.calls.filter(call => call.startsWith('POST ')).length, 0);
+    }
+    assert.equal(f.calls.filter(call => call.startsWith('DELETE ')).length, 0);
+  }
+});
+test('readiness polling crossing the qualification stop retains ownership and never consumes review reserve', async () => {
+  const f = fixture(), original = f.options.api.request; let clock = instant;
+  f.options.now = () => clock;
+  f.options.sleep = async () => { clock = instant + RESTORE.qualificationStopMs; };
+  f.options.api.request = async (suffix, options) => {
+    const row = await original(suffix, options);
+    return suffix === `/branches/${RESTORE.target}` && !options?.method ? { ...row, ready: false, state: 'pending' } : row;
+  };
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('qualification_phase_review_reserve_reached'));
+  assert.equal(report.state, 'TARGET_RETAINED_PENDING_REVIEW'); assert.equal(report.costEscalationRequired, true);
+  assert.equal(report.finishedAt, new Date(instant + RESTORE.qualificationStopMs).toISOString());
+  assert.equal(report.cleanupDeadlineAt, new Date(instant + RESTORE.maximumMs).toISOString());
+  assert.equal(f.calls.filter(call => call.startsWith('DELETE ')).length, 0);
+});
 
+test('slow owned-target smoke aborts, closes resources and finalizes retained failure evidence before escalation/review', async () => {
+  const f = fixture(); let clock = instant, closed = false;
+  f.options.now = () => clock; f.options.phaseBudgetMs = 10;
+  f.options.smoke = async (_connections, _id, _baseline, _scripts, _factory, signal) => new Promise((resolve, reject) => {
+    signal.addEventListener('abort', () => { closed = true; clock = instant + RESTORE.qualificationStopMs; reject(signal.reason); }, { once: true });
+  });
+  const report = await runNativeRestore(f.options);
+  assert.equal(closed, true); assert.equal(report.credentialReferencesDiscarded, true);
+  assert.equal(report.state, 'TARGET_RETAINED_PENDING_REVIEW'); assert.equal(report.qualificationOutcome, 'FAILED');
+  assert.ok(report.phases.some(row => row.name === 'smoke' && row.outcome === 'TIMED_OUT'));
+  assert.ok(Date.parse(report.finishedAt) < Date.parse(report.escalationAt));
+  assert.ok(Date.parse(report.finishedAt) < Date.parse(report.reviewByAt));
+  assert.equal(f.checkpoints.at(-1).state, 'TARGET_RETAINED_PENDING_REVIEW');
+  assert.equal(report.cleanupDeadlineAt, new Date(instant + RESTORE.maximumMs).toISOString());
+  assert.equal(f.calls.filter(call => call.startsWith('DELETE ')).length, 0);
+});
 test('provider transport refuses redirects, denied/oversized responses and unknown writes without retrying', async () => {
   for (const [response, outcome] of [
     [new Response('{}', { status: 403 }), 'DENIED'],
@@ -248,6 +296,43 @@ test('lost extension COMMIT acknowledgment never retries or attempts a committed
   } });
   await assert.rejects(() => installMissingExtensions(raw, newId, ['unaccent'], factory), error => error.extensionOutcomeUnknown === true && !error.message.includes(password));
   assert.equal(calls.filter(sql => sql === 'CREATE EXTENSION "unaccent"').length, 1); assert.ok(!calls.includes('ROLLBACK'));
+});
+test('SQL phase cancellation closes the active connection before returning and never retries a possibly committed extension', async () => {
+  const raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup);
+  for (const ddl of [false, true]) {
+    const controller = new AbortController(), calls = []; let rejectPending, closed = false;
+    const factory = () => ({ connect: async () => {}, end: async () => { calls.push('END'); closed = true; rejectPending?.(controller.signal.reason); },
+      query: async sql => {
+        calls.push(sql);
+        if (sql.includes('current_setting')) return { rows: [{ database: 'postgres', username: RESTORE.setup, session: RESTORE.setup, read_only: 'on', version: '170005' }] };
+        if (sql === 'COMMIT' || sql === 'SYNTHETIC_SLOW_READ') {
+          return new Promise((resolve, reject) => { rejectPending = reject; controller.abort(new Error('synthetic-deadline')); });
+        }
+        return { rows: [{ database: 'postgres', username: RESTORE.setup }], command: sql };
+      } });
+    const work = ddl ? installMissingExtensions(raw, newId, ['unaccent'], factory, controller.signal)
+      : readOnly(raw, newId, RESTORE.setup, client => client.query('SYNTHETIC_SLOW_READ'), factory, controller.signal);
+    await assert.rejects(() => work, error => ddl ? error.extensionOutcomeUnknown === true : error.message === 'synthetic-deadline');
+    assert.equal(closed, true); assert.equal(calls.filter(sql => sql === 'END').length, 1);
+    assert.equal(calls.filter(sql => sql === 'COMMIT').length, ddl ? 1 : 0); assert.equal(calls.includes('ROLLBACK'), false);
+  }
+});
+test('application smoke cancellation disposes its Worker runtime before returning', async () => {
+  const controller = new AbortController(); let rejectPending, disposed = false;
+  const connections = Object.fromEntries(['runtime','admin','jobs','privacy'].map(name => [name,
+    restoredConnection({ ...roleRows().find(row => row.base_username === RESTORE[name]), password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE[name])]));
+  const runtime = () => ({ getWorker: async () => new Promise((resolve, reject) => {
+    rejectPending = reject; controller.abort(new Error('synthetic-runtime-deadline'));
+  }), dispose: async () => { disposed = true; rejectPending?.(controller.signal.reason); } });
+  await assert.rejects(() => runRestoreSmoke(connections, newId, baseline(), {}, runtime, controller.signal));
+  assert.equal(disposed, true);
+  await assert.rejects(() => buildRestoreSmoke(controller.signal));
+});
+test('in-flight build cancellation disposes its context before returning', async () => {
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(new Error('synthetic-build-deadline')), 5);
+  try { await assert.rejects(() => buildRestoreSmoke(controller.signal)); }
+  finally { clearTimeout(timer); }
+  assert.equal(controller.signal.aborted, true);
 });
 test('actual isolated Worker bundles build before spending; main and crossed credentials are rejected before workerd starts', async () => {
   const scripts = await buildRestoreSmoke(); assert.deepEqual(Object.keys(scripts), ['public','admin','jobs']);

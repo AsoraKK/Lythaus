@@ -12,7 +12,7 @@ export const artifactPath = runId => `docs/evidence/production-cutover/0021-rest
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
-export const decimal = value => typeof value === 'string' && /^[1-9]\d{0,17}$/.test(value);
+export const decimal = value => typeof value === 'string' && /^[1-9]\d{0,17}$/.test(value) && Number.isSafeInteger(Number(value));
 
 export function finalizeQualificationEvidence(directory, now = Date.now()) {
   const destination = path.join(directory, 'qualification.json');
@@ -108,22 +108,25 @@ export function validateCleanupEvidence({ record, report, bytes, qualificationRu
     && digest(intent.artifactArchiveSha256) && intent.evidenceOutcome === report.qualificationOutcome,
   'immutable_one_use_cleanup_intent_required');
   const verified = Date.parse(record.verifiedAt), finished = Date.parse(report.finishedAt), reviewed = Date.parse(record.review?.reviewedAt);
-  requireThat(Number.isFinite(verified) && verified === Date.parse(report.verifiedAt ?? report.finishedAt)
-    && Number.isFinite(finished) && Number.isFinite(reviewed) && reviewed >= finished && reviewed <= now
+  if (!reconcile) requireThat(Number.isFinite(verified) && verified === Date.parse(report.verifiedAt ?? report.finishedAt)
+    && Number.isFinite(finished), 'canonical_verification_timestamp_invalid');
+  if (!reconcile) requireThat(Number.isFinite(reviewed) && reviewed >= finished && reviewed <= now
     && /^[A-Za-z0-9-]{1,39}$/.test(record.review?.reviewedBy ?? '')
     && typeof record.review.reference === 'string' && record.review.reference.length >= 8, 'canonical_review_missing_or_invalid');
-  requireThat(Array.isArray(record.verifiedScope) && Array.isArray(record.unresolvedGates)
+  if (!reconcile) requireThat(Array.isArray(record.verifiedScope) && Array.isArray(record.unresolvedGates)
     && record.verifiedScope.every(scope => REQUIRED_0021_RESTORE_SCOPE.includes(scope))
     && record.unresolvedGates.every(scope => REQUIRED_0021_RESTORE_SCOPE.includes(scope)), 'canonical_scope_invalid');
-  if (report.qualificationOutcome !== 'PASSED') requireThat(record.verifiedScope.length === 0
+  if (!reconcile && report.qualificationOutcome !== 'PASSED') requireThat(record.verifiedScope.length === 0
     && REQUIRED_0021_RESTORE_SCOPE.every(scope => record.unresolvedGates.includes(scope)), 'failure_evidence_cannot_certify_recovery');
   requireThat(['PASSED', 'FAILED', 'UNKNOWN'].includes(report.qualificationOutcome), 'qualification_outcome_invalid');
   const deadline = Date.parse(report.cleanupDeadlineAt), created = Date.parse(creation.createdAt), started = Date.parse(report.startedAt);
-  requireThat(Number.isFinite(started) && Number.isFinite(deadline) && Number.isFinite(created)
-    && deadline === started + RESTORE.maximumMs && created >= started - 60000 && created <= finished
-    && Date.parse(report.escalationAt) === started + 45 * 60000
-    && Date.parse(report.reviewByAt) === started + 60 * 60000
-    && Date.parse(report.cleanupStartByAt) === started + 105 * 60000, 'phase_deadline_invalid');
+  requireThat(Number.isFinite(started) && Number.isFinite(created) && Number.isFinite(finished)
+    && created >= started - 60000 && created <= finished, 'original_creation_timestamp_invalid');
+  if (!reconcile) requireThat(Number.isFinite(deadline) && deadline === started + RESTORE.maximumMs
+    && Date.parse(report.qualificationStopAt) === started + RESTORE.qualificationStopMs
+    && Date.parse(report.escalationAt) === started + RESTORE.escalationMs
+    && Date.parse(report.reviewByAt) === started + RESTORE.reviewMs
+    && Date.parse(report.cleanupStartByAt) === started + RESTORE.cleanupStartMs, 'phase_deadline_invalid');
   if (!reconcile) requireThat(now < deadline - 60000 && now < Date.parse(report.approvalExpiresAt), 'cleanup_phase_deadline_expired');
   return { intent, creation, deadline };
 }
@@ -138,8 +141,8 @@ export async function verifyReviewedEvidence({ env, evidenceSha, prNumber, comme
   requireThat(sha(evidenceSha) && decimal(prNumber) && decimal(commentId), 'review_binding_inputs_invalid');
   const { record, report } = evidence;
   const pr = await read(`/pulls/${prNumber}`);
-  requireThat(pr.head?.repo?.id === 1010752912 && pr.head.sha === evidenceSha
-    && ['open','closed'].includes(pr.state), 'reviewed_evidence_commit_mismatch');
+  requireThat(pr.head?.repo?.id === 1010752912 && pr.base?.repo?.id === 1010752912 && pr.base.ref === 'main'
+    && pr.merged === true && pr.state === 'closed' && pr.merge_commit_sha === evidenceSha, 'reviewed_evidence_commit_mismatch');
   const comparison = await read(`/compare/${report.sourceMainSha}...${evidenceSha}`);
   const allowed = new Set([RECORD_PATH, artifactPath(report.runId)]);
   requireThat(comparison.merge_base_commit?.sha === report.sourceMainSha && Array.isArray(comparison.files)

@@ -6,21 +6,31 @@ import { branchQualifiedDatabaseTarget } from './planetscale-0021-target-identit
 
 const require = createRequire(new URL('../../node_modules/wrangler/package.json', import.meta.url));
 const root = fileURLToPath(new URL('../../', import.meta.url));
-export async function buildRestoreSmoke() {
-  const { build } = require('esbuild');
+export async function buildRestoreSmoke(signal) {
+  const { context } = require('esbuild');
   const scripts = {};
   for (const [name, entry] of Object.entries({ public: 'apps/lythaus-public-api/src/worker.ts',
     admin: 'apps/lythaus-admin-api/src/index.ts', jobs: 'apps/lythaus-jobs/src/index.ts' })) {
-    const bundle = await build({ absWorkingDir: root, entryPoints: [entry], bundle: true, write: false,
+    signal?.throwIfAborted();
+    const build = await context({ absWorkingDir: root, entryPoints: [entry], bundle: true, write: false,
       format: 'esm', platform: 'node', target: 'es2022', conditions: ['workerd'], logLevel: 'silent',
       banner: { js: "import {createRequire} from 'node:module'; const require=createRequire('/bundle/worker.mjs');" },
       external: ['cloudflare:*', 'pg-native', ...builtinModules, ...builtinModules.map(name => `node:${name}`)] });
-    scripts[name] = bundle.outputFiles[0].text;
+    const abort = () => { void build.cancel().catch(() => {}); };
+    signal?.addEventListener('abort', abort, { once: true });
+    try {
+      signal?.throwIfAborted();
+      const bundle = await build.rebuild(); signal?.throwIfAborted(); scripts[name] = bundle.outputFiles[0].text;
+    } finally {
+      signal?.removeEventListener('abort', abort);
+      try { if (signal?.aborted) await build.cancel(); } finally { await build.dispose(); }
+    }
   }
   return scripts;
 }
 
-export async function runRestoreSmoke(connections, branchId, baseline, scripts, runtimeFactory) {
+export async function runRestoreSmoke(connections, branchId, baseline, scripts, runtimeFactory, signal) {
+  signal?.throwIfAborted();
   const { Miniflare, convertV4MiniflareOptions, Log, LogLevel } = require('miniflare');
   const names = ['runtime', 'admin', 'jobs', 'privacy'];
   for (const name of names) {
@@ -50,11 +60,17 @@ export async function runRestoreSmoke(connections, branchId, baseline, scripts, 
     workers: workers.map(worker => ({ ...worker, compatibilityDate: '2026-08-01', compatibilityFlags: ['nodejs_compat'],
       outboundService: () => { outbound++; return new Response(null, { status: 403 }); } })) };
   const mf = runtimeFactory ? runtimeFactory(options) : new Miniflare(convertV4MiniflareOptions(options));
+  let disposing;
+  const dispose = () => disposing ??= Promise.resolve().then(() => mf.dispose());
+  const abort = () => { void dispose().catch(() => {}); };
+  signal?.addEventListener('abort', abort, { once: true });
   try {
     for (const name of ['public', 'admin', 'jobs']) {
+      signal?.throwIfAborted();
       const worker = await mf.getWorker(name);
+      signal?.throwIfAborted();
       const response = await worker.fetch('https://restore.lythaus.test/internal/readiness/database-identity', {
-        signal: AbortSignal.timeout(30000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000),
         headers: { authorization: `Bearer ${token}`, 'Cloudflare-Workers-Version-Overrides': `lythaus-public-api-development="${version}"` } });
       requireThat(response.status === 200, 'isolated_application_readiness_failed');
       const body = await response.json();
@@ -68,5 +84,5 @@ export async function runRestoreSmoke(connections, branchId, baseline, scripts, 
     requireThat(outbound === 0, 'unexpected_application_external_http_attempt');
     return { services: 3, databaseBindings: 5, distinctRoles: 4, readOnlyDatabaseIdentity: true,
       externalHttpRequests: 0, readyForProductionAuthentication: false };
-  } finally { await mf.dispose(); }
+  } finally { try { await dispose(); } finally { signal?.removeEventListener('abort', abort); } }
 }

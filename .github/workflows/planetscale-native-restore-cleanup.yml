@@ -9,16 +9,16 @@ on:
         required: true
         type: string
       evidence_sha:
-        description: Committed evidence-only PR head; data is never executed
+        description: Tracked canonical evidence commit; cleanup requires current main, reconciliation permits an older main ancestor
         required: true
         type: string
       evidence_pr:
-        description: Same-repository canonical evidence PR number
-        required: true
+        description: Merged same-repository canonical evidence PR number
+        required: false
         type: string
       review_comment_id:
         description: Unedited human attestation comment on that exact evidence PR
-        required: true
+        required: false
         type: string
       qualification_run_id:
         description: Original acknowledged qualification run; never a discovered target name
@@ -42,7 +42,7 @@ permissions:
   issues: read
 
 concurrency:
-  group: lythaus-fixed-native-restore-check
+  group: lythaus-fixed-native-restore-cleanup
   cancel-in-progress: false
 
 jobs:
@@ -59,10 +59,8 @@ jobs:
       REVIEW_COMMENT_ID: ${{ inputs.review_comment_id }}
       QUALIFICATION_RUN_ID: ${{ inputs.qualification_run_id }}
       CLEANUP_APPROVAL_JSON: ${{ inputs.cleanup_approval_json }}
+      CLEANUP_MODE: ${{ inputs.mode }}
       EVIDENCE_CHECKOUT: ${{ github.workspace }}/restore-review
-      EVIDENCE_DIR: ${{ runner.temp }}/native-restore-cleanup
-      QUALIFICATION_DOWNLOAD: ${{ runner.temp }}/native-restore-qualification-download
-      PENDING_DOWNLOAD: ${{ runner.temp }}/native-restore-pending-download
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -82,6 +80,9 @@ jobs:
           [[ "$EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$GITHUB_SHA" = "$RELEASE_SHA"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          printf 'EVIDENCE_DIR=%s/native-restore-cleanup\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'QUALIFICATION_DOWNLOAD=%s/native-restore-qualification-download\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'PENDING_DOWNLOAD=%s/native-restore-pending-download\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
@@ -97,11 +98,9 @@ jobs:
           submodules: false
           lfs: false
       - name: Prove exact reviewed evidence and immutable qualification upload
-        if: inputs.mode == 'cleanup'
         id: prepare
         run: node scripts/ci/planetscale-native-restore-cleanup.mjs prepare
       - name: Download immutable qualification artifact
-        if: inputs.mode == 'cleanup'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           artifact-ids: ${{ steps.prepare.outputs.qualification_artifact_id }}

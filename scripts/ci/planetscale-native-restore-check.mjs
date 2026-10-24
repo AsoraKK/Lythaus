@@ -49,6 +49,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
   checkpoint = () => {}, readCatalog = collectRestoreCatalog, readSession = readOnly,
   extensionAuthority = inspectExtensionAuthority, installExtensions = installMissingExtensions,
   prepareSmoke = buildRestoreSmoke, smoke = runRestoreSmoke,
+  phaseBudgetMs = 120000,
   reserveCleanup = () => inspectCleanupReservation(environment),
   reviewedOriginFingerprint = manifest.expectedMainOriginFingerprint } = {}) {
   const started = now(), execute = environment.RESTORE_CHECK_EXECUTE === 'true';
@@ -57,15 +58,32 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     phase: 'qualification', mode: execute ? 'execute' : 'read-only-plan', status: 'BLOCKED', state: 'NO_TARGET_CREATED',
     qualificationOutcome: 'FAILED', startedAt: new Date(started).toISOString(),
     sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target, createdTargetId: null,
-    providerMutations: [], credentialActions: [], productRowsRead: false, cleanup: 'NOT_NEEDED', blockers: [],
+    providerMutations: [], credentialActions: [], phases: [], productRowsRead: false, cleanup: 'NOT_NEEDED', blockers: [],
     recoveryAcceptance: 'NOT_CERTIFIED', independentRecovery: 'DEFERRED_BY_OWNER_EXCEPTION', deploymentAuthorized: false,
     verifiedScope: [], cleanupDeadlineAt: new Date(started + RESTORE.maximumMs).toISOString(),
-    escalationAt: new Date(started + 45 * 60000).toISOString(), reviewByAt: new Date(started + 60 * 60000).toISOString(),
-    cleanupStartByAt: new Date(started + 105 * 60000).toISOString() };
-  let owned = false, approval, deadline = started + RESTORE.maximumMs, scripts, setup;
+    qualificationStopAt: new Date(started + RESTORE.qualificationStopMs).toISOString(),
+    escalationAt: new Date(started + RESTORE.escalationMs).toISOString(), reviewByAt: new Date(started + RESTORE.reviewMs).toISOString(),
+    cleanupStartByAt: new Date(started + RESTORE.cleanupStartMs).toISOString() };
+  let owned = false, approval, scripts, setup;
   const connections = {};
   const save = async () => { await checkpoint(structuredClone(report)); };
-  const time = () => requireThat(now() < deadline - 5 * 60000, 'test_deadline_cleanup_reserve_reached');
+  const time = () => requireThat(now() < Date.parse(report.qualificationStopAt), 'qualification_phase_review_reserve_reached');
+  const phase = async (name, operation, maximumMs = 120000, mutation = false) => {
+    time();
+    const budgetMs = Math.min(maximumMs, phaseBudgetMs, Date.parse(report.qualificationStopAt) - now());
+    requireThat(Number.isSafeInteger(budgetMs) && budgetMs > 0, 'qualification_phase_budget_invalid');
+    const controller = new AbortController(), row = { name, budgetMs, startedAt: new Date(now()).toISOString(), outcome: 'PENDING' };
+    report.phases.push(row); await save();
+    const timer = setTimeout(() => controller.abort(new RestoreFailure(`qualification_${name}_timeout`)), budgetMs);
+    try {
+      const result = await operation(controller.signal); controller.signal.throwIfAborted(); time();
+      row.outcome = 'PASSED'; return result;
+    } catch (error) {
+      row.outcome = controller.signal.aborted ? 'TIMED_OUT' : 'FAILED';
+      if (controller.signal.aborted) throw new RestoreFailure(`qualification_${name}_timeout`, mutation ? 'UNKNOWN_MUTATION_OUTCOME' : 'BLOCKED');
+      throw error;
+    } finally { clearTimeout(timer); row.finishedAt = new Date(now()).toISOString(); await save(); }
+  };
   const mutate = async (label, operation) => {
     time(); await assertMain();
     const reservation = await reserveCleanup();
@@ -112,10 +130,10 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     await save();
     if (!execute) { report.status = 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED'; return report; }
     const sourceUrl = sourceConnection(environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL, reviewedOriginFingerprint);
-    const baseline = await readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog);
+    const baseline = await phase('source_catalog', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
     requireThat(baseline.extensionCount === 3, 'source_required_extensions_incomplete');
     report.sourceBaseline = baseline;
-    scripts = await prepareSmoke();
+    scripts = await phase('build', signal => prepareSmoke(signal));
     await assertMain(); checkBackup(await api.request(backupPath), now());
     requireThat(!(await api.list('/branches')).some(row => row.name === RESTORE.target), 'preexisting_target_refused');
     const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
@@ -148,20 +166,21 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       return connection;
     };
     setup = await reset(RESTORE.setup);
-    const missing = await extensionAuthority(setup, created.id);
+    const missing = await phase('extension_authority', signal => extensionAuthority(setup, created.id, undefined, signal), 30000);
     requireThat(Array.isArray(missing) && missing.every(name => EXTENSIONS.includes(name)), 'extension_probe_invalid');
     report.missingExtensions = missing;
-    if (missing.length) await mutate('install_missing_named_extensions', () => installExtensions(setup, created.id, missing));
-    const restored = await readSession(setup, created.id, RESTORE.setup, readCatalog);
+    if (missing.length) await mutate('install_missing_named_extensions', () => phase('extensions', signal => installExtensions(setup, created.id, missing, undefined, signal), 60000, true));
+    const restored = await phase('restored_catalog', signal => readSession(setup, created.id, RESTORE.setup, readCatalog, undefined, signal));
     requireThat(hash(restored) === hash(baseline), 'restored_catalog_registry_acl_or_grants_mismatch');
     report.restoredVerification = restored;
     for (const name of ['runtime', 'admin', 'jobs', 'privacy']) connections[name] = await reset(RESTORE[name]);
     time(); await boundTarget();
-    report.applicationSmoke = await smoke(connections, created.id, baseline, scripts);
+    report.applicationSmoke = await phase('smoke', signal => smoke(connections, created.id, baseline, scripts, undefined, signal));
     requireThat(report.applicationSmoke?.readOnlyDatabaseIdentity === true && report.applicationSmoke?.distinctRoles === 4,
       'application_smoke_not_verified');
-    const sourceAfter = await readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog);
+    const sourceAfter = await phase('source_readback', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
     requireThat(hash(sourceAfter) === hash(baseline), 'source_metadata_changed_during_restore');
+    time();
     report.verifiedAt = new Date(now()).toISOString();
     report.measuredRestoreSeconds = Math.ceil((Date.parse(report.restoreReadyAt) - started) / 1000);
     report.status = 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED'; report.qualificationOutcome = 'PASSED';
@@ -179,7 +198,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
     }
     report.credentialReferencesDiscarded = true;
-    report.costEscalationRequired = owned && (now() >= Date.parse(report.escalationAt) || report.qualificationOutcome !== 'PASSED');
+    report.costEscalationRequired = report.cleanup === 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED'
+      || (owned && (now() >= Date.parse(report.escalationAt) || report.qualificationOutcome !== 'PASSED'));
     report.finishedAt = new Date(now()).toISOString();
     try { await save(); } catch { report.blockers.push('final_evidence_checkpoint_failed'); report.status = 'EVIDENCE_PERSISTENCE_FAILED'; }
   }

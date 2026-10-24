@@ -41,20 +41,25 @@ function cleanupConsent(env, evidence, now) {
 export async function proveCleanupContext({ env, evidence, now = Date.now(), reconcile = false,
   read = suffix => githubRead(env, suffix), assertMain = () => githubReadiness(env), evidenceHead }) {
   await assertMain();
-  requireThat(/^[a-f0-9]{40}$/.test(env.EVIDENCE_SHA ?? '') && evidenceHead === env.EVIDENCE_SHA
+  requireThat(/^[a-f0-9]{40}$/.test(env.EVIDENCE_SHA ?? '') && evidenceHead === env.EVIDENCE_SHA && (reconcile || env.EVIDENCE_SHA === env.RELEASE_SHA)
     && decimal(env.QUALIFICATION_RUN_ID ?? '') && decimal(env.GITHUB_RUN_ID ?? '')
     && decimal(env.GITHUB_RUN_NUMBER ?? '') && env.GITHUB_RUN_ATTEMPT === '1', 'cleanup_execution_context_invalid');
   const { intent, creation, deadline } = validateCleanupEvidence({ ...evidence, qualificationRunId: env.QUALIFICATION_RUN_ID, now, reconcile });
   const { report, record } = evidence;
-  await verifyReviewedEvidence({ env, evidenceSha: env.EVIDENCE_SHA, prNumber: env.EVIDENCE_PR,
-    commentId: env.REVIEW_COMMENT_ID, evidence, read });
-  const reviewer = record.review.reviewedBy;
-  requireThat(reviewer === report.reviewWindow?.reviewer && Date.parse(record.review.reviewedAt) <= Date.parse(report.reviewByAt),
-    'reserved_review_window_not_met');
-  const sourceDelta = await read(`/compare/${report.sourceMainSha}...${env.RELEASE_SHA}`);
-  requireThat(sourceDelta.merge_base_commit?.sha === report.sourceMainSha && Array.isArray(sourceDelta.files)
-    && sourceDelta.files.every(file => [RECORD_PATH, artifactPath(report.runId)].includes(file.filename)),
-  'cleanup_code_changed_since_qualification');
+  const reviewer = record.review?.reviewedBy ?? null;
+  if (reconcile) {
+    const lineage = await read(`/compare/${env.EVIDENCE_SHA}...${env.RELEASE_SHA}`);
+    requireThat(lineage.merge_base_commit?.sha === env.EVIDENCE_SHA, 'reconciliation_evidence_not_in_protected_main_history');
+  } else {
+    await verifyReviewedEvidence({ env, evidenceSha: env.EVIDENCE_SHA, prNumber: env.EVIDENCE_PR,
+      commentId: env.REVIEW_COMMENT_ID, evidence, read });
+    requireThat(reviewer === report.reviewWindow?.reviewer && Date.parse(record.review.reviewedAt) <= Date.parse(report.reviewByAt),
+      'reserved_review_window_not_met');
+    const sourceDelta = await read(`/compare/${report.sourceMainSha}...${env.RELEASE_SHA}`);
+    requireThat(sourceDelta.merge_base_commit?.sha === report.sourceMainSha && Array.isArray(sourceDelta.files)
+      && sourceDelta.files.every(file => [RECORD_PATH, artifactPath(report.runId)].includes(file.filename)),
+    'cleanup_code_changed_since_qualification');
+  }
   const original = await read(`/actions/runs/${report.runId}`);
   requireThat(original.id === Number(report.runId) && original.workflow_id === intent.qualificationWorkflowId
     && original.head_sha === report.sourceMainSha && original.head_branch === 'main' && original.path === QUALIFICATION_WORKFLOW
@@ -69,7 +74,8 @@ export async function proveCleanupContext({ env, evidence, now = Date.now(), rec
   assertUploadedArtifact(uploaded, { id: intent.artifactId, runId: report.runId,
     name: artifactName(report), archiveSha256: intent.artifactArchiveSha256 });
   const current = await read(`/actions/runs/${env.GITHUB_RUN_ID}`);
-  requireThat(current.id === Number(env.GITHUB_RUN_ID) && current.workflow_id === intent.workflowId
+  requireThat(current.id === Number(env.GITHUB_RUN_ID) && Number.isSafeInteger(current.workflow_id) && current.workflow_id > 0
+    && (reconcile || current.workflow_id === intent.workflowId)
     && current.head_sha === env.RELEASE_SHA && current.head_branch === 'main' && current.path === CLEANUP_WORKFLOW
     && current.event === 'workflow_dispatch' && current.run_attempt === 1
     && current.run_number === Number(env.GITHUB_RUN_NUMBER) && current.repository?.id === 1010752912,
@@ -119,26 +125,31 @@ function deletionTimestampValid(branch, context, now) {
     && new Date(time).toISOString().slice(0, 19) === value.slice(0, 19);
 }
 
-export async function observeOwnedTarget(api, context, now, allowDeleted = false) {
+export async function observeOwnedTarget(api, context, now, allowDeleted = false, allowPresent = false) {
+  let present = false;
   const branch = await api.request(targetPath, { absent: allowDeleted });
   if (branch === null) {
     requireThat(allowDeleted, 'owned_target_absence_not_expected');
   } else if (!(allowDeleted && deletionTimestampValid(branch, context, now))) {
     checkOwnedBranch(branch, context.creation.id);
     requireThat(branch.created_at === context.creation.createdAt, 'owned_target_creation_timestamp_changed');
-    if (allowDeleted) throw new RestoreFailure('target_deletion_not_confirmed');
+    if (allowDeleted && !allowPresent) throw new RestoreFailure('target_deletion_not_confirmed');
+    present = true;
   }
-  const backup = await api.request(backupPath);
-  requireThat(backup.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
-    && backup.database_branch.name === 'main' && backup.restored_branches?.some(row => row.id === context.creation.id
+  if (!allowPresent) {
+    const backup = await api.request(backupPath);
+    requireThat(backup.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
+      && backup.database_branch.name === 'main', 'cleanup_backup_identity_changed');
+    if (!allowDeleted) requireThat(backup.protected === true && backup.restored_branches?.some(row => row.id === context.creation.id
       && row.name === RESTORE.target), 'cleanup_backup_binding_changed');
-  if (allowDeleted) {
+  }
+  if (allowDeleted && !present) {
     const inventory = await api.list('/branches');
     for (const row of inventory.filter(row => row.id === context.creation.id || row.name === RESTORE.target)) {
       requireThat(deletionTimestampValid(row, context, now), 'target_identity_still_present_or_replaced');
     }
   }
-  return { targetId: context.creation.id, absent: branch === null, deletionObserved: allowDeleted };
+  return { targetId: context.creation.id, present, absent: branch === null, deletionObserved: allowDeleted && !present };
 }
 
 export async function deleteReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, pendingBytes, downloadedPending,
@@ -153,7 +164,7 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
     assertDownloadedQualification(evidence, downloadedQualification);
     receipt.pendingSha256 = await provePendingUpload({ env, context, pendingBytes, downloadedBytes: downloadedPending, read });
     receipt.targetId = context.creation.id; receipt.qualificationSha = context.report.sourceMainSha;
-    await api.authority(); await observeOwnedTarget(api, context, now());
+    await api.authority(); await observeOwnedTarget(api, context, now()); receipt.preDeleteBindingVerified = true;
     if (assertMain) await assertMain(); else await githubReadiness(env);
     requireThat(now() < context.deadline - 60000, 'cleanup_phase_deadline_expired');
     receipt.state = 'DELETE_PENDING'; await checkpoint(structuredClone(receipt));
@@ -172,15 +183,16 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
   await checkpoint(structuredClone(receipt)); return receipt;
 }
 
-export async function reconcileReviewedTarget({ env, evidence, evidenceHead, read = suffix => githubRead(env, suffix), assertMain,
+export async function reconcileReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, read = suffix => githubRead(env, suffix), assertMain,
   api = new RestoreCleanupApi(env.PLANETSCALE_API_TOKEN), now = Date.now }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'read-only-reconciliation',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
     providerMutations: false, deletionVerified: false, recoveryCertified: false, blockers: [] };
   try {
     const context = await proveCleanupContext({ env, evidence, evidenceHead, now: now(), reconcile: true, read, assertMain });
-    const observation = await observeOwnedTarget(api, context, now(), true);
-    receipt.state = 'ABSENCE_OBSERVED_READ_ONLY'; receipt.targetId = observation.targetId;
+    assertDownloadedQualification(evidence, downloadedQualification);
+    const observation = await observeOwnedTarget(api, context, now(), true, true);
+    receipt.state = observation.present ? 'TARGET_PRESENT_READ_ONLY' : 'ABSENCE_OBSERVED_READ_ONLY'; receipt.targetId = observation.targetId;
   } catch (error) { receipt.state = 'TARGET_PRESENT_OR_BINDING_UNCERTAIN'; receipt.blockers.push(failureCode(error)); }
   receipt.finishedAt = new Date(now()).toISOString(); return receipt;
 }
@@ -188,11 +200,13 @@ export async function reconcileReviewedTarget({ env, evidence, evidenceHead, rea
 async function main() {
   const env = process.env, stage = process.argv[2], root = env.EVIDENCE_CHECKOUT, directory = env.EVIDENCE_DIR;
   requireThat(root && directory && path.isAbsolute(directory) && ['prepare','stage','delete','reconcile'].includes(stage), 'cleanup_cli_context_invalid');
+  requireThat(['cleanup','reconcile'].includes(env.CLEANUP_MODE) && (stage !== 'reconcile' || env.CLEANUP_MODE === 'reconcile')
+    && (!['stage','delete'].includes(stage) || env.CLEANUP_MODE === 'cleanup'), 'cleanup_cli_mode_invalid');
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   const evidence = readTrackedEvidence(root, env.QUALIFICATION_RUN_ID);
   const evidenceHead = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const write = (name, value, exclusive = false) => fs.writeFileSync(path.join(directory, name), encode(value), { mode: 0o600, ...(exclusive ? { flag: 'wx' } : {}) });
-  const context = await proveCleanupContext({ env, evidence, evidenceHead, now: Date.now(), reconcile: stage === 'reconcile' });
+  const context = await proveCleanupContext({ env, evidence, evidenceHead, now: Date.now(), reconcile: env.CLEANUP_MODE === 'reconcile' });
   if (stage === 'prepare') {
     requireThat(env.GITHUB_OUTPUT, 'github_output_required');
     fs.appendFileSync(env.GITHUB_OUTPUT, `qualification_artifact_id=${context.intent.artifactId}\nqualification_run_id=${context.report.runId}\npending_name=${pendingName(context.report, context.intent)}\n`);
@@ -201,7 +215,8 @@ async function main() {
     write('pending.json', pendingReceipt(context, env), true);
   } else {
     const result = stage === 'reconcile'
-      ? await reconcileReviewedTarget({ env, evidence, evidenceHead })
+      ? await reconcileReviewedTarget({ env, evidence, evidenceHead,
+        downloadedQualification: fs.readFileSync(path.join(env.QUALIFICATION_DOWNLOAD, 'qualification.json')) })
       : await deleteReviewedTarget({ env, evidence, evidenceHead,
         downloadedQualification: fs.readFileSync(path.join(env.QUALIFICATION_DOWNLOAD, 'qualification.json')),
         pendingBytes: fs.readFileSync(path.join(directory, 'pending.json')),
