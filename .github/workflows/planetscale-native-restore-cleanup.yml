@@ -1,0 +1,150 @@
+name: Reviewed fixed native restore cleanup
+run-name: Native restore ${{ inputs.mode }} ${{ inputs.qualification_run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed current protected main cleanup code SHA
+        required: true
+        type: string
+      evidence_sha:
+        description: Committed evidence-only PR head; data is never executed
+        required: true
+        type: string
+      evidence_pr:
+        description: Same-repository canonical evidence PR number
+        required: true
+        type: string
+      review_comment_id:
+        description: Unedited human attestation comment on that exact evidence PR
+        required: true
+        type: string
+      qualification_run_id:
+        description: Original acknowledged qualification run; never a discovered target name
+        required: true
+        type: string
+      mode:
+        description: Default is read-only reconciliation; cleanup consumes the reserved one-use run number
+        required: true
+        default: reconcile
+        type: choice
+        options: [reconcile, cleanup]
+      cleanup_approval_json:
+        description: Separate exact owner approval for irreversible deletion of only this created test target
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: lythaus-fixed-native-restore-check
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Review evidence before single target cleanup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      EVIDENCE_SHA: ${{ inputs.evidence_sha }}
+      EVIDENCE_PR: ${{ inputs.evidence_pr }}
+      REVIEW_COMMENT_ID: ${{ inputs.review_comment_id }}
+      QUALIFICATION_RUN_ID: ${{ inputs.qualification_run_id }}
+      CLEANUP_APPROVAL_JSON: ${{ inputs.cleanup_approval_json }}
+      EVIDENCE_CHECKOUT: ${{ github.workspace }}/restore-review
+      EVIDENCE_DIR: ${{ runner.temp }}/native-restore-cleanup
+      QUALIFICATION_DOWNLOAD: ${{ runner.temp }}/native-restore-qualification-download
+      PENDING_DOWNLOAD: ${{ runner.temp }}/native-restore-pending-download
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Require exact protected main before loading dependencies or credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$GITHUB_REPOSITORY_ID" = 1010752912
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Check out canonical evidence data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.evidence_sha }}
+          path: restore-review
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Prove exact reviewed evidence and immutable qualification upload
+        if: inputs.mode == 'cleanup'
+        id: prepare
+        run: node scripts/ci/planetscale-native-restore-cleanup.mjs prepare
+      - name: Download immutable qualification artifact
+        if: inputs.mode == 'cleanup'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ steps.prepare.outputs.qualification_artifact_id }}
+          run-id: ${{ steps.prepare.outputs.qualification_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ env.QUALIFICATION_DOWNLOAD }}
+          merge-multiple: true
+      - name: Verify unchanged qualification bytes and stage one-use pending intent
+        if: inputs.mode == 'cleanup'
+        run: node scripts/ci/planetscale-native-restore-cleanup.mjs stage
+      - name: Persist pending deletion before any DELETE
+        if: inputs.mode == 'cleanup'
+        id: pending
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.prepare.outputs.pending_name }}
+          path: ${{ env.EVIDENCE_DIR }}/pending.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Download and verify durable pending attempt
+        if: inputs.mode == 'cleanup'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ steps.pending.outputs.artifact-id }}
+          path: ${{ env.PENDING_DOWNLOAD }}
+          merge-multiple: true
+      - name: Delete original acknowledged target once after reviewed durable evidence
+        if: inputs.mode == 'cleanup'
+        env:
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PENDING_ARTIFACT_ID: ${{ steps.pending.outputs.artifact-id }}
+          PENDING_ARTIFACT_DIGEST: ${{ steps.pending.outputs.artifact-digest }}
+        run: node scripts/ci/planetscale-native-restore-cleanup.mjs delete
+      - name: Reconcile read-only without retrying deletion or qualification
+        if: inputs.mode == 'reconcile'
+        env:
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+        run: node scripts/ci/planetscale-native-restore-cleanup.mjs reconcile
+      - name: Retain separate sanitized cleanup receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-restore-cleanup-${{ inputs.qualification_run_id }}-${{ github.run_id }}
+          path: ${{ env.EVIDENCE_DIR }}/cleanup.json
+          retention-days: 7
+          if-no-files-found: warn

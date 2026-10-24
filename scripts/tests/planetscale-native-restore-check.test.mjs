@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
-import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, RestoreApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
+import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
   checkedRoles, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore, githubReadiness } from '../ci/planetscale-native-restore-check.mjs';
 import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions } from '../ci/planetscale-native-restore-verifier.mjs';
@@ -15,7 +15,11 @@ const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GI
   RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, backupId: RESTORE.backupId, target: RESTORE.target,
     maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, recoveryPointAcknowledged: true,
     reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: '2026-10-23T21:00:00Z',
-    actions: ACTIONS, roles: ROLE_NAMES }) });
+    actions: ACTIONS, roles: ROLE_NAMES, cleanupPermit: { workflowId: 42, runNumber: 1 },
+    reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: '2026-10-23T16:00:00Z', availableUntil: '2026-10-23T21:00:00Z' },
+    retention: { operator: 'owner', reference: 'finite-retention-approval', manualEndActionApprovalReference: 'manual-decision-approval',
+      endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: '2026-10-24T16:00:00Z',
+      decisionBy: '2026-10-23T18:00:00Z', estimatedUsd: 0.01 } }) });
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
   dropped_at: null, expires_at: null, with_replication: false, inherited_roles: ['pg_read_all_settings'],
@@ -25,13 +29,13 @@ const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-23
   cluster_name: RESTORE.cluster, cluster_architecture: 'aarch64', region: { slug: RESTORE.region }, replicas: 0,
   minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes, ready: true, state: 'ready', frozen: false });
 const backup = () => ({ id: RESTORE.backupId, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
-  state: 'success', deleted_at: null, protected: false, completed_at: '2026-10-23T14:29:11.907Z',
+  state: 'success', deleted_at: null, protected: true, completed_at: '2026-10-23T14:29:11.907Z',
   expires_at: '2026-10-25T14:25:02.690Z', pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
 const baseline = () => ({ catalogSha256: 'b'.repeat(64), schemaFingerprint: 'c'.repeat(64), relationCount: 108,
   schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3 });
 
 function fixture(mode = '') {
-  const calls = [], checkpoints = [], b = backup(); let created = false, deleted = false, resets = 0;
+  const calls = [], checkpoints = [], b = backup(); let created = false, resets = 0;
   const api = {
     authority: async () => { calls.push('authority'); if (mode === 'authority_denied') throw new RestoreFailure('provider_access_denied', 'DENIED'); },
     list: async path => {
@@ -43,20 +47,14 @@ function fixture(mode = '') {
     },
     request: async (path, options = {}) => {
       const method = options.method ?? 'GET'; calls.push(`${method} ${path}`);
-      if (method === 'PATCH') { assert.deepEqual(options.body, { protected: true }); b.protected = true; return b; }
+      assert.notEqual(method, 'PATCH', 'qualification must never change backup protection');
+      assert.notEqual(method, 'DELETE', 'qualification must never delete on any path');
       if (method === 'POST' && path === '/branches') {
         assert.equal(options.body.backup_id, RESTORE.backupId); assert.equal(options.body.storage.maximum_storage_bytes, RESTORE.bytes);
         assert.equal(options.body.create_database_if_missing, false); created = true;
         if (mode === 'unknown_create') throw new RestoreFailure('provider_transport_failed', 'UNKNOWN_MUTATION_OUTCOME');
         b.restored_branches = [{ id: newId, name: RESTORE.target }];
         return { ...target(), ...(mode === 'wrong_config' ? { replicas: 2 } : {}) };
-      }
-      if (method === 'DELETE') {
-        assert.equal(path, `/branches/${RESTORE.target}`); assert.equal(created, true);
-        if (mode === 'cleanup_failed') throw new RestoreFailure('provider_access_denied', 'DENIED');
-        deleted = true;
-        if (mode === 'unknown_delete') throw new RestoreFailure('provider_transport_failed', 'UNKNOWN_MUTATION_OUTCOME');
-        return null;
       }
       if (method === 'POST' && path.endsWith('/reset')) {
         resets++;
@@ -66,36 +64,17 @@ function fixture(mode = '') {
       }
       if (path === '/branches/main') return { id: RESTORE.sourceId, name: 'main', kind: 'postgresql', default: true, deleted_at: null, ready: true };
       if (path.endsWith(`/backups/${RESTORE.backupId}`)) {
+        if (mode === 'unprotected') b.protected = false;
         if (mode === 'stale') b.completed_at = '2026-10-22T14:00:00Z';
         if (mode === 'binding_mismatch' && created) b.restored_branches = [{ id: 'other', name: RESTORE.target }];
         return b;
       }
-      if (path === `/branches/${RESTORE.target}`) {
-        if (!deleted || !options.absent) return target();
-        const deletedRecord = { ...target(), deleted_at: '2026-10-23T17:00:00.000Z' };
-        if (mode === 'cleanup_deleted_record') return deletedRecord;
-        if (mode === 'cleanup_deleted_at_missing') { delete deletedRecord.deleted_at; return deletedRecord; }
-        if (mode === 'cleanup_deleted_at_null') return { ...deletedRecord, deleted_at: null };
-        if (mode === 'cleanup_deleted_at_malformed') return { ...deletedRecord, deleted_at: 'not-a-date' };
-        if (mode === 'cleanup_deleted_at_wrong_type') return { ...deletedRecord, deleted_at: 12345 };
-        if (mode === 'cleanup_deleted_at_impossible') return { ...deletedRecord, deleted_at: '2026-02-30T17:00:00.000Z' };
-        if (mode === 'cleanup_deleted_at_future') return { ...deletedRecord, deleted_at: '2026-10-23T17:01:00.000Z' };
-        if (mode === 'cleanup_deleted_at_before_run') return { ...deletedRecord, deleted_at: '2026-10-22T17:00:00.000Z' };
-        if (mode === 'cleanup_wrong_id') return { ...deletedRecord, id: 'replacedtarget' };
-        if (mode === 'cleanup_wrong_name') return { ...deletedRecord, name: 'main' };
-        if (mode === 'cleanup_wrong_source') return { ...deletedRecord, restored_from_branch: { id: 'differentbranch' } };
-        if (mode === 'cleanup_wrong_kind') return { ...deletedRecord, kind: 'mysql' };
-        if (mode === 'cleanup_default_branch') return { ...deletedRecord, default: true };
-        if (mode === 'cleanup_get_204') {
-          const transport = new RestoreApi('fixture-id:fixture-token', async () => new Response(null, { status: 204 }));
-          return transport.request(path, { absent: true });
-        }
-        return null;
-      }
+      if (path === `/branches/${RESTORE.target}`) return target();
       throw new Error(`unexpected synthetic path ${path}`);
     },
   };
   const options = { environment: environment(), api, now: () => instant, assertMain: async () => { calls.push('main'); },
+    reserveCleanup: async () => ({ workflowId: 42, runNumber: 1 }),
     reviewedOriginFingerprint: branchQualifiedDatabaseTarget(environment().PLANETSCALE_SCHEMA_READ_DATABASE_URL).originFingerprint,
     sleep: async () => {}, checkpoint: report => { checkpoints.push(report); }, prepareSmoke: async () => ({}),
     readSession: async (raw, branchId) => {
@@ -111,14 +90,16 @@ function fixture(mode = '') {
   return { calls, checkpoints, options };
 }
 
-test('fixed restore exercises five copied credentials, verifies both baselines, and cleans only acknowledged new ID', async () => {
+test('qualification exercises five copied credentials and retains original target for separate review', async () => {
   const f = fixture(); const report = await runNativeRestore(f.options);
   assert.equal(report.status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
-  assert.equal(report.cleanup, 'DELETED_AND_READBACK_VERIFIED'); assert.equal(report.createdTargetId, newId);
+  assert.equal(report.cleanup, 'TARGET_RETAINED_PENDING_REVIEW'); assert.equal(report.createdTargetId, newId);
+  assert.equal(report.state, 'TARGET_RETAINED_PENDING_REVIEW'); assert.equal(report.qualificationOutcome, 'PASSED');
+  assert.equal(report.creation.acknowledged, true); assert.equal(report.credentialReferencesDiscarded, true);
   assert.equal(report.credentialActions.length, 5); assert.equal(report.sourceBaseline.approvedPrivilegeChecks, 17);
   assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED'); assert.equal(report.deploymentAuthorized, false);
   assert.equal(f.calls.filter(value => value.startsWith('POST /branches')).length, 6);
-  assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
+  assert.equal(f.calls.filter(value => /^(DELETE|PATCH)/.test(value)).length, 0);
   assert.ok(f.calls.indexOf('extension_authority') < f.calls.indexOf(`POST /branches/${RESTORE.target}/roles/role1/reset`));
   assert.equal(JSON.stringify(f.checkpoints).includes(password), false);
   assert.doesNotMatch(JSON.stringify(f.checkpoints), /connectionString|postgresql:\/\/|access_host_url/);
@@ -128,20 +109,20 @@ for (const [mode, blocker, cleanup] of [
   ['authority_denied','provider_access_denied','NOT_NEEDED'], ['preexisting','preexisting_target_refused','NOT_NEEDED'],
   ['stale','backup_stale_or_test_window_too_short','NOT_NEEDED'],
   ['unknown_create','provider_transport_failed','UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED'],
-  ['copied_role_mismatch','copied_role_missing_or_ambiguous','DELETED_AND_READBACK_VERIFIED'],
-  ['extension_denied','missing_extension_install_authority_unproven','DELETED_AND_READBACK_VERIFIED'],
-  ['catalog_mismatch','restored_catalog_registry_acl_or_grants_mismatch','DELETED_AND_READBACK_VERIFIED'],
-  ['partial_reset','provider_transport_failed','DELETED_AND_READBACK_VERIFIED'],
-  ['wrong_config','created_target_identity_or_configuration_changed','DELETED_AND_READBACK_VERIFIED'],
-  ['binding_mismatch','backup_to_new_target_binding_unproven','FAILED_OR_UNCERTAIN_MANUAL_OPERATOR_REQUIRED'],
-  ['cleanup_failed','cleanup_deletion_not_confirmed','FAILED_OR_UNCERTAIN_MANUAL_OPERATOR_REQUIRED'],
+  ['unprotected','protected_backup_with_finite_retention_plan_is_manual_prerequisite','NOT_NEEDED'],
+  ['copied_role_mismatch','copied_role_missing_or_ambiguous','TARGET_RETAINED_PENDING_REVIEW'],
+  ['extension_denied','missing_extension_install_authority_unproven','TARGET_RETAINED_PENDING_REVIEW'],
+  ['catalog_mismatch','restored_catalog_registry_acl_or_grants_mismatch','TARGET_RETAINED_PENDING_REVIEW'],
+  ['partial_reset','provider_transport_failed','TARGET_RETAINED_PENDING_REVIEW'],
+  ['wrong_config','created_target_identity_or_configuration_changed','TARGET_RETAINED_PENDING_REVIEW'],
+  ['binding_mismatch','backup_to_new_target_binding_unproven','TARGET_RETAINED_PENDING_REVIEW'],
 ]) test(`fails closed without mutation retry: ${mode}`, async () => {
   const f = fixture(mode), report = await runNativeRestore(f.options);
   assert.ok(report.blockers.includes(blocker), JSON.stringify(report)); assert.equal(report.cleanup, cleanup);
   const mutations = f.calls.filter(value => /^(POST|PATCH|DELETE) /.test(value));
   assert.equal(new Set(mutations).size, mutations.length);
-  if (['authority_denied','preexisting','stale'].includes(mode)) assert.equal(mutations.length, 0);
-  if (mode === 'unknown_create') assert.equal(mutations.filter(value => value.startsWith('DELETE')).length, 0);
+  if (['authority_denied','preexisting','stale','unprotected'].includes(mode)) assert.equal(mutations.length, 0);
+  assert.equal(mutations.filter(value => /^(DELETE|PATCH)/.test(value)).length, 0);
 });
 
 test('plan mode performs no SQL, reset, protection, creation or cleanup', async () => {
@@ -150,29 +131,11 @@ test('plan mode performs no SQL, reset, protection, creation or cleanup', async 
   assert.equal(report.status, 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED');
   assert.ok(!f.calls.some(value => /^(SQL|POST|PATCH|DELETE)/.test(value)));
 });
-test('lost DELETE acknowledgment is reconciled read-only, never repeated', async () => {
-  const f = fixture('unknown_delete'), report = await runNativeRestore(f.options);
-  assert.equal(report.cleanup, 'DELETED_READBACK_VERIFIED_ACK_UNCERTAIN');
-  assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
+test('consumed cleanup reservation blocks qualification before spending', async () => {
+  const f = fixture(); f.options.reserveCleanup = async () => ({ workflowId: 42, runNumber: 2 });
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('cleanup_reservation_not_approved')); assert.equal(f.calls.length, 1);
 });
-test('cleanup also accepts a validated deletion timestamp for the exact owned target identity', async () => {
-  const f = fixture('cleanup_deleted_record'), report = await runNativeRestore(f.options);
-  assert.equal(report.cleanup, 'DELETED_AND_READBACK_VERIFIED');
-  assert.equal(report.status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
-  assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
-});
-for (const mode of ['cleanup_deleted_at_missing', 'cleanup_deleted_at_null', 'cleanup_deleted_at_malformed',
-  'cleanup_deleted_at_wrong_type', 'cleanup_deleted_at_impossible', 'cleanup_deleted_at_future', 'cleanup_deleted_at_before_run',
-  'cleanup_wrong_id', 'cleanup_wrong_name', 'cleanup_wrong_source', 'cleanup_wrong_kind', 'cleanup_default_branch', 'cleanup_get_204']) {
-  test(`cleanup remains unresolved with no repeated mutation: ${mode}`, async () => {
-    const f = fixture(mode), report = await runNativeRestore(f.options);
-    assert.equal(report.cleanup, 'FAILED_OR_UNCERTAIN_MANUAL_OPERATOR_REQUIRED');
-    assert.equal(report.status, 'CLEANUP_INCOMPLETE_BILLING_MAY_CONTINUE');
-    assert.ok(report.blockers.includes(mode === 'cleanup_get_204' ? 'provider_response_invalid' : 'cleanup_deletion_not_confirmed'));
-    assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
-    assert.equal(f.calls.filter(value => /^(POST|PATCH) /.test(value)).length, 7);
-  });
-}
 test('only proven missing named extensions are installed', async () => {
   const f = fixture('missing_extensions'); assert.equal((await runNativeRestore(f.options)).status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
   assert.equal(f.calls.filter(value => value.startsWith('INSTALL')).length, 1);
@@ -180,7 +143,10 @@ test('only proven missing named extensions are installed', async () => {
 test('missing, stale, wrong-target, broader-role and unbounded tax/budget records block before any API call', async () => {
   for (const change of [() => undefined, record => ({ ...record, maximumUsd: 6 }), record => ({ ...record, taxAndFeeAllowanceUsd: 0 }),
     record => ({ ...record, estimatedSubtotalUsd: 5 }), record => ({ ...record, target: 'main' }),
-    record => ({ ...record, roles: [...ROLE_NAMES, 'postgres'] }), record => ({ ...record, expiresAt: '2026-10-23T18:00:00Z' })]) {
+    record => ({ ...record, roles: [...ROLE_NAMES, 'postgres'] }), record => ({ ...record, expiresAt: '2026-10-23T18:00:00Z' }),
+    record => ({ ...record, reviewWindow: { ...record.reviewWindow, reserved: false } }),
+    record => ({ ...record, retention: { ...record.retention, endsAt: '2026-11-23T18:00:00Z' } }),
+    record => ({ ...record, retention: { ...record.retention, estimatedUsd: 5 } })]) {
     const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
     f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(change(record));
     const report = await runNativeRestore(f.options); assert.equal(report.status, 'BLOCKED'); assert.equal(f.calls.length, 0);
@@ -217,7 +183,7 @@ test('provider transport refuses redirects, denied/oversized responses and unkno
 test('only an explicit absent GET 404 is translated to null; GET 204 or null JSON is never deletion evidence', async () => {
   const path = `/branches/${RESTORE.target}`;
   let calls = 0;
-  const api = response => new RestoreApi('fixture-id:fixture-token', async () => { calls++; return response; });
+  const api = response => new RestoreCleanupApi('fixture-id:fixture-token', async () => { calls++; return response; });
   assert.equal(await api(new Response(null, { status: 404 })).request(path, { absent: true }), null);
   await assert.rejects(() => api(new Response(null, { status: 404 })).request(path), /provider_request_failed/);
   for (const absent of [false, true]) {

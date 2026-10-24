@@ -15,8 +15,8 @@ export const CREATE_TARGET_BODY = Object.freeze({ name: RESTORE.target, backup_i
   restore_point: RESTORE.recoveryPoint, region: RESTORE.region, cluster_size: RESTORE.cluster, replicas: 0,
   major_version: '17', deletion_protected: false, create_database_if_missing: false,
   storage: Object.freeze({ minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes }) });
-export const ACTIONS = Object.freeze(['protect_named_backup', 'restore_fixed_target', 'reset_five_copied_roles',
-  'install_only_missing_named_extensions', 'delete_only_created_target', 'manual_cost_watch_on_failure']);
+export const ACTIONS = Object.freeze(['restore_fixed_target', 'reset_five_copied_roles',
+  'install_only_missing_named_extensions', 'retain_target_for_review', 'reserved_review_and_cost_watch']);
 export const apiBase = `https://api.planetscale.com/v1/organizations/${RESTORE.organization}/databases/${RESTORE.database}`;
 export const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export const safeId = value => typeof value === 'string' && /^[a-z0-9]{1,64}$/.test(value);
@@ -26,11 +26,12 @@ export class RestoreFailure extends Error {
 }
 export function requireThat(condition, code, outcome) { if (!condition) throw new RestoreFailure(code, outcome); }
 export const failureCode = error => error instanceof RestoreFailure ? error.code : 'operation_failed_details_redacted';
+const cleanupCapability = Symbol('fixed_target_cleanup');
 export function approvalRecord(raw, environment, now) {
   let record;
   try { record = JSON.parse(raw); } catch { throw new RestoreFailure('explicit_owner_approval_record_required'); }
   requireThat(object(record) && Object.keys(record).sort().join(',') ===
-    'actions,backupId,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,recoveryPointAcknowledged,reference,releaseSha,roles,target,taxAndFeeAllowanceUsd',
+    'actions,backupId,cleanupPermit,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,recoveryPointAcknowledged,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd',
   'approval_record_fields_invalid');
   requireThat(record.releaseSha === environment.RELEASE_SHA && record.backupId === RESTORE.backupId && record.target === RESTORE.target
     && JSON.stringify(record.roles) === JSON.stringify(ROLE_NAMES) && JSON.stringify(record.actions) === JSON.stringify(ACTIONS)
@@ -43,6 +44,22 @@ export function approvalRecord(raw, environment, now) {
     && typeof record.manualOperator === 'string' && /^[A-Za-z0-9_.@-]{1,100}$/.test(record.manualOperator), 'approval_provenance_required');
   const expires = Date.parse(record.expiresAt);
   requireThat(Number.isFinite(expires) && expires >= now + RESTORE.maximumMs && expires <= now + 24 * 3600000, 'approval_expired_or_unbounded');
+  const window = record.reviewWindow, retention = record.retention, permit = record.cleanupPermit;
+  requireThat(object(window) && /^[A-Za-z0-9-]{1,39}$/.test(window.reviewer ?? '')
+    && window.operator === record.manualOperator && window.reserved === true
+    && Date.parse(window.availableFrom) <= now && Date.parse(window.availableUntil) >= now + RESTORE.maximumMs,
+  'reserved_reviewer_operator_window_required');
+  requireThat(object(permit) && Number.isSafeInteger(permit.workflowId) && permit.workflowId > 0
+    && Number.isSafeInteger(permit.runNumber) && permit.runNumber > 0, 'one_use_cleanup_reservation_required');
+  requireThat(object(retention) && retention.operator === record.manualOperator
+    && typeof retention.reference === 'string' && retention.reference.length >= 8
+    && typeof retention.manualEndActionApprovalReference === 'string' && retention.manualEndActionApprovalReference.length >= 8
+    && retention.endAction === 'separately_approved_manual_decision_no_automatic_unprotect'
+    && Date.parse(retention.endsAt) >= now + RESTORE.maximumMs && Date.parse(retention.endsAt) <= now + 24 * 3600000
+    && Date.parse(retention.decisionBy) >= now && Date.parse(retention.decisionBy) <= now + RESTORE.maximumMs
+    && Number.isFinite(retention.estimatedUsd) && retention.estimatedUsd > 0
+    && record.estimatedSubtotalUsd >= retention.estimatedUsd + 0.025,
+  'finite_separately_approved_backup_retention_plan_required');
   return record;
 }
 
@@ -94,20 +111,22 @@ export function checkedRoles(rows, branchId, sourceRoles) {
 }
 
 export class RestoreApi {
-  constructor(token, fetchImpl = fetch) {
+  #cleanupOnly;
+  constructor(token, fetchImpl = fetch, capability) {
     try { this.authorization = planetScaleServiceTokenAuthorizationHeader(token); }
     catch { throw new RestoreFailure('existing_service_token_pair_required'); }
     this.tokenId = this.authorization.split(':')[0]; this.fetchImpl = fetchImpl;
+    this.#cleanupOnly = capability === cleanupCapability;
   }
   async request(path, { method = 'GET', body, absent = false } = {}) {
     const target = `/branches/${RESTORE.target}`, backup = `/branches/main/backups/${RESTORE.backupId}`;
     const getAllowed = ['', '/branches/main', target, backup, '/../service-tokens/self'].includes(path)
       || /^\/branches(?:\/main\/roles)?\?page=[1-5]&per_page=100$/.test(path)
       || new RegExp(`^${target}/roles\\?page=[1-5]&per_page=100$`).test(path);
-    const writeAllowed = (method === 'PATCH' && path === backup && JSON.stringify(body) === '{"protected":true}')
-      || (method === 'DELETE' && path === target && body === undefined)
-      || (method === 'POST' && path === '/branches' && JSON.stringify(body) === JSON.stringify(CREATE_TARGET_BODY))
-      || (method === 'POST' && new RegExp(`^${target}/roles/[a-z0-9]{1,64}/reset$`).test(path) && body === undefined);
+    const writeAllowed = this.#cleanupOnly
+      ? method === 'DELETE' && path === target && body === undefined
+      : (method === 'POST' && path === '/branches' && JSON.stringify(body) === JSON.stringify(CREATE_TARGET_BODY))
+        || (method === 'POST' && new RegExp(`^${target}/roles/[a-z0-9]{1,64}/reset$`).test(path) && body === undefined);
     requireThat((method === 'GET' && getAllowed && body === undefined) || writeAllowed, 'fixed_provider_operation_required');
     const url = path.startsWith('/../service-tokens/')
       ? `https://api.planetscale.com/v1/organizations/${RESTORE.organization}/service-tokens/${this.tokenId}` : apiBase + path;
@@ -157,11 +176,16 @@ export class RestoreApi {
     const accesses = new Set(token.service_token_accesses.filter(row => row.resource_id === RESTORE.databaseId
       && row.resource?.id === RESTORE.databaseId && row.resource.name === RESTORE.database && row.resource.deleted_at === null
       && row.resource_type?.toLowerCase() === 'database').map(row => row.access));
-    for (const access of ['read_database', 'read_branch', 'create_branch', 'delete_branch', 'delete_production_branch',
-      'read_backups', 'write_backups', 'connect_branch', 'connect_production_branch']) {
+    const required = ['read_database', 'read_branch', 'delete_branch', 'delete_production_branch', 'read_backups'];
+    if (!this.#cleanupOnly) required.push('create_branch', 'connect_branch', 'connect_production_branch');
+    for (const access of required) {
       requireThat(accesses.has(access), `existing_token_missing_${access}`);
     }
-    requireThat(accesses.has('restore_production_branch_backup') || accesses.has('restore_production_branch_backups'),
+    if (!this.#cleanupOnly) requireThat(accesses.has('restore_production_branch_backup') || accesses.has('restore_production_branch_backups'),
       'existing_token_missing_restore_production_branch_backup');
   }
+}
+
+export class RestoreCleanupApi extends RestoreApi {
+  constructor(token, fetchImpl = fetch) { super(token, fetchImpl, cleanupCapability); }
 }

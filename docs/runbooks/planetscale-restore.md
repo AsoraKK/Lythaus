@@ -92,6 +92,19 @@ privileges, approved application smoke, RPO/RTO acceptance, and the independent
 recovery destination. Full-data parity is not a required scope. An unresolved
 gate keeps the plan blocked.
 
+The fixed native runner separates qualification from destructive cleanup; see
+[its evidence boundary](planetscale-native-restore-runner.md#evidence-boundary-and-separate-cleanup).
+Qualification retains the acknowledged target and immutable artifact on every
+path. A separate explicitly approved cleanup requires the canonical tracked
+record/artifact and exact human review first, even for failed qualification.
+Qualification SHA and later evidence/cleanup SHAs are bound separately; a
+data-only evidence commit may advance main without invalidating original
+ownership. Reviewed failure evidence authorizes only scoped resource cleanup,
+never recovery acceptance. This does not weaken the planner's tracked evidence,
+freshness, complete scope or normal integration gates. Backup protection needs
+a separate finite retention/end-action cost plan; no indefinite retention or
+automatic unprotect is approved by the bounded restore exercise.
+
 The 2026-10-21 owner decision permits only the
 [one-release owner-testing independent-recovery exception](planetscale-production-migrations.md#one-release-owner-testing-recovery-exception).
 It retains every native scope, actual completed restore and protected backup,

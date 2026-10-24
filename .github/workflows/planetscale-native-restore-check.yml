@@ -9,7 +9,7 @@ on:
         required: true
         type: string
       execute:
-        description: Consequential restore, target-only resets/extensions and irreversible target cleanup
+        description: Restore and target-only qualification; retains target for separate reviewed cleanup
         required: true
         default: false
         type: boolean
@@ -28,6 +28,7 @@ concurrency:
 
 jobs:
   qualify:
+    name: Qualify isolated native restore without cleanup
     runs-on: ubuntu-latest
     timeout-minutes: 130
     environment: production
@@ -36,6 +37,7 @@ jobs:
       REF_PROTECTED: ${{ github.ref_protected }}
       RESTORE_CHECK_EXECUTE: ${{ inputs.execute }}
       RESTORE_CHECK_APPROVAL_JSON: ${{ inputs.approval_json }}
+      EVIDENCE_DIR: ${{ runner.temp }}/native-restore-check
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -64,21 +66,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
-          EVIDENCE_DIR: ${{ runner.temp }}/native-restore-check
         run: node scripts/ci/planetscale-native-restore-check.mjs
-      - name: Summarize sanitized checkpoint and cleanup status
+      - name: Finalize immutable qualification evidence without provider access
         if: always()
         shell: bash
         run: |
-          report="$RUNNER_TEMP/native-restore-check/summary.json"
-          if [[ -s "$report" ]]; then
-            jq '{sourceMainSha,status,blockers,backupId,targetName,createdTargetId,cleanup,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -s "$EVIDENCE_DIR/checkpoint.json" ]]; then
+            node scripts/ci/planetscale-native-restore-check.mjs --finalize-only
           fi
-      - name: Retain sanitized evidence only
+      - name: Summarize retained target and review deadlines
+        if: always()
+        shell: bash
+        run: |
+          report="$EVIDENCE_DIR/qualification.json"
+          if [[ -s "$report" ]]; then
+            jq '{sourceMainSha,status,state,qualificationOutcome,blockers,backupId,targetName,createdTargetId,cleanup,escalationAt,reviewByAt,cleanupStartByAt,cleanupDeadlineAt,costEscalationRequired,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload immutable qualification evidence
+        id: qualification_artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: native-restore-check-${{ inputs.release_sha }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/native-restore-check/summary.json
+          name: native-restore-qualification-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-restore-check/qualification.json
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: error
