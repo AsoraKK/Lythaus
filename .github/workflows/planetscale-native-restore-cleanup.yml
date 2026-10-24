@@ -80,9 +80,10 @@ jobs:
           [[ "$EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$GITHUB_SHA" = "$RELEASE_SHA"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          printf 'EVIDENCE_DIR=%s/native-restore-cleanup\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'QUALIFICATION_DOWNLOAD=%s/native-restore-qualification-download\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'PENDING_DOWNLOAD=%s/native-restore-pending-download\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf '%s\n' \
+            "EVIDENCE_DIR=$RUNNER_TEMP/native-restore-cleanup" \
+            "QUALIFICATION_DOWNLOAD=$RUNNER_TEMP/native-restore-qualification-download" \
+            "PENDING_DOWNLOAD=$RUNNER_TEMP/native-restore-pending-download" >> "$GITHUB_ENV"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
