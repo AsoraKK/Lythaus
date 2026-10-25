@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "lythaus-manual-native-restore-cleanup-v1",
+  "recordType": "manual_cleanup_observation",
+  "qualificationRunId": "40212030891",
+  "qualification": {
+    "artifactPath": "docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-40212030891.json",
+    "artifactSha256": "4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618",
+    "recordPath": "docs/evidence/production-cutover/0021-restore-evidence/zw0so7f5jbpu.json",
+    "canonicalRecordDigest": "01bb7bd2c39d17edcdbf12d04a3660bdbcd75782769805cac2b4c6c39b4cbf5e",
+    "recordFileSha256": "4b1f22b052a6afa2c539e11cfb0393ca9e7cb280c8f195a9ecd25ddec7d6e7b2",
+    "outcome": "FAILED",
+    "recoveryAcceptance": "NOT_CERTIFIED"
+  },
+  "database": {
+    "organization": "lythaus",
+    "name": "lythaus-core",
+    "id": "hzhe0cbn6rxi"
+  },
+  "targetBeforeDeletion": {
+    "name": "lythaus-0021-native-restore-check-20261022",
+    "id": "gnbnmpsu7r5k",
+    "createdAt": "2026-10-25T16:37:31.931Z",
+    "state": "ready",
+    "providerClassProduction": true,
+    "default": false,
+    "deletionProtected": false,
+    "sourceBranch": {
+      "name": "main",
+      "id": "vqa2g2xc9wsl"
+    }
+  },
+  "manualCleanup": {
+    "outcome": "TARGET_ABSENT_VERIFIED",
+    "route": "PlanetScale ordinary cloud-browser branch deletion confirmation",
+    "confirmationText": "lythaus-0021-native-restore-check-20261022",
+    "submitCount": 1,
+    "submittedAt": "2026-10-25T18:24:01.071Z",
+    "uiAndIndependentInventoryVerifiedAt": "2026-10-25T18:24:10.013Z",
+    "uiResult": "Redirected to branches list with only main",
+    "exactTargetGetResult": "not_found",
+    "exactTargetGetObservedAt": "2026-10-25T18:24:22Z"
+  },
+  "ownerAuthorizationReferences": {
+    "manualCleanupException": "Sentinel_6649cd5bf07c8191b6abceb53fa82cb9",
+    "targetDeletionApproval": "Sentinel_d1fc9c13592481918528628e70d19570"
+  },
+  "postCleanupInventory": {
+    "totalCount": 1,
+    "totalPages": 1,
+    "nextPage": null,
+    "branches": [
+      {
+        "name": "main",
+        "id": "vqa2g2xc9wsl",
+        "state": "ready",
+        "ready": true,
+        "default": true,
+        "deletionProtected": true,
+        "deletedAt": null
+      }
+    ]
+  },
+  "protectedSourceBackupAfterCleanup": {
+    "id": "zw0so7f5jbpu",
+    "sourceBranch": "main",
+    "preventBackupDeletionChecked": true,
+    "backedUpAt": "2026-10-25T02:33:09.321Z",
+    "expiresAt": "2126-10-25T09:57:37.861Z",
+    "verifiedAt": "2026-10-25T18:24:52.853Z"
+  },
+  "unchangedByManualCleanup": {
+    "productionBranch": true,
+    "protectedSourceBackup": true,
+    "credentialsAndSettings": true,
+    "releaseGates": true
+  },
+  "automation": {
+    "cleanupWorkflowDispatched": false,
+    "cleanupPermitRunNumber2Consumed": false,
+    "automatedCleanupPassClaimed": false
+  },
+  "evidenceProvenance": {
+    "sourceReceiptSha256": "0ee7dd33def6cac5af4e38e7cff699a6e897f5a8701464b7ba178e7ce4b1c37e",
+    "sourceReceiptByteNote": "This SHA-256 identifies the parent-controlled source receipt bytes. This repository record is a separate sanitized structured record, not a byte-identical copy.",
+    "screenshotFilesPublished": false,
+    "screenshotNote": "The source receipt references parent-local screenshots; they are not included or claimed as copied here."
+  }
+}
