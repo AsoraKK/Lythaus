@@ -13,6 +13,7 @@ import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/design_system/components/lyth_text_field.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 
 class InviteRedeemScreen extends ConsumerStatefulWidget {
@@ -65,49 +66,71 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     return ReadingPane(
       child: Scaffold(
         appBar: AppBar(title: const Text('Redeem invite')),
-        body: Padding(
-          padding: EdgeInsets.all(spacing.xxl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Enter your invite code',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              SizedBox(height: spacing.sm),
-              Text(
-                'Invites unlock access to the Lythaus beta.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              SizedBox(height: spacing.lg),
-              LythTextField(
-                controller: _controller,
-                label: 'Invite code',
-                placeholder: 'XXXX-XXXX',
-                onChanged: (_) {
-                  if (_error != null) {
-                    setState(() => _error = null);
-                  }
-                },
-              ),
-              if (_error != null) ...[
-                SizedBox(height: spacing.sm),
-                Text(
-                  _error!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+        body: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.all(spacing.xxl),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: LythBrand(),
+                    ),
+                    SizedBox(height: spacing.xxl),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        'Enter your invite code',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: spacing.sm),
+                    Text(
+                      'Invites unlock access to the Lythaus beta.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    SizedBox(height: spacing.lg),
+                    LythTextField(
+                      controller: _controller,
+                      label: 'Invite code',
+                      placeholder: 'XXXX-XXXX',
+                      onChanged: (_) {
+                        if (_error != null) {
+                          setState(() => _error = null);
+                        }
+                      },
+                    ),
+                    if (_error != null) ...[
+                      SizedBox(height: spacing.sm),
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          _error!,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: spacing.lg),
+                    LythButton.primary(
+                      label: _isSubmitting ? 'Redeeming...' : 'Redeem invite',
+                      isLoading: _isSubmitting,
+                      onPressed: _isSubmitting ? null : _redeemInvite,
+                    ),
+                  ],
                 ),
-              ],
-              SizedBox(height: spacing.lg),
-              LythButton.primary(
-                label: _isSubmitting ? 'Redeeming...' : 'Redeem invite',
-                isLoading: _isSubmitting,
-                onPressed: _isSubmitting ? null : _redeemInvite,
               ),
-            ],
+            ),
           ),
         ),
       ),
