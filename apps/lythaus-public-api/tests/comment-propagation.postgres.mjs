@@ -71,9 +71,11 @@ test('post-backed articles share one conversation; nested replies are chronologi
   const page = await read(articlePost, null);
   assert.deepEqual(ids(page), [root]);
   assert.equal(page.items[0].replyCount, 2);
+  assert.equal(page.items[0].publicLabel, 'Human-authored');
   const replies = await read(postId, null, { conversationId: root });
   assert.deepEqual(ids(replies), [reply, nested]);
   assert.ok(replies.items.every(item => item.replyCount === 0));
+  assert.ok(replies.items.every(item => item.publicLabel === 'Human-authored'));
   assert.equal(replies.items[1].parentId, reply);
   assert.equal(replies.items[1].conversationId, root);
   assert.equal(replies.items[1].replyToAuthorId, author);
@@ -209,10 +211,12 @@ test('reply tail revalidation authoritatively removes hidden ancestors and redac
   const ownPending = await read(postId, author, { conversationId: root, revalidationOnly: 'true', revalidateIds: [middle, child].join(',') });
   assert.deepEqual(ownPending.revalidatedItems.map(row => row.id), [middle]);
   assert.equal(ownPending.revalidatedItems[0].body, 'Private revised ancestor');
+  assert.equal(Object.hasOwn(ownPending.revalidatedItems[0], 'publicLabel'), false);
   await control.query("UPDATE content.comments SET moderation_state='allowed',deleted_at=now() WHERE id=$1", [middle]);
   const deleted = await read(postId, owner, { conversationId: root, revalidationOnly: 'true', revalidateIds: [middle, child].join(',') });
   assert.equal(deleted.revalidatedItems.find(row => row.id === middle).body, null);
   assert.equal(deleted.revalidatedItems.find(row => row.id === middle).deleted, true);
+  assert.equal(deleted.revalidatedItems.find(row => row.id === middle).publicLabel, 'Human-authored');
   assert.ok(deleted.revalidatedItems.some(row => row.id === child));
   assert.equal(deleted.revalidatedItems.find(row => row.id === child).replyToDeleted, true);
   const unrelated = await comment(await post(owner), owner);

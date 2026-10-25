@@ -1,6 +1,6 @@
 import { commentConversationRootSql, commentParentVisibilitySql, commentPostVisibilitySql } from '../../../packages/db/src/comment-visibility.ts';
 import { FEED_AUTHOR_FIELDS, FEED_AUTHOR_JOINS } from './feed-author-projection.ts';
-import { requireFeedPostId } from './feed-runtime-policy.ts';
+import { commentPublicLabel, requireFeedPostId } from './feed-runtime-policy.ts';
 
 type CommentSort = 'oldest' | 'newest';
 type ThreadQuery = (sql: string, values: readonly unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
@@ -163,12 +163,16 @@ export async function readCommentThread(input: {
   const tailCursor = tail ? btoa(JSON.stringify({ version: 1, postId, sort, view, conversationId,
     snapshot: tail.snapshotAt, timestamp: tail.cursorCreatedAt, id: tail.id })).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '') : null;
   const nextCursor = result.rows.length > limit ? tailCursor : null;
-  const items = rows.map(({ cursorCreatedAt: _, snapshotAt: __, ...row }) => row);
+  const items = rows.map(presentCommentThreadItem);
   return { items, nextCursor, refreshCursor: conversationId ? tailCursor ?? rawCursor : null,
-    ...(revalidated ? { revalidatedItems: revalidated.rows } : {}),
+    ...(revalidated ? { revalidatedItems: revalidated.rows.map(presentCommentThreadItem) } : {}),
     capabilities: { conversations: true, nestedReplies: true,
     sorts: ['newest', 'oldest'], mostRelevantAvailable: false,
     mostRelevantUnavailableReason: 'Comment usefulness signals have not been validated.' } };
+}
+
+function presentCommentThreadItem({ cursorCreatedAt: _, snapshotAt: __, ...row }: Record<string, unknown>): Record<string, unknown> {
+  return { ...row, ...(row.moderationState === 'allowed' ? { publicLabel: commentPublicLabel(row.declaredCreationMode) } : {}) };
 }
 
 export function commentThreadErrorStatus(error: unknown): number | undefined {
