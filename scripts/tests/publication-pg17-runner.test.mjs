@@ -5,7 +5,7 @@ import test from 'node:test';
 import { publicationControlTarget, publicationFailureAnnotation } from '../ci/run-publication-pg17.mjs';
 
 test('publication failure annotations identify only fixed runner stages without caller data', () => {
-  for (const stage of ['control', 'moderation.create', 'moderation.baseline', 'rereview.suite', 'admission.suite', 'safety.suite', 'tx.drop', 'attach.suite', 'rewards.suite', 'membership.suite', 'membership_admin.suite']) {
+  for (const stage of ['control', 'moderation.create', 'moderation.baseline', 'rereview.suite', 'admission.suite', 'safety.suite', 'tx.drop', 'attach.suite', 'rewards.suite', 'membership.suite', 'membership_admin.suite', 'comment_propagation.create', 'comment_workerd.baseline', 'feed_post_read_native.suite']) {
     assert.equal(publicationFailureAnnotation(stage), `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`);
   }
   for (const stage of ['unknown', 'admission.suite\n::error::injected', 'postgresql://user:secret@remote.invalid/private', 'rereview.suite?token=secret']) {
@@ -64,6 +64,21 @@ test('required native CI runs rewards and membership in fresh databases with no 
     'apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs']) {
     assert.equal(runner.split(suite).length - 1, 1);
   }
+});
+
+test('required native CI runs comment and post-read suites through the isolated comments group', () => {
+  const ci = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  const runner = readFileSync(new URL('../ci/run-publication-pg17.mjs', import.meta.url), 'utf8');
+  assert.equal(packageJson.scripts['test:comments:pg17'], 'node scripts/ci/run-publication-pg17.mjs --comments');
+  assert.match(ci, /run: npm run test:comments:pg17/);
+  assert.match(runner, /args\[0\] === '--comments' \? 'comments'/);
+  for (const suite of ['comment-propagation.postgres.mjs', 'comment-propagation.workerd.mjs', 'feed-post-read-native.postgres.mjs']) {
+    assert.equal(runner.split(suite).length - 1, 1);
+  }
+  assert.match(runner, /CREATE DATABASE/);
+  assert.match(runner, /validate-planetscale-postgres17\.mjs/);
+  assert.match(runner, /DROP DATABASE/);
 });
 
 test('unsupported runner arguments fail before reaching a local control database', () => {

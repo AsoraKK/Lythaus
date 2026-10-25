@@ -146,6 +146,11 @@ jobs:
           packages/contracts/tests/monthly-earning.test.mjs
           packages/contracts/tests/monthly-earning-human-eligibility.test.mjs
           packages/contracts/tests/monthly-maintenance.test.mjs
+      - name: Verify monthly response and projection contracts
+        run: >-
+          node --experimental-strip-types --test
+          packages/contracts/tests/monthly-rewards-response-preparation.test.mjs
+          apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs
       - run: npm run test:critical-coverage
       - name: Verify text revision evidence, decision binding and account fencing
         run: npm run test:text-review
@@ -162,6 +167,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: node scripts/ci/run-publication-pg17.mjs --membership-rewards
+      - name: Verify comment propagation and native post reads on PG17 and Workerd
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: npm run test:comments:pg17
       - name: Verify gated standard image integrity and unchanged role boundaries
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control

@@ -29,14 +29,20 @@ const membershipRewardSuites = [
   ['membership_admin', 'apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs'],
 ];
 
+const commentSuites = [
+  ['comment_propagation', 'apps/lythaus-public-api/tests/comment-propagation.postgres.mjs', 240000],
+  ['comment_workerd', 'apps/lythaus-public-api/tests/comment-propagation.workerd.mjs', 240000],
+  ['feed_post_read_native', 'apps/lythaus-public-api/tests/feed-post-read-native.postgres.mjs', 240000],
+];
+
 export function publicationFailureAnnotation(stage) {
-  assert.match(stage, /^(control|(?:moderation|rereview|admission|safety|tx|attach|rewards|membership|membership_admin)\.(?:create|baseline|suite|drop))$/);
+  assert.match(stage, /^(control|(?:moderation|rereview|admission|safety|tx|attach|rewards|membership|membership_admin|comment_propagation|comment_workerd|feed_post_read_native)\.(?:create|baseline|suite|drop))$/);
   return `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`;
 }
 
 export async function runPublicationSuites(value, group = 'publication') {
-  assert.ok(['publication', 'membership-rewards'].includes(group), 'unsupported isolated suite group');
-  const selectedSuites = group === 'membership-rewards' ? membershipRewardSuites : suites;
+  assert.ok(['publication', 'membership-rewards', 'comments'].includes(group), 'unsupported isolated suite group');
+  const selectedSuites = group === 'membership-rewards' ? membershipRewardSuites : group === 'comments' ? commentSuites : suites;
   const target = publicationControlTarget(value);
   const control = new pg.Client({ connectionString: target.toString(), ssl: false, connectionTimeoutMillis: 5000 });
   const owned = new Set();
@@ -92,7 +98,8 @@ export async function runPublicationSuites(value, group = 'publication') {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const group = args.length === 0 ? 'publication'
-    : args.length === 1 && args[0] === '--membership-rewards' ? 'membership-rewards' : 'unsupported';
+    : args.length === 1 && args[0] === '--membership-rewards' ? 'membership-rewards'
+      : args.length === 1 && args[0] === '--comments' ? 'comments' : 'unsupported';
   await runPublicationSuites(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '', group).catch(() => {
     console.error('Publication PG17 suites failed; inspect the preceding baseline/test output.');
     process.exitCode ||= 1;
