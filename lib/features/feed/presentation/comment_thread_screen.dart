@@ -2,6 +2,7 @@
 
 import 'package:dio/dio.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
@@ -281,6 +282,24 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     }
   }
 
+  bool _isLegacyCommentCursor(String cursor) {
+    if (cursor.length > 2048) return false;
+    try {
+      final standardBase64 = cursor.replaceAll('-', '+').replaceAll('_', '/');
+      final padded = standardBase64.padRight(
+        (standardBase64.length + 3) ~/ 4 * 4,
+        '=',
+      );
+      final decoded = jsonDecode(utf8.decode(base64.decode(padded)));
+      return decoded is Map &&
+          decoded.length == 2 &&
+          decoded['timestamp'] is String &&
+          decoded['id'] is String;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _loadInitial() async {
     if (!mounted) return;
     if (_isSubmitting) {
@@ -425,11 +444,21 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         setState(() => _isLoadingMore = false);
         return;
       }
+      final legacyCursorRejected =
+          error.response?.statusCode == 400 &&
+          contentErrorCode(error.response?.data) == 'invalid_pagination' &&
+          _isLegacyCommentCursor(cursor);
       setState(() {
         _isLoadingMore = false;
-        _clearUnavailableComments(error);
-        _errorMessage = _messageForCommentsFailure(error);
-        _retryAction = _loadMore;
+        if (legacyCursorRejected) {
+          _nextCursor = null;
+          _errorMessage = 'Refresh to load the latest comments.';
+          _retryAction = _loadInitial;
+        } else {
+          _clearUnavailableComments(error);
+          _errorMessage = _messageForCommentsFailure(error);
+          _retryAction = _loadMore;
+        }
       });
     } catch (_) {
       if (!mounted || epoch != _loadEpoch) return;

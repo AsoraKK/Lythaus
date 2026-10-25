@@ -1551,6 +1551,191 @@ void main() {
   });
 
   testWidgets(
+    'legacy pagination rejection refreshes without crossing account changes',
+    (tester) async {
+      final actorProvider = StateProvider<User?>((ref) => _user());
+      final legacyCursor = base64Url
+          .encode(
+            utf8.encode(
+              jsonEncode({
+                'timestamp': '2026-10-01T00:00:00.000000Z',
+                'id': '01900000-0000-7000-8000-000000000001',
+              }),
+            ),
+          )
+          .replaceAll('=', '');
+      final accountARefresh = Completer<ResponseBody>();
+      var pageReads = 0;
+      final adapter = _Adapter((request) async {
+        if (request.method == 'GET' && request.path.endsWith('/comments')) {
+          final cursor = request.queryParameters['cursor'];
+          if (cursor == legacyCursor) {
+            return _response({'error': 'invalid_pagination'}, 400);
+          }
+          if (cursor != null) {
+            return _response({'error': 'invalid_pagination'}, 400);
+          }
+          pageReads++;
+          if (pageReads == 1) {
+            return _response(
+              _conversationPage(
+                List.generate(30, (i) => _comment('c$i', author: 'other')),
+                nextCursor: legacyCursor,
+              ),
+            );
+          }
+          if (pageReads == 2) return accountARefresh.future;
+          return _response(
+            _conversationPage([_comment('new-account', author: 'other')]),
+          );
+        }
+        return _response({'items': <Object>[]});
+      });
+
+      await _pump(tester, adapter, mutableActorProvider: actorProvider);
+      await _openComments(tester);
+      final controller = tester
+          .widget<ListView>(find.byType(ListView).first)
+          .controller!;
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpUntil(
+        tester,
+        () => adapter.requests.any(
+          (request) => request.queryParameters['cursor'] == legacyCursor,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Refresh to load the latest comments.'), findsOneWidget);
+      expect(
+        adapter.requests.where(
+          (request) => request.queryParameters['cursor'] == legacyCursor,
+        ),
+        hasLength(1),
+        reason: 'The rejected legacy cursor must not be retried automatically.',
+      );
+
+      controller.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment c9'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await _pumpUntil(tester, () => pageReads == 2);
+      expect(
+        adapter.requests
+            .where(
+              (request) =>
+                  request.method == 'GET' &&
+                  request.path.endsWith('/comments') &&
+                  request.queryParameters['cursor'] == null,
+            )
+            .length,
+        2,
+        reason: 'Retry after a legacy cursor rejection must start at page one.',
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CommentThreadScreen)),
+      );
+      container.read(actorProvider.notifier).state = _user('new-actor');
+      await tester.pump();
+      await _pumpUntil(tester, () => pageReads == 3);
+      await tester.pumpAndSettle();
+      accountARefresh.complete(
+        _response(
+          _conversationPage([_comment('stale-account-a', author: 'other')]),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comment new-account'), findsOneWidget);
+      expect(find.text('Comment stale-account-a'), findsNothing);
+      expect(find.text('Comment c9'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('versioned cursor rejection is not treated as legacy', (
+    tester,
+  ) async {
+    final mismatchedCursor = base64Url
+        .encode(
+          utf8.encode(
+            jsonEncode({
+              'version': 1,
+              'postId': 'another-post',
+              'sort': 'newest',
+              'view': 'conversations',
+              'conversationId': null,
+              'snapshot': '2026-10-01T00:00:00.000000Z',
+              'timestamp': '2026-10-01T00:00:00.000000Z',
+              'id': '01900000-0000-7000-8000-000000000001',
+            }),
+          ),
+        )
+        .replaceAll('=', '');
+    final adapter = _Adapter((request) async {
+      if (request.queryParameters['cursor'] == mismatchedCursor) {
+        return _response({'error': 'invalid_pagination'}, 400);
+      }
+      return _response(
+        _conversationPage(
+          List.generate(30, (i) => _comment('c$i', author: 'other')),
+          nextCursor: mismatchedCursor,
+        ),
+      );
+    });
+
+    await _pump(tester, adapter);
+    await _openComments(tester);
+    final controller = tester
+        .widget<ListView>(find.byType(ListView).first)
+        .controller!;
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await _pumpUntil(
+      tester,
+      () => adapter.requests.any(
+        (request) => request.queryParameters['cursor'] == mismatchedCursor,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unable to load comments right now.'), findsOneWidget);
+    expect(find.text('Refresh to load the latest comments.'), findsNothing);
+    final cursorRequestsBeforeRetry = adapter.requests
+        .where(
+          (request) => request.queryParameters['cursor'] == mismatchedCursor,
+        )
+        .length;
+    await tester.tap(find.text('Retry'));
+    await _pumpUntil(
+      tester,
+      () =>
+          adapter.requests
+              .where(
+                (request) =>
+                    request.queryParameters['cursor'] == mismatchedCursor,
+              )
+              .length >=
+          cursorRequestsBeforeRetry + 1,
+    );
+    expect(
+      adapter.requests.where(
+        (request) =>
+            request.method == 'GET' &&
+            request.path.endsWith('/comments') &&
+            request.queryParameters['cursor'] == null,
+      ),
+      hasLength(1),
+      reason:
+          'A mismatched versioned cursor must not trigger an unscoped rebase.',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'synthetic stale pagination cannot overwrite a newer comment edit',
     (tester) async {
       final stalePage = Completer<ResponseBody>();
