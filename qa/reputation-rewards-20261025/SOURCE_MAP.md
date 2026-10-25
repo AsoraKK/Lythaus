@@ -18,9 +18,18 @@ bridge. #1086's independent approval lane was not edited or tested.
 
 The repository instructions read were M `AGENTS.md`; a local file search found
 no nested `AGENTS.md` or `.agents/skills/SKILL.md`. The relevant authority record
-was M `docs/policy/current-policy-authority.md`. This task did not invoke a
-separate plugin or skill. Parent-supplied later policy applies prospectively;
+was M `docs/policy/current-policy-authority.md`. The initial QA did not invoke a
+separate plugin or skill; the requested follow-up uses the Library skill for
+artifact delivery. Parent-supplied later policy applies prospectively;
 it does not relabel historical records or establish deployment.
+
+Follow-up authority reconciliation also inspected S
+`docs/architecture/member-action-verification-inactive-2026-10-23.md:148–175,220–237`,
+S `docs/testing/member-action-verification-2026-10-23.md:132–165,234–237`, M
+`packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json:157–166`,
+and M `docs/architecture/monthly-reputation-2026-10.md:137–158,184–202`.
+These records distinguish deliberate candidate guards from missing mapping
+and operational approvals. The corrected classification is in POLICY.md.
 
 | Source location at named commit | Role in the ordinary business path | Evidence here |
 | --- | --- | --- |

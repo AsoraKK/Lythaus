@@ -22,5 +22,6 @@ that work are counted here.
 
 Repository `AGENTS.md` and `docs/policy/current-policy-authority.md` were read.
 No nested `AGENTS.md` or `.agents/skills/SKILL.md` exists at the pinned local
-baseline. No applicable additional skill was needed. The available tools do
+baseline. No additional skill was needed for the initial QA; the follow-up
+uses the Library skill only for requested artifact delivery. The available tools do
 not expose `update_plan`, so this file records the plan.

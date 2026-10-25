@@ -67,3 +67,11 @@ asserted business outcomes and fixtures are deterministic.
 No hosted calls, account/credential operations, permission changes, paid APIs,
 deployment, policy activation or external publication were performed in this
 replacement QA phase. Token refresh behavior was not changed or exercised.
+
+The follow-up rechecked owner-decision documents and corrected overly broad
+policy questions in POLICY.md, TICKETS.md, REPORT.md and MATRIX.md. It changed
+documentation only; the 47-test result and source baseline are unchanged.
+Requested Library delivery of REPORT.md and MATRIX.md was blocked by HTTP 401
+during the required workflow's app discovery. No Library IDs were confirmed;
+no retry or alternate route was used. See
+[the delivery receipt](results/library-delivery.json).

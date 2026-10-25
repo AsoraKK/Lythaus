@@ -2,7 +2,8 @@
 
 All 47 executed cases below passed in the final run. `Pass` means the stated
 assertions ran successfully, including expected rejection cases. `Observed`
-also passed but records candidate behavior whose product authority is pending.
+also passed and records documented candidate behavior; it does not by itself
+indicate a missing product decision or a confirmed entitlement.
 M/S and exact source paths are defined in [SOURCE_MAP.md](SOURCE_MAP.md).
 Nothing in this matrix represents a hosted request or a real credential event.
 
@@ -52,7 +53,7 @@ Nothing in this matrix represents a hosted request or a real credential event.
 | I17 | Evaluate before month close, at close and after proposed settlement | Pass against candidate: open, settling, ready at next-month day 4 | intervals.test.mjs; S choice/grace; calendar approval P2 |
 | I18 | Local device-preference record alone | Pass: unavailable; no qualifying coverage evidence emitted | intervals.test.mjs; S choice/grace |
 | I19 | Missing mapping or disabled collection | Pass: unavailable/inactive; cannot produce ready result | intervals.test.mjs; S choice/grace |
-| I20 | Full coverage without within-month authentication observation; observation at next-month cutoff | Observed: both `qualifying_authentication_missing`; extra monthly-use requirement needs a decision | intervals.test.mjs; S choice/grace; P3 |
+| I20 | Full coverage without within-month authentication observation; observation at next-month cutoff | Observed: both `qualifying_authentication_missing`, matching the documented candidate qualification rule; no new owner question inferred | intervals.test.mjs; S choice/grace; P3 |
 | I21 | 64 deterministic schedules of four separate gaps, reversed input order | Pass: independently summed gap duration, month partition and ≤24-hour threshold all match | intervals.test.mjs; S choice/grace |
 | I22 | Two partly overlapping 24-hour absence spans | Pass: union is 36 hours, not 48; exceeds grace | intervals.test.mjs; S choice/grace |
 
@@ -63,7 +64,7 @@ These extensions were **not executed** and are not counted as skipped tests:
 | U01 | Real database constraints, commit durability or simultaneous transactions | This phase used local mocks only; no database execution. Do not infer these properties from E/T/W. |
 | U02 | Automatic Jobs retry, receipt persistence, monthly assembly and snapshot correction as one delivery flow | Pack stops at the stated units. T3 specifies a bounded local consumer replay suite. |
 | U03 | Order-dependent attribution under same-day diminishing returns/caps | E02 deliberately uses independent dates. A normative attribution rule and focused fixtures are needed before claiming arbitrary order independence. |
-| U04 | Effective event time, late delivery and finality beyond the recorded candidate boundaries | No retrospective entitlement rule was invented. P5 must identify the applicable version and correction rule. |
+| U04 | Effective event time and late delivery through the fixed-month correction flow | The existing append-only correction model is documented; integrated acceptance on the reviewed source is not demonstrated here. Signed obligations/cutover remain separate. |
 | U05 | Integrated S+M implementation and interactions with #1091/#1092/#1090/#1093 | Pending heads were not merged. T2 requires one exact reviewed source and prospective fixtures. |
 | U06 | Flutter rendering, stale cache, offline refresh, keyboard/screen-reader retry | Flutter absent from PATH; source inspection is not a widget result. T4 names existing local test files. |
 | U07 | Non-UTC product calendars / DST interpretation | Current contract accepts UTC only. P2 is pending; C07 tests serialization, not regional calendar policy. |

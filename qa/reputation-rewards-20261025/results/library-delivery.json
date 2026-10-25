@@ -1,0 +1,14 @@
+{
+  "requestedArtifacts": [
+    "/workspace/Lythaus/qa/reputation-rewards-20261025/REPORT.md",
+    "/workspace/Lythaus/qa/reputation-rewards-20261025/MATRIX.md"
+  ],
+  "workflow": "Current Library skill prepared-upload helper, one ordered batch",
+  "status": "blocked",
+  "exitCode": 1,
+  "error": "library upload failed: hosted apps tools/list request failed with HTTP status 401",
+  "confirmedLibraryIds": [],
+  "retryAttempted": false,
+  "alternateRouteAttempted": false,
+  "note": "No Library save was confirmed. Local artifacts remain available. This delivery failure is separate from the 47 passing business-rule tests."
+}

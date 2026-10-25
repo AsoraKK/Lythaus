@@ -19,16 +19,22 @@ the distinction between implementation, tests and activation.
 | Pending versus confirmed projection | Pending, shadow and preparation values do not populate confirmed level/score fields. A confirmed level can coexist with pending reward selection. | D01–D05; M `apps/lythaus-public-api/src/monthly-reputation-projection.ts:6`; high for this function, not rendered/cache behavior. |
 | Monthly interval arithmetic and equal benefit | 86,400,000 ms is allowed; 86,400,001 ms is not. Separate gaps accumulate; overlaps count once; a normal method change with continuous evidence consumes no grace. Calendar clipping and 28/29/30/31-day months match. Synthetic qualifying options receive one equal benefit under each tested existing action mapping. | I01–I14, I17–I19, I21–I22; S `packages/contracts/src/monthly-security-grace.ts:33`, `monthly-security-choice.ts:97`; high for the isolated candidate. No real method or benefit amount was approved by these fixtures. |
 
-The following are **evidence or policy gaps, not confirmed defects**. Priorities
-describe work needed before asserting complete business-rule acceptance.
+Follow-up authority reconciliation narrows the initial report: the monthly
+authentication observation and enrollment/history guards are documented
+candidate behavior. Fixed monthly snapshots and separately approved corrections
+are also documented. They are not new defects or broad owner questions. See
+POLICY.md for exact source references and the remaining narrow P1/P2 inputs.
+
+The following are **evidence gaps or documented guards, not confirmed defects**.
+Priorities describe work needed before asserting complete business-rule acceptance.
 
 | ID / priority | Expected acceptance evidence versus actual evidence | Affected users / status / next action |
 | --- | --- | --- |
 | G1 / P1: candidate is separate from main | A final implementation should apply the approved common benefit and grace rules through the assembled monthly source. S contains the interval/common-benefit functions and candidate assembly wiring. M still calls the historical maintenance calculation; this pack does not execute an integrated S+M assembly. | Prospective benefit recipients; integration status unverified, no demonstrated live impact. High confidence in source separation. Complete T2 after policy inputs T1. |
-| G2 / P1: extra monthly observation requirement | The supplied policy establishes coverage, grace and equal treatment. With uninterrupted coverage but no within-month authentication observation, S returns `qualifying_authentication_missing` (I20). An observation exactly at next-month cutoff also does not satisfy it. Whether the additional monthly-use condition is intended is unresolved. | Covered members who do not perform the qualifying action during that month. Candidate behavior demonstrated; desired entitlement unresolved. Resolve P3 before changing code. |
+| G2 / documented guard: monthly observation requirement | With uninterrupted coverage but no within-month authentication observation, S returns `qualifying_authentication_missing` (I20); a next-month observation does not satisfy it. S's architecture record explicitly requires this, and M's historical maintenance calculator already requires a monthly observation. | Intended candidate behavior, not a demonstrated defect. Keep it in the versioned qualification acceptance review; do not create a new owner question solely from this test. The qualifying-method mapping remains pending under P1. |
 | G3 / P1: recovery evidence stops at mocks | E04 only reaches the correct result after an explicit retry. T01–T03 prove wrapper behavior with a fake driver, and W01 proves a fake outbox row count. They do not show a worker scheduling the retry, committing real rows atomically, or correcting an already confirmed monthly snapshot. | Members whose deliveries are interrupted or contributions change after settlement. Production effect unverified. Add the bounded consumer/assembly replay specifications in T3; do not infer durable delivery from this pack. |
 | G4 / P2: projection is not client acceptance | D01–D05 prove fresh server projection results. The Flutter card has pending/shadow/unavailable text in source, but rendering, refresh behavior and stale-cache replacement were not executed; Flutter is absent from PATH. | Members seeing a changing or unavailable monthly result. No displayed defect demonstrated. Execute the synthetic model/widget/provider cases in T4 using an existing Flutter environment. |
-| G5 / P1: prospective operational inputs remain pending | Calculations use the current proposed UTC closing-Sunday convention and 72-hour settlement, plus an explicitly synthetic mapping. These tests cannot approve calendar ownership, qualifying methods, common action/budget, initial enrollment or correction finality. | All prospective monthly participants. Candidate arithmetic passed; product/version acceptance remains incomplete. Resolve only the specific questions in POLICY.md, retaining historical versions. |
+| G5 / P1: prospective mapping and operational inputs remain pending | Calculations use the proposed UTC closing-Sunday convention, 72-hour settlement and an explicitly synthetic mapping. S's activation packet explicitly leaves qualifying methods/common action and UTC/settlement approval pending. Enrollment and fixed-month correction behavior are already documented candidate rules. | All prospective monthly participants. Resolve P1/P2 from existing approval evidence or their narrow existing approval gates; do not reopen settled equal-benefit/grace rules or documented P3/P4/P5 behavior. |
 
 For G1, compare M `packages/db/src/monthly-assembly.ts:116` with S
 `packages/db/src/monthly-assembly.ts:118` and S
@@ -55,9 +61,9 @@ Acceptance of the integrated rules needs these measurable additions:
 1. A reviewed immutable combined source with the common-benefit calculation
    wired into assembly; retain all 47 assertions with equivalent versioned
    fixtures and preserve historical calculation results.
-2. Versioned decisions for P1–P5 in POLICY.md. Each approved qualifying method
-   must pass the same boundary/equality cases; unknown evidence must stay
-   explicitly unresolved instead of acquiring an invented entitlement.
+2. Versioned mapping/operational approval for P1/P2 in POLICY.md, with documented
+   P3/P4/P5 behavior retained. Each approved qualifying method must pass the same
+   boundary/equality cases; unknown evidence must stay explicitly unresolved.
 3. Ordinary consumer replay tests reaching receipts, weekly correction,
    monthly source and snapshot: one result after duplicate delivery, a retained
    retry for dependency ordering, and no confirmed result after failed local

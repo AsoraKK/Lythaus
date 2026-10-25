@@ -1,111 +1,81 @@
 # Prioritized follow-up specifications
 
-No confirmed defect patch is justified by the executed results. These tickets
-close specific policy, integration and verification gaps. They are suitable
-for a subsequent Sol 6.1/Luna implementation lane; this task makes no production
-change. M/S and file locations refer to SOURCE_MAP.md. Effort categories are
-S (one focused documentation/test change) and M (several cooperating modules
-with focused regression tests), not estimates for deployment or approval.
+These are verification/integration tickets, not fixes for demonstrated defects.
+M/S and P1–P5 are defined in POLICY.md. S means a focused change; M means several
+cooperating modules with bounded tests. No code change is part of this report.
 
-1. **T1 — Record the missing prospective inputs. P1; Luna documentation,
-   owner decisions required; effort S.**
+1. **T1 — Reconcile only genuinely pending mapping and operational inputs.
+   P1 priority; Luna; effort S.**
 
-   Scope: resolve P1–P5 in POLICY.md against existing owner evidence. Record
-   exact version, common action/amount, method mapping, calendar/settlement,
-   monthly-observation and correction semantics. Update only the prospective
-   technical decision record and appropriate versioned configuration schema
-   after approval. Relevant files: `docs/policy/current-policy-authority.md`,
-   the prospective monthly decision record, S
-   `packages/contracts/src/monthly-security-choice.ts` mapping type, and
-   existing `packages/contracts/src/monthly-reputation-decisions.ts` references.
-   Do not rewrite immutable historical catalogues or globally relabel D01–D13.
+   Scope: record or recover P1's approved method/common-action mapping and P2's
+   operational approval in the prospective technical decision record. Relevant
+   files: `docs/policy/current-policy-authority.md`,
+   `packages/contracts/src/monthly-security-choice.ts` on S, and the existing
+   calendar/maintenance decision records. P3/P4 are documented guards; P5's
+   fixed-month/correction model is documented. Do not ask again about equal
+   benefits, 24 hours, initial enrollment, or whether snapshots are fixed.
 
-   Dependencies: owner authority for unresolved inputs, not another decision
-   on equal benefits or the inclusive 24-hour threshold. Acceptance: every
-   prospective configuration value links to a dated decision; two qualifying
-   methods map to the same action; unknown values remain unavailable; no
-   method is inferred from device preference. Keep P3/P4 explicitly pending
-   if unresolved. Rollout: documentation and inactive fixtures only. Rollback:
-   revert the new prospective record/configuration, preserving old versions.
+   Acceptance: exact versions and approval references accompany the mapping;
+   no method or amount is inferred from local unlock; missing mapping remains
+   unavailable. Preserve historical catalogues. Dependency: genuine P1/P2
+   authority only, not another broad owner questionnaire. Rollout: inactive
+   documentation/configuration; rollback: revert the prospective addition
+   without changing history.
 
-2. **T2 — Verify the pending common-benefit integration on one exact source.
-   P1; Sol 6.1; effort M.**
+2. **T2 — Verify existing #1084 integration on one exact combined source.
+   P1 priority; Sol 6.1; effort M.**
 
-   Scope: coordinate the existing #1084 implementation with current main;
-   reuse its interval/common-action functions instead of creating another
-   calculator. Relevant paths: S `packages/contracts/src/monthly-security-choice.ts`,
+   Scope: reuse S `packages/contracts/src/monthly-security-choice.ts`,
    `monthly-security-grace.ts`, `packages/db/src/member-security-maintenance.ts`,
    `packages/db/src/monthly-assembly.ts`, and
-   `apps/lythaus-jobs/src/monthly-assembly.ts`. Main's historical maintenance
-   calculation remains versioned. No new service, credential mechanism or
-   refresh behavior is part of this ticket. Consume only existing canonical
-   coverage facts; absent approved facts remain explicitly unavailable.
+   `apps/lythaus-jobs/src/monthly-assembly.ts`. Do not build another calculator
+   or change authentication/refresh behavior.
 
-   Dependencies: T1's mapping/calendar/observation decisions and the existing
-   PR review workflow. Acceptance: port the I01–I22 assertions into supported
-   contract tests on the final combined SHA; add a local mocked assembly case
-   proving one common benefit reaches the monthly source for each approved
-   method. Exactly 86,400,000 ms must qualify and +1 ms must not; partial
-   overlap must use its union; continuous method change must preserve benefit;
-   local preferences alone must remain unavailable. Existing historical tests
-   must retain their outputs. All 47 current assertions must remain represented,
-   with any policy-dependent expectation changed only under the recorded new
-   version. Rollout: preparation/shadow fixtures first, runtime activation still
-   separate. Rollback: stop the prospective configuration and retain immutable
-   observations/revisions; do not delete history or alter tokens.
+   Acceptance: retain equivalent coverage for all 47 cases; add a local mocked
+   assembly case showing one equal benefit for every approved method.
+   86,400,000 ms qualifies; +1 ms does not; overlaps use their union; continuous
+   method changes preserve eligibility; missing mapping/history stays explicit.
+   Preserve P3/P4's documented observations and enrollment guards plus historical
+   outputs. Local synthetic work can proceed; real configuration depends on
+   T1 and existing PR review. Rollout: preparation/shadow only until separately
+   approved. Rollback: disable the prospective configuration; retain evidence
+   and revisions, with no token or history changes.
 
-3. **T3 — Close ordinary delivery and correction gaps with a bounded consumer
-   replay suite. P1; Sol 6.1; effort M.**
+3. **T3 — Exercise ordinary consumer replay and the existing correction flow.
+   P1 priority; Sol 6.1; effort M.**
 
-   Scope: extend supported local mocks through the actual Jobs consumers and
-   monthly receipt/source/snapshot functions. Relevant files:
+   Scope: supported local mocks through
    `apps/lythaus-jobs/src/monthly-earning.ts`, `monthly-assembly.ts`,
-   `packages/db/src/monthly-earning.ts`, `monthly-reputation.ts`,
-   `monthly-reward-snapshots.ts`, and their existing test directories. The
-   historical event adapter in `apps/lythaus-jobs/src/index.ts` is relevant only
-   to the missing-original reversal retry case. Keep tests restricted to
-   ordinary delivery and synthetic records; do not add diagnostic/permission
-   work or duplicate #1100.
+   `packages/db/src/monthly-earning.ts`, `monthly-reputation.ts`, and
+   `monthly-reward-snapshots.ts`. Use the historical Jobs event adapter only
+   for the missing-original reversal retry case; no database diagnostic work.
 
-   Dependencies: P5 for finality and correction outcomes, T2 for integrated
-   benefit cases. Acceptance: duplicate delivery yields one receipt/result;
-   out-of-order dependency remains retryable and converges after the original
-   arrives; a newer accepted/reversed revision wins over stale delivery;
-   injected failure after a local write produces no published result; an
-   uncertain commit response stays unknown and normal retry reuses the
-   recorded result; weekly correction changes the next source revision without
-   replacing immutable old rows. Explicitly test the approved snapshot
-   correction behavior rather than equating recomputation with entitlement.
-   Describe mock limits: no database durability/locking certification. Rollout:
-   tests first, then only a targeted production fix if a failing assertion
-   demonstrates one. Rollback: revert that focused fix while retaining the
-   reproducer; no data deletion or runtime switch is authorized here.
+   Acceptance: duplicate delivery yields one receipt/result; dependency ordering
+   remains retryable; stale delivery cannot replace newer evidence; injected
+   work failure publishes nothing; uncertain commit remains unknown and replay
+   reuses the result. Weekly revisions must not silently change a confirmed
+   month; use the documented separately approved correction path and retain old
+   rows. No new finality decision is needed to test that path. Signed historical
+   obligations/cutover remain a separate existing gate. Rollout: tests first,
+   targeted fix only if a test demonstrates a defect. Rollback: revert that
+   focused fix, keep the reproducer. Mocks do not prove database durability.
 
-4. **T4 — Verify client status replacement and fallback behavior. P2; Luna,
-   Sol 6.1 if provider logic changes; effort S/M.**
+4. **T4 — Verify rendered status replacement and accessible fallback.
+   P2 priority; Luna, Sol 6.1 if provider logic changes; effort S/M.**
 
-   Scope: use existing Flutter model/widget/provider tests with local fake
-   responses. Relevant paths: `lib/ui/screens/rewards/monthly_reputation_widgets.dart`,
-   `lib/features/rewards/application/reward_providers.dart`,
+   Scope: `lib/ui/screens/rewards/monthly_reputation_widgets.dart`,
+   `lib/features/rewards/application/reward_providers.dart`, and existing
    `test/ui/screens/rewards/monthly_reputation_widgets_test.dart`,
-   `test/features/rewards/application/reward_providers_test.dart`, and
-   `test/features/rewards/domain/reward_models_test.dart`. Confirm exact model
-   paths from those tests before editing. No login or token-refresh changes.
+   `test/features/rewards/application/reward_providers_test.dart`,
+   `test/features/rewards/domain/reward_models_test.dart`.
 
-   Dependencies: an existing Flutter-capable environment; P3/P4 for any new
-   reason-code wording. Acceptance: confirmed → pending/unavailable response
-   removes stale confirmed fields; shadow stays visibly provisional;
-   preparation never looks earned; confirmed level plus pending selection is
-   accurately described; error/retry remains keyboard and semantics
-   accessible; missing evidence is distinct from a confirmed grace overrun
-   where the approved contract supplies that distinction. Tests must render
-   the widget and exercise fake provider refresh, not just reconstruct its
-   string output. Rollout: test-only first; change only a demonstrated UI
-   mismatch. Rollback: revert the focused display/provider change without
-   changing server snapshots or stored obligations.
+   Acceptance: fake refresh from confirmed to pending/unavailable clears stale
+   confirmed data; shadow/preparation stays provisional; confirmed level plus
+   pending selection is accurate; retry has usable keyboard/semantics behavior.
+   Use existing reason-code distinctions; do not invent entitlements.
+   Dependency: an existing Flutter environment. Rollout: tests first, change
+   only a demonstrated mismatch. Rollback: revert the focused display/provider
+   change without altering snapshots, obligations or tokens.
 
-The smallest next step is T1 followed by the existing-candidate integration
-check in T2. The executed arithmetic does not justify a replacement rewards
-engine, new thresholds, a new identity service or a broad rewrite. Separate
-database durability and deployment acceptance would require their own explicit
-scope and evidence; they are not silently included in these completed tests.
+No rewrite, new service, threshold change, live activation or broad policy
+reopening is warranted by these results.
