@@ -1,6 +1,6 @@
 # Upload review follow-up
 
-Coordinator addendum: `review/upload_disposal_test.dart` has three deterministic controller lifecycle cases (raw output in [followup-upload-disposal-final.log](followup-upload-disposal-final.log)). It confirms disposal cancellation/reload release, exact default 5-second/24-poll behavior plus manual retry on the same attempt, and disposal after a valid local selection with zero API calls. A separate route-level UP-24 test now mounts the real composer and a prior route: a valid local selection causes zero media API and post-repository calls; close remains blocked by the existing guard; clearing then closing returns to the prior route with both call counts still zero.
+Additional upload coverage: `review/upload_disposal_test.dart` has three deterministic controller lifecycle cases (raw output in [followup-upload-disposal-final.log](followup-upload-disposal-final.log)). It confirms disposal cancellation/reload release, exact default 5-second/24-poll behavior plus manual retry on the same attempt, and disposal after a valid local selection with zero API calls. A separate route-level UP-24 test now mounts the real composer and a prior route: a valid local selection causes zero media API and post-repository calls; close remains blocked by the existing guard; clearing then closing returns to the prior route with both call counts still zero.
 
 Follow-up to `upload.md`: execute mobile lifecycle/composer cases and the terminal janitor cleanup branch with local fixtures. Runs used Flutter 3.41.1 / Dart 3.11.0 and the shared Pub cache prepared by the integration lane. No provider, production database, detector, or live service was accessed.
 
@@ -24,7 +24,7 @@ Result: **15 passed, 0 failed**. Relevant cases included:
 - `composer blocks image-bearing submission until explicitly cleared`
 - `private controls remain readable at 320 pixels and double text`
 
-The first attempt omitted Flutter's writable config/cache environment and failed before test startup while trying to create `/home/agent/.config/flutter`. Retrying with the shared activation paths above passed; this was an environment setup issue, not a test failure.
+The first attempt omitted Flutter's writable config/cache environment and failed before test startup while trying to create its default config directory. Retrying with the cached activation paths above passed; this was an environment setup issue, not a test failure.
 
 ## Terminal janitor cleanup
 
@@ -34,7 +34,7 @@ Command:
 node --test --test-name-pattern='actual standard-upload handlers, Queue dispatcher and local private R2' packages/media/tests/standard-upload.workerd.mjs
 ```
 
-The name pattern selects the suite's parent test, so Node executed the full fixture suite. A temporary test-only case exercised a cancelled terminal session with an unreferenced approved derivative: the first approved-bucket deletion failed, quarantine deletion completed, the cleanup marker stayed unset, then retry removed the derivative and set the marker without ledger writes. Result: **30 passed, 0 failed** (parent plus 29 nested tests, including this case). The temporary case was removed afterward; no business logic changed.
+The name pattern selects the suite's outer test, so Node executed the full fixture suite. A temporary test-only case exercised a cancelled terminal session with an unreferenced approved derivative: the first approved-bucket deletion failed, quarantine deletion completed, the cleanup marker stayed unset, then retry removed the derivative and set the marker without ledger writes. Result: **30 passed, 0 failed** (outer test plus 29 nested tests, including this case). The temporary case was removed afterward; no business logic changed.
 
 Raw terminal janitor command output:
 

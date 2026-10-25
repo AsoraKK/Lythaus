@@ -11,7 +11,7 @@ The three lane files form one 67-case matrix, with preconditions, action, expect
 - [Comments C01–C20](comments-matrix.md): 20 cases; source review of the pending contract, not full runtime execution. C01/C08 now additionally corroborated by CS02/CS01 below. Proposed fixtures must not be mistaken for checked-in handler behavior.
 - [Integration I-01–I-23](integration-matrix.md): 23 cases; projection behavior tested, UI observations remain static.
 
-This is not a claim that all 67 journeys ran end-to-end, and is not evidence of any historical suite completion. UI/backend combined rows explicitly separate Node execution from UI review. Additional executable coordinator cases below give 82 defined cases total (67 lane + 12 S + 3 CS); some intentionally corroborate lane findings, so do not interpret 82 as unique runtime coverage.
+This is not a claim that all 67 journeys ran end-to-end, and is not evidence of any other suite completion. UI/backend combined rows explicitly separate Node execution from UI review. Additional executable event/revision seam cases below give 82 defined cases total (67 lane + 12 S + 3 CS); some intentionally corroborate lane findings, so do not interpret 82 as unique runtime coverage.
 
 | ID | Preconditions | Action | Expected outcome | Observed result | Evidence |
 |---|---|---|---|---|---|

@@ -1,7 +1,7 @@
 # Prioritized remediation tickets
 
 ## F1 — P1 activation prerequisite: coordinate the intentionally staged comment hooks
-Owner: existing parent/comments integration lane; Sol for shared Worker integration and Luna for focused regressions if assigned. Scope: #1090 only. This is an already documented coordination prerequisite, not a newly discovered implementation defect or duplicate ticket. docs/testing/comment-propagation-2026-10-23.md:71–99 deliberately leaves shared files untouched and documents client fallback.
+Scope: existing #1090 integration work. This is an already documented prerequisite, not a newly discovered implementation defect or duplicate ticket. docs/testing/comment-propagation-2026-10-23.md:71–99 deliberately leaves shared files untouched and documents client fallback.
 
 Affected files: apps/lythaus-public-api/src/index.ts, comment-thread-reader.ts, comment-integration-hooks.mjs/comment-runtime-fixture.mjs; lib/features/feed/presentation/comment_thread_screen.dart. Check proposed create/revision, Jobs notification and Admin revision hooks for contract parity as part of the same existing lane; do not assume the read fix wires every mutation.
 
@@ -24,14 +24,14 @@ Acceptance:
 Rollout: hold threaded experience until actual server and client agree; preserve legacy flat-reader compatibility as required by existing clients. Roll back the client capability/entry point or the paired release if necessary, never claim unsupported capability. No schema rollout is authorized by this ticket.
 
 ## V1 — P2 policy clarification: forced reload before durable draft persistence
-Owner: Luna. Affected tests: test/features/media/private_image_upload_test.dart; test/features/feed/presentation/comment_thread_screen_test.dart; post_comment_journey_test.dart; monthly_reputation_widgets_test.dart; responsive_product_test.dart.
+Affected tests: test/features/media/private_image_upload_test.dart; test/features/feed/presentation/comment_thread_screen_test.dart; post_comment_journey_test.dart; monthly_reputation_widgets_test.dart; responsive_product_test.dart.
 
-The requested actual browser reload, enabled local-unlock provider isolation and affected-screen semantics now have execution evidence. EVIDENCE_LEDGER.md records exact commands and16 actual screenshots. I-08 remains qualified only because its original broad expectation includes blocking forced manual reload before persistence; no such guarantee was found. App-driven reload readiness and actual manual reload after durable journaling pass. Ask the product owner whether the broader guarantee is intended before adding a requirement or implementation ticket. This is a policy boundary, not a confirmed bug or unavailable-tool blocker. No implementation change is presently proposed.
+The actual browser reload, enabled local-unlock provider isolation and affected-screen semantics now have execution evidence. EVIDENCE_LEDGER.md records exact commands and16 actual screenshots. I-08 remains qualified only because its original broad expectation includes blocking forced manual reload before persistence; no such guarantee was found. App-driven reload readiness and actual manual reload after durable journaling pass. Resolve whether forced reload blocking is a product guarantee before adding it to acceptance criteria. This is a policy boundary, not a confirmed bug or unavailable-tool blocker. No implementation change is presently proposed.
 
 Acceptance: report actual passed/failed/skipped counts, runtime versions, screenshots with viewport/state/build SHA, and fix only reproduced defects. Rollback: test-only additions can be reverted; no production changes.
 
 ## V2 — P2: preserve serialization and actual-runtime regressions
-Owner: Luna. Safe independent test-only work: retain new monthly serialized fresh-account regression, event-revision seam tests, and the #1087 cleanup patch through their owning lanes. Keep F1 future-contract failure explicit until candidate runtime is integrated; do not describe it as a bug in the supported legacy behavior.
+Safe independent test-only work: retain new monthly serialized fresh-account regression, event-revision seam tests, and the #1087 cleanup patch in their relevant regression suites. Keep F1 future-contract failure explicit until candidate runtime is integrated; do not describe it as a bug in the supported legacy behavior.
 
 Acceptance: fresh pending/shadow projections expose no confirmed top-level level/source fields; stale content revisions cannot be processed as current; failed cancellation cleanup remains retryable and deletes only correct objects. Rollout/rollback: test-only, no feature activation; coordinate with existing PRs to avoid duplicate patches.
 

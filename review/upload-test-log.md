@@ -45,7 +45,7 @@ ok 1 - actual standard-upload handlers, Queue dispatcher and local private R2
 # duration_ms 5458.73409
 ```
 
-The Workerd parent executed 28 nested cases on the assigned checkout. A separate run with the exact additional test from ref 1087 temporarily inserted reported:
+The Workerd outer test executed 28 nested cases in the review worktree. A separate run with the exact additional test from ref 1087 temporarily inserted reported:
 
 ```text
 ✔ cancelled queue work retries orphan cleanup without transforming or persisting evidence (26.80004ms)
@@ -59,6 +59,6 @@ The Workerd parent executed 28 nested cases on the assigned checkout. A separate
 ℹ todo 0
 ```
 
-The exact regression is preserved in [1087-cancelled-cleanup.patch](1087-cancelled-cleanup.patch). To reproduce the augmented Workerd result locally, apply the patch, run the Workerd command above, then reverse the patch with `git apply -R review/1087-cancelled-cleanup.patch`. Its temporary insertion was reverted after execution; the review ref itself was read-only. An earlier Workerd attempt before locked workspace dependencies were installed failed during module loading with `ERR_MODULE_NOT_FOUND: sharp`; the passing runs supersede it. A detached worktree run of ref 1087 could not resolve its separate `node_modules`, so its test body was run using the assigned checkout’s installed dependencies.
+The exact regression is preserved in [1087-cancelled-cleanup.patch](1087-cancelled-cleanup.patch). To reproduce the augmented Workerd result locally, apply the patch, run the Workerd command above, then reverse the patch with `git apply -R review/1087-cancelled-cleanup.patch`. Its temporary insertion was reverted after execution; the review ref itself was read-only. An earlier Workerd attempt before locked workspace dependencies were installed failed during module loading with `ERR_MODULE_NOT_FOUND: sharp`; the passing runs supersede it. A detached worktree run of ref 1087 could not resolve its separate `node_modules`, so its test body was run using the review worktree’s installed dependencies.
 
-Flutter/Dart executables are unavailable on `PATH`, so mobile polling tests were not run. `git diff --check` passed. The checkout shows unrelated shared-workspace changes in `apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs` and `LYTHAUS_END_TO_END_RELIABILITY_PROMPT.md`; this review did not create or modify them.
+This initial PATH lookup did not locate Flutter or Dart, so mobile polling tests were not run during the first pass. Cached Flutter 3.41.1/Dart 3.11.0 were subsequently found and the requested focused mobile cases are recorded in EVIDENCE_LEDGER.md. `git diff --check` passed.

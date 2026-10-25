@@ -3,15 +3,15 @@
 ## Outcome
 The available cached environment supported the missing tests. The earlier PATH-only Flutter/PostgreSQL limitation was incorrect. Final row-level audit: **66 of 67 defined lane cases passed directly at their named local fixture scope; I-08 has qualified documented-contract execution. None is wholly unexecuted. No new current-contract implementation defect was confirmed.** This supersedes the intermediate 64-direct/3-partial assessment. No public-publishing readiness certification is claimed.
 
-The only comment contract mismatch is an explicitly staged integration prerequisite in pending #1090. Its documentation reserves shared API/Jobs/Admin hooks for parent coordination and its UI falls back to the legacy flat reader until capabilities arrive. Three future-contract assertions fail against that unintegrated reader as expected; these must not be presented as current defects.
+The only comment contract mismatch is an explicitly staged integration prerequisite in pending #1090. Its documentation reserves shared API/Jobs/Admin hooks for coordinated integration and its UI falls back to the legacy flat reader until capabilities arrive. Three future-contract assertions fail against that unintegrated reader as expected; these must not be presented as current defects.
 
 Original results and the corrected first-pass report remain in FIRST_PASS_REPORT.md and the original logs. No assertions were weakened, runtime/business code changed, branches merged, features activated or deployments performed.
 
 ## Exact source baseline
 Main review: `c0963c36693476ecc49ab1fcba0572454926b4d3`.
 Pending comments: `a10c381213373c0cb93e7dbc14404806ddf21cf2`.
-Owner-reported deployed source: `3880a8be4c89459dd7ef831c9385817a887511ef`; live deployment not queried.
-All seven pinned PR heads, original checkout and model receipt are in BASELINE.md. Main tests use the dedicated review worktree; pending comment tests use an unchanged detached #1090 worktree.
+Previously reported deployed source: `3880a8be4c89459dd7ef831c9385817a887511ef`; live deployment not queried.
+All seven pinned PR heads and the original checkout are in BASELINE.md. Main tests use the dedicated review worktree; pending comment tests use an unchanged detached #1090 worktree.
 
 ## Environment and setup
 Repository .fvmrc pins Flutter 3.41.1. The saved SDK at /workspace/.lythaus-tools/flutter-sdk/flutter matches that version and supplies Dart 3.11.0. The saved activation script sets only SDK/cache/browser paths. Offline Pub resolution succeeded with /workspace/.lythaus-cache/pub; lockfiles remained unchanged. Docker 28.4.0 and an already cached postgres:17 image were available. No SDK download, privileged package install, new credentials, security-setting change, paid service or production connection was needed.
@@ -39,10 +39,10 @@ The row audit also added exact default upload timeout/manual retry, actual guard
 Counts are per command group; do not sum them as unique coverage.
 | Selection | Result | Scope/evidence |
 |---|---:|---|
-| Main integration/session/reward/local-unlock/responsive batch | 115 pass | followup-integration.md; full original stream in tool transcript |
-| Profile accessibility | 5 pass | followup-integration.md; original output in tool transcript |
+| Main integration/session/reward/local-unlock/responsive batch | 115 pass | followup-integration.md; summary output recorded |
+| Profile accessibility | 5 pass | followup-integration.md; summary output recorded |
 | Flutter media/composer | 15 pass | followup-upload.md |
-| Terminal janitor retry addition | 30 pass | one parent +29 children, overlaps previously passing suite; exact followup-terminal-janitor.patch preserved |
+| Terminal janitor retry addition | 30 pass | one outer test +29 nested tests, overlaps previously passing suite; exact followup-terminal-janitor.patch preserved |
 | New disposal regression | 1 pass | upload_disposal_test.dart; followup-upload-disposal.log |
 | Pending comment PostgreSQL reader | 11 pass | followup-comments-postgres.log |
 | Pending transformed comment Workerd | 4 pass | followup-comments-workerd.log |
@@ -60,10 +60,10 @@ Counts are per command group; do not sum them as unique coverage.
 
 The initial pass remains valid: media pure functions7; baseline media Workerd29; #1087-augmented Workerd30; monthly projection6 then7 after the added test; monthly routes15; new event seams12; proposed hook compile tests2. The two comment harness modes verify legacy behavior3/3 and reject future-contract expectations0/3 respectively. Hook compile tests were not counted as three extra future-contract product failures.
 
-Some parent suites were necessarily repeated to execute an added nested case; those overlaps are disclosed, not counted as fresh unique coverage. Main and pending comment screen runs are different source builds. No unrelated full suite was launched.
+Some suites were necessarily repeated to execute an added nested case; those overlaps are disclosed, not counted as fresh unique coverage. Main and pending comment screen runs are different source builds. No unrelated full suite was launched.
 
 ## Staged comment prerequisite
-At #1090, public-api/src/index.ts:3441–3480 is the legacy reader; line3627 dispatches to it. It ignores future target/conversation/sort parameters and omits future capabilities. The exact function is also present in main and the owner-reported deployed-source commit (function SHA256: 51edd1cd7817bba619168fac5f78014b94b02f313aeccff2579f2c1a97910c8b).
+At #1090, public-api/src/index.ts:3441–3480 is the legacy reader; line3627 dispatches to it. It ignores future target/conversation/sort parameters and omits future capabilities. The exact function is also present in main and the previously reported deployed-source commit (function SHA256: 51edd1cd7817bba619168fac5f78014b94b02f313aeccff2579f2c1a97910c8b).
 
 docs/testing/comment-propagation-2026-10-23.md:71–99 explicitly requires coordinated shared-hook application and documents client fallback; comment_thread_screen.dart:1361 gates sort controls on capability. comment-runtime-fixture.mjs:21–22 applies the shared hooks in memory. The new local results validate that proposed integration, not its presence in the checked-in dispatch. Coordinate with the existing owner before activation; do not open a duplicate “new bug” ticket based on the expected future-contract failures.
 
@@ -81,14 +81,10 @@ docs/testing/comment-propagation-2026-10-23.md:71–99 explicitly requires coord
 
 
 ## User-visible evidence
-Sixteen actual images are saved under screenshots/: twelve main post/reward widget renders; three main comment-thread renders at200% text (320×640,320×900,390×844) with bundled fonts; and one pending #1090 Chromium screenshot after actual reload restoring the draft (390×900). Synthetic fixtures only. Coordinator inspected representative post/reward images, the narrow comment render and browser draft restoration. screenshots/manifest.json records every filename, source SHA, dimensions and SHA256; screenshots/README.md documents states and limits.
+Sixteen actual images are saved under screenshots/: twelve main post/reward widget renders; three main comment-thread renders at200% text (320×640,320×900,390×844) with bundled fonts; and one pending #1090 Chromium screenshot after actual reload restoring the draft (390×900). Synthetic fixtures only. Representative post/reward images, the narrow comment render and browser draft restoration were visually inspected. screenshots/manifest.json records every filename, source SHA, dimensions and SHA256; screenshots/README.md documents states and limits.
 
 ## Remaining limitations and delivery
 I-08 retains the documented-policy boundary described above; no missing-tool blocker remains. No real detector/provider, mobile device biometric interaction, production account, deployment or end-to-end public publication was exercised. Public image attachment/validated publishing remains intentionally withheld. Preserve all gates and the existing refresh-token mechanism.
 
-Library was not retried. Its required helper failed during authenticated tool discovery with HTTP401 before any upload attempt or file transfer. No Library files were delivered and no library_file_ids exist. Artifacts remain in the workspace pending supported delivery.
-
-Three existing Luna Medium helpers were reused. No extra Astra agent or unsupported speed tier was created. Coordinator model/effort/tier still cannot be attested; BASELINE.md retains the receipt.
-
 ## Deliverables
-This report, FIRST_PASS_REPORT.md, BASELINE.md, TEST_MATRIX.md, the three lane matrices, REGRESSION_PACK.md, TICKETS.md, followup-*.md/log files, review-only regression tests/patches and screenshots remain together under review/. The reusable LYTHAUS_END_TO_END_RELIABILITY_PROMPT.md is at worktree root; CURRENT_BRIEF_EXACT.md preserves the original delegation separately. No persistent cross-session personal-memory claim is made.
+This report, FIRST_PASS_REPORT.md, BASELINE.md, TEST_MATRIX.md, the three lane matrices, REGRESSION_PACK.md, TICKETS.md, follow-up records, review-only regression tests/patches and screenshots are preserved in this artifact branch. The matrix records local scope and the evidence ledger gives exact commands and results.

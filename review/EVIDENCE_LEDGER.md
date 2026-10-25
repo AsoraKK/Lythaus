@@ -34,9 +34,9 @@ For the boundary commands set the local55432 URL documented in followup-comments
 | Scope | Exact selection / command | Result |
 |---|---|---:|
 | M | `node --test packages/media/tests/standard-upload.test.mjs` | 7 pass |
-| M | `node --test packages/media/tests/standard-upload.workerd.mjs` | 29 pass (parent+28) |
-| M + exact pending1087 test-only patch | Same Workerd command | 30 pass (parent+29); overlaps baseline |
-| M + terminal janitor test-only patch | `node --test --test-name-pattern='actual standard-upload handlers, Queue dispatcher and local private R2' packages/media/tests/standard-upload.workerd.mjs` | 30 pass; parent necessarily executes children |
+| M | `node --test packages/media/tests/standard-upload.workerd.mjs` | 29 pass (outer test +28 nested tests) |
+| M + exact pending1087 test-only patch | Same Workerd command | 30 pass (outer test +29 nested tests); overlaps baseline |
+| M + terminal janitor test-only patch | `node --test --test-name-pattern='actual standard-upload handlers, Queue dispatcher and local private R2' packages/media/tests/standard-upload.workerd.mjs` | 30 pass; selected outer test executes nested cases |
 | M | `node --experimental-strip-types --test apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs` | 6 initial,7 after added serialization case |
 | M | `node --experimental-strip-types --test apps/lythaus-public-api/tests/monthly-reputation-routes.test.mjs` | 15 pass |
 | M | `node --experimental-strip-types --test review/seams.test.mjs` | 12 pass |
@@ -59,7 +59,7 @@ For the boundary commands set the local55432 URL documented in followup-comments
 | Isolated actual P legacy handler | `node --experimental-strip-types --test review/comment-seam.test.mjs` | 3 current-behavior checks pass |
 | Same handler, future contract | `EXPECT_COMMENT_INTEGRATION=1 node --experimental-strip-types --test review/comment-seam.test.mjs` | 3 expected failures, not current defects |
 
-Some earlier full raw streams (115/5 and focused helper runs) exist only in the execution transcript; their commands/results are recorded in followup-integration.md. This limitation is explicit; no tests were rerun merely to manufacture logs. Suite counts overlap and have no meaningful unique-total sum.
+Raw output files for the 115/5 and some focused runs were not retained; commands and result summaries are recorded in followup-integration.md. No tests were rerun solely to create logs. Suite counts overlap and have no meaningful unique-total sum.
 
 ## Preserved non-product failures
 - Missing PATH/dependencies/cache setup from initial pass: superseded by successful supported cached setup.
@@ -72,7 +72,7 @@ The authoritative16-file manifest is screenshots/manifest.json, including actual
 -12 M widget renders: post/rewards × widths320,390,1440 × light/dark; height900; width320 uses2×text.
 -3 M real-font comment widget renders:320×640,320×900,390×844; light,2×text,DPR1.
 -1 P Chromium screenshot: comment-unsent-actual-reload-390-light.png,390×900, normaltext; after actual reload/before explicit submit.
-Coordinator inspected the narrow comment render and browser restoration screenshot. Widgets expose semantics; this is not a certification of real-device screen-reader usability or WCAG compliance.
+The narrow comment render and browser restoration screenshot were visually inspected. Widgets expose semantics; this is not a certification of real-device screen-reader usability or WCAG compliance.
 
 ## Delivery and residual boundaries
-No Library retry was made after authenticated discovery returned401. It was not an upload attempt; no delivered Library files or IDs exist. Files remain local, with plain report/manifest available to parent. No production mutation, paid API, feature activation, merge or deployment occurred. Live deployment remains unverified. Shared comment hooks remain intentionally staged, not a discovered defect.
+The report, tests, logs and screenshot evidence are included in this repository artifact branch. No production mutation, paid API, feature activation, merge or deployment occurred. Live deployment remains unverified. Shared comment hooks remain intentionally staged, not a discovered defect.

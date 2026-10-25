@@ -1,6 +1,6 @@
 # Reliability test artifact handoff — 2026-10-25
 
-Authorized source handoff to the repository integration task, not a production change or CI activation. Base main: c0963c36693476ecc49ab1fcba0572454926b4d3. Pending comments candidate: a10c381213373c0cb93e7dbc14404806ddf21cf2 (#1090). No runtime logic or workflow changes are included.
+This branch contains review artifacts based on main c0963c36693476ecc49ab1fcba0572454926b4d3 and pending comments candidate a10c381213373c0cb93e7dbc14404806ddf21cf2 (#1090). No runtime logic or workflow changes are included.
 
 Read REPORT.md and EVIDENCE_LEDGER.md first. Final coverage is66 direct local-scope passes plus1 qualified case (I-08), not67 production end-to-end passes. Suite counts overlap. The three historical future-contract failures are expected against intentionally staged comment dispatch; they are not current defects and must not become required failing CI checks.
 
@@ -26,7 +26,7 @@ Exact commands/versions are in EVIDENCE_LEDGER.md. Flutter3.41.1/Dart3.11.0 matc
 - review/comment-seam.test.mjs reads the exact pending SHA through git show. A shallow clone lacking that object cannot run it. Observed mode3 passed; EXPECT_COMMENT_INTEGRATION=1 intentionally fails3 future-contract expectations. Historical diagnostic only; do not install unchanged as a required current-contract CI gate.
 - review/comment-reload.browser.mjs requires the exact pending candidate's existing content-journey entry point and browser runtime. Build/run from that checkout as documented in its header and ledger. One actual reload scenario passed after durable journal persistence. It does not promise to block forced manual reload before persistence; I-08 remains qualified.
 - review/pendingtests/comments-boundary-followup.postgres.mjs must be installed at the candidate test path in its README. Actual standalone candidate reader, disposable local PG17 only:2 boundary tests passed; stronger inactive-access rerun1 passed. This does not prove the reader is wired into main dispatch.
-- review/1087-cancelled-cleanup.patch and followup-terminal-janitor.patch are archived test-only patches. Each augmented Workerd run passed30 counting parent+children, overlapping baseline29. Coordinate with owning upload lane before adopting; do not count them as60 unique cases.
+- review/1087-cancelled-cleanup.patch and followup-terminal-janitor.patch are archived test-only patches. Each augmented Workerd run passed30 counting the outer test and nested cases, overlapping baseline29. Review overlap before adopting; do not count them as60 unique cases.
 - Pending Workerd/hook results use explicitly transformed proposed shared hooks. The real checked-in shared handlers remain intentionally unintegrated. Adoption should eventually test the unchanged integrated runtime, not silently transform it to supply missing features.
 - Original logs, FIRST_PASS_REPORT.md and early lane reports preserve historical conclusions and setup failures. Final REPORT.md, EVIDENCE_LEDGER.md and updated lane matrices supersede earlier status estimates. Provisional Ahem-font overflow and browser locator failures are harness artifacts, not product bugs.
 
