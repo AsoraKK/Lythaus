@@ -108,7 +108,6 @@
     "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs",
     "test:product-integrity-runtime": "node --test scripts/tests/product-integrity-runtime-invariants.test.mjs",
     "test:publication:pg17": "node scripts/ci/run-publication-pg17.mjs",
-    "test:comments:pg17": "node scripts/ci/run-publication-pg17.mjs --comments",
     "test:reputation:pg17": "node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql",
     "test:critical-coverage": "node scripts/critical-coverage-gate.mjs",
     "ml:thermal-qualify": "node ml/local/eco_train/thermal-qualify.mjs --plan",

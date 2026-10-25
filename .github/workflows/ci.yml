@@ -170,7 +170,7 @@ jobs:
       - name: Verify comment propagation and native post reads on PG17 and Workerd
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
-        run: npm run test:comments:pg17
+        run: node scripts/ci/run-publication-pg17.mjs --comments
       - name: Verify gated standard image integrity and unchanged role boundaries
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
