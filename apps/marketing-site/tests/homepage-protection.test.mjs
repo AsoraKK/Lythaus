@@ -36,8 +36,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b'],
+  // Exact inactive account-action source reviewed at 6270c2b; image and waitlist boundaries remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', '95ae09a2df0d260d699b4526a18bc682ff6cc485'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -201,15 +201,20 @@ const reviewedOpenApiDartScripts = {
       'openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true',
       'node scripts/fix-openapi-dart-nested-builder-assignment.mjs lib/generated/api_client',
       'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
+      'node scripts/protect-openapi-member-verification.mjs lib/generated/api_client',
       'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
       'node scripts/install-openapi-dart-membership-tests.mjs lib/generated/api_client',
     ].join(' && '),
   },
   'openapi:test:dart': {
     baseline: 'node scripts/validate-openapi-dart-client.mjs',
-    reviewed: 'node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs && node scripts/validate-openapi-dart-client.mjs',
+    reviewed: 'node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs scripts/tests/openapi-member-verification-transport.test.mjs && node scripts/validate-openapi-dart-client.mjs',
   },
 };
+function assertExactOpenApiDartScript(name, source) {
+  assert.ok(Object.hasOwn(reviewedOpenApiDartScripts, name), 'Only explicitly pinned SDK commands are admitted');
+  assert.equal(source, reviewedOpenApiDartScripts[name].reviewed, `${name} must match the exact SDK normalization and verification transport command`);
+}
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
@@ -947,7 +952,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.overrides['concurrently@10.0.5'] = { 'shell-quote': '1.11.0' };
       for (const [name, scripts] of Object.entries(reviewedOpenApiDartScripts)) {
         assert.equal(before.scripts[name], scripts.baseline, `${name} baseline must stay pinned`);
-        assert.equal(after.scripts[name], scripts.reviewed, `${name} must match the exact PR896 normalization script`);
+        assertExactOpenApiDartScript(name, after.scripts[name]);
         before.scripts[name] = scripts.reviewed;
       }
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
@@ -1077,6 +1082,22 @@ test('allocated Jobs registration rejects missing reordered duplicate extra comm
   }
 });
 
+for (const name of Object.keys(reviewedOpenApiDartScripts)) {
+  test(`${name} allocation rejects missing security steps and arbitrary commands`, () => {
+    const actual = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).scripts[name];
+    assertExactOpenApiDartScript(name, actual);
+    const step = name === 'openapi:gen:dart'
+      ? 'node scripts/protect-openapi-member-verification.mjs lib/generated/api_client && '
+      : ' scripts/tests/openapi-member-verification-transport.test.mjs';
+    const missing = actual.replace(step, '');
+    assert.notEqual(missing, actual);
+    for (const changed of [missing, actual + ' && node unreviewed.mjs', actual + '\n']) {
+      assert.throws(() => assertExactOpenApiDartScript(name, changed), assert.AssertionError);
+    }
+    assert.throws(() => assertExactOpenApiDartScript('unallocated:command', actual), assert.AssertionError);
+  });
+}
+
 test('allocated Jobs pins reject altered historical and unrelated source paths', () => {
   for (const [filename, expected] of allocatedJobsDiagnosticFiles) {
     assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, git('hash-object', `--path=${filename}`, filename)));
@@ -1085,6 +1106,9 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     assert.notEqual(changed, expected);
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
     if (filename === 'apps/lythaus-public-api/src/index.ts') {
+      const previousAllocation = 'dbdbd18ee726e3e399e04fbd01c649534729bb4b';
+      assert.notEqual(previousAllocation, expected, 'The reviewed inactive verification bytes replace the prior exact allocation');
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousAllocation), assert.AssertionError);
       const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
       assert.notEqual(previousPublicApiBlob, expected, 'The reviewed membership and private media retry bytes replace the previous exact allocation');
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);

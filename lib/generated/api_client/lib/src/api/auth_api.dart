@@ -22,8 +22,11 @@ import 'package:lythaus_api_client/src/model/email_verification_request.dart';
 import 'package:lythaus_api_client/src/model/email_verification_required_response.dart';
 import 'package:lythaus_api_client/src/model/email_verification_response.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/member_action_verification_receipt.dart';
+import 'package:lythaus_api_client/src/model/member_action_verification_request.dart';
 import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
 import 'package:lythaus_api_client/src/model/refresh_session_request.dart';
+import 'package:lythaus_api_client/src/model/simple_error.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 import 'package:lythaus_api_client/src/model/validation_error_response.dart';
 
@@ -772,6 +775,120 @@ class AuthApi {
     }
 
     return Response<AuthUserInfo200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Verify an existing account password for one sensitive operation
+  /// Inactive by default; returns 503 while the explicit server policy is disabled. When enabled, verifies the existing account password and issues one opaque proof bound to the authenticated subject, current token version, refresh family, action and exact operation bytes. The server derives the action; only existing reward redemption and deletion request routes are supported. Security/email mutation handlers remain unavailable. The proof expires after five minutes of server DB time and is consumed atomically once inside the protected mutation transaction. Token refresh, JWT iat, local biometrics and reputation cannot satisfy verification. No session credentials are created, rotated or extended. Clients must reject redirects and must not persist or log passwords, existing refresh bindings or proof values. After a confirmed no-effect 403 recent_authentication_required, verify and retry with a fresh Idempotency-Key; an uncertain mutation outcome must retain its old key. The generated Dart method supports native transport only; on web use the bounded app client with redirect rejection and existing HttpOnly cookies. Generic browser SDK adapters cannot guarantee redirect rejection.
+  ///
+  /// Parameters:
+  /// * [memberActionVerificationRequest] - JSON body limited to 16 KiB; the operation body must also fit the protected route's 8192-byte bound.
+  /// * [xLythausAuthTransport] - Browser cookie transport requires cookie-v1, credentials included and an exact allowed Origin. The existing HttpOnly refresh cookie binds the session; never read it into JavaScript or Web Storage.
+  /// * [xLythausSessionBinding] - Native clients supply their current existing securely stored refresh credential as session context. This is not a new API key or login provider. Browser clients instead use the existing HttpOnly cookie contract. One valid existing refresh-family binding is required when verification is enabled.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [MemberActionVerificationReceipt] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<MemberActionVerificationReceipt>> verifyRecentAccountAction({
+    required MemberActionVerificationRequest memberActionVerificationRequest,
+    String? xLythausAuthTransport,
+    String? xLythausSessionBinding,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    if (const bool.fromEnvironment('dart.library.js_interop') ||
+        const bool.fromEnvironment('dart.library.html')) {
+      throw UnsupportedError('Use the redirect-rejecting browser verification client');
+    }
+    final _path = r'/auth/recent-verification';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        if (xLythausAuthTransport != null) r'X-Lythaus-Auth-Transport': xLythausAuthTransport,
+        if (xLythausSessionBinding != null) r'X-Lythaus-Session-Binding': xLythausSessionBinding,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      followRedirects: false,
+      maxRedirects: 0,
+      validateStatus: (status) => status != null && status >= 200 && status < 300 &&
+          (validateStatus?.call(status) ?? true),
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(MemberActionVerificationRequest);
+      _bodyData = _serializers.serialize(memberActionVerificationRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    MemberActionVerificationReceipt? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(MemberActionVerificationReceipt),
+      ) as MemberActionVerificationReceipt;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<MemberActionVerificationReceipt>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

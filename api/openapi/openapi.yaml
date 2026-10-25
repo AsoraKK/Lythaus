@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus API
-  version: v13
+  version: v14
   description: >
     HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers
     backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication
@@ -459,6 +459,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /auth/recent-verification:
+    $ref: './member-verification.yaml#/paths/~1auth~1recent-verification'
   /auth/email/verify:
     $ref: './product-integrity.yaml#/paths/~1auth~1email~1verify'
   /privacy/requests:
@@ -1513,6 +1515,10 @@ components:
       name: CF-Access-Jwt-Assertion
       description: Cloudflare Access JWT assertion required by the admin Worker.
   schemas:
+    MemberActionVerificationRequest:
+      $ref: './member-verification.yaml#/components/schemas/MemberActionVerificationRequest'
+    MemberActionVerificationReceipt:
+      $ref: './member-verification.yaml#/components/schemas/MemberActionVerificationReceipt'
     ActivityConsentInput:
       $ref: './activity-measurement.yaml#/components/schemas/ActivityConsentInput'
     ActivityRenderInput:

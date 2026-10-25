@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**authPasswordResetRequest**](AuthApi.md#authpasswordresetrequest) | **POST** /auth/password/reset/request | Request an opaque password reset message
 [**authRefresh**](AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
 [**authUserInfo**](AuthApi.md#authuserinfo) | **GET** /auth/userinfo | Get the authenticated user&#39;s current identity claims
+[**verifyRecentAccountAction**](AuthApi.md#verifyrecentaccountaction) | **POST** /auth/recent-verification | Verify an existing account password for one sensitive operation
 
 
 # **authEmail**
@@ -359,6 +360,53 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **verifyRecentAccountAction**
+> MemberActionVerificationReceipt verifyRecentAccountAction(memberActionVerificationRequest, xLythausAuthTransport, xLythausSessionBinding)
+
+Verify an existing account password for one sensitive operation
+
+Inactive by default; returns 503 while the explicit server policy is disabled. When enabled, verifies the existing account password and issues one opaque proof bound to the authenticated subject, current token version, refresh family, action and exact operation bytes. The server derives the action; only existing reward redemption and deletion request routes are supported. Security/email mutation handlers remain unavailable. The proof expires after five minutes of server DB time and is consumed atomically once inside the protected mutation transaction. Token refresh, JWT iat, local biometrics and reputation cannot satisfy verification. No session credentials are created, rotated or extended. Clients must reject redirects and must not persist or log passwords, existing refresh bindings or proof values. After a confirmed no-effect 403 recent_authentication_required, verify and retry with a fresh Idempotency-Key; an uncertain mutation outcome must retain its old key. The generated Dart method supports native transport only; on web use the bounded app client with redirect rejection and existing HttpOnly cookies. Generic browser SDK adapters cannot guarantee redirect rejection.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAuthApi();
+final MemberActionVerificationRequest memberActionVerificationRequest = ; // MemberActionVerificationRequest | JSON body limited to 16 KiB; the operation body must also fit the protected route's 8192-byte bound.
+final String xLythausAuthTransport = xLythausAuthTransport_example; // String | Browser cookie transport requires cookie-v1, credentials included and an exact allowed Origin. The existing HttpOnly refresh cookie binds the session; never read it into JavaScript or Web Storage.
+final String xLythausSessionBinding = xLythausSessionBinding_example; // String | Native clients supply their current existing securely stored refresh credential as session context. This is not a new API key or login provider. Browser clients instead use the existing HttpOnly cookie contract. One valid existing refresh-family binding is required when verification is enabled.
+
+try {
+    final response = api.verifyRecentAccountAction(memberActionVerificationRequest, xLythausAuthTransport, xLythausSessionBinding);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->verifyRecentAccountAction: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **memberActionVerificationRequest** | [**MemberActionVerificationRequest**](MemberActionVerificationRequest.md)| JSON body limited to 16 KiB; the operation body must also fit the protected route's 8192-byte bound. |
+ **xLythausAuthTransport** | **String**| Browser cookie transport requires cookie-v1, credentials included and an exact allowed Origin. The existing HttpOnly refresh cookie binds the session; never read it into JavaScript or Web Storage. | [optional]
+ **xLythausSessionBinding** | **String**| Native clients supply their current existing securely stored refresh credential as session context. This is not a new API key or login provider. Browser clients instead use the existing HttpOnly cookie contract. One valid existing refresh-family binding is required when verification is enabled. | [optional]
+
+### Return type
+
+[**MemberActionVerificationReceipt**](MemberActionVerificationReceipt.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
