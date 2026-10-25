@@ -11,6 +11,23 @@ export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lytha
   jobs: 'pscale_api_9jfbtij9y4b2', privacy: 'pscale_api_wv7rzyuejknl',
 });
 export const ROLE_NAMES = Object.freeze([RESTORE.setup, RESTORE.runtime, RESTORE.admin, RESTORE.jobs, RESTORE.privacy]);
+export const ROLE_SQL_SECURITY_BASELINE = Object.freeze({
+  [RESTORE.setup]: Object.freeze({ rolsuper: false, rolbypassrls: true, rolcreaterole: true, rolcreatedb: true,
+    rolreplication: true, rolcanlogin: true }),
+  [RESTORE.runtime]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
+    rolreplication: false, rolcanlogin: true }),
+  [RESTORE.admin]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
+    rolreplication: false, rolcanlogin: true }),
+  [RESTORE.jobs]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
+    rolreplication: false, rolcanlogin: true }),
+  [RESTORE.privacy]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
+    rolreplication: false, rolcanlogin: true }),
+});
+export const ROLE_SQL_MEMBERSHIP_BASELINE = Object.freeze([
+  Object.freeze({ role: 'postgres', member: RESTORE.setup }),
+  Object.freeze({ role: 'pg_read_all_data', member: RESTORE.setup }),
+  Object.freeze({ role: 'pg_write_all_data', member: RESTORE.setup }),
+]);
 export const EXTENSIONS = Object.freeze(['pg_trgm', 'unaccent', 'pgcrypto']);
 export const CREATE_TARGET_BODY = Object.freeze({ name: RESTORE.target, backup_id: RESTORE.backupId,
   region: RESTORE.region, cluster_size: RESTORE.cluster, replicas: 0,
@@ -23,7 +40,10 @@ export const object = value => value !== null && typeof value === 'object' && !A
 export const safeId = value => typeof value === 'string' && /^[a-z0-9]{1,64}$/.test(value);
 export const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export class RestoreFailure extends Error {
-  constructor(code, outcome = 'BLOCKED') { super(code); this.code = code; this.outcome = outcome; }
+  constructor(code, outcome = 'BLOCKED', safeDiagnostic) {
+    super(code); this.code = code; this.outcome = outcome;
+    if (safeDiagnostic) this.safeDiagnostic = safeDiagnostic;
+  }
 }
 export function requireThat(condition, code, outcome) { if (!condition) throw new RestoreFailure(code, outcome); }
 export const failureCode = error => error instanceof RestoreFailure ? error.code : 'operation_failed_details_redacted';
@@ -91,24 +111,100 @@ export function checkBranch(branch, id, ready = false) {
   if (ready) requireThat(branch.ready === true && branch.state === 'ready' && branch.frozen === false, 'target_not_ready');
 }
 
+function safeType(value, present = true) {
+  if (!present) return 'MISSING';
+  if (value === null) return 'NULL';
+  if (Array.isArray(value)) return 'ARRAY';
+  if (object(value)) return 'OBJECT';
+  return typeof value === 'string' ? 'STRING' : typeof value === 'boolean' ? 'BOOLEAN'
+    : typeof value === 'number' ? 'NUMBER' : 'UNSUPPORTED';
+}
+
+function safeRoleField(row, key, matcher, expected) {
+  const present = object(row) && Object.hasOwn(row, key);
+  const value = present ? row[key] : undefined;
+  const type = safeType(value, present);
+  return { present, type, expected, ...(type === 'BOOLEAN' || type === 'NULL' ? { observed: value } : {}), matches: matcher(value, present) };
+}
+
+function roleMetadataDiagnostic(name, branchId, found, row, sourceRow) {
+  const branch = object(row?.branch) ? row.branch : undefined;
+  const expectedReplication = name === RESTORE.setup;
+  const actualInherited = Array.isArray(row?.inherited_roles) ? row.inherited_roles : undefined;
+  const inheritedMatches = actualInherited !== undefined
+    && actualInherited.every(item => typeof item === 'string' && /^[A-Za-z0-9_.-]+$/.test(item));
+  const sourceInherited = Array.isArray(sourceRow?.inherited_roles) ? sourceRow.inherited_roles : undefined;
+  const sourceInheritanceMatches = sourceRow === undefined || (sourceInherited !== undefined && actualInherited !== undefined
+    && JSON.stringify([...actualInherited].sort()) === JSON.stringify([...sourceInherited].sort()));
+  return {
+    roleClass: name === RESTORE.setup ? 'setup' : 'application', candidateCount: found.length,
+    fields: {
+      id: safeRoleField(row, 'id', value => safeId(value), 'safe-provider-id'),
+      baseUsername: safeRoleField(row, 'base_username', value => value === name, 'exact-configured-role'),
+      branchId: { present: !!branch && Object.hasOwn(branch, 'id'), type: safeType(branch?.id, !!branch && Object.hasOwn(branch, 'id')),
+        expected: 'exact-bound-branch', matches: branch?.id === branchId },
+      branchName: { present: !!branch && Object.hasOwn(branch, 'name'), type: safeType(branch?.name, !!branch && Object.hasOwn(branch, 'name')),
+        expected: branchId === RESTORE.sourceId ? 'main' : RESTORE.target,
+        matches: branch?.name === (branchId === RESTORE.sourceId ? 'main' : RESTORE.target) },
+      branchDeletedAtNull: { present: !!branch && Object.hasOwn(branch, 'deleted_at'), type: safeType(branch?.deleted_at, !!branch && Object.hasOwn(branch, 'deleted_at')),
+        expected: 'NULL', matches: branch?.deleted_at === null },
+      username: safeRoleField(row, 'username', value => value === `${name}.${branchId}`, 'exact-bound-role'),
+      databaseName: safeRoleField(row, 'database_name', value => value === 'postgres', 'postgres'),
+      ready: safeRoleField(row, 'ready', value => value === true, true),
+      expired: safeRoleField(row, 'expired', value => value === false, false),
+      deletedAtNull: safeRoleField(row, 'deleted_at', value => value === null, 'NULL'),
+      disabledAtNull: safeRoleField(row, 'disabled_at', value => value === null, 'NULL'),
+      droppedAtNull: safeRoleField(row, 'dropped_at', value => value === null, 'NULL'),
+      expiresAtNull: safeRoleField(row, 'expires_at', value => value === null, 'NULL'),
+      withReplication: safeRoleField(row, 'with_replication', value => value === expectedReplication, expectedReplication),
+      inheritedRoles: { present: object(row) && Object.hasOwn(row, 'inherited_roles'), type: safeType(row?.inherited_roles,
+        object(row) && Object.hasOwn(row, 'inherited_roles')), expected: 'array of safe inherited role names',
+        observedCount: actualInherited?.length ?? null, elementsAreSafeStrings: actualInherited !== undefined
+          && actualInherited.every(item => typeof item === 'string' && /^[A-Za-z0-9_.-]+$/.test(item)), matches: inheritedMatches },
+      ...(sourceRow === undefined ? {} : { sourceInheritanceMatches: { present: true, type: 'BOOLEAN', expected: true,
+        observed: sourceInheritanceMatches, matches: sourceInheritanceMatches } }),
+    },
+  };
+}
+
 export function checkedRoles(rows, branchId, sourceRoles) {
   requireThat(Array.isArray(rows), 'copied_role_inventory_invalid');
   const result = new Map();
   for (const name of ROLE_NAMES) {
-    const found = rows.filter(row => row.base_username === name);
-    requireThat(found.length === 1, 'copied_role_missing_or_ambiguous');
-    const row = found[0];
-    requireThat(safeId(row.id) && row.branch?.id === branchId && row.branch.name === (branchId === RESTORE.sourceId ? 'main' : RESTORE.target)
-      && row.branch.deleted_at === null && row.username === `${name}.${branchId}` && row.database_name === 'postgres'
-      && row.ready === true && row.expired === false && row.deleted_at === null && row.disabled_at === null
-      && row.dropped_at === null && row.expires_at === null && row.with_replication === false
-      && Array.isArray(row.inherited_roles) && row.inherited_roles.every(item => typeof item === 'string' && /^[A-Za-z0-9_.-]+$/.test(item)),
-    'copied_role_metadata_invalid');
-    if (sourceRoles) requireThat(JSON.stringify([...row.inherited_roles].sort()) ===
-      JSON.stringify([...sourceRoles.get(name).inherited_roles].sort()), 'copied_role_authority_changed');
+    const found = rows.filter(row => object(row) && row.base_username === name);
+    const row = found.length === 1 ? found[0] : undefined;
+    const sourceRow = sourceRoles?.get(name);
+    const diagnostic = roleMetadataDiagnostic(name, branchId, found, row, sourceRow);
+    const checks = Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches')
+      .every(([, value]) => value.matches === true);
+    if (found.length !== 1 || !checks) {
+      throw new RestoreFailure('copied_role_metadata_invalid', 'BLOCKED', { version: 1, role: diagnostic });
+    }
+    if (sourceRoles && (!sourceRow || diagnostic.fields.sourceInheritanceMatches?.matches !== true)) {
+      throw new RestoreFailure('copied_role_authority_changed', 'BLOCKED', { version: 1, role: diagnostic });
+    }
     result.set(name, { id: row.id, base_username: name, username: row.username, inherited_roles: row.inherited_roles });
   }
   return result;
+}
+
+export function assertRestoreRoleSqlBaseline(roles, members) {
+  requireThat(Array.isArray(roles) && roles.length === ROLE_NAMES.length && Array.isArray(members), 'restored_role_security_contract_invalid');
+  const byName = new Map(roles.map(row => [row?.rolname, row]));
+  requireThat(byName.size === ROLE_NAMES.length && ROLE_NAMES.every(name => byName.has(name)), 'restored_role_security_contract_invalid');
+  for (const name of ROLE_NAMES) {
+    const expected = ROLE_SQL_SECURITY_BASELINE[name], row = byName.get(name);
+    requireThat(Object.keys(expected).every(key => typeof row[key] === 'boolean' && row[key] === expected[key]),
+      'restored_role_security_contract_invalid');
+  }
+  const expectedMemberships = ROLE_SQL_MEMBERSHIP_BASELINE.map(row => `${row.role}\0${row.member}`).sort();
+  const observedMemberships = members.map(row => {
+    requireThat(object(row) && typeof row.role === 'string' && typeof row.member === 'string'
+      && typeof row.grantor === 'string' && typeof row.admin_option === 'boolean'
+      && typeof row.inherit_option === 'boolean' && typeof row.set_option === 'boolean', 'restored_role_security_contract_invalid');
+    return `${row.role}\0${row.member}`;
+  }).sort();
+  requireThat(JSON.stringify(observedMemberships) === JSON.stringify(expectedMemberships), 'restored_role_security_contract_invalid');
 }
 
 const diagnosticPermissions = new Set(['read_database', 'read_databases', 'read_service_tokens', 'read_branch', 'read_backups',

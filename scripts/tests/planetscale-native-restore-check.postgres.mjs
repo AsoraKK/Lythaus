@@ -20,8 +20,12 @@ test('disposable PG17 verifies actual catalog SQL, all 17 restored privileges an
     const existing = await control.query('SELECT rolname FROM pg_roles WHERE rolname=ANY($1::text[])', [ROLE_NAMES]);
     assert.equal(existing.rows.length, 0, 'fixture roles must not preexist');
     for (const role of ROLE_NAMES) {
-      await control.query(`CREATE ROLE "${role}" LOGIN PASSWORD 'synthetic-restore-only'`); ownedRoles.push(role);
+      const attributes = role === RESTORE.setup ? 'CREATEDB CREATEROLE REPLICATION BYPASSRLS' : 'NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS';
+      await control.query(`CREATE ROLE "${role}" LOGIN PASSWORD 'synthetic-restore-only' ${attributes} NOSUPERUSER`); ownedRoles.push(role);
     }
+    await control.query(`GRANT postgres TO "${RESTORE.setup}"`);
+    await control.query(`GRANT pg_read_all_data TO "${RESTORE.setup}"`);
+    await control.query(`GRANT pg_write_all_data TO "${RESTORE.setup}"`);
     await control.query(`CREATE DATABASE "${database}"`); created = true;
     const local = new URL(controlUrl); local.pathname = '/' + database;
     client = new pg.Client({ connectionString: local.toString(), ssl: false }); await client.connect();

@@ -3,7 +3,7 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig } from './
 import { expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
 import { runtimeSchemaFingerprint, canonicalReleaseSchemaContract, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
-import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash } from './planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, assertRestoreRoleSqlBaseline } from './planetscale-native-restore-contract.mjs';
 
 export function sourceConnection(raw, expectedOrigin) {
   const target = branchQualifiedDatabaseTarget(raw);
@@ -105,12 +105,11 @@ export async function collectRestoreCatalog(client) {
   requireThat(staged?.index_absent === true && staged.column_absent === true, '0021_catalog_must_be_absent');
   const roles = (await client.query(`SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls
     FROM pg_roles WHERE rolname=ANY($1::text[]) ORDER BY rolname`, [ROLE_NAMES])).rows;
-  requireThat(roles.length === 5 && roles.every(row => row.rolcanlogin === true && row.rolsuper === false
-    && row.rolbypassrls === false && row.rolreplication === false), 'restored_role_security_contract_invalid');
   const members = (await client.query(`SELECT r.rolname AS role,m.rolname AS member,g.rolname AS grantor,
     a.admin_option,a.inherit_option,a.set_option FROM pg_auth_members a JOIN pg_roles r ON r.oid=a.roleid
     JOIN pg_roles m ON m.oid=a.member JOIN pg_roles g ON g.oid=a.grantor
     WHERE r.rolname=ANY($1::text[]) OR m.rolname=ANY($1::text[]) ORDER BY role,member,grantor`, [ROLE_NAMES])).rows;
+  assertRestoreRoleSqlBaseline(roles, members);
   const extensions = (await client.query('SELECT extname,extversion FROM pg_extension WHERE extname=ANY($1::text[]) ORDER BY extname', [EXTENSIONS])).rows;
   const checks = [];
   for (const [table, privilege, columns] of [['trust.reward_redemptions', 'SELECT', ['id','user_id','reward_id','reward_level','reward_title','redeemed_at','status']],

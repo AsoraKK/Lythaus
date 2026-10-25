@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
-import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
-  checkedRoles, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, ROLE_SQL_SECURITY_BASELINE,
+  ROLE_SQL_MEMBERSHIP_BASELINE, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
+  checkedRoles, assertRestoreRoleSqlBaseline, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore, githubReadiness } from '../ci/planetscale-native-restore-check.mjs';
 import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions } from '../ci/planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
@@ -22,7 +23,7 @@ const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GI
       decisionBy: '2026-10-25T05:00:00Z', estimatedUsd: 0.01 } }) });
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
-  dropped_at: null, expires_at: null, with_replication: false, inherited_roles: ['pg_read_all_settings'],
+  dropped_at: null, expires_at: null, with_replication: name === RESTORE.setup, inherited_roles: ['pg_read_all_settings'],
   branch: { id, name: id === RESTORE.sourceId ? 'main' : RESTORE.target, deleted_at: null } }));
 const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-25T04:00:00Z', deleted_at: null,
   default: false, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false,
@@ -46,6 +47,7 @@ function fixture(mode = '') {
         return mode === 'preexisting' ? [target()] : [];
       }
       const rows = roleRows(path.includes('/main/') ? RESTORE.sourceId : newId);
+      if (mode === 'source_role_metadata_invalid' && path.includes('/main/')) rows[0].expires_at = 'synthetic-lifecycle-canary';
       if (mode === 'copied_role_mismatch' && !path.includes('/main/')) rows[2].base_username = 'unexpected';
       return rows;
     },
@@ -127,6 +129,21 @@ test('qualification restores the specified backup snapshot, exercises five copie
   assert.doesNotMatch(JSON.stringify(f.checkpoints), /connectionString|postgresql:\/\/|access_host_url/);
 });
 
+test('pinned history plus source-role metadata failure stays pre-mutation and emits shape-only diagnostics', async () => {
+  const f = fixture('source_role_metadata_invalid');
+  f.options.assertMain = async () => ({ executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED',
+    pinnedExecutions: [{ runId: '40184823787' }, { runId: '40193991312' }] } });
+  const report = await runNativeRestore(f.options);
+  assert.equal(report.blockers[0], 'copied_role_metadata_invalid');
+  assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+  assert.equal(report.createdTargetId, null); assert.equal(report.cleanup, 'NOT_NEEDED');
+  assert.equal(report.executionHistoryReconciliation.pinnedExecutions[1].runId, '40193991312');
+  assert.deepEqual(report.roleMetadataDiagnostic.role.fields.expiresAtNull,
+    { present: true, type: 'STRING', expected: 'NULL', matches: false });
+  assert.doesNotMatch(JSON.stringify(report), /synthetic-lifecycle-canary|synthetic-secret-never-output/);
+  assert.ok(f.calls.every(value => !/^(POST|PATCH|DELETE) /.test(value)));
+});
+
 for (const [mode, blocker, cleanup] of [
   ['authority_denied','provider_access_denied','NOT_NEEDED'], ['preexisting','preexisting_target_refused','NOT_NEEDED'],
   ['direct_target_present','preexisting_target_refused','NOT_NEEDED'], ['direct_target_error','provider_request_failed','NOT_NEEDED'],
@@ -135,7 +152,7 @@ for (const [mode, blocker, cleanup] of [
   ['completion_mismatch','fixed_backup_completion_changed','NOT_NEEDED'],
   ['unknown_create','provider_transport_failed','UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED'],
   ['unprotected','protected_backup_with_finite_retention_plan_is_manual_prerequisite','NOT_NEEDED'],
-  ['copied_role_mismatch','copied_role_missing_or_ambiguous','TARGET_RETAINED_PENDING_REVIEW'],
+  ['copied_role_mismatch','copied_role_metadata_invalid','TARGET_RETAINED_PENDING_REVIEW'],
   ['extension_denied','missing_extension_install_authority_unproven','TARGET_RETAINED_PENDING_REVIEW'],
   ['catalog_mismatch','restored_catalog_registry_acl_or_grants_mismatch','TARGET_RETAINED_PENDING_REVIEW'],
   ['partial_reset','provider_transport_failed','TARGET_RETAINED_PENDING_REVIEW'],
@@ -662,20 +679,106 @@ test('credential projection rejects main, mismatched role, host and password; ne
   assert.throws(() => checkBranch({ ...target(), name: 'main' }, newId));
   assert.throws(() => checkBackup({ ...backup(), pvc_size: RESTORE.bytes + 1 }, instant));
 });
-test('GitHub preconditions reconcile only the pinned prior run with complete never-started evidence', async () => {
+test('role-class checks accept only the exact observed setup baseline and strict application-role baseline', () => {
+  const sourceRows = roleRows(RESTORE.sourceId);
+  const source = new Map(sourceRows.map(row => [row.base_username, row]));
+  assert.equal(checkedRoles(sourceRows, RESTORE.sourceId).size, ROLE_NAMES.length);
+  assert.equal(checkedRoles(roleRows(), newId, source).size, ROLE_NAMES.length);
+
+  const wrongSetupReplication = roleRows(); wrongSetupReplication[0].with_replication = false;
+  assert.throws(() => checkedRoles(wrongSetupReplication, newId), error => {
+    assert.equal(error.code, 'copied_role_metadata_invalid');
+    assert.equal(error.safeDiagnostic.role.roleClass, 'setup');
+    assert.deepEqual(error.safeDiagnostic.role.fields.withReplication,
+      { present: true, type: 'BOOLEAN', expected: true, observed: false, matches: false });
+    return true;
+  });
+  const privilegedApplication = roleRows(); privilegedApplication[1].with_replication = true;
+  assert.throws(() => checkedRoles(privilegedApplication, newId), error => {
+    assert.equal(error.safeDiagnostic.role.roleClass, 'application');
+    assert.equal(error.safeDiagnostic.role.fields.withReplication.matches, false);
+    return true;
+  });
+  const malformedInheritance = roleRows(); malformedInheritance[0].inherited_roles = { password: 'synthetic-password-canary' };
+  assert.throws(() => checkedRoles(malformedInheritance, newId), error => {
+    const diagnostic = JSON.stringify(error.safeDiagnostic);
+    assert.equal(error.safeDiagnostic.role.fields.inheritedRoles.type, 'OBJECT');
+    assert.equal(error.safeDiagnostic.role.fields.inheritedRoles.matches, false);
+    assert.doesNotMatch(diagnostic, /synthetic-password-canary/);
+    return true;
+  });
+  const changedInheritance = roleRows(); changedInheritance[0].inherited_roles.push('unexpected_role');
+  assert.throws(() => checkedRoles(changedInheritance, newId, source), error => error.code === 'copied_role_authority_changed');
+});
+test('restored SQL role contract pins observed setup flags and memberships while keeping app flags strict', () => {
+  const roles = ROLE_NAMES.map(rolname => ({ rolname, ...ROLE_SQL_SECURITY_BASELINE[rolname], rolinherit: true, rolcanlogin: true }));
+  const members = ROLE_SQL_MEMBERSHIP_BASELINE.map(({ role, member }) => ({ role, member, grantor: 'postgres',
+    admin_option: false, inherit_option: true, set_option: true }));
+  assert.doesNotThrow(() => assertRestoreRoleSqlBaseline(roles, members));
+
+  for (const key of ['rolsuper', 'rolbypassrls', 'rolcreaterole', 'rolcreatedb', 'rolreplication']) {
+    const altered = roles.map(row => ({ ...row }));
+    altered[1][key] = !ROLE_SQL_SECURITY_BASELINE[RESTORE.runtime][key];
+    assert.throws(() => assertRestoreRoleSqlBaseline(altered, members), /restored_role_security_contract_invalid/,
+      `application role drift in ${key} must block`);
+  }
+  const setupDrift = roles.map(row => ({ ...row })); setupDrift[0].rolsuper = true;
+  assert.throws(() => assertRestoreRoleSqlBaseline(setupDrift, members), /restored_role_security_contract_invalid/);
+  for (const name of ROLE_NAMES) {
+    const nonLogin = roles.map(row => ({ ...row })); nonLogin.find(row => row.rolname === name).rolcanlogin = false;
+    assert.throws(() => assertRestoreRoleSqlBaseline(nonLogin, members), /restored_role_security_contract_invalid/,
+      `${name} must remain login-enabled`);
+    const missingLogin = roles.map(row => ({ ...row })); delete missingLogin.find(row => row.rolname === name).rolcanlogin;
+    assert.throws(() => assertRestoreRoleSqlBaseline(missingLogin, members), /restored_role_security_contract_invalid/,
+      `${name} must include an explicit login flag`);
+  }
+  assert.throws(() => assertRestoreRoleSqlBaseline(roles, members.slice(1)), /restored_role_security_contract_invalid/);
+  assert.throws(() => assertRestoreRoleSqlBaseline(roles, [...members, { ...members[0], role: RESTORE.runtime }]),
+    /restored_role_security_contract_invalid/);
+});
+
+test('GitHub preconditions reconcile only the two pinned prior runs with complete evidence', async () => {
   const env = { ...environment(), GH_TOKEN: password, GITHUB_SHA: sha, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
     GITHUB_REPOSITORY_ID: '1010752912', GITHUB_REPOSITORY: 'fixture-owner/Lythaus', GITHUB_RUN_ATTEMPT: '1' };
-  const pinnedSha = '43829abc3424a88a22826695bbfdc7be4a116e62';
-  const pinnedRun = () => ({ id: 40184823787, run_number: 7, workflow_id: 394786946, path: '.github/workflows/planetscale-native-restore-check.yml',
-    head_sha: pinnedSha, head_branch: 'main', event: 'workflow_dispatch', run_attempt: 1, status: 'completed', conclusion: 'cancelled',
-    display_title: `Native restore execute ${pinnedSha}`, name: `Native restore execute ${pinnedSha}`,
+  const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
+  const cancelledSha = '43829abc3424a88a22826695bbfdc7be4a116e62';
+  const failedSha = '96ff66fa5c28c9780ce72ee23a40cd846372d6bd';
+  const cancelledRun = () => ({ id: 40184823787, run_number: 7, workflow_id: 394786946, path: workflowPath,
+    head_sha: cancelledSha, head_branch: 'main', event: 'workflow_dispatch', run_attempt: 1, status: 'completed', conclusion: 'cancelled',
+    display_title: `Native restore execute ${cancelledSha}`, name: `Native restore execute ${cancelledSha}`,
     repository: { id: 1010752912, full_name: env.GITHUB_REPOSITORY },
     head_repository: { id: 1010752912, full_name: env.GITHUB_REPOSITORY }, pull_requests: [] });
-  const pinnedJob = () => ({ id: 121143288424, run_id: 40184823787, run_attempt: 1, head_sha: pinnedSha,
+  const cancelledJob = () => ({ id: 121143288424, run_id: 40184823787, run_attempt: 1, head_sha: cancelledSha,
     name: 'Qualify isolated native restore without cleanup', status: 'completed', conclusion: 'cancelled',
     runner_id: 0, runner_name: '', runner_group_id: 0, steps: [] });
+  const failedRun = () => ({ id: 40193991312, run_number: 8, workflow_id: 394786946, path: workflowPath,
+    head_sha: failedSha, head_branch: 'main', event: 'workflow_dispatch', run_attempt: 1, status: 'completed', conclusion: 'failure',
+    display_title: `Native restore execute ${failedSha}`, name: `Native restore execute ${failedSha}`,
+    repository: { id: 1010752912, full_name: env.GITHUB_REPOSITORY },
+    head_repository: { id: 1010752912, full_name: env.GITHUB_REPOSITORY }, pull_requests: [] });
+  const failedStepNames = [
+    'Set up job', 'Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+    'Require exact protected main before loading dependencies or credentials',
+    'Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+    'Run npm ci --ignore-scripts --no-audit', 'Run fixed-target runner using only existing protected access',
+    'Finalize immutable qualification evidence without provider access', 'Summarize retained target and review deadlines',
+    'Upload immutable qualification evidence',
+    'Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+    'Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'Complete job',
+  ];
+  const failedConclusions = ['success','success','success','success','success','failure','success','success','success','skipped','success','success'];
+  const failedNumbers = [1,2,3,4,5,6,7,8,9,17,18,19];
+  const failedJob = () => ({ id: 121170799629, run_id: 40193991312, run_attempt: 1, head_sha: failedSha,
+    name: 'Qualify isolated native restore without cleanup', status: 'completed', conclusion: 'failure', runner_id: 101,
+    runner_name: 'GitHub Actions 1000000000', runner_group_id: 1,
+    steps: failedStepNames.map((name, index) => ({ name, number: failedNumbers[index], status: 'completed', conclusion: failedConclusions[index] })) });
+  const failedArtifact = () => ({ id: 12599287272,
+    name: `native-restore-qualification-${failedSha}-40193991312`, size_in_bytes: 1925,
+    digest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac', expired: false,
+    created_at: '2026-10-25T12:41:37Z', expires_at: '2026-11-01T12:41:36Z',
+    workflow_run: { id: 40193991312, repository_id: 1010752912, head_sha: failedSha } });
   const planRuns = [sha, 'b'.repeat(40)].map((headSha, index) => ({ id: 50 + index, workflow_id: 394786946,
-    path: '.github/workflows/planetscale-native-restore-check.yml', head_sha: headSha, head_branch: 'main', event: 'workflow_dispatch',
+    path: workflowPath, head_sha: headSha, head_branch: 'main', event: 'workflow_dispatch',
     display_title: `Native restore plan ${headSha}` }));
   const fixtureFetch = (overrides = {}) => {
     const reads = [];
@@ -686,16 +789,22 @@ test('GitHub preconditions reconcile only the pinned prior run with complete nev
       if (pathname.endsWith(`/actions/runs/${env.GITHUB_RUN_ID}/approvals`)) return Response.json(overrides.currentApprovals
         ?? [{ state: 'approved', user: { type: overrides.bot ? 'Bot' : 'User', login: 'owner' }, environments: [{ name: 'production' }] }]);
       if (pathname.includes('/actions/workflows/') && pathname.endsWith('/runs')) {
-        const runs = overrides.history ?? [...planRuns, pinnedRun()];
+        const runs = overrides.history ?? [...planRuns, cancelledRun(), failedRun()];
         return Response.json({ total_count: overrides.historyCount ?? runs.length, workflow_runs: runs });
       }
       if (pathname.endsWith('/actions/runs/40184823787/approvals')) return Response.json(overrides.priorApprovals ?? []);
       if (pathname.endsWith('/actions/runs/40184823787/jobs')) return Response.json({ total_count: overrides.jobCount ?? 1,
-        jobs: Object.hasOwn(overrides, 'jobs') ? overrides.jobs : [pinnedJob()] });
+        jobs: Object.hasOwn(overrides, 'jobs') ? overrides.jobs : [cancelledJob()] });
       if (pathname.endsWith('/actions/runs/40184823787/artifacts')) return Response.json({ total_count: overrides.artifactCount ?? 0,
         artifacts: Object.hasOwn(overrides, 'artifacts') ? overrides.artifacts : [] });
       if (pathname.endsWith('/actions/runs/40184823787')) return Response.json(overrides.malformedRun
-        ? null : { ...pinnedRun(), ...(overrides.run ?? {}) });
+        ? null : { ...cancelledRun(), ...(overrides.run ?? {}) });
+      if (pathname.endsWith('/actions/runs/40193991312/jobs')) return Response.json({ total_count: overrides.failedJobCount ?? 1,
+        jobs: Object.hasOwn(overrides, 'failedJobs') ? overrides.failedJobs : [failedJob()] });
+      if (pathname.endsWith('/actions/runs/40193991312/artifacts')) return Response.json({ total_count: overrides.failedArtifactCount ?? 1,
+        artifacts: Object.hasOwn(overrides, 'failedArtifacts') ? overrides.failedArtifacts : [failedArtifact()] });
+      if (pathname.endsWith('/actions/runs/40193991312')) return Response.json(overrides.malformedFailedRun
+        ? null : { ...failedRun(), ...(overrides.failedRun ?? {}) });
       if (pathname === `/repos/${env.GITHUB_REPOSITORY}`) return Response.json({ id: 1010752912, full_name: env.GITHUB_REPOSITORY });
       throw new Error(`unexpected GitHub read ${pathname}`);
     };
@@ -703,10 +812,18 @@ test('GitHub preconditions reconcile only the pinned prior run with complete nev
   };
   const good = fixtureFetch();
   const readiness = await githubReadiness(env, good.fetcher, true);
-  assert.deepEqual(readiness.executionHistoryReconciliation, { status: 'PINNED_PRE_RUNNER_CANCELLATION_RECONCILED',
-    workflowPath: '.github/workflows/planetscale-native-restore-check.yml', workflowId: 394786946,
-    runId: '40184823787', runNumber: 7, runAttempt: 1, headSha: pinnedSha, event: 'workflow_dispatch', conclusion: 'cancelled',
-    jobId: 121143288424, runnerAssigned: false, stepCount: 0, approvalCount: 0, artifactCount: 0 });
+  assert.deepEqual(readiness.executionHistoryReconciliation, { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED',
+    workflowPath, workflowId: 394786946, pinnedExecutions: [
+      { status: 'PINNED_PRE_RUNNER_CANCELLATION_RECONCILED', workflowPath, workflowId: 394786946,
+        runId: '40184823787', runNumber: 7, runAttempt: 1, headSha: cancelledSha, event: 'workflow_dispatch', conclusion: 'cancelled',
+        jobId: 121143288424, runnerAssigned: false, stepCount: 0, approvalCount: 0, artifactCount: 0 },
+      { status: 'PINNED_PRECREATE_FAILURE_RECONCILED', workflowPath, workflowId: 394786946,
+        runId: '40193991312', runNumber: 8, runAttempt: 1, headSha: failedSha, event: 'workflow_dispatch', conclusion: 'failure',
+        jobId: 121170799629, failedStepNumber: 6, blocker: 'copied_role_metadata_invalid', artifactId: 12599287272,
+        artifactDigest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac',
+        artifactProviderMutationCount: 0, artifactCredentialActionCount: 0, artifactTargetCreated: false,
+        artifactState: 'NO_TARGET_CREATED', artifactCount: 1 },
+    ] });
   assert.ok(good.reads.every(row => row.method === 'GET'));
   const noPrior = fixtureFetch({ history: planRuns });
   await assert.rejects(() => githubReadiness(env, noPrior.fetcher, true), /prior_execution_requires_manual_reconciliation/);
@@ -722,17 +839,32 @@ test('GitHub preconditions reconcile only the pinned prior run with complete nev
     ['wrong repository', { run: { repository: { id: 2, full_name: env.GITHUB_REPOSITORY } } }],
     ['prior approval', { priorApprovals: [{ state: 'approved' }] }], ['job inventory incomplete', { jobCount: 2 }],
     ['missing jobs', { jobs: undefined }],
-    ['wrong job id', { jobs: [{ ...pinnedJob(), id: 1 }] }], ['wrong job run', { jobs: [{ ...pinnedJob(), run_id: 7 }] }],
-    ['wrong job attempt', { jobs: [{ ...pinnedJob(), run_attempt: 2 }] }], ['wrong job SHA', { jobs: [{ ...pinnedJob(), head_sha: 'd'.repeat(40) }] }],
-    ['job not cancelled', { jobs: [{ ...pinnedJob(), conclusion: 'failure' }] }], ['runner assigned', { jobs: [{ ...pinnedJob(), runner_id: 7 }] }],
-    ['runner name present', { jobs: [{ ...pinnedJob(), runner_name: 'runner' }] }],
-    ['missing steps', { jobs: [{ ...pinnedJob(), steps: undefined }] }], ['started step', { jobs: [{ ...pinnedJob(), steps: [{ name: 'checkout' }] }] }],
+    ['wrong job id', { jobs: [{ ...cancelledJob(), id: 1 }] }], ['wrong job run', { jobs: [{ ...cancelledJob(), run_id: 7 }] }],
+    ['wrong job attempt', { jobs: [{ ...cancelledJob(), run_attempt: 2 }] }], ['wrong job SHA', { jobs: [{ ...cancelledJob(), head_sha: 'd'.repeat(40) }] }],
+    ['job not cancelled', { jobs: [{ ...cancelledJob(), conclusion: 'failure' }] }], ['runner assigned', { jobs: [{ ...cancelledJob(), runner_id: 7 }] }],
+    ['runner name present', { jobs: [{ ...cancelledJob(), runner_name: 'runner' }] }],
+    ['missing steps', { jobs: [{ ...cancelledJob(), steps: undefined }] }], ['started step', { jobs: [{ ...cancelledJob(), steps: [{ name: 'checkout' }] }] }],
     ['artifact present', { artifactCount: 1, artifacts: [{ id: 1 }] }], ['artifact inventory incomplete', { artifactCount: 1 }],
     ['missing artifacts', { artifacts: undefined }], ['history count mismatch', { historyCount: 99 }], ['history over limit', { historyCount: 101 }],
-    ['unclassifiable history', { history: [...planRuns, pinnedRun(), { ...planRuns[0], id: 99, display_title: 'unexpected' }] }],
-    ['pinned history title mismatch', { history: [...planRuns, { ...pinnedRun(), display_title: `Native restore plan ${pinnedSha}` }] }],
-    ['pinned history SHA mismatch', { history: [...planRuns, { ...pinnedRun(), head_sha: 'e'.repeat(40) }] }],
-    ['second execute run', { history: [...planRuns, pinnedRun(), { ...pinnedRun(), id: 40184823788 }] }],
+    ['unclassifiable history', { history: [...planRuns, cancelledRun(), failedRun(), { ...planRuns[0], id: 99, display_title: 'unexpected' }] }],
+    ['pinned history title mismatch', { history: [...planRuns, { ...cancelledRun(), display_title: `Native restore plan ${cancelledSha}` }, failedRun()] }],
+    ['pinned history SHA mismatch', { history: [...planRuns, { ...cancelledRun(), head_sha: 'e'.repeat(40) }, failedRun()] }],
+    ['second execute run', { history: [...planRuns, cancelledRun(), failedRun(), { ...failedRun(), id: 40193991313 }] }],
+    ['failed run SHA mismatch', { failedRun: { head_sha: 'f'.repeat(40) } }],
+    ['failed run event mismatch', { failedRun: { event: 'push' } }],
+    ['failed run attempt mismatch', { failedRun: { run_attempt: 2 } }],
+    ['failed run not terminal', { failedRun: { status: 'in_progress', conclusion: null } }],
+    ['failed run workflow mismatch', { failedRun: { workflow_id: 1 } }],
+    ['failed job inventory mismatch', { failedJobCount: 2 }],
+    ['failed job identity mismatch', { failedJobs: [{ ...failedJob(), id: 99 }] }],
+    ['failed job missing steps', { failedJobs: [{ ...failedJob(), steps: undefined }] }],
+    ['failure step changed', { failedJobs: [{ ...failedJob(), steps: failedJob().steps.map(step =>
+      step.number === 6 ? { ...step, conclusion: 'success' } : step) }] }],
+    ['extra job step', { failedJobs: [{ ...failedJob(), steps: [...failedJob().steps, { name: 'extra', number: 20, status: 'completed', conclusion: 'success' }] }] }],
+    ['artifact inventory empty', { failedArtifactCount: 0, failedArtifacts: [] }],
+    ['artifact digest mismatch', { failedArtifacts: [{ ...failedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] }],
+    ['artifact expired', { failedArtifacts: [{ ...failedArtifact(), expired: true }] }],
+    ['artifact source mismatch', { failedArtifacts: [{ ...failedArtifact(), workflow_run: { ...failedArtifact().workflow_run, head_sha: 'f'.repeat(40) } }] }],
   ]) {
     const candidate = fixtureFetch(overrides);
     await assert.rejects(() => githubReadiness(env, candidate.fetcher, true), undefined, label);

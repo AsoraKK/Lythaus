@@ -15,16 +15,22 @@ before dispatching `execute=true`.
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
 record. Every prior execute run in the complete workflow history blocks another
-execution, even across SHAs. The only reconciled history item is pinned run
-`40184823787` at `43829abc3424a88a22826695bbfdc7be4a116e62`; it is accepted only
-when GitHub still proves the exact workflow and attempt, terminal cancellation,
-no production approval, one terminal cancelled job with no assigned runner and
-an explicit empty step list, and no artifacts. Any missing, changed, extra or
-uncertain evidence blocks. Before target creation, the runner also requires an
-exact target GET 404, a complete branch inventory without the target, and
-backup restore history without the target. This one-run reconciliation never
-permits retry after a runner or step starts, or after a provider mutation may
-have occurred.
+execution, even across SHAs. The only reconciled prior executions are the two
+exact pinned runs #7 and #8; complete history must include both and every other
+non-plan execution blocks. Run #7 (`40184823787`, SHA
+`43829abc3424a88a22826695bbfdc7be4a116e62`) must remain a terminal cancellation
+with no production approval, one terminal job with no runner and an explicit
+empty step list, and no artifacts. Run #8 (`40193991312`, SHA
+`96ff66fa5c28c9780ce72ee23a40cd846372d6bd`) must remain the exact terminal
+pre-create failure: its one job must fail at step 6 during copied-role metadata
+validation, complete evidence finalization and upload, and retain the pinned
+single artifact ID, size and digest whose inspected report records zero
+provider mutations, no credential actions and no target. Any missing, changed,
+extra or uncertain evidence blocks. Before target creation, the runner also
+requires an exact target GET 404, a complete branch inventory without the
+target, and backup restore history without the target. These pinned
+reconciliations never permit retry after any other runner or step sequence, or
+after a provider mutation may have occurred.
 
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
 `zw0so7f5jbpu` (provisional until a fresh API read confirms its metadata).
@@ -130,6 +136,22 @@ never guessed from SQL names. Metadata must match the source's inheritance:
 | Jobs | `pscale_api_9jfbtij9y4b2` |
 | Privacy | `pscale_api_wv7rzyuejknl` |
 
+The approved restore-copy SQL baseline is role-specific. The setup-only role is pinned to
+`NOSUPERUSER`, `BYPASSRLS`, `CREATEROLE`, `CREATEDB`, and `REPLICATION`, with
+only its observed memberships in `postgres`, `pg_read_all_data`, and
+`pg_write_all_data`. The four application roles remain `NOSUPERUSER`, without
+`BYPASSRLS`, `CREATEROLE`, `CREATEDB`, `REPLICATION`, or memberships. The
+setup role and all four application roles must remain login-enabled. The
+provider's `with_replication` field is documented as the PostgreSQL
+`REPLICATION` attribute, so it is true only for setup and false for the four
+application roles ([Terraform provider schema](https://github.com/planetscale/terraform-provider-planetscale/blob/main/docs/data-sources/postgres_branch_role.md),
+[official Go client](https://github.com/planetscale/planetscale-go/pull/323)).
+The verifier continues to require exact copied role metadata, including branch,
+lifecycle, and source-to-copy inheritance checks. Other REST fields remain
+strictly validated without normalization. Other SQL role fields and membership
+grant options are bound by exact source-to-copy catalog equality rather than
+invented static values. The source roles are never changed.
+
 Restored passwords are not usable until reset. It is therefore impossible to
 prove target SQL authority before the first reset without another already
 authorized target connection. The exact owner packet must authorize resetting
@@ -201,7 +223,8 @@ end, and `decisionBy` to two hours after its start. This leaves the full
 two-hour runner window after any start in the first thirty minutes. If the
 approval margin is missed, do not approve a run that would start with less than
 two hours remaining; a runner-started failed preflight is not eligible for the
-one pinned pre-runner reconciliation.
+one pinned pre-runner cancellation. Only the exact pinned run #8 pre-create
+failure described above can be reconciled after a runner starts.
 
 Known two-hour compute/storage plus a conservative 20-GiB additional backup/WAL
 day and 10-MiB egress is about US$0.038604429 before tax/fees. The packet must

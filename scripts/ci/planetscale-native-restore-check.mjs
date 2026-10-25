@@ -15,6 +15,25 @@ const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
 const workflowId = 394786946;
 const pinnedCancelledExecution = Object.freeze({ runId: '40184823787', runNumber: 7, runAttempt: 1,
   headSha: '43829abc3424a88a22826695bbfdc7be4a116e62', jobId: 121143288424 });
+const pinnedPrecreateFailure = Object.freeze({ runId: '40193991312', runNumber: 8, runAttempt: 1,
+  headSha: '96ff66fa5c28c9780ce72ee23a40cd846372d6bd', jobId: 121170799629,
+  artifactId: 12599287272,
+  artifactName: 'native-restore-qualification-96ff66fa5c28c9780ce72ee23a40cd846372d6bd-40193991312',
+  artifactSize: 1925, artifactDigest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac' });
+const pinnedPrecreateSteps = Object.freeze([
+  ['Set up job', 'success'],
+  ['Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'success'],
+  ['Require exact protected main before loading dependencies or credentials', 'success'],
+  ['Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020', 'success'],
+  ['Run npm ci --ignore-scripts --no-audit', 'success'],
+  ['Run fixed-target runner using only existing protected access', 'failure'],
+  ['Finalize immutable qualification evidence without provider access', 'success'],
+  ['Summarize retained target and review deadlines', 'success'],
+  ['Upload immutable qualification evidence', 'success'],
+  ['Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020', 'skipped'],
+  ['Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'success'],
+  ['Complete job', 'success'],
+]);
 
 async function verifyPinnedCancelledExecution(run, read, env) {
   const pinned = pinnedCancelledExecution;
@@ -46,12 +65,53 @@ async function verifyPinnedCancelledExecution(run, read, env) {
     conclusion: 'cancelled', jobId: pinned.jobId, runnerAssigned: false, stepCount: 0, approvalCount: 0, artifactCount: 0 };
 }
 
-function verifyPinnedHistoryEntry(run) {
-  const pinned = pinnedCancelledExecution;
+async function verifyPinnedPrecreateFailure(run, read, env) {
+  const pinned = pinnedPrecreateFailure;
+  requireThat(object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
+    && run.workflow_id === workflowId && run.path === workflowPath && run.head_sha === pinned.headSha
+    && run.head_branch === 'main' && run.event === 'workflow_dispatch' && run.run_attempt === pinned.runAttempt
+    && run.status === 'completed' && run.conclusion === 'failure'
+    && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`
+    && run.repository?.id === 1010752912 && run.repository?.full_name === env.GITHUB_REPOSITORY
+    && run.head_repository?.id === 1010752912 && run.head_repository?.full_name === env.GITHUB_REPOSITORY
+    && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
+  'prior_execution_provenance_mismatch');
+  const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
+  requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
+    'prior_execution_job_inventory_incomplete');
+  const [job] = jobs.jobs;
+  requireThat(object(job) && job.id === pinned.jobId && String(job.run_id) === pinned.runId && job.run_attempt === pinned.runAttempt
+    && job.head_sha === pinned.headSha && job.name === 'Qualify isolated native restore without cleanup'
+    && job.status === 'completed' && job.conclusion === 'failure' && Number.isSafeInteger(job.runner_id) && job.runner_id > 0
+    && typeof job.runner_name === 'string' && job.runner_name.length > 0 && Number.isSafeInteger(job.runner_group_id)
+    && Array.isArray(job.steps) && job.steps.length === pinnedPrecreateSteps.length
+    && pinnedPrecreateSteps.every(([name, conclusion], index) => job.steps[index]?.name === name
+      && job.steps[index].number === [1,2,3,4,5,6,7,8,9,17,18,19][index]
+      && job.steps[index].status === 'completed' && job.steps[index].conclusion === conclusion),
+  'prior_execution_precreate_step_evidence_mismatch');
+  const artifacts = await read(`/actions/runs/${pinned.runId}/artifacts?per_page=100`);
+  requireThat(object(artifacts) && artifacts.total_count === 1 && Array.isArray(artifacts.artifacts) && artifacts.artifacts.length === 1,
+    'prior_execution_artifact_inventory_incomplete');
+  const [artifact] = artifacts.artifacts;
+  requireThat(object(artifact) && artifact.id === pinned.artifactId && artifact.name === pinned.artifactName
+    && artifact.size_in_bytes === pinned.artifactSize && artifact.digest === pinned.artifactDigest && artifact.expired === false
+    && artifact.created_at === '2026-10-25T12:41:37Z' && artifact.expires_at === '2026-11-01T12:41:36Z'
+    && String(artifact.workflow_run?.id) === pinned.runId && artifact.workflow_run?.repository_id === 1010752912
+    && artifact.workflow_run?.head_sha === pinned.headSha,
+  'prior_execution_no_mutation_artifact_mismatch');
+  return { status: 'PINNED_PRECREATE_FAILURE_RECONCILED', workflowPath, workflowId,
+    runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha,
+    event: 'workflow_dispatch', conclusion: 'failure', jobId: pinned.jobId, failedStepNumber: 6,
+    blocker: 'copied_role_metadata_invalid', artifactId: pinned.artifactId, artifactDigest: pinned.artifactDigest,
+    artifactProviderMutationCount: 0, artifactCredentialActionCount: 0, artifactTargetCreated: false,
+    artifactState: 'NO_TARGET_CREATED', artifactCount: 1 };
+}
+
+function verifyPinnedHistoryEntry(run, pinned, conclusion) {
   return object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
     && run.workflow_id === workflowId && run.path === workflowPath && run.head_sha === pinned.headSha
     && run.head_branch === 'main' && run.event === 'workflow_dispatch' && run.run_attempt === pinned.runAttempt
-    && run.status === 'completed' && run.conclusion === 'cancelled'
+    && run.status === 'completed' && run.conclusion === conclusion
     && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`;
 }
 
@@ -87,14 +147,23 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
         && typeof run.display_title === 'string'), 'execution_history_incomplete');
     requireThat(new Set(prior.workflow_runs.map(run => run.id)).size === prior.workflow_runs.length, 'execution_history_duplicate_run');
     const previous = prior.workflow_runs.filter(run => String(run.id) !== env.GITHUB_RUN_ID);
-    const pinnedRows = previous.filter(run => String(run.id) === pinnedCancelledExecution.runId);
-    const unexpectedRows = previous.filter(run => String(run.id) !== pinnedCancelledExecution.runId
+    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure];
+    const pinnedRows = new Map(pinnedExecutions.map(pinned => [pinned.runId,
+      previous.filter(run => String(run.id) === pinned.runId)]));
+    const pinnedIds = new Set(pinnedExecutions.map(pinned => pinned.runId));
+    const unexpectedRows = previous.filter(run => !pinnedIds.has(String(run.id))
       && run.display_title !== `Native restore plan ${run.head_sha}`);
-    requireThat(pinnedRows.length === 1 && unexpectedRows.length === 0, 'prior_execution_requires_manual_reconciliation');
-    requireThat(verifyPinnedHistoryEntry(pinnedRows[0]), 'prior_execution_history_entry_mismatch');
-    const run = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
-    const proof = await verifyPinnedCancelledExecution(run, read, env);
-    return { executionHistoryReconciliation: proof };
+    requireThat([...pinnedRows.values()].every(rows => rows.length === 1) && unexpectedRows.length === 0,
+      'prior_execution_requires_manual_reconciliation');
+    requireThat(verifyPinnedHistoryEntry(pinnedRows.get(pinnedCancelledExecution.runId)[0], pinnedCancelledExecution, 'cancelled')
+      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedPrecreateFailure.runId)[0], pinnedPrecreateFailure, 'failure'),
+    'prior_execution_history_entry_mismatch');
+    const cancelledRun = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
+    const cancelledProof = await verifyPinnedCancelledExecution(cancelledRun, read, env);
+    const precreateRun = await read(`/actions/runs/${pinnedPrecreateFailure.runId}`);
+    const precreateProof = await verifyPinnedPrecreateFailure(precreateRun, read, env);
+    return { executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED', workflowPath, workflowId,
+      pinnedExecutions: [cancelledProof, precreateProof] } };
   }
   return { executionHistoryReconciliation: null };
 }
@@ -265,6 +334,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     report.verifiedScope = ['backup_binding','restore_completion','schema_extensions_indexes','canonical_registry','effective_runtime_privileges','application_smoke'];
   } catch (error) {
     report.blockers.push(failureCode(error));
+    if (error instanceof RestoreFailure && object(error.safeDiagnostic)) report.roleMetadataDiagnostic = error.safeDiagnostic;
     report.status = error instanceof RestoreFailure ? error.outcome : error?.extensionOutcomeUnknown ? 'UNKNOWN_MUTATION_OUTCOME' : 'FAILED';
     report.qualificationOutcome = report.status.includes('UNKNOWN') ? 'UNKNOWN' : 'FAILED';
   } finally {
