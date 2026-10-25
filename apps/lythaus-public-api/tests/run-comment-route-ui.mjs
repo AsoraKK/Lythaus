@@ -36,7 +36,7 @@ try {
   server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
-      if (url.pathname === '/fixture/config') return response.end(JSON.stringify({ actor, postId }));
+      if (url.pathname === '/fixture/config') return response.end(JSON.stringify({ actor, postId, targetId: comments[0] }));
       if (url.pathname === '/fixture/reset' && request.method === 'POST') {
         await control.query("UPDATE content.posts SET visibility='followers' WHERE id=$1", [postId]);
         await control.query("UPDATE content.comments SET moderation_state='allowed' WHERE post_id=$1", [postId]);

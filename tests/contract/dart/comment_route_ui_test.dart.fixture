@@ -36,6 +36,7 @@ class MemoryStorage implements ContentRecoveryStorage {
 
 class RouteAdapter implements HttpClientAdapter {
   final statuses = <int>[];
+  final requests = <Map<String, dynamic>>[];
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
@@ -47,6 +48,7 @@ class RouteAdapter implements HttpClientAdapter {
         (key, value) => MapEntry(key, value.toString()),
       ),
     ).query;
+    requests.add(Map<String, dynamic>.from(options.queryParameters));
     final result = call(options.path + '?' + query);
     statuses.add(result['status'] as int);
     return ResponseBody.fromString(
@@ -127,4 +129,47 @@ void main() {
       },
     );
   }
+
+  testWidgets('an exact notification target remains reachable beyond the first root page', (
+    tester,
+  ) async {
+    call('/fixture/reset', 'POST');
+    final config = call('/fixture/config')['body'] as Map;
+    final targetId = config['targetId'] as String;
+    final adapter = RouteAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          secureDioProvider.overrideWithValue(dio),
+          contentRecoveryStorageProvider.overrideWithValue(MemoryStorage()),
+          currentUserProvider.overrideWithValue(
+            User(
+              id: config['actor'] as String,
+              email: 'synthetic@example.invalid',
+              role: UserRole.user,
+              tier: UserTier.bronze,
+              reputationScore: 0,
+              createdAt: DateTime.utc(2026),
+              lastLoginAt: DateTime.utc(2026),
+            ),
+          ),
+          jwtProvider.overrideWith((ref) async => 'synthetic-ui-session'),
+        ],
+        child: MaterialApp(
+          home: CommentThreadScreen(
+            postId: config['postId'] as String,
+            initialCommentId: targetId,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Synthetic gated comment 0'), findsOneWidget);
+    expect(
+      adapter.requests.any((request) => request['targetId'] == targetId),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

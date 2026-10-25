@@ -2,7 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { integratePublicApiComments, integrateJobsCommentNotifications, integrateAdminCommentRevision, integrateCommentNotificationNavigation } from './comment-integration-hooks.mjs';
+import { integratePublicApiComments, integrateJobsCommentNotifications, integrateAdminCommentRevision, integrateCommentNotificationNavigation, resolveCommentFixtureSource } from './comment-integration-hooks.mjs';
+
+test('candidate fixture preserves actual handlers and historical transforms require an explicit mode', () => {
+  const source = 'actual applied comment handler';
+  assert.equal(resolveCommentFixtureSource(source, 'applied comment handler', () => assert.fail('Candidate source was transformed')), source);
+  assert.throws(() => resolveCommentFixtureSource('unpatched historical handler', 'applied comment handler', () => 'transformed'), /Actual applied comment hooks are required/);
+  assert.equal(resolveCommentFixtureSource('unpatched historical handler', 'applied comment handler', () => 'transformed', 'historical-staging'), 'transformed');
+  assert.throws(() => resolveCommentFixtureSource(source, 'applied', () => source, 'unknown'), /Unknown comment fixture mode/);
+});
 
 test('native notification hook keeps its import after the library directive', () => {
   const path = 'lib/features/notifications/domain/notification_models.dart';

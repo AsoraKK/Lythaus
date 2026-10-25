@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 
 const target = new URL(process.env.COMMENT_PREVIEW_URL ?? 'http://127.0.0.1:5188/');
 assert.ok(['localhost', '127.0.0.1'].includes(target.hostname), 'Comment browser tests require a local synthetic preview');
-const screenshots = 'docs/evidence/comment-propagation-20261023/screenshots';
+const screenshots = process.env.COMMENT_SCREENSHOTS_DIR ?? 'docs/evidence/comment-propagation-20261023/screenshots';
 
 test('local Flutter web conversations support exact context, chronological replies, sort switching and mobile accessibility', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? '/usr/bin/chromium',

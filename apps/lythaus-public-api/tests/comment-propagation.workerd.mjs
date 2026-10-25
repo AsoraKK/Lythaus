@@ -3,24 +3,30 @@ import { before, after, test } from 'node:test';
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
-import { signAccessToken, uuidv7 } from '@lythaus/security';
+import { hmacLookup, signAccessToken, uuidv7 } from '@lythaus/security';
 import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 import { commentRuntimeFixture } from './comment-runtime-fixture.mjs';
 
 const connectionString = privacyPostgresTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL).toString();
 const control = new pg.Client({ connectionString, ssl: false });
-let fixture, privateKeyPem;
+let fixture, privateKeyPem, adminAccessKey, adminSubject;
 const keyId = 'synthetic-comment-propagation';
 before(async () => {
   await control.connect();
   assert.match((await control.query('SHOW server_version_num')).rows[0].server_version_num, /^17/);
   const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
   privateKeyPem = await exportPKCS8(privateKey);
+  adminAccessKey = randomBytes(32).toString('base64');
   fixture = await commentRuntimeFixture(connectionString, {
-    ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
+    ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test,admin.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test,https://admin.lythaus.test',
     PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
+    ACCESS_SUBJECT_HMAC_KEY: adminAccessKey,
     JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }),
   });
+  const moderator = await actor();
+  adminSubject = 'synthetic-comment-moderator-' + uuidv7();
+  await control.query('INSERT INTO identity.admin_memberships(user_id, access_subject_hmac, role, active) VALUES($1, $2, \'moderator\', true)',
+    [moderator.id, Buffer.from(hmacLookup(adminSubject, adminAccessKey), 'base64')]);
 });
 after(async () => { try { await fixture?.dispose(); } finally { await control.end(); } });
 async function actor() {
@@ -50,20 +56,20 @@ async function submit(user, postId, parentId, body = 'Synthetic reply', key = uu
   return { payload, key, result: await json(await call(user, 'POST', path(postId), payload, key), 201) };
 }
 async function publish(id) {
-  const eventId = uuidv7();
-  await control.query('BEGIN');
-  try {
-    await control.query("UPDATE content.comments SET moderation_state='allowed',updated_at=now() WHERE id=$1", [id]);
-    const caseId = uuidv7(), decisionId = uuidv7();
-    await control.query(`INSERT INTO moderation.cases(id,content_type,content_id,source_event_id,policy_version,state,resolved_at)
-      SELECT $1,'comment',id,moderation_source_event_id,'synthetic-comment-fixture','resolved',now() FROM content.comments WHERE id=$2`, [caseId, id]);
-    await control.query("INSERT INTO moderation.decisions(id,case_id,outcome,policy_version) VALUES($1,$2,'allow','synthetic-comment-fixture')", [decisionId, caseId]);
-    await control.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,payload)
-      SELECT $1,'content.comment.published','comment',id,jsonb_build_object('contentId',id,'authorId',author_id,'postId',post_id,'parentId',parent_id,'sourceEventId',moderation_source_event_id,'decisionId',$3::text)
-      FROM content.comments WHERE id=$2`, [eventId, id, decisionId]);
-    await control.query('COMMIT');
-  } catch (error) { await control.query('ROLLBACK'); throw error; }
-  return eventId;
+  const sourceEventId = (await control.query('SELECT moderation_source_event_id FROM content.comments WHERE id=$1', [id])).rows[0].moderation_source_event_id;
+  let caseId = (await control.query("SELECT id FROM moderation.cases WHERE content_type='comment' AND content_id=$1 AND source_event_id=$2 AND state='open'", [id, sourceEventId])).rows[0]?.id;
+  if (!caseId) {
+    caseId = uuidv7();
+    await control.query("INSERT INTO moderation.cases(id,content_type,content_id,source_event_id,policy_version,state) VALUES($1,'comment',$2,$3,'synthetic-comment-fixture','open')", [caseId, id, sourceEventId]);
+  }
+  const response = await fixture.dispatchFetch('https://admin.lythaus.test/api/admin/moderation/cases/' + caseId + '/decision', {
+    method: 'POST', headers: { origin: 'https://admin.lythaus.test', 'content-type': 'application/json', 'cf-access-jwt-assertion': adminSubject },
+    body: JSON.stringify({ outcome: 'allow', reasonCode: 'SYNTHETIC.COMMENT_ALLOW', expectedReviewCycleId: null }),
+  });
+  assert.equal(response.status, 200, await response.clone().text());
+  const event = await control.query("SELECT id FROM system.outbox_events WHERE event_type='content.comment.published' AND aggregate_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1", [id]);
+  assert.equal(event.rowCount, 1);
+  return event.rows[0].id;
 }
 const deliver = eventId => fixture.dispatchFetch('https://api.lythaus.test/fixture/notification', {
   method: 'POST', body: JSON.stringify({ eventId, eventType: 'content.comment.published', payload: { postId: uuidv7() } }),
@@ -138,6 +144,18 @@ test('reply producers preserve disclosure, ownership, parent visibility and revi
 test('notification adapter rolls back interruption, retries once, respects preferences and filters current read/unread counts', async () => {
   const { owner, author, postId, root } = await setup();
   const child = await submit(author, postId, root), eventId = await publish(child.result.id);
+  const publication = await control.query(`SELECT event.payload, comment.moderation_source_event_id AS revision,
+      decision.id AS decision_id
+    FROM system.outbox_events event
+    JOIN content.comments comment ON comment.id = event.aggregate_id
+    JOIN moderation.cases moderation_case ON moderation_case.content_type = 'comment'
+      AND moderation_case.content_id = comment.id AND moderation_case.source_event_id = comment.moderation_source_event_id
+    JOIN moderation.decisions decision ON decision.case_id = moderation_case.id AND decision.outcome = 'allow'
+    WHERE event.id = $1`, [eventId]);
+  assert.equal(publication.rowCount, 1);
+  assert.equal(publication.rows[0].payload.sourceEventId, publication.rows[0].revision);
+  assert.equal(publication.rows[0].payload.decisionId, publication.rows[0].decision_id);
+  assert.ok(fixture.statements.some(row => row.role === 'lythaus_admin' && row.text.includes('INSERT INTO system.outbox_events')));
   fixture.failNextNotification();
   assert.equal((await deliver(eventId)).status, 503);
   assert.equal((await control.query('SELECT count(*)::int AS n FROM feed.notifications WHERE source_event_id=$1', [eventId])).rows[0].n, 0);

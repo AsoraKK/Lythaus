@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
-import { integratePublicApiComments, integrateJobsCommentNotifications } from './comment-integration-hooks.mjs';
+import { integratePublicApiComments, integrateJobsCommentNotifications, integrateAdminCommentRevision, resolveCommentFixtureSource } from './comment-integration-hooks.mjs';
 
 export async function commentRuntimeFixture(connectionString, bindings) {
   connectionString = privacyPostgresTarget(connectionString).toString();
@@ -14,12 +14,13 @@ export async function commentRuntimeFixture(connectionString, bindings) {
   const root = fileURLToPath(new URL('../../../', import.meta.url));
   const clients = new Map(), statements = [];
   let sequence = 0, failNotification = false;
-  const requireAppliedHooks = process.env.COMMENT_REQUIRE_APPLIED_HOOKS === 'true';
+  const fixtureMode = process.env.COMMENT_FIXTURE_MODE ?? 'candidate';
+  if (process.env.COMMENT_REQUIRE_APPLIED_HOOKS === 'true') {
+    assert.equal(fixtureMode, 'candidate', 'COMMENT_REQUIRE_APPLIED_HOOKS cannot be combined with historical staging mode');
+  }
   const sourceFor = (path, marker, integrate) => {
     const source = readFileSync(path, 'utf8');
-    if (!requireAppliedHooks) return integrate(source);
-    assert.ok(source.includes(marker), 'Actual applied comment hooks are required');
-    return source;
+    return resolveCommentFixtureSource(source, marker, integrate, fixtureMode);
   };
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
@@ -27,6 +28,19 @@ export async function commentRuntimeFixture(connectionString, bindings) {
     plugins: [{ name: 'comment-integration-local', setup(builder) {
       builder.onLoad({ filter: /apps\/lythaus-public-api\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'const body = await readCommentThread(', integratePublicApiComments) }));
       builder.onLoad({ filter: /apps\/lythaus-jobs\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'await client.query(commentNotificationRevisionLockQuery, [eventId]);', integrateJobsCommentNotifications) + '\nexport { processNotificationSource as fixtureNotification };' }));
+      builder.onLoad({ filter: /apps\/lythaus-admin-api\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'sourceEventId: moderationCase.source_event_id, decisionId', integrateAdminCommentRevision) }));
+      builder.onLoad({ filter: /apps\/lythaus-admin-api\/src\/admin-access-runtime-policy\.ts$/ }, () => ({ loader: 'ts', contents: `
+        export interface AdminActor { userId: string; role: string }
+        export async function verifiedAccessSubject(request: Request): Promise<string> {
+          const subject = request.headers.get('cf-access-jwt-assertion');
+          if (!subject) throw new Error('access_required');
+          return subject;
+        }
+        export function requireActiveAdminMembership(row: { user_id?: unknown; role?: unknown } | undefined): AdminActor {
+          if (typeof row?.user_id !== 'string' || typeof row.role !== 'string') throw new Error('admin_role_required');
+          return { userId: row.user_id, role: row.role };
+        }
+      ` }));
       builder.onResolve({ filter: /^@lythaus\/db$/ }, () => ({ path: 'database', namespace: 'comment-postgres' }));
       builder.onLoad({ filter: /.*/, namespace: 'comment-postgres' }, () => ({ resolveDir: root, contents: `
         export * from './packages/db/src/index.ts';
@@ -50,7 +64,9 @@ export async function commentRuntimeFixture(connectionString, bindings) {
     stdin: { resolveDir: root, contents: `
       import api from './apps/lythaus-public-api/src/index.ts';
       import { fixtureNotification } from './apps/lythaus-jobs/src/index.ts';
+      import admin from './apps/lythaus-admin-api/src/index.ts';
       export default { async fetch(request, env, ctx) {
+        if (new URL(request.url).pathname.startsWith('/api/admin/')) return admin.fetch(request, env, ctx);
         if (new URL(request.url).pathname === '/fixture/notification') {
           const event = await request.json();
           try {
@@ -65,7 +81,8 @@ export async function commentRuntimeFixture(connectionString, bindings) {
   const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'comment-propagation-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
-    bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' } },
+    bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' },
+      DB_ADMIN_FRESH: { role: 'lythaus_admin' }, DB_PRIVACY_FRESH: { role: 'lythaus_privacy' } },
     outboundService: () => { throw new Error('Comment fixture refuses external requests'); },
     serviceBindings: { COMMENT_POSTGRES: async request => {
       const input = await request.json();
@@ -73,7 +90,7 @@ export async function commentRuntimeFixture(connectionString, bindings) {
       const temporary = !entry;
       try {
         if (temporary) {
-          assert.ok(['lythaus_runtime', 'lythaus_jobs'].includes(input.role));
+          assert.ok(['lythaus_runtime', 'lythaus_jobs', 'lythaus_admin', 'lythaus_privacy'].includes(input.role));
           const client = new pg.Client({ connectionString, ssl: false }); await client.connect();
           await client.query("SET statement_timeout='5s'"); await client.query('SET ROLE ' + input.role);
           entry = { client, role: input.role };

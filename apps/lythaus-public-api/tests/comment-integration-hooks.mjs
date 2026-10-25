@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
 
+export function resolveCommentFixtureSource(source, marker, integrate, mode = process.env.COMMENT_FIXTURE_MODE ?? 'candidate') {
+  if (mode === 'historical-staging') return integrate(source);
+  if (mode !== 'candidate') throw new Error('Unknown comment fixture mode: ' + mode);
+  assert.ok(source.includes(marker), 'Actual applied comment hooks are required in candidate mode');
+  return source;
+}
+
 function replaceOnce(source, before, after) {
   assert.equal(source.split(before).length, 2, 'Comment integration anchor must occur exactly once');
   return source.replace(before, after);

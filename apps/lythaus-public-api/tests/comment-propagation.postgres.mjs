@@ -107,6 +107,35 @@ test('newest/oldest use precise deterministic cursors bound to the post, filter 
   assert.equal(newest.capabilities.mostRelevantAvailable, false);
 });
 
+test('31 root conversations page without skips or duplicates while exact targets bypass the first page', async () => {
+  const owner = await actor(), postId = await post(owner), roots = [];
+  for (let index = 0; index < 31; index++) {
+    roots.push(await comment(postId, owner, {
+      timestamp: `2026-10-01T00:00:${String(index).padStart(2, '0')}.000000Z`,
+    }));
+  }
+  const first = await read(postId, null, { limit: '25', sort: 'newest' });
+  assert.deepEqual(ids(first), [...roots].reverse().slice(0, 25));
+  assert.ok(first.nextCursor);
+
+  const exact = await read(postId, null, { targetId: roots[0], sort: 'newest' });
+  assert.deepEqual(ids(exact), [roots[0]]);
+
+  const concurrentTimestamp = (await control.query(`SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC',
+    'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS timestamp`)).rows[0].timestamp;
+  const concurrentRoot = await comment(postId, owner, { timestamp: concurrentTimestamp });
+  const second = await read(postId, null, { limit: '25', sort: 'newest', cursor: first.nextCursor });
+  assert.deepEqual(ids(second), [...roots].reverse().slice(25));
+  const pagedIds = [...ids(first), ...ids(second)];
+  assert.equal(pagedIds.length, 31);
+  assert.equal(new Set(pagedIds).size, 31);
+  assert.ok(!pagedIds.includes(concurrentRoot));
+  assert.equal(second.nextCursor, null);
+
+  const fresh = await read(postId, null, { sort: 'newest' });
+  assert.equal(ids(fresh)[0], concurrentRoot);
+});
+
 test('hidden ancestors, cross-post links, cycles, blocks and mutes cannot expose descendants or private receipts', async () => {
   const owner = await actor(), viewer = await actor(), ancestorAuthor = await actor(), postId = await post(owner);
   const root = await comment(postId, ancestorAuthor);
