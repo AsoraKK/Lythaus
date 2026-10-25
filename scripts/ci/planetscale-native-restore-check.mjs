@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { RESTORE, ROLE_NAMES, EXTENSIONS, CREATE_TARGET_BODY, RestoreApi, RestoreFailure, requireThat, failureCode, hash,
-  approvalRecord, checkBackup, checkBranch, checkOwnedBranch, checkedRoles, safeId } from './planetscale-native-restore-contract.mjs';
+  approvalRecord, checkBackup, checkBranch, checkOwnedBranch, checkedRoles, safeId, object } from './planetscale-native-restore-contract.mjs';
 import { sourceConnection, restoredConnection, readOnly, collectRestoreCatalog, inspectExtensionAuthority,
   installMissingExtensions } from './planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
@@ -11,6 +11,49 @@ import { inspectCleanupReservation, finalizeQualificationEvidence } from './plan
 const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
 const targetPath = `/branches/${RESTORE.target}`;
 const backupPath = `/branches/main/backups/${RESTORE.backupId}`;
+const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
+const workflowId = 394786946;
+const pinnedCancelledExecution = Object.freeze({ runId: '40184823787', runNumber: 7, runAttempt: 1,
+  headSha: '43829abc3424a88a22826695bbfdc7be4a116e62', jobId: 121143288424 });
+
+async function verifyPinnedCancelledExecution(run, read, env) {
+  const pinned = pinnedCancelledExecution;
+  requireThat(object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
+    && run.workflow_id === workflowId && run.path === workflowPath
+    && run.head_sha === pinned.headSha && run.head_branch === 'main' && run.event === 'workflow_dispatch'
+    && run.run_attempt === pinned.runAttempt && run.status === 'completed' && run.conclusion === 'cancelled'
+    && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`
+    && run.repository?.id === 1010752912 && run.repository?.full_name === env.GITHUB_REPOSITORY
+    && run.head_repository?.id === 1010752912 && run.head_repository?.full_name === env.GITHUB_REPOSITORY
+    && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
+  'prior_execution_provenance_mismatch');
+  const approvals = await read(`/actions/runs/${pinned.runId}/approvals`);
+  requireThat(Array.isArray(approvals) && approvals.length === 0, 'prior_execution_has_production_approval');
+  const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
+  requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
+    'prior_execution_job_inventory_incomplete');
+  const [job] = jobs.jobs;
+  requireThat(object(job) && job.id === pinned.jobId && String(job.run_id) === pinned.runId && job.run_attempt === pinned.runAttempt
+    && job.head_sha === pinned.headSha && job.name === 'Qualify isolated native restore without cleanup'
+    && job.status === 'completed' && job.conclusion === 'cancelled' && job.runner_id === 0
+    && job.runner_name === '' && job.runner_group_id === 0 && Array.isArray(job.steps) && job.steps.length === 0,
+  'prior_execution_runner_or_step_evidence_present');
+  const artifacts = await read(`/actions/runs/${pinned.runId}/artifacts?per_page=100`);
+  requireThat(object(artifacts) && artifacts.total_count === 0 && Array.isArray(artifacts.artifacts) && artifacts.artifacts.length === 0,
+    'prior_execution_artifact_evidence_present');
+  return { status: 'PINNED_PRE_RUNNER_CANCELLATION_RECONCILED', workflowPath, workflowId,
+    runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha, event: 'workflow_dispatch',
+    conclusion: 'cancelled', jobId: pinned.jobId, runnerAssigned: false, stepCount: 0, approvalCount: 0, artifactCount: 0 };
+}
+
+function verifyPinnedHistoryEntry(run) {
+  const pinned = pinnedCancelledExecution;
+  return object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
+    && run.workflow_id === workflowId && run.path === workflowPath && run.head_sha === pinned.headSha
+    && run.head_branch === 'main' && run.event === 'workflow_dispatch' && run.run_attempt === pinned.runAttempt
+    && run.status === 'completed' && run.conclusion === 'cancelled'
+    && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`;
+}
 
 export async function githubReadiness(environment, fetchImpl = fetch, execute = false) {
   const env = environment;
@@ -35,12 +78,25 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
     const record = JSON.parse(env.RESTORE_CHECK_APPROVAL_JSON);
     requireThat(Array.isArray(approvals) && approvals.some(row => row.state === 'approved' && row.user?.type === 'User'
       && row.user.login === record.manualOperator && row.environments?.some(item => item.name === 'production')), 'named_human_production_approval_required');
-    const prior = await read(`/actions/workflows/planetscale-native-restore-check.yml/runs?head_sha=${env.RELEASE_SHA}&event=workflow_dispatch&per_page=100`);
-    requireThat(Number.isInteger(prior.total_count) && prior.total_count <= 100 && Array.isArray(prior.workflow_runs)
-      && prior.workflow_runs.length === prior.total_count, 'execution_history_incomplete');
-    requireThat(!prior.workflow_runs.some(run => String(run.id) !== env.GITHUB_RUN_ID
-      && run.display_title === `Native restore execute ${env.RELEASE_SHA}`), 'prior_execution_requires_manual_reconciliation');
+    const prior = await read(`/actions/workflows/${workflowPath.split('/').at(-1)}/runs?event=workflow_dispatch&per_page=100`);
+    requireThat(object(prior) && Number.isInteger(prior.total_count) && prior.total_count <= 100 && Array.isArray(prior.workflow_runs)
+      && prior.workflow_runs.length === prior.total_count
+      && prior.workflow_runs.every(run => Number.isSafeInteger(run.id) && run.id > 0
+        && run.workflow_id === workflowId && run.path === workflowPath && run.event === 'workflow_dispatch'
+        && run.head_branch === 'main' && /^[a-f0-9]{40}$/.test(run.head_sha ?? '')
+        && typeof run.display_title === 'string'), 'execution_history_incomplete');
+    requireThat(new Set(prior.workflow_runs.map(run => run.id)).size === prior.workflow_runs.length, 'execution_history_duplicate_run');
+    const previous = prior.workflow_runs.filter(run => String(run.id) !== env.GITHUB_RUN_ID);
+    const pinnedRows = previous.filter(run => String(run.id) === pinnedCancelledExecution.runId);
+    const unexpectedRows = previous.filter(run => String(run.id) !== pinnedCancelledExecution.runId
+      && run.display_title !== `Native restore plan ${run.head_sha}`);
+    requireThat(pinnedRows.length === 1 && unexpectedRows.length === 0, 'prior_execution_requires_manual_reconciliation');
+    requireThat(verifyPinnedHistoryEntry(pinnedRows[0]), 'prior_execution_history_entry_mismatch');
+    const run = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
+    const proof = await verifyPinnedCancelledExecution(run, read, env);
+    return { executionHistoryReconciliation: proof };
   }
+  return { executionHistoryReconciliation: null };
 }
 
 export async function runNativeRestore({ environment = process.env, api, now = Date.now,
@@ -67,6 +123,15 @@ export async function runNativeRestore({ environment = process.env, api, now = D
   let owned = false, approval, scripts, setup;
   const connections = {};
   const save = async () => { await checkpoint(structuredClone(report)); };
+  const assertProtectedMain = async () => {
+    const readiness = await assertMain();
+    if (readiness?.executionHistoryReconciliation) {
+      const targetReconciliation = report.executionHistoryReconciliation?.targetReconciliation;
+      report.executionHistoryReconciliation = readiness.executionHistoryReconciliation;
+      if (targetReconciliation) report.executionHistoryReconciliation.targetReconciliation = targetReconciliation;
+    }
+    return readiness;
+  };
   const time = () => requireThat(now() < Date.parse(report.qualificationStopAt), 'qualification_phase_review_reserve_reached');
   const phase = async (name, operation, maximumMs = 120000, mutation = false) => {
     time();
@@ -85,10 +150,27 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     } finally { clearTimeout(timer); row.finishedAt = new Date(now()).toISOString(); await save(); }
   };
   const mutate = async (label, operation) => {
-    time(); await assertMain();
+    time(); await assertProtectedMain();
     const reservation = await reserveCleanup();
     requireThat(reservation.workflowId === report.cleanupPermit.workflowId && reservation.runNumber === report.cleanupPermit.runNumber,
       'reserved_cleanup_run_number_consumed');
+    if (label === 'create_fixed_restore') {
+      checkBackup(await api.request(backupPath), now());
+      const directTarget = await api.request(targetPath, { absent: true });
+      requireThat(directTarget === null, 'preexisting_target_refused');
+      const branches = await api.list('/branches');
+      requireThat(!branches.some(row => row.name === RESTORE.target), 'preexisting_target_refused');
+      const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
+      requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
+      requireThat(Array.isArray(protectedBackup.restored_branches)
+        && !protectedBackup.restored_branches.some(row => row.name === RESTORE.target), 'backup_target_history_unexpected');
+      if (report.executionHistoryReconciliation) {
+        report.executionHistoryReconciliation.targetReconciliation = { databaseId: RESTORE.databaseId,
+          sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target,
+          directGetReturnedNotFound: true, completeBranchInventoryExcludedTarget: true,
+          backupRestoreHistoryExcludedTarget: true, checkedAt: new Date(now()).toISOString() };
+      }
+    }
     report.providerMutations.push({ action: label, outcome: 'PENDING_OR_UNKNOWN' }); await save();
     try { const value = await operation(); report.providerMutations.at(-1).outcome = 'ACKNOWLEDGED'; await save(); return value; }
     catch (error) { report.providerMutations.at(-1).outcome = error instanceof RestoreFailure ? error.outcome : 'UNKNOWN_MUTATION_OUTCOME'; await save(); throw error; }
@@ -109,7 +191,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       report.approvalSha256 = hash(approval); report.approvalExpiresAt = approval.expiresAt;
       report.reviewWindow = approval.reviewWindow; report.retention = approval.retention;
     }
-    await assertMain();
+    await assertProtectedMain();
     report.cleanupPermit = await reserveCleanup();
     if (execute) requireThat(hash(report.cleanupPermit) === hash(approval.cleanupPermit), 'cleanup_reservation_not_approved');
     api ??= new RestoreApi(environment.PLANETSCALE_RESTORE_API_TOKEN);
@@ -134,10 +216,6 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     requireThat(baseline.extensionCount === 3, 'source_required_extensions_incomplete');
     report.sourceBaseline = baseline;
     scripts = await phase('build', signal => prepareSmoke(signal));
-    await assertMain(); checkBackup(await api.request(backupPath), now());
-    requireThat(!(await api.list('/branches')).some(row => row.name === RESTORE.target), 'preexisting_target_refused');
-    const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
-    requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
     const created = await mutate('create_fixed_restore', () => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }));
     report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
     requireThat(safeId(created.id) && created.id !== RESTORE.sourceId && created.name === RESTORE.target
