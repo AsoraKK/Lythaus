@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import test from 'node:test';
 import fs from 'node:fs';
 import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, ROLE_SQL_SECURITY_BASELINE,
   ROLE_SQL_MEMBERSHIP_BASELINE, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
   checkedRoles, assertRestoreRoleSqlBaseline, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore, githubReadiness } from '../ci/planetscale-native-restore-check.mjs';
-import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions } from '../ci/planetscale-native-restore-verifier.mjs';
+import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions, restoreCatalogDigest } from '../ci/planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 
@@ -36,7 +37,7 @@ const baseline = () => ({ catalogSha256: 'b'.repeat(64), schemaFingerprint: 'c'.
   schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3 });
 
 function fixture(mode = '') {
-  const calls = [], checkpoints = [], b = backup(); let created = false, resets = 0, branchInventories = 0;
+  const calls = [], checkpoints = [], b = backup(); let created = false, resets = 0, branchInventories = 0, clock = instant;
   const api = {
     authority: async () => { calls.push('authority'); if (mode === 'authority_denied') throw new RestoreFailure('provider_access_denied', 'DENIED'); },
     list: async path => {
@@ -89,7 +90,7 @@ function fixture(mode = '') {
       throw new Error(`unexpected synthetic path ${path}`);
     },
   };
-  const options = { environment: environment(), api, now: () => instant, assertMain: async () => { calls.push('main'); },
+  const options = { environment: environment(), api, now: () => clock, assertMain: async () => { calls.push('main'); },
     reserveCleanup: async () => ({ workflowId: 42, runNumber: 1 }),
     reviewedOriginFingerprint: branchQualifiedDatabaseTarget(environment().PLANETSCALE_SCHEMA_READ_DATABASE_URL).originFingerprint,
     sleep: async () => {}, checkpoint: report => { checkpoints.push(report); }, prepareSmoke: async () => ({}),
@@ -103,7 +104,7 @@ function fixture(mode = '') {
     }, installExtensions: async (_raw, id, missing) => { assert.equal(id, newId); assert.deepEqual(missing, ['unaccent']); calls.push('INSTALL unaccent'); },
     smoke: async () => { calls.push('actual_smoke_adapter'); return { readOnlyDatabaseIdentity: true, distinctRoles: 4 }; },
   };
-  return { calls, checkpoints, options };
+  return { calls, checkpoints, options, setNow: value => { clock = value; } };
 }
 
 test('qualification restores the specified backup snapshot, exercises five copied credentials and retains target for review', async () => {
@@ -142,6 +143,173 @@ test('pinned history plus source-role metadata failure stays pre-mutation and em
     { present: true, type: 'STRING', expected: 'NULL', matches: false });
   assert.doesNotMatch(JSON.stringify(report), /synthetic-lifecycle-canary|synthetic-secret-never-output/);
   assert.ok(f.calls.every(value => !/^(POST|PATCH|DELETE) /.test(value)));
+});
+
+test('the mutation cutoff is rechecked after awaited preflight and checkpoint work immediately before POST', async () => {
+  const f = fixture();
+  f.options.checkpoint = report => {
+    f.checkpoints.push(report);
+    if (report.providerMutations.at(-1)?.action === 'create_fixed_restore'
+      && report.providerMutations.at(-1)?.outcome === 'PENDING_OR_UNKNOWN') {
+      f.setNow(instant + RESTORE.qualificationStopMs);
+    }
+  };
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('qualification_phase_review_reserve_reached'));
+  assert.equal(report.providerMutations.at(-1)?.action, 'create_fixed_restore');
+  assert.equal(report.providerMutations.at(-1)?.outcome, 'BLOCKED');
+  assert.equal(report.createdTargetId, null);
+  assert.equal(report.cleanup, 'NOT_NEEDED');
+  assert.equal(f.calls.filter(value => /^(POST|PATCH|DELETE) /.test(value)).length, 0);
+});
+
+test('restore catalog digest binds schema, view, function-security and extension ownership metadata', () => {
+  const baseline = {
+    sections: {
+      schemaOwnership: [{ schema: 'privacy', owner: 'lythaus_migrations' }],
+      relations: [{ table_type: 'VIEW', table_schema: 'privacy', table_name: 'safe_view', owner: 'lythaus_migrations',
+        reloptions: ['security_barrier=true'], view_definition: 'SELECT id FROM privacy.requests' }],
+      functions: [{ schema: 'privacy', proname: 'safe_fn', arguments: '', definition: 'CREATE FUNCTION ...',
+        owner: 'lythaus_migrations', security_definer: false, acl_is_null: false,
+        acl_entries: [{ grantor: 'lythaus_migrations', grantee: 'lythaus_runtime', privilege: 'EXECUTE', grantable: false }] }],
+    },
+    migrations: [{ version: '0020_auth_recovery_delivery.sql', checksum: 'a'.repeat(64) }],
+    roles: [{ rolname: 'lythaus_runtime', rolsuper: false }], members: [],
+    extensions: [{ extname: 'pgcrypto', extversion: '1.3', schema: 'public', owner: 'postgres', extrelocatable: true }],
+  };
+  const digest = restoreCatalogDigest(baseline);
+  const mutations = [
+    value => { value.sections.schemaOwnership[0].owner = 'postgres'; },
+    value => { value.sections.relations[0].reloptions = ['security_barrier=false']; },
+    value => { value.sections.relations[0].view_definition = 'SELECT id FROM identity.users'; },
+    value => { value.sections.functions[0].owner = 'postgres'; },
+    value => { value.sections.functions[0].security_definer = true; },
+    value => { value.sections.functions[0].acl_entries[0].grantee = 'PUBLIC'; },
+    value => { value.extensions[0].schema = 'extensions'; },
+    value => { value.extensions[0].owner = 'lythaus_migrations'; },
+    value => { value.extensions[0].extrelocatable = false; },
+  ];
+  for (const mutate of mutations) {
+    const changed = structuredClone(baseline); mutate(changed);
+    assert.notEqual(restoreCatalogDigest(changed), digest);
+  }
+});
+
+test('readiness smoke uses sequential Miniflare groups with unique Hyperdrive proxy names', async () => {
+  const branchId = newId;
+  const connections = Object.fromEntries(['runtime','admin','jobs','privacy'].map(name => [name,
+    restoredConnection({ ...roleRows().find(row => row.base_username === RESTORE[name]), password,
+      access_host_url: 'aws.connect.psdb.cloud' }, branchId, RESTORE[name])]));
+  const groups = []; let active = 0;
+  const runtimeFactory = options => {
+    assert.equal(active, 0, 'Miniflare groups must not overlap');
+    const names = options.workers.map(worker => worker.name), bindings = options.workers.flatMap(worker => Object.keys(worker.hyperdrives ?? {}));
+    assert.equal(new Set(bindings).size, bindings.length, 'each in-runtime TLS proxy name must be unique');
+    active++;
+    const current = { names, disposed: false };
+    groups.push(current);
+    return {
+      getWorker: async name => ({ fetch: async () => {
+        const row = { readiness: 'pass', readyForAuthentication: false, schemaFingerprint: baseline().schemaFingerprint,
+          schemaVersion: baseline().schemaVersion, databaseEnvironment: RESTORE.target, relationCount: baseline().relationCount };
+        const body = name === 'public' ? row : { readiness: 'pass', databases: { primary: row, privacy: row },
+          ...(name === 'admin' ? { emailBinding: { bindingVerified: true } } : {}) };
+        return Response.json(body, { status: 200 });
+      } }),
+      dispose: async () => { current.disposed = true; active--; },
+    };
+  };
+  const result = await runRestoreSmoke(connections, branchId, baseline(), {}, runtimeFactory);
+  assert.deepEqual(groups.map(group => group.names), [['public', 'admin'], ['jobs']]);
+  assert.ok(groups.every(group => group.disposed));
+  assert.equal(active, 0);
+  assert.equal(result.isolatedHyperdriveRuntimeGroups, 2);
+  assert.equal(result.readOnlyDatabaseIdentity, true);
+  assert.equal(result.readyForProductionAuthentication, false);
+});
+
+test('real Miniflare TLS proxies dispose and let success and abort subprocesses exit naturally', { timeout: 65000 }, async () => {
+  const requireUrl = JSON.stringify(new URL('../../node_modules/wrangler/package.json', import.meta.url).href);
+  const common = `
+    const { createRequire } = require('node:module');
+    const req = createRequire(${requireUrl});
+    const { Miniflare, convertV4MiniflareOptions, Log, LogLevel } = req('miniflare');
+    const url = 'postgresql://fixture:never-used@127.0.0.1:5432/postgres?sslmode=verify-full';
+    const log = new Log(LogLevel.NONE);
+    const worker = (name, script, hyperdrives) => ({ name, modules: true, script,
+      compatibilityDate: '2026-08-01', hyperdrives });
+  `;
+  const scenarios = [
+    ['success', common + `
+      (async () => {
+        const groups = [
+          [worker('public', 'export default { async fetch(){ return new Response("ok") } }', { DB_A: url }),
+            worker('admin', 'export default { async fetch(){ return new Response("ok") } }', { DB_B: url, DB_C: url })],
+          [worker('jobs', 'export default { async fetch(){ return new Response("ok") } }', { DB_A: url })],
+        ];
+        for (const group of groups) {
+          const mf = new Miniflare(convertV4MiniflareOptions({ log, workers: group }));
+          try {
+            for (const spec of group) {
+              const response = await (await mf.getWorker(spec.name)).fetch('https://restore.lythaus.test/');
+              assert.ok(response.status === 200 && await response.text() === 'ok');
+            }
+          } finally { await mf.dispose(); }
+        }
+        console.log('success-disposed');
+      })().catch(error => { console.error(error.stack || error); process.exitCode = 2; });
+    `],
+    ['abort', common + `
+      (async () => {
+        const spec = worker('abort', 'export default { async fetch(){ await new Promise(resolve => setTimeout(resolve, 5000)); return new Response("late"); } }', { DB_ABORT: url });
+        const mf = new Miniflare(convertV4MiniflareOptions({ log, workers: [spec] }));
+        const controller = new AbortController();
+        try {
+          const workerInstance = await mf.getWorker('abort');
+          const pending = workerInstance.fetch('https://restore.lythaus.test/wait', { signal: controller.signal })
+            .then(() => 'resolved', () => 'rejected');
+          const abortTimer = setTimeout(() => controller.abort(), 50);
+          let abortWatchdog;
+          const outcome = await Promise.race([
+            pending,
+            new Promise(resolve => { abortWatchdog = setTimeout(() => resolve('timed-out'), 1000); }),
+          ]);
+          clearTimeout(abortTimer);
+          clearTimeout(abortWatchdog);
+          assert.equal(controller.signal.aborted, true);
+          assert.notEqual(outcome, 'timed-out', 'aborted Worker fetch must settle before its delayed response');
+        } finally { await mf.dispose(); }
+        console.log('abort-disposed');
+      })().catch(error => { console.error(error.stack || error); process.exitCode = 2; });
+    `],
+  ];
+  for (const [scenario, source] of scenarios) {
+    const result = await new Promise(resolve => {
+      const child = spawn(process.execPath, ['-e', source], {
+        cwd: process.cwd(), detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let stdout = '', stderr = '', timedOut = false, forceKill;
+      child.stdout.on('data', chunk => { stdout += chunk; });
+      child.stderr.on('data', chunk => { stderr += chunk; });
+      const watchdog = setTimeout(() => {
+        timedOut = true;
+        try { process.kill(-child.pid, 'SIGTERM'); } catch {}
+        forceKill = setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} }, 1000);
+      }, 20000);
+      child.on('error', error => { stderr += String(error); });
+      child.on('close', (code, signal) => {
+        clearTimeout(watchdog);
+        if (timedOut) {
+          clearTimeout(forceKill);
+          try { process.kill(-child.pid, 'SIGKILL'); } catch {}
+        }
+        resolve({ code, signal, timedOut, stdout: stdout.trim(), stderr: stderr.trim() });
+      });
+    });
+    assert.equal(result.timedOut, false, `${scenario} Miniflare subprocess failed to exit naturally: ${result.stderr}`);
+    assert.equal(result.code, 0, `${scenario} Miniflare subprocess failed: ${result.stderr}`);
+    assert.equal(result.stdout, `${scenario}-disposed`);
+  }
 });
 
 for (const [mode, blocker, cleanup] of [
@@ -705,6 +873,19 @@ test('role-class checks accept only the exact observed setup baseline and strict
     assert.equal(error.safeDiagnostic.role.fields.inheritedRoles.type, 'OBJECT');
     assert.equal(error.safeDiagnostic.role.fields.inheritedRoles.matches, false);
     assert.doesNotMatch(diagnostic, /synthetic-password-canary/);
+    return true;
+  });
+  const missingBaseUsername = roleRows(); delete missingBaseUsername[0].base_username;
+  assert.throws(() => checkedRoles(missingBaseUsername, newId), error => {
+    const inventory = error.safeDiagnostic.role.inventory;
+    assert.equal(error.safeDiagnostic.role.candidateCount, 0);
+    assert.equal(inventory.rowCount, ROLE_NAMES.length);
+    assert.equal(inventory.recognizedBaseUsernameCounts[RESTORE.setup], 0);
+    assert.equal(inventory.recognizedRoutedUsernameCounts[RESTORE.setup], 1);
+    assert.deepEqual(inventory.recognizedIdentityRows[0], { role: RESTORE.setup, idSyntaxValid: true,
+      baseUsernamePresent: false, baseUsernameType: 'MISSING', baseUsernameMatches: false,
+      routedUsernameMatches: true, branchIdMatches: true, branchNameMatches: true, databaseNameMatches: true });
+    assert.doesNotMatch(JSON.stringify(error.safeDiagnostic), /synthetic-password-never-output/);
     return true;
   });
   const changedInheritance = roleRows(); changedInheritance[0].inherited_roles.push('unexpected_role');
