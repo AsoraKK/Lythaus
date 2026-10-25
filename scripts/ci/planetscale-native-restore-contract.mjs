@@ -127,8 +127,29 @@ function safeRoleField(row, key, matcher, expected) {
   return { present, type, expected, ...(type === 'BOOLEAN' || type === 'NULL' ? { observed: value } : {}), matches: matcher(value, present) };
 }
 
-function roleMetadataDiagnostic(name, branchId, found, row, sourceRow) {
+function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow) {
   const branch = object(row?.branch) ? row.branch : undefined;
+  const recognizedBaseUsernameCounts = Object.fromEntries(ROLE_NAMES.map(role => [role, 0]));
+  const recognizedRoutedUsernameCounts = Object.fromEntries(ROLE_NAMES.map(role => [role, 0]));
+  const recognizedIdentityRows = [];
+  for (const candidate of rows) {
+    if (!object(candidate)) continue;
+    const baseRole = ROLE_NAMES.includes(candidate.base_username) ? candidate.base_username : undefined;
+    const username = typeof candidate.username === 'string' ? candidate.username : '';
+    const suffix = `.${branchId}`;
+    const routedBase = username.endsWith(suffix) ? username.slice(0, -suffix.length) : undefined;
+    const routedRole = ROLE_NAMES.includes(routedBase) ? routedBase : undefined;
+    if (baseRole) recognizedBaseUsernameCounts[baseRole]++;
+    if (routedRole) recognizedRoutedUsernameCounts[routedRole]++;
+    if (!baseRole && !routedRole) continue;
+    const candidateBranch = object(candidate.branch) ? candidate.branch : undefined;
+    recognizedIdentityRows.push({ role: baseRole ?? routedRole, idSyntaxValid: safeId(candidate.id),
+      baseUsernamePresent: Object.hasOwn(candidate, 'base_username'), baseUsernameType: safeType(candidate.base_username,
+        Object.hasOwn(candidate, 'base_username')), baseUsernameMatches: candidate.base_username === (baseRole ?? routedRole),
+      routedUsernameMatches: routedRole === (baseRole ?? routedRole), branchIdMatches: candidateBranch?.id === branchId,
+      branchNameMatches: candidateBranch?.name === (branchId === RESTORE.sourceId ? 'main' : RESTORE.target),
+      databaseNameMatches: candidate.database_name === 'postgres' });
+  }
   const expectedReplication = name === RESTORE.setup;
   const actualInherited = Array.isArray(row?.inherited_roles) ? row.inherited_roles : undefined;
   const inheritedMatches = actualInherited !== undefined
@@ -138,6 +159,10 @@ function roleMetadataDiagnostic(name, branchId, found, row, sourceRow) {
     && JSON.stringify([...actualInherited].sort()) === JSON.stringify([...sourceInherited].sort()));
   return {
     roleClass: name === RESTORE.setup ? 'setup' : 'application', candidateCount: found.length,
+    inventory: { rowCount: rows.length, recognizedBaseUsernameCounts, recognizedRoutedUsernameCounts,
+      recognizedIdentityRowCount: recognizedIdentityRows.length,
+      recognizedIdentityRows: recognizedIdentityRows.slice(0, ROLE_NAMES.length * 2),
+      recognizedIdentityRowsTruncated: recognizedIdentityRows.length > ROLE_NAMES.length * 2 },
     fields: {
       id: safeRoleField(row, 'id', value => safeId(value), 'safe-provider-id'),
       baseUsername: safeRoleField(row, 'base_username', value => value === name, 'exact-configured-role'),
@@ -174,7 +199,7 @@ export function checkedRoles(rows, branchId, sourceRoles) {
     const found = rows.filter(row => object(row) && row.base_username === name);
     const row = found.length === 1 ? found[0] : undefined;
     const sourceRow = sourceRoles?.get(name);
-    const diagnostic = roleMetadataDiagnostic(name, branchId, found, row, sourceRow);
+    const diagnostic = roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow);
     const checks = Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches')
       .every(([, value]) => value.matches === true);
     if (found.length !== 1 || !checks) {

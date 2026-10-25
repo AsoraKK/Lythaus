@@ -320,6 +320,33 @@ test('interrupted qualification finalizes once as retained UNKNOWN; final bytes 
   assert.equal(finalizeQualificationEvidence(root, instant + 60000), digest);
   assert.deepEqual(fs.readFileSync(path.join(root, 'qualification.json')), bytes);
 });
+test('interrupted create without a bound acknowledged target is manual reconciliation, never delete eligibility', t => {
+  const cases = [
+    { outcome: 'PENDING_OR_UNKNOWN', creation: null, createdTargetId: null },
+    { outcome: 'UNKNOWN_MUTATION_OUTCOME', creation: null, createdTargetId: null },
+    { outcome: 'ACKNOWLEDGED', creation: null, createdTargetId: 'newrestore123' },
+    { outcome: 'ACKNOWLEDGED', creation: { acknowledged: true, id: 'otherTarget', name: RESTORE.target }, createdTargetId: 'newrestore123' },
+  ];
+  for (const [index, scenario] of cases.entries()) {
+    const f = fixture(), root = fs.mkdtempSync(path.join(os.tmpdir(), `restore-create-finalize-${index}-`));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const report = structuredClone(f.report);
+    report.creation = scenario.creation;
+    report.createdTargetId = scenario.createdTargetId;
+    report.state = 'NO_TARGET_CREATED'; report.cleanup = 'NOT_NEEDED';
+    report.providerMutations = [{ action: 'create_fixed_restore', outcome: scenario.outcome }];
+    fs.writeFileSync(path.join(root, 'checkpoint.json'), encode(report));
+    finalizeQualificationEvidence(root, instant);
+    const finalized = JSON.parse(fs.readFileSync(path.join(root, 'qualification.json'), 'utf8'));
+    assert.equal(finalized.state, 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED');
+    assert.equal(finalized.cleanup, 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED');
+    assert.equal(finalized.qualificationOutcome, 'UNKNOWN');
+    assert.equal(finalized.recoveryAcceptance, 'NOT_CERTIFIED');
+    assert.equal(finalized.credentialActions?.length ?? 0, 0);
+    assert.equal(finalized.providerMutations.length, 1);
+    assert.equal(finalized.creation?.acknowledged === true && finalized.creation.id === finalized.createdTargetId, false);
+  }
+});
 test('provider capabilities separate qualification from deletion; cleanup cannot create, reset or protect', async () => {
   let calls = 0;
   const fetch = async () => { calls++; throw new Error('must never reach provider'); };

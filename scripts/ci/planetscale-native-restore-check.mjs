@@ -241,7 +241,10 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       }
     }
     report.providerMutations.push({ action: label, outcome: 'PENDING_OR_UNKNOWN' }); await save();
-    try { const value = await operation(); report.providerMutations.at(-1).outcome = 'ACKNOWLEDGED'; await save(); return value; }
+    try {
+      time();
+      const value = await operation(); report.providerMutations.at(-1).outcome = 'ACKNOWLEDGED'; await save(); return value;
+    }
     catch (error) { report.providerMutations.at(-1).outcome = error instanceof RestoreFailure ? error.outcome : 'UNKNOWN_MUTATION_OUTCOME'; await save(); throw error; }
   };
   const boundTarget = async (configuration = true) => {
