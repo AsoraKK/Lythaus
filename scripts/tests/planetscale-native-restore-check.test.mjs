@@ -8,29 +8,29 @@ import { restoredConnection, readOnly, inspectExtensionAuthority, installMissing
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 
-const instant = Date.parse('2026-10-23T17:00:00Z');
+const instant = Date.parse('2026-10-25T04:00:00Z');
 const sha = 'a'.repeat(40), newId = 'newrestore123', password = 'synthetic-secret-never-output';
 const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GITHUB_RUN_ID: '12345',
   PLANETSCALE_SCHEMA_READ_DATABASE_URL: `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:${password}@aws.connect.psdb.cloud/postgres?sslmode=verify-full`,
   RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, backupId: RESTORE.backupId, target: RESTORE.target,
-    maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, recoveryPointAcknowledged: true,
-    reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: '2026-10-23T21:00:00Z',
+    maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
+    reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: '2026-10-25T08:00:00Z',
     actions: ACTIONS, roles: ROLE_NAMES, cleanupPermit: { workflowId: 42, runNumber: 1 },
-    reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: '2026-10-23T16:00:00Z', availableUntil: '2026-10-23T21:00:00Z' },
+    reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: '2026-10-25T03:00:00Z', availableUntil: '2026-10-25T08:00:00Z' },
     retention: { operator: 'owner', reference: 'finite-retention-approval', manualEndActionApprovalReference: 'manual-decision-approval',
-      endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: '2026-10-24T16:00:00Z',
-      decisionBy: '2026-10-23T18:00:00Z', estimatedUsd: 0.01 } }) });
+      endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: '2026-10-26T03:00:00Z',
+      decisionBy: '2026-10-25T05:00:00Z', estimatedUsd: 0.01 } }) });
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
   dropped_at: null, expires_at: null, with_replication: false, inherited_roles: ['pg_read_all_settings'],
   branch: { id, name: id === RESTORE.sourceId ? 'main' : RESTORE.target, deleted_at: null } }));
-const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-23T17:00:00Z', deleted_at: null,
+const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-25T04:00:00Z', deleted_at: null,
   default: false, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false,
   cluster_name: RESTORE.cluster, cluster_architecture: 'aarch64', region: { slug: RESTORE.region }, replicas: 0,
   minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes, ready: true, state: 'ready', frozen: false });
 const backup = () => ({ id: RESTORE.backupId, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
-  state: 'success', deleted_at: null, protected: true, completed_at: '2026-10-23T14:29:11.907Z',
-  expires_at: '2026-10-25T14:25:02.690Z', pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
+  state: 'success', deleted_at: null, protected: true, completed_at: '2026-10-25T02:33:09.321Z',
+  expires_at: '2026-10-27T02:25:02.838Z', pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
 const baseline = () => ({ catalogSha256: 'b'.repeat(64), schemaFingerprint: 'c'.repeat(64), relationCount: 108,
   schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3 });
 
@@ -51,6 +51,7 @@ function fixture(mode = '') {
       assert.notEqual(method, 'DELETE', 'qualification must never delete on any path');
       if (method === 'POST' && path === '/branches') {
         assert.equal(options.body.backup_id, RESTORE.backupId); assert.equal(options.body.storage.maximum_storage_bytes, RESTORE.bytes);
+        assert.equal(Object.hasOwn(options.body, 'restore_point'), false);
         assert.equal(options.body.create_database_if_missing, false); created = true;
         if (mode === 'unknown_create') throw new RestoreFailure('provider_transport_failed', 'UNKNOWN_MUTATION_OUTCOME');
         b.restored_branches = [{ id: newId, name: RESTORE.target }];
@@ -66,6 +67,7 @@ function fixture(mode = '') {
       if (path.endsWith(`/backups/${RESTORE.backupId}`)) {
         if (mode === 'unprotected') b.protected = false;
         if (mode === 'stale') b.completed_at = '2026-10-22T14:00:00Z';
+        if (mode === 'completion_mismatch') b.completed_at = '2026-10-25T02:34:00Z';
         if (mode === 'binding_mismatch' && created) b.restored_branches = [{ id: 'other', name: RESTORE.target }];
         return b;
       }
@@ -90,12 +92,13 @@ function fixture(mode = '') {
   return { calls, checkpoints, options };
 }
 
-test('qualification exercises five copied credentials and retains original target for separate review', async () => {
+test('qualification restores the specified backup snapshot, exercises five copied credentials and retains target for review', async () => {
   const f = fixture(); const report = await runNativeRestore(f.options);
   assert.equal(report.status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
   assert.equal(report.cleanup, 'TARGET_RETAINED_PENDING_REVIEW'); assert.equal(report.createdTargetId, newId);
   assert.equal(report.state, 'TARGET_RETAINED_PENDING_REVIEW'); assert.equal(report.qualificationOutcome, 'PASSED');
   assert.equal(report.creation.acknowledged, true); assert.equal(report.credentialReferencesDiscarded, true);
+  assert.equal(report.backup.restoreMode, 'SPECIFIED_BACKUP_SNAPSHOT');
   assert.equal(report.credentialActions.length, 5); assert.equal(report.sourceBaseline.approvedPrivilegeChecks, 17);
   assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED'); assert.equal(report.deploymentAuthorized, false);
   assert.equal(f.calls.filter(value => value.startsWith('POST /branches')).length, 6);
@@ -108,6 +111,7 @@ test('qualification exercises five copied credentials and retains original targe
 for (const [mode, blocker, cleanup] of [
   ['authority_denied','provider_access_denied','NOT_NEEDED'], ['preexisting','preexisting_target_refused','NOT_NEEDED'],
   ['stale','backup_stale_or_test_window_too_short','NOT_NEEDED'],
+  ['completion_mismatch','fixed_backup_completion_changed','NOT_NEEDED'],
   ['unknown_create','provider_transport_failed','UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED'],
   ['unprotected','protected_backup_with_finite_retention_plan_is_manual_prerequisite','NOT_NEEDED'],
   ['copied_role_mismatch','copied_role_missing_or_ambiguous','TARGET_RETAINED_PENDING_REVIEW'],
@@ -121,7 +125,7 @@ for (const [mode, blocker, cleanup] of [
   assert.ok(report.blockers.includes(blocker), JSON.stringify(report)); assert.equal(report.cleanup, cleanup);
   const mutations = f.calls.filter(value => /^(POST|PATCH|DELETE) /.test(value));
   assert.equal(new Set(mutations).size, mutations.length);
-  if (['authority_denied','preexisting','stale','unprotected'].includes(mode)) assert.equal(mutations.length, 0);
+  if (['authority_denied','preexisting','stale','completion_mismatch','unprotected'].includes(mode)) assert.equal(mutations.length, 0);
   if (mode === 'unknown_create') assert.equal(report.costEscalationRequired, true);
   assert.equal(mutations.filter(value => /^(DELETE|PATCH)/.test(value)).length, 0);
 });

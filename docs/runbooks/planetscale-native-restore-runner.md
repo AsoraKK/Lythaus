@@ -1,11 +1,13 @@
 # Fixed native restore runner
 
-This is preparation, not permission to dispatch execution. The runner has not
-restored a hosted backup, reset provider credentials or demonstrated that the
-existing protected API key has the required access. Mock success and disposable
-PG17 success are not operational restore evidence. Parent source review, normal
-required CI, exact merged-source review and the separate owner action packet
-remain required before dispatching `execute=true`.
+This is preparation, not permission to dispatch execution. Read-only run
+`40175663686` verified the dedicated restore token's nine target-database
+actions and organization `read_service_tokens`, then stopped because its pinned
+backup was stale. No hosted backup was restored, no credentials were reset, and
+no target was created. Mock success and disposable PG17 success are not
+operational restore evidence. Parent source review, normal required CI, exact
+merged-source review and the separate owner action packet remain required
+before dispatching `execute=true`.
 
 ## Fixed scope
 
@@ -15,30 +17,39 @@ attempt 1, a named human's normal production approval, and an exact approval
 record. A prior execute run at the same SHA blocks another execution, even if
 that prior run failed. Never rerun an uncertain mutation.
 
-Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), backup `nxqskcldn8yk`.
+Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
+`zw0so7f5jbpu` (provisional until a fresh API read confirms its metadata).
 The only target is `lythaus-0021-native-restore-check-20261022`: PS-5 ARM,
 Frankfurt, zero replicas, minimum and maximum 21474836480 bytes. Any preexisting
 target is refused. The runner creates no database, role, GitHub secret,
 Hyperdrive, binding, traffic route or application deployment. Source passwords
 are never reset. Migration 0021 is never applied.
 
-The requested PITR timestamp is explicitly `2026-10-23T14:29:11.907Z`, the
-recorded completion of this backup. This is a requested recovery point, not
-proof of the actual replay point. Provider completion plus independent SQL
-checks must establish what was restored; all 17 previously approved privileges
-are tested directly. The API receipt does not expose an actual replay point,
-so provider attestation and owner acceptance remain a reviewed evidence step.
-Neither backup timestamps nor the provider checklist certify restored grants.
+This qualification restores the exact backup snapshot by sending its
+`backup_id`; it does not request PITR. PlanetScale documents `backup_id` as
+restoring that backup's schema and data. `restore_point` is a separate optional
+PostgreSQL PITR request and is omitted from the fixed create body. The backup's
+completion time is validated from API `completed_at` metadata; it is distinct
+from the dashboard's snapshot label. The candidate's last displayed “Backup
+time” was `2026-10-25T02:33:09.321Z`, while its snapshot label was
+`2026-10-25T02:25:02.838Z`; re-read API `completed_at` before qualification.
+Provider completion plus independent SQL checks must establish what was
+restored; all 17 previously approved privileges are tested directly. Neither
+backup timestamps nor the provider checklist certify restored grants.
+References: [backup GET](https://planetscale.com/docs/api/reference/get_backup),
+[branch creation](https://planetscale.com/docs/api/reference/create_branch).
 
 The whole two-hour window must fit before the backup reaches 24 hours old and
-before expiry. For this backup, start before 2026-10-24 12:29:11.907 UTC.
-Freshness ends 2026-10-24 14:29:11.907 UTC; normal unprotected expiry is
-2026-10-25 14:25:02.690 UTC. Freshness and expiry are different gates. No
-replacement is silently chosen. The backup must already be protected under a
-separately approved, finite retention and end-action plan before qualification.
-Neither phase changes protection or deletes a backup. The last verified
-inventory had this backup **unprotected**; source integration does not close
-that operational prerequisite or extend these dates.
+before expiry. From the last observed completion, start before
+`2026-10-26T00:33:09.321Z` and finish before
+`2026-10-26T02:33:09.321Z`; the displayed expiry was
+`2026-10-27T02:25:02.838Z`. Recompute these limits from a fresh API read.
+Freshness and expiry are different gates. No replacement is silently chosen.
+The backup must already be protected under a separately approved, finite
+retention and end-action plan before qualification. Neither phase changes
+protection or deletes a backup. The 08:37 UTC dashboard read had this candidate
+**unprotected**; source integration does not close that prerequisite or extend
+these dates.
 
 ## Existing-access and bootstrap limitations
 
@@ -165,20 +176,12 @@ or recovery gate is automatically marked passed.
 
 ## Owner packet and execution
 
-After exact merged-source review, prepare this wording with the actual SHA,
-approval reference, approver GitHub login and expiry:
-
-> Approve one restore qualification on the fixed PS-5 ARM Frankfurt target
-> from backup nxqskcldn8yk, requesting 23 October 14:29:11.907 UTC, within US$5
-> total including tax/fees and the separately bounded backup/WAL retention plan.
-> The named backup must already be protected under that separately approved
-> plan. Reset only the five copied target identities listed above,
-> setup first for the authority probe; never change source credentials. Install
-> only the three named extensions if proven missing and authorized. Retain
-> sanitized evidence and retain the test target for human review. Reserve a
-> reviewer and operator for the whole two-hour window, including evidence
-> publication, review, separately approved cleanup and cost escalation. This
-> qualification approval alone does not authorize a DELETE.
+Before dispatch, bind the approval record to the exact merged SHA, freshly
+verified backup API metadata, absent fixed target, reviewed all-in estimate,
+finite retention plan, and an actually reserved operator/reviewer window. The
+candidate uses specified-snapshot restore only; it does not use a PITR
+timestamp. Never reuse an expired approval record or substitute the dashboard's
+snapshot label for API `completed_at`.
 
 Known two-hour compute/storage plus a conservative 20-GiB additional backup/WAL
 day and 10-MiB egress is about US$0.038604429 before tax/fees. The packet must
@@ -201,12 +204,12 @@ No automatic unprotect, backup deletion or denied billing-read workaround exists
 ```json
 {
   "releaseSha": "EXACT_REVIEWED_MERGED_SHA",
-  "backupId": "nxqskcldn8yk",
+  "backupId": "zw0so7f5jbpu",
   "target": "lythaus-0021-native-restore-check-20261022",
   "maximumUsd": 5,
   "estimatedSubtotalUsd": 0.05,
   "taxAndFeeAllowanceUsd": 1,
-  "recoveryPointAcknowledged": true,
+  "backupSnapshotAcknowledged": true,
   "reference": "EXACT_OWNER_APPROVAL_REFERENCE",
   "manualOperator": "OWNER_GITHUB_LOGIN",
   "expiresAt": "UTC_EXPIRY_COVERING_THE_TWO_HOUR_WINDOW",
@@ -288,7 +291,7 @@ After qualification completes, use this operator-controlled sequence:
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `nxqskcldn8yk.json` record in an evidence-only PR
+   Commit it with the canonical `zw0so7f5jbpu.json` record in an evidence-only PR
    and merge it into protected main after all normal required checks pass.
    Both must be tracked regular files, unchanged in the checkout. The record
    binds source, backup, acknowledged target ID/creation time, verification

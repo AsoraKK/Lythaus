@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 
 export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lythaus-core', databaseId: 'hzhe0cbn6rxi',
-  source: 'main', sourceId: 'vqa2g2xc9wsl', backupId: 'nxqskcldn8yk',
-  recoveryPoint: '2026-10-23T14:29:11.907Z',
+  source: 'main', sourceId: 'vqa2g2xc9wsl', backupId: 'zw0so7f5jbpu',
+  backupCompletedAt: '2026-10-25T02:33:09.321Z',
   target: 'lythaus-0021-native-restore-check-20261022', cluster: 'PS_5_AWS_ARM', region: 'eu-central',
   bytes: 21474836480, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
   qualificationStopMs: 20 * 60000, escalationMs: 45 * 60000, reviewMs: 60 * 60000, cleanupStartMs: 105 * 60000,
@@ -13,7 +13,7 @@ export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lytha
 export const ROLE_NAMES = Object.freeze([RESTORE.setup, RESTORE.runtime, RESTORE.admin, RESTORE.jobs, RESTORE.privacy]);
 export const EXTENSIONS = Object.freeze(['pg_trgm', 'unaccent', 'pgcrypto']);
 export const CREATE_TARGET_BODY = Object.freeze({ name: RESTORE.target, backup_id: RESTORE.backupId,
-  restore_point: RESTORE.recoveryPoint, region: RESTORE.region, cluster_size: RESTORE.cluster, replicas: 0,
+  region: RESTORE.region, cluster_size: RESTORE.cluster, replicas: 0,
   major_version: '17', deletion_protected: false, create_database_if_missing: false,
   storage: Object.freeze({ minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes }) });
 export const ACTIONS = Object.freeze(['restore_fixed_target', 'reset_five_copied_roles',
@@ -32,11 +32,11 @@ export function approvalRecord(raw, environment, now) {
   let record;
   try { record = JSON.parse(raw); } catch { throw new RestoreFailure('explicit_owner_approval_record_required'); }
   requireThat(object(record) && Object.keys(record).sort().join(',') ===
-    'actions,backupId,cleanupPermit,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,recoveryPointAcknowledged,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd',
+    'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd',
   'approval_record_fields_invalid');
   requireThat(record.releaseSha === environment.RELEASE_SHA && record.backupId === RESTORE.backupId && record.target === RESTORE.target
     && JSON.stringify(record.roles) === JSON.stringify(ROLE_NAMES) && JSON.stringify(record.actions) === JSON.stringify(ACTIONS)
-    && record.maximumUsd === RESTORE.maximumUsd && record.recoveryPointAcknowledged === true,
+    && record.maximumUsd === RESTORE.maximumUsd && record.backupSnapshotAcknowledged === true,
   'approval_scope_mismatch');
   requireThat(Number.isFinite(record.estimatedSubtotalUsd) && record.estimatedSubtotalUsd >= 0.04
     && Number.isFinite(record.taxAndFeeAllowanceUsd) && record.taxAndFeeAllowanceUsd > 0
@@ -71,7 +71,7 @@ export function checkBackup(backup, now) {
   const completed = Date.parse(backup.completed_at), expires = Date.parse(backup.expires_at);
   requireThat(Number.isFinite(completed) && completed <= now && now + RESTORE.maximumMs <= completed + 24 * 3600000
     && Number.isFinite(expires) && now + RESTORE.maximumMs < expires, 'backup_stale_or_test_window_too_short');
-  requireThat(backup.completed_at === RESTORE.recoveryPoint, 'fixed_backup_completion_changed');
+  requireThat(backup.completed_at === RESTORE.backupCompletedAt, 'fixed_backup_completion_changed');
   requireThat(Number.isSafeInteger(backup.pvc_size) && backup.pvc_size > 0 && backup.pvc_size <= RESTORE.bytes
     && Number.isSafeInteger(backup.uncompressed_size) && backup.uncompressed_size <= RESTORE.bytes, 'backup_storage_not_bounded');
 }
