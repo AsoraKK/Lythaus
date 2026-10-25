@@ -176,7 +176,10 @@ void main() {
             'level': null,
             'levelKind': null,
           },
-          'corrections': {'sourceRevisions': [], 'effectiveSnapshots': []},
+          'corrections': {
+            'sourceRevisions': <Object?>[],
+            'effectiveSnapshots': <Object?>[],
+          },
           'report': null,
         },
       ),

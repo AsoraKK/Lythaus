@@ -8,6 +8,32 @@ On rollout, stored comment-notification rows without revision or decision eviden
 
 The last-known native client in `lib/features/notifications/domain/notification_models.dart` handles responses with `notificationType` in a dedicated `Notification.fromJson` branch that copies `entityId` but not `deeplink`; `lib/features/notifications/presentation/notifications_screen.dart` requires a non-null link before navigation. The old API supplied no comment destination, so historical rows were visible but not navigable to an exact comment. Updated clients consume the guarded comment link; older clients may still display evidence-backed new notices but cannot use their exact-comment destination.
 
-Already-loaded `3880a8be` comment screens also keep sending the old unscoped `timestamp,id` cursor, which the new reader rejects; load-more remains broken on those tabs until the client is updated or refreshed. The separately reviewed candidate client recovery handles a pagination error only after an explicit Retry: it requests the canonical first page, retains loaded rows, and preserves the existing account/privacy fences. Updating the client does not retrofit an already-loaded tab; this note does not prescribe or promise a forced reload. Parent owns release sequencing and update communications for stale tabs, alongside client sequencing for exact notification navigation. This is a release prerequisite, not a new approval gate. The test covers server projections, not cached device state.
+An already-open `3880a8be` comment screen keeps retrying an old unscoped
+`timestamp,id` cursor, which the new reader rejects. This is a pagination
+interruption for that screen. Its post-detail route constructs a new
+`CommentThreadScreen` on each open, and initial loading sends no cursor, so
+leaving and reopening Comments provides a source-level recovery path even on
+that old client. The new PG17 transition case proves that a request with no
+view or cursor gets the default flat/oldest page and a new opaque cursor that
+can be passed unchanged to retrieve the remaining rows. It also proves that
+the old cursor remains rejected. This is protocol and Git-source evidence,
+not a test on a deployed device.
 
-No additional owner decision is needed to keep historical notices without verifiable provenance hidden; the approved propagation evidence already says events lacking the exact revision/decision envelope are withheld and not backfilled. Parent owns the separate stale-client update/refresh sequencing prerequisite. Restoring historical notices would require separate approval and an authoritative provenance review, not inferred or fabricated evidence.
+The candidate adds a narrower in-screen recovery: only a 400
+`invalid_pagination` response for the old two-field cursor offers an explicit
+Retry from the first page. Existing rows remain in state while the retry
+shows a loading indicator, then the fresh first page replaces the list;
+current account, load and mutation fences still apply. A Flutter
+journey verifies that Retry preserves a saved unsent draft, performs no
+POST/PUT/DELETE request and discards a response arriving after an account
+switch. A second case keeps a mismatched versioned cursor rejected. The
+[rendered recovery state](../evidence/review-improvements-20261025/comments/comments-legacy-cursor-recovery.png)
+shows the banner and saved draft. This does not promise persistence before an
+asynchronous draft save completes.
+
+Updating the client does not retrofit an already-loaded tab. Parent owns
+normal client/API sequencing and any stale-screen recovery communication,
+including the older client's lack of exact notification navigation. No new
+owner approval or forced-reload requirement is introduced here.
+
+No additional owner decision is needed to keep historical notices without verifiable provenance hidden; the approved propagation evidence already says events lacking the exact revision/decision envelope are withheld and not backfilled. Restoring historical notices would require separate approval and an authoritative provenance review, not inferred or fabricated evidence.

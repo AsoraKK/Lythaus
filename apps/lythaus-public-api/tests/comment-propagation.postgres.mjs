@@ -139,6 +139,28 @@ test('31 root conversations page without skips or duplicates while exact targets
   assert.equal(ids(fresh)[0], concurrentRoot);
 });
 
+test('legacy clients recover from an old cursor by reopening and paging the default flat view', async () => {
+  const owner = await actor(), postId = await post(owner), roots = [];
+  for (let index = 0; index < 31; index++) {
+    roots.push(await comment(postId, owner, {
+      timestamp: `2026-10-01T00:00:${String(index).padStart(2, '0')}.000000Z`,
+    }));
+  }
+  const legacyRead = (options = {}) => readCommentThread({
+    postId, viewerId: null, query,
+    request: new Request('https://local.test/api/posts/' + postId + '/comments?' + new URLSearchParams({ limit: '25', ...options })),
+  });
+  const oldCursor = Buffer.from(JSON.stringify({ timestamp: '2026-10-01T00:00:24.000Z', id: roots[24] })).toString('base64url');
+  await assert.rejects(legacyRead({ cursor: oldCursor }), /invalid_pagination/);
+
+  const fresh = await legacyRead();
+  assert.deepEqual(ids(fresh), roots.slice(0, 25));
+  assert.ok(fresh.nextCursor);
+  const resumed = await legacyRead({ cursor: fresh.nextCursor });
+  assert.deepEqual([...ids(fresh), ...ids(resumed)], roots);
+  assert.equal(resumed.nextCursor, null);
+});
+
 test('hidden ancestors, cross-post links, cycles, blocks and mutes cannot expose descendants or private receipts', async () => {
   const owner = await actor(), viewer = await actor(), ancestorAuthor = await actor(), postId = await post(owner);
   const root = await comment(postId, ancestorAuthor);
@@ -387,20 +409,23 @@ test('rollout hides legacy comment notices missing revision or decision evidence
   };
   const commonLegacyPayload = commentId => ({ contentType: 'comment', contentId: commentId,
     authorId: author, postId, parentId: root, declaredCreationMode: 'human', reasonCode: 'SYNTHETIC.ALLOW' });
+  const noEvidenceEvent = await insertLegacyEvent(legacyWithoutRevision, commonLegacyPayload(legacyWithoutRevision));
   const noRevisionEvent = await insertLegacyEvent(legacyWithoutRevision, {
     ...commonLegacyPayload(legacyWithoutRevision), decisionId: revisionPayload.decisionId,
   });
   const noDecisionEvent = await insertLegacyEvent(partialWithoutDecision, {
     ...commonLegacyPayload(partialWithoutDecision), sourceEventId: partialPayload.sourceEventId,
   });
-  const notificationIds = [uuidv7(), uuidv7(), uuidv7()];
+  const notificationIds = [uuidv7(), uuidv7(), uuidv7(), uuidv7()];
   await control.query(`INSERT INTO feed.notifications(id,recipient_id,notification_type,entity_id,source_event_id)
     VALUES ($1,$2,'content.reply_received',$3,$4),
            ($5,$2,'content.reply_received',$6,$7),
-           ($8,$2,'content.reply_received',$9,$10)`,
+           ($8,$2,'content.reply_received',$9,$10),
+           ($11,$2,'content.reply_received',$3,$12)`,
   [notificationIds[0], owner, legacyWithoutRevision, noRevisionEvent,
     notificationIds[1], partialWithoutDecision, noDecisionEvent,
-    notificationIds[2], current, currentEvent]);
+    notificationIds[2], current, currentEvent,
+    notificationIds[3], noEvidenceEvent]);
 
   const runtimeList = () => query(`SELECT id, entity_id AS "entityId" FROM feed.notifications
       WHERE recipient_id=$1 AND dismissed_at IS NULL AND ${commentNotificationVisibilitySql}
@@ -415,11 +440,12 @@ test('rollout hides legacy comment notices missing revision or decision evidence
   assert.equal((await runtimeUnread()).rows[0].count, 0);
 
   const retainedRows = await control.query('SELECT id,entity_id,source_event_id FROM feed.notifications WHERE id=ANY($1::uuid[]) ORDER BY id', [notificationIds]);
-  assert.equal(retainedRows.rowCount, 3);
+  assert.equal(retainedRows.rowCount, 4);
   assert.deepEqual(new Set(retainedRows.rows.map(row => row.id)), new Set(notificationIds));
-  const retainedEvents = await control.query('SELECT id,payload FROM system.outbox_events WHERE id=ANY($1::uuid[])', [[noRevisionEvent, noDecisionEvent]]);
-  assert.equal(retainedEvents.rowCount, 2);
+  const retainedEvents = await control.query('SELECT id,payload FROM system.outbox_events WHERE id=ANY($1::uuid[])', [[noRevisionEvent, noDecisionEvent, noEvidenceEvent]]);
+  assert.equal(retainedEvents.rowCount, 3);
   const byId = new Map(retainedEvents.rows.map(row => [row.id, row.payload]));
+  assert.deepEqual(byId.get(noEvidenceEvent), commonLegacyPayload(legacyWithoutRevision));
   assert.equal(byId.get(noRevisionEvent).sourceEventId, undefined);
   assert.equal(byId.get(noRevisionEvent).decisionId, revisionPayload.decisionId);
   assert.equal(byId.get(noDecisionEvent).sourceEventId, partialPayload.sourceEventId);

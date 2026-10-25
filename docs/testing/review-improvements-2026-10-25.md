@@ -58,6 +58,25 @@ shared-entrypoint combinations need their own exact-source acceptance.
   states the already-approved cumulative grace/equal-benefit rule. The
   [decision record](../policy/inactive-state-display-and-qualification-decision-2026-10.md)
   contains only the unresolved method/action/amount and UTC settlement choices.
+- Initial hosted CI at `644a0a663a01783d4af736745217a9b15437644d` exposed a
+  real reader compatibility regression: public comment responses omitted the
+  existing `publicLabel`. The unchanged publication-admission suite reproduced
+  this locally. The reader now uses the existing label function for allowed
+  comments, including revalidation; private pending receipts receive no public
+  label. The original 40-case admission suite and all six publication suites
+  pass after the fix. This is separate from the already-known staging gap.
+- The [rollout transition record](comment-rollout-transition-2026-10-25.md)
+  documents legacy cursor recovery and historical notification disposition.
+  Old cursors remain rejected; the client offers a manual first-page retry
+  while preserving saved drafts and account fences. An older client can also
+  recover by reopening Comments and passing the new opaque cursor unchanged.
+  Legacy notifications without revision/decision evidence remain hidden from
+  list and unread projections, without backfill or deletion.
+- The report-card review concern was corrected after tracing the supported
+  contract: `reportState` permits `pending` and `shadow`, and absent approval
+  configuration intentionally returns `pending` with `report_unavailable`.
+  Two defensive widget cases now distinguish that response from an actual
+  failed request. Report-card production behavior was not changed.
 
 ## Local verification
 
@@ -68,10 +87,11 @@ not an additive claim of unique business coverage.
 
 | Command or suite | Result | Scope |
 | --- | --- | --- |
-| `node scripts/ci/run-publication-pg17.mjs --comments` | 12 direct PG17; 4 Workerd; 9 native feed-read tests passed, zero skips | Canonical SQL and actual candidate handlers. Final run supplied historical mode externally and verified the runner still forced candidate mode. |
+| `node scripts/ci/run-publication-pg17.mjs --comments` | 14 direct PG17; 4 Workerd; 9 native feed-read tests passed, zero skips | Includes old-cursor/default-view transition and retained legacy notification history. Final run supplied historical mode externally and verified the runner still forced candidate mode. |
+| `node scripts/ci/run-publication-pg17.mjs` | Six suites passed: 18 moderation, 6 rereview, 40 admission, 93 safety, 15 transaction, 9 attachment cases; zero skips | Existing isolated PG17/Workerd acceptance after the public-label compatibility repair. The 40 admission cases are included here, not extra coverage. |
 | `node apps/lythaus-public-api/tests/run-comment-route-ui.mjs` | 4 passed | Real local Worker/PG responses consumed by Flutter widget journeys; synthetic identity. |
-| Seven focused comment/notification/owner-comment Flutter files | 114 passed | Widgets, notification navigation, edits/deletes, drafts, account fencing; mocked transports except the separate route suite. |
-| Two changed monthly/security UI test files; `reward_models_test.dart` | 11 UI plus 13 model tests passed | Synthetic pending/unavailable/shadow/confirmed and policy-version authority. |
+| Seven focused comment/notification/owner-comment Flutter files | Original 114 passed; changed post-comment file rerun with 57 passed | The original post-comment file had 55 cases. Two added cases cover old-cursor recovery with saved draft/account fencing and rejection of mismatched versioned cursors. Other file bodies are unchanged; results overlap. |
+| Two changed monthly/security UI test files; `reward_models_test.dart` | 13 UI plus 13 model tests passed | Synthetic pending/unavailable/shadow/confirmed and policy-version authority. The two added report-card cases assert supported pending responses and request failure, not an unsupported `unavailable` DTO state. |
 | `comment-conversation.browser.mjs` | 1 journey passed; 5 screenshots | Chromium against a current Flutter build with a synthetic adapter; not a provider or PG browser end-to-end test. |
 | `npm run openapi:test:dart` | 1,604 passed | Temporary generated SDK package; 76 existing analyzer warnings, no errors. |
 | `npm run openapi:test:contract` | 77 passed; 17 existing skips | OpenAPI contracts. Lint passed; regenerated temporary bundle byte-matches the committed bundle. |
@@ -89,7 +109,8 @@ Rendered comment captures: [expanded mobile](../evidence/review-improvements-202
 [collapsed mobile](../evidence/review-improvements-20261025/comments/comments-browser-mobile-collapsed.png),
 [Oldest](../evidence/review-improvements-20261025/comments/comments-browser-mobile-oldest.png),
 [narrow large text](../evidence/review-improvements-20261025/comments/comments-browser-narrow-large-text.png),
-[desktop dark](../evidence/review-improvements-20261025/comments/comments-browser-desktop-dark.png).
+[desktop dark](../evidence/review-improvements-20261025/comments/comments-browser-desktop-dark.png),
+[legacy cursor recovery with saved draft](../evidence/review-improvements-20261025/comments/comments-legacy-cursor-recovery.png).
 The decision record links the three monthly/security captures and their reproducible
 opt-in fixture. These are actual renders of synthetic data, not mockups.
 
@@ -129,6 +150,15 @@ comments privacy/pagination/notification-concurrency or monthly-state defect.
 The schema wording ambiguity was fixed. Notification navigation deliberately
 opens the post first, then reveals the exact target when Comments opens; no
 approved auto-open requirement was found, so no extra navigation behavior was added.
+
+Parent independently reviewed `644a0a66` and requested the two rollout
+classifications. A separate helper then reviewed all follow-up source and
+transition assertions, including saved-draft/account fences and the corrected
+monthly DTO matrix, with no blocking finding. Its documentation correction
+clarifies that an explicit first-page retry retains rows in memory while
+showing a loading indicator. Parent review and hosted checks must still apply
+to the final pushed head. PR #1102 has first merge priority; this task does not
+update main or race the database lane.
 
 Three helpers were requested with `model=gpt-6-luna`, `reasoning_effort=max`:
 `/root/comment_regressions`, `/root/regression_preservation`, and
