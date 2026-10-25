@@ -21,6 +21,8 @@ before(async () => {
     ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test,admin.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test,https://admin.lythaus.test',
     PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
     ACCESS_SUBJECT_HMAC_KEY: adminAccessKey,
+    ACCESS_JWKS_URL: 'https://jwks.fixture.test/.well-known/jwks.json',
+    ACCESS_AUDIENCES: 'synthetic-comment-reviewer-audience',
     JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }),
   });
   const moderator = await actor();
@@ -75,7 +77,7 @@ const deliver = eventId => fixture.dispatchFetch('https://api.lythaus.test/fixtu
   method: 'POST', body: JSON.stringify({ eventId, eventType: 'content.comment.published', payload: { postId: uuidv7() } }),
 });
 
-test('proposed shared hooks execute authenticated nested create with exact idempotent replay and one outbox record', async () => {
+test('candidate handlers execute authenticated nested create with exact idempotent replay and one outbox record', async () => {
   const { owner, author, postId, root } = await setup();
   const first = await submit(author, postId, root);
   assert.equal(first.result.parentId, root);

@@ -29,16 +29,16 @@ export async function commentRuntimeFixture(connectionString, bindings) {
       builder.onLoad({ filter: /apps\/lythaus-public-api\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'const body = await readCommentThread(', integratePublicApiComments) }));
       builder.onLoad({ filter: /apps\/lythaus-jobs\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'await client.query(commentNotificationRevisionLockQuery, [eventId]);', integrateJobsCommentNotifications) + '\nexport { processNotificationSource as fixtureNotification };' }));
       builder.onLoad({ filter: /apps\/lythaus-admin-api\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'sourceEventId: moderationCase.source_event_id, decisionId', integrateAdminCommentRevision) }));
-      builder.onLoad({ filter: /apps\/lythaus-admin-api\/src\/admin-access-runtime-policy\.ts$/ }, () => ({ loader: 'ts', contents: `
-        export interface AdminActor { userId: string; role: string }
-        export async function verifiedAccessSubject(request: Request): Promise<string> {
-          const subject = request.headers.get('cf-access-jwt-assertion');
-          if (!subject) throw new Error('access_required');
-          return subject;
+      builder.onResolve({ filter: /^\.\/admin-access-runtime-policy\.ts$/ }, args => {
+        if (/apps\/lythaus-admin-api\/src\/index\.ts$/.test(args.importer)) {
+          return { path: 'admin-access-wrapper', namespace: 'comment-admin-access' };
         }
-        export function requireActiveAdminMembership(row: { user_id?: unknown; role?: unknown } | undefined): AdminActor {
-          if (typeof row?.user_id !== 'string' || typeof row.role !== 'string') throw new Error('admin_role_required');
-          return { userId: row.user_id, role: row.role };
+      });
+      builder.onLoad({ filter: /.*/, namespace: 'comment-admin-access' }, () => ({ loader: 'ts', resolveDir: root, contents: `
+        import { verifiedAccessSubject as verifyAccess, requireActiveAdminMembership } from './apps/lythaus-admin-api/src/admin-access-runtime-policy.ts';
+        export { requireActiveAdminMembership };
+        export async function verifiedAccessSubject(request: Request, configuration: Parameters<typeof verifyAccess>[1]): Promise<string> {
+          return verifyAccess(request, configuration, async assertion => ({ sub: assertion }));
         }
       ` }));
       builder.onResolve({ filter: /^@lythaus\/db$/ }, () => ({ path: 'database', namespace: 'comment-postgres' }));
