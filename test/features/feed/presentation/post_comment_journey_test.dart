@@ -179,6 +179,7 @@ Future<void> _pump(
       child: RepaintBoundary(
         key: _commentCaptureKey,
         child: MaterialApp(
+          debugShowCheckedModeBanner: false,
           theme: LythausTheme.light(),
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(
@@ -1566,7 +1567,13 @@ void main() {
           .replaceAll('=', '');
       final accountARefresh = Completer<ResponseBody>();
       var pageReads = 0;
+      var writes = 0;
       final adapter = _Adapter((request) async {
+        if (request.method == 'POST' ||
+            request.method == 'PUT' ||
+            request.method == 'DELETE') {
+          writes++;
+        }
         if (request.method == 'GET' && request.path.endsWith('/comments')) {
           final cursor = request.queryParameters['cursor'];
           if (cursor == legacyCursor) {
@@ -1619,8 +1626,20 @@ void main() {
       controller.jumpTo(0);
       await tester.pumpAndSettle();
       expect(find.text('Comment c9'), findsOneWidget);
+      const draftText = 'An unsent draft survives refresh';
+      await _draft(tester, draftText);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        draftText,
+      );
+      await _captureComments(tester, 'comments-legacy-cursor-recovery');
       await tester.tap(find.text('Retry'));
       await _pumpUntil(tester, () => pageReads == 2);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        draftText,
+      );
+      expect(writes, 0, reason: 'Pagination recovery must not send a draft.');
       expect(
         adapter.requests
             .where(
