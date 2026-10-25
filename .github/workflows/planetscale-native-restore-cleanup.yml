@@ -131,14 +131,14 @@ jobs:
       - name: Delete original acknowledged target once after reviewed durable evidence
         if: inputs.mode == 'cleanup'
         env:
-          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_RESTORE_API_TOKEN: ${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}
           PENDING_ARTIFACT_ID: ${{ steps.pending.outputs.artifact-id }}
           PENDING_ARTIFACT_DIGEST: ${{ steps.pending.outputs.artifact-digest }}
         run: node scripts/ci/planetscale-native-restore-cleanup.mjs delete
       - name: Reconcile read-only without retrying deletion or qualification
         if: inputs.mode == 'reconcile'
         env:
-          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_RESTORE_API_TOKEN: ${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}
         run: node scripts/ci/planetscale-native-restore-cleanup.mjs reconcile
       - name: Retain separate sanitized cleanup receipt
         if: always()
