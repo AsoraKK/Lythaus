@@ -42,8 +42,19 @@ that operational prerequisite or extend these dates.
 
 ## Existing-access and bootstrap limitations
 
-The runner uses the existing protected `PLANETSCALE_API_TOKEN` service-token
-pair and the existing `PLANETSCALE_SCHEMA_READ_DATABASE_URL`. It first reads
+Qualification and cleanup use only the separately approved production-environment
+secret `PLANETSCALE_RESTORE_API_TOKEN`, containing the complete service-token
+`ID:secret` pair with exactly one colon and no whitespace. No separate token-ID
+variable is needed. Missing or malformed dedicated access fails closed, even if
+the shared `PLANETSCALE_API_TOKEN` is available; there is no fallback. Other
+workflows retain their existing shared credential. Token creation, explicit
+database grants and protected-secret setup require separate owner approval;
+these workflows perform none of that setup. The dedicated token needs the nine
+database actions checked below and organization `read_service_tokens` for its
+self-read. Secret presence alone does not prove those grants or authorize a
+restore, copied-role reset, migration or deletion.
+
+Qualification also uses the existing `PLANETSCALE_SCHEMA_READ_DATABASE_URL`. It first reads
 database identity and that token's own permissions. Missing `read_service_tokens`
 or database-level access blocks before spending. No new scope is granted.
 The documented restore permission is `restore_production_branch_backup`
@@ -398,7 +409,8 @@ The implementation follows the official [service-token contract](https://planets
 The one-use reservation follows GitHub's documented
 [`GITHUB_RUN_NUMBER` and `GITHUB_RUN_ATTEMPT`](https://docs.github.com/en/actions/reference/workflows-and-actions/variables#default-environment-variables)
 semantics. Evidence review reads the exact PR/comment through the existing
-read-only GitHub token; neither workflow adds write permissions or new secrets.
+read-only GitHub token; neither workflow adds GitHub write permissions or creates
+secrets. Only their provider-operation steps receive the dedicated restore secret.
 Build cancellation uses esbuild's documented
 [context cancellation/disposal](https://esbuild.github.io/api/#cancel); the
 SQL and Worker cancellation adapters are verified with synthetic failure tests.
