@@ -164,7 +164,7 @@ test('monthly rewards stays pending without approved server configuration and pe
   assert.equal(deps.calls.transactions, 0);
 });
 
-for (const mode of ['confirmed', 'shadow', 'pending']) for (const prospective of [false, true]) test(`monthly ${mode} projection preserves authority under the selection period lock with candidate=${prospective}`, async () => {
+for (const mode of ['confirmed', 'shadow', 'pending']) for (const prospective of [false, true, 'configuration', 'query', 'projection']) test(`monthly ${mode} projection preserves authority under the selection period lock with candidate=${prospective}`, async () => {
   const calls = [];
   let locked = false;
   let current = { ...snapshot, source_month: new Date('2026-09-01T00:00:00Z'),
@@ -172,8 +172,14 @@ for (const mode of ['confirmed', 'shadow', 'pending']) for (const prospective of
     revision: 1, source_revision: 1, source_score: 500, level: 1 };
   const client = { async query(sql, values = []) {
     calls.push({ sql, values });
-    if (sql.includes('SELECT configuration FROM trust.lock_monthly_rewards_v05_configuration')) return { rows: [{ configuration: candidateConfiguration }], rowCount: 1 };
-    if (sql.includes('SELECT candidate.report')) return { rows: [{ report: prospectiveCandidate }], rowCount: 1 };
+    if (sql.includes('SELECT configuration FROM trust.lock_monthly_rewards_v05_configuration')) {
+      if (prospective === 'configuration') throw new Error('monthly_rewards_v05_configuration_invalid private detail');
+      return { rows: [{ configuration: candidateConfiguration }], rowCount: 1 };
+    }
+    if (sql.includes('SELECT candidate.report')) {
+      if (prospective === 'query') throw new Error('private database detail');
+      return { rows: [{ report: prospective === 'projection' ? { ...prospectiveCandidate, redeemable: true } : prospectiveCandidate }], rowCount: 1 };
+    }
     if (sql.includes('SELECT pg_advisory_xact_lock')) {
       if (values[0] === `monthly-reputation:${owner}:2026-09` && !locked) {
         // Model a writer that commits immediately before the request obtains its
@@ -225,7 +231,9 @@ for (const mode of ['confirmed', 'shadow', 'pending']) for (const prospective of
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
   const body = await response.json();
-  assert.equal(body.prospective?.state, prospective ? 'provisional' : undefined);
+  assert.equal(body.prospective?.state, typeof prospective === 'string' ? 'unavailable' : prospective ? 'provisional' : undefined);
+  assert.ok(!JSON.stringify(body).includes('private detail'));
+  assert.ok(!JSON.stringify(body).includes('database detail'));
   assert.equal(locked, true);
   assert.equal(body.snapshot.state, mode);
   if (mode === 'pending') {

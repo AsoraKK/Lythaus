@@ -76,3 +76,23 @@ test('persisted malformed, finalised or redeemable candidates cannot become disp
     }), /projection_invalid/);
   }
 });
+test('candidate-only configuration, query and projection failures return safe unavailable status without fabricated authority', async () => {
+  for (const phase of ['configuration', 'query', 'projection']) {
+    const db = client({ report: phase === 'projection' ? { ...candidate, redeemable: true } : candidate });
+    const read = db.query;
+    db.query = (sql, values) => {
+      if (phase === 'configuration' && sql.startsWith('SELECT configuration')
+        || phase === 'query' && sql.includes('SELECT candidate.report')) throw new Error('private database detail');
+      return read(sql, values);
+    };
+    const response = await handleMonthlyReputationRead(new Request('https://api.lythaus.test/api/rewards/me/monthly'), {
+      authenticate: async () => ({ userId: owner }), transaction: work => work(db),
+      prospectiveRulesVersion: configuration.version, respond: (body, status) => Response.json(body, { status }),
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.prospective, { state: 'unavailable', reasonCode: 'prospective_assessment_unavailable' });
+    assert.equal(body.currentLevel, null); assert.equal(body.sourceScore, null);
+    assert.ok(!JSON.stringify(body).includes('private database detail'));
+  }
+});

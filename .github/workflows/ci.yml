@@ -154,6 +154,8 @@ jobs:
           apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs
           packages/db/tests/monthly-rewards-v05.test.mjs
           packages/db/tests/monthly-rewards-v05-assembly.test.mjs
+          packages/db/tests/monthly-rewards-v05-privacy.test.mjs
+          apps/lythaus-jobs/tests/monthly-rewards-v05-reconciliation.test.mjs
       - run: npm run test:critical-coverage
       - name: Verify text revision evidence, decision binding and account fencing
         run: npm run test:text-review

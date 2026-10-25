@@ -36,7 +36,7 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   // Exact comment hooks independently reviewed at 211f0e064b501ec6ed680c891ee36bd3e38d8a41.
-  ['apps/lythaus-jobs/src/index.ts', '9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12'],
+  ['apps/lythaus-jobs/src/index.ts', '1c0b7626e880156bd72ddbbb71d413a24dad292d'],
   // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
   ['apps/lythaus-public-api/src/index.ts', '91fa5fa0217ec18da0896f57adbffd04deb703f8'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],

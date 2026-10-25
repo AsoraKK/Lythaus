@@ -5,7 +5,8 @@ import type { projectRewardsV05Candidate } from '../../../packages/contracts/src
 type MonthlyRewardSelectionRead = Awaited<ReturnType<typeof readOwnMonthlyRewardSelections>>;
 
 export function projectMonthlyRewards(snapshot: MonthlyRewardSnapshotRead, selection: MonthlyRewardSelectionRead,
-  prospective?: ReturnType<typeof projectRewardsV05Candidate> | null) {
+  prospective?: ReturnType<typeof projectRewardsV05Candidate>
+    | { state: 'unavailable'; reasonCode: 'prospective_assessment_unavailable' } | null) {
   const confirmed = snapshot.state === 'confirmed' && snapshot.preparationOnly !== true;
   const ready = confirmed && selection.state === 'ready';
   return {

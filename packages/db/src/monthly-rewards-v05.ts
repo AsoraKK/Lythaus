@@ -26,6 +26,30 @@ export async function monthlyRewardsV05Configuration(client: Client, version?: s
   return row.configuration;
 }
 
+export async function rewardsV05ReconciliationCandidates(client: Client, configuration: RewardsV05Configuration) {
+  validateRewardsV05Configuration(configuration);
+  if (!configuration.firstSourceMonth) return [];
+  return (await client.query<{ subject_user_id: string; source_month: string }>(
+    `SELECT account.id AS subject_user_id, to_char(period.month, 'YYYY-MM') AS source_month
+     FROM identity.users account CROSS JOIN generate_series($1::date,
+       (date_trunc('month', now() AT TIME ZONE 'UTC') - interval '1 month')::date, interval '1 month') period(month)
+     LEFT JOIN trust.monthly_rewards_v05_reconciliation_attempts attempt
+       ON attempt.subject_user_id = account.id AND attempt.source_month = period.month::date AND attempt.rules_version = $2
+     WHERE account.status = 'active' AND account.deleted_at IS NULL AND NOT account.is_production_acceptance
+       AND account.created_at < (period.month + interval '1 month') AT TIME ZONE 'UTC'
+     ORDER BY attempt.attempted_at NULLS FIRST, period.month, account.id LIMIT 50`,
+    [`${configuration.firstSourceMonth}-01`, configuration.version])).rows;
+}
+
+export async function recordRewardsV05ReconciliationAttempt(client: Client, input: {
+  subjectUserId: string; sourceMonth: string; rulesVersion: string;
+}) {
+  requireSourceMonth(input.sourceMonth);
+  return (await client.query<{ recorded: boolean }>(
+    'SELECT trust.record_monthly_rewards_v05_attempt($1,$2,$3::date,$4) AS recorded',
+    [uuidv7(), input.subjectUserId, `${input.sourceMonth}-01`, input.rulesVersion])).rows[0]?.recorded === true;
+}
+
 export async function assembleRewardsV05Candidate(client: Client, input: {
   subjectUserId: string; sourceMonth: string; version?: string; peerRulesVersion?: string; contextRulesVersion?: string;
 }) {

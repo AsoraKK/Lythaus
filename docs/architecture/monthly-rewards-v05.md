@@ -63,9 +63,20 @@ producers, settlement validation and snapshot/activation approvals remain blocke
 Explicit `MONTHLY_REWARDS_V05_RULES` configuration selects this preparation;
 there is no configured default or provider change. The proposed SQL installs an
 off feature flag, immutable rule sets and separate private candidate revisions.
-It is not in the production migration manifest. Reconciliation uses a separate
-check timestamp for bounded fair scheduling without changing report bytes.
-Deletion erases private candidate records. Only the Jobs role can append them;
+It is not in the production migration manifest. Reconciliation commits a separate
+subject/month/rules attempt before assembling a candidate. Null results, policy
+errors and interrupted candidate transactions advance scheduling independently
+of successful candidate creation. The next bounded batch prioritises unattempted
+pairs, then the oldest attempt, with deterministic month and subject ordering.
+Only the Jobs role can invoke the constrained attempt writer. These operational
+records do not change candidate reports or grant benefits.
+
+Private Data Passport exports include all stored candidate revisions and attempt
+records, including candidate-only configuration and paused collection. Exported
+candidates use the existing sanitised projection; raw evidence and other members'
+data are excluded. The privacy inventory records both derived record types,
+preserves recorded deletion state on retries and prunes erased records. Subject
+deletion erases candidates and attempts. Only the Jobs role can append candidates;
 the Runtime role reads the authenticated member's current-period projection.
 
 The existing private `/api/rewards/me/monthly` route exposes a sanitised optional
@@ -75,6 +86,12 @@ with the sidecar. Flutter labels provisional benefits and displays a coexisting
 confirmed level. The sidecar is always nonredeemable. Existing QR and invoice
 claim paths still require a stored confirmed snapshot; there are no merchant
 exceptions and no v0.5 snapshot promotion path.
+
+Optional candidate read/configuration/projection failures return a fixed
+unavailable sidecar while existing confirmed authority retains its own error
+semantics. Optional Jobs configuration, query and attempt failures are contained
+within prospective reconciliation, so legacy monthly work and later scheduled
+work can continue. Authentication remains outside the optional read boundary.
 
 ## Remaining acceptance
 

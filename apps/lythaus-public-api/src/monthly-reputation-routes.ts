@@ -81,10 +81,13 @@ export async function handleMonthlyReputationRead(request: Request,
         { 'content-type': 'application/json; charset=utf-8' });
     }
 
-    const prospective = dependencies.prospectiveRulesVersion
-      ? await dependencies.transaction(client => readOwnRewardsV05Candidate(client, {
-        subjectId: principal.userId, version: dependencies.prospectiveRulesVersion,
-      })) : null;
+    let prospective;
+    try {
+      prospective = dependencies.prospectiveRulesVersion
+        ? await dependencies.transaction(client => readOwnRewardsV05Candidate(client, {
+          subjectId: principal.userId, version: dependencies.prospectiveRulesVersion,
+        })) : null;
+    } catch { prospective = { state: 'unavailable' as const, reasonCode: 'prospective_assessment_unavailable' as const }; }
     // No configured server rules means no monthly-reward table reads. In particular,
     // owner identity and score values never come from query or body parameters.
     if (!dependencies.snapshotRulesVersion || !dependencies.selectionRulesVersion) {

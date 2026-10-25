@@ -21,6 +21,7 @@ import { reconcileMonthlyAssembly } from './monthly-assembly.ts';
 import { processMonthlyPeerParticipation, reconcileMonthlyPeerParticipation } from './monthly-peer-participation.ts';
 import { processMonthlyRewardSnapshotEvent,reconcileMonthlyRewardSnapshots } from './monthly-reward-snapshots.ts';
 import { readMonthlyReputationReportsForPassport } from './monthly-reputation-dsr.ts';
+import { readMonthlyRewardsV05ForPassport, reconcileMonthlyRewardsV05DataLocations } from '../../../packages/db/src/monthly-rewards-v05-privacy.ts';
 import { reconcileCommunityAppeals } from './community-appeals.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
@@ -45,6 +46,7 @@ interface Env extends EnvBindings {
   JOBS_REPUTATION_SESSION_DIAGNOSTIC_ENABLED?: string;
   MONTHLY_REPUTATION_SHADOW_RULES?: string;
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
+  MONTHLY_REWARDS_V05_RULES?: string;
   MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
   MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
@@ -158,6 +160,7 @@ async function reconcileMonthlyReputationDataLocations(db: HyperdriveBinding, su
   if (adapter.rows[0]?.available) {
     await query(db, `SELECT privacy.reconcile_monthly_reputation_data_locations($1)`, [subjectId]);
   }
+  await transaction(db, client => reconcileMonthlyRewardsV05DataLocations(client, subjectId));
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -2483,6 +2486,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
           client, subjectId, this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
         ))
         : { state: 'unavailable', reasonCode: 'approval_unavailable', reports: [] };
+      const monthlyRewardsV05 = await transaction(this.env.DB_PRIVACY_FRESH,
+        client => readMonthlyRewardsV05ForPassport(client, subjectId));
       const [
         posts,
         comments,
@@ -2596,7 +2601,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       });
       const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId, subjectId);
       const accountActivityMeasurement = await activityMeasurementPrivacyExport(this.env.DB_PRIVACY_FRESH, requestId, subjectId);
-      return Object.freeze({ ...passport, accountActivityMeasurement, ...(supportFeedback === undefined ? {} : { supportFeedback }) });
+      return Object.freeze({ ...passport, monthlyRewardsV05, accountActivityMeasurement, ...(supportFeedback === undefined ? {} : { supportFeedback }) });
     });
 
     const completion = await step.do('store-export-and-complete-request', async () => {

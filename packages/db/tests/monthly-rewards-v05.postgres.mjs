@@ -5,6 +5,8 @@ import pg from 'pg';
 import { uuidv7 } from '@lythaus/security';
 import { assembleProspectiveMonthlyRewards } from '../src/monthly-assembly.ts';
 import { readOwnRewardsV05Candidate } from '../src/monthly-rewards-v05.ts';
+import { recordRewardsV05ReconciliationAttempt } from '../src/monthly-rewards-v05.ts';
+import { readMonthlyRewardsV05ForPassport, reconcileMonthlyRewardsV05DataLocations } from '../src/monthly-rewards-v05-privacy.ts';
 import { REWARDS_V05_CONFIGURATION, MONTHLY_REWARDS_V05 } from '../../contracts/src/monthly-rewards-v05.ts';
 import { PROPOSED_HUMAN_CONTRIBUTION_RULES as PROPOSED_WEEKLY_EARNING_RULES,
   calculateProposedWeeklyEarning } from '../../contracts/src/monthly-earning-policy.ts';
@@ -52,7 +54,7 @@ test('prospective monthly candidates use canonical PG17 assembly without snapsho
     await setFlag('trust.monthly_reputation_shadow', MONTHLY_REPUTATION_POLICY_VERSION, true);
     const assemble = () => assembleProspectiveMonthlyRewards(client, { subjectUserId: owner, sourceMonth, rulesVersion: configuration.version });
     const role = async (name, work) => {
-      assert.ok(['lythaus_jobs', 'lythaus_runtime'].includes(name));
+      assert.ok(['lythaus_jobs', 'lythaus_runtime', 'lythaus_privacy'].includes(name));
       await client.query(`SET LOCAL ROLE ${name}`);
       try { return await work(); } finally { await client.query('RESET ROLE'); }
     };
@@ -147,10 +149,47 @@ test('prospective monthly candidates use canonical PG17 assembly without snapsho
       await client.query('ROLLBACK TO SAVEPOINT interrupted');
       assert.equal((await client.query('SELECT count(*)::integer AS count FROM trust.monthly_rewards_v05_candidates')).rows[0].count, before);
     });
+    await t.test('Jobs-only attempt writer rejects runtime writes, unknown rules and future months', async () => {
+      assert.equal(await role('lythaus_jobs', () => recordRewardsV05ReconciliationAttempt(client, {
+        subjectUserId: owner, sourceMonth, rulesVersion: configuration.version,
+      })), true);
+      await role('lythaus_runtime', () => rejectsSql('SELECT trust.record_monthly_rewards_v05_attempt($1,$2,$3,$4)',
+        [uuidv7(), owner, `${sourceMonth}-01`, configuration.version], /permission denied/));
+      assert.equal((await client.query("SELECT has_table_privilege('lythaus_runtime','trust.monthly_rewards_v05_reconciliation_attempts','INSERT') AS allowed")).rows[0].allowed, false);
+      assert.equal(await role('lythaus_jobs', () => recordRewardsV05ReconciliationAttempt(client, {
+        subjectUserId: owner, sourceMonth, rulesVersion: 'unknown',
+      })), false);
+      const futureMonth = (await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM') AS month")).rows[0].month;
+      assert.equal(await role('lythaus_jobs', () => recordRewardsV05ReconciliationAttempt(client, {
+        subjectUserId: owner, sourceMonth: futureMonth, rulesVersion: configuration.version,
+      })), false);
+    });
+    await t.test('paused candidate-only privacy export includes all revisions and attempts with redacted owner-scoped inventory', async () => {
+      await setFlag('trust.monthly_rewards_v05_preparation', MONTHLY_REWARDS_V05, false);
+      const exported = await role('lythaus_privacy', () => readMonthlyRewardsV05ForPassport(client, owner));
+      assert.equal(exported.state, 'included'); assert.equal(exported.candidates.length, 3);
+      assert.equal(exported.reconciliationAttempts.length, 1);
+      assert.equal(exported.candidates[1].weeklyPoints, weeklyPoints);
+      assert.ok(exported.candidates.every(row => !Object.hasOwn(row, 'security') && row.redeemable === false));
+      const otherExport = await role('lythaus_privacy', () => readMonthlyRewardsV05ForPassport(client, other));
+      assert.equal(otherExport.candidates.length, 0); assert.equal(otherExport.reconciliationAttempts.length, 0);
+      await role('lythaus_privacy', () => reconcileMonthlyRewardsV05DataLocations(client, owner));
+      await client.query("UPDATE privacy.subject_data_locations SET deletion_state='retained' WHERE subject_id=$1 AND resource_reference='trust.monthly_rewards_v05_candidates'", [owner]);
+      await role('lythaus_privacy', () => reconcileMonthlyRewardsV05DataLocations(client, owner));
+      const inventory = (await client.query("SELECT resource_reference,authoritative_or_derived,deletion_state FROM privacy.subject_data_locations WHERE subject_id=$1 AND resource_reference LIKE 'trust.monthly_rewards_v05_%'", [owner])).rows;
+      assert.equal(inventory.length, 4); assert.ok(inventory.every(row => row.authoritative_or_derived === 'derived'));
+      assert.ok(inventory.filter(row => row.resource_reference.endsWith('candidates')).every(row => row.deletion_state === 'retained'));
+      await setFlag('trust.monthly_rewards_v05_preparation', MONTHLY_REWARDS_V05, true);
+    });
     await t.test('subject deletion erases the sidecar and cannot be resurrected', async () => {
       await client.query("UPDATE identity.users SET status = 'deleted', deleted_at = clock_timestamp() WHERE id = $1", [owner]);
       assert.equal(await role('lythaus_jobs', assemble), null);
       assert.equal((await client.query('SELECT count(*)::integer AS count FROM trust.monthly_rewards_v05_candidates')).rows[0].count, 0);
+      assert.equal((await client.query('SELECT count(*)::integer AS count FROM trust.monthly_rewards_v05_reconciliation_attempts')).rows[0].count, 0);
+      await role('lythaus_privacy', () => reconcileMonthlyRewardsV05DataLocations(client, owner));
+      assert.equal((await client.query("SELECT count(*)::integer AS count FROM privacy.subject_data_locations WHERE subject_id=$1 AND resource_reference LIKE 'trust.monthly_rewards_v05_%'", [owner])).rows[0].count, 0);
+      const exported = await role('lythaus_privacy', () => readMonthlyRewardsV05ForPassport(client, owner));
+      assert.equal(exported.candidates.length, 0); assert.equal(exported.reconciliationAttempts.length, 0);
     });
   } finally { await client.query('ROLLBACK'); await client.end(); }
 });
