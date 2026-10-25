@@ -17,6 +17,10 @@ part 'comment.g.dart';
 /// * [id]
 /// * [authorId]
 /// * [parentId]
+/// * [conversationId] - Canonical top-level comment for this conversation.
+/// * [replyCount] - Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero.
+/// * [replyToAuthorId]
+/// * [replyToDeleted]
 /// * [body]
 /// * [depth]
 /// * [declaredCreationMode]
@@ -34,6 +38,20 @@ abstract class Comment implements Built<Comment, CommentBuilder> {
 
   @BuiltValueField(wireName: r'parentId')
   String? get parentId;
+
+  /// Canonical top-level comment for this conversation.
+  @BuiltValueField(wireName: r'conversationId')
+  String? get conversationId;
+
+  /// Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero.
+  @BuiltValueField(wireName: r'replyCount')
+  int? get replyCount;
+
+  @BuiltValueField(wireName: r'replyToAuthorId')
+  String? get replyToAuthorId;
+
+  @BuiltValueField(wireName: r'replyToDeleted')
+  bool? get replyToDeleted;
 
   @BuiltValueField(wireName: r'body')
   String? get body;
@@ -97,6 +115,34 @@ class _$CommentSerializer implements PrimitiveSerializer<Comment> {
       yield serializers.serialize(
         object.parentId,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.conversationId != null) {
+      yield r'conversationId';
+      yield serializers.serialize(
+        object.conversationId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.replyCount != null) {
+      yield r'replyCount';
+      yield serializers.serialize(
+        object.replyCount,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.replyToAuthorId != null) {
+      yield r'replyToAuthorId';
+      yield serializers.serialize(
+        object.replyToAuthorId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.replyToDeleted != null) {
+      yield r'replyToDeleted';
+      yield serializers.serialize(
+        object.replyToDeleted,
+        specifiedType: const FullType(bool),
       );
     }
     yield r'body';
@@ -180,6 +226,35 @@ class _$CommentSerializer implements PrimitiveSerializer<Comment> {
           ) as String?;
           if (valueDes == null) continue;
           result.parentId = valueDes;
+          break;
+        case r'conversationId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.conversationId = valueDes;
+          break;
+        case r'replyCount':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.replyCount = valueDes;
+          break;
+        case r'replyToAuthorId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.replyToAuthorId = valueDes;
+          break;
+        case r'replyToDeleted':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.replyToDeleted = valueDes;
           break;
         case r'body':
           final valueDes = serializers.deserialize(

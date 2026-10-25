@@ -16,6 +16,7 @@ part 'owner_comment.g.dart';
 /// * [postId]
 /// * [authorId]
 /// * [parentId]
+/// * [conversationId]
 /// * [depth]
 /// * [body]
 /// * [declaredCreationMode]
@@ -36,6 +37,9 @@ abstract class OwnerComment implements Built<OwnerComment, OwnerCommentBuilder> 
 
   @BuiltValueField(wireName: r'parentId')
   String? get parentId;
+
+  @BuiltValueField(wireName: r'conversationId')
+  String? get conversationId;
 
   @BuiltValueField(wireName: r'depth')
   OwnerCommentDepthEnum get depth;
@@ -104,6 +108,13 @@ class _$OwnerCommentSerializer implements PrimitiveSerializer<OwnerComment> {
       object.parentId,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.conversationId != null) {
+      yield r'conversationId';
+      yield serializers.serialize(
+        object.conversationId,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'depth';
     yield serializers.serialize(
       object.depth,
@@ -190,6 +201,13 @@ class _$OwnerCommentSerializer implements PrimitiveSerializer<OwnerComment> {
           ) as String?;
           if (valueDes == null) continue;
           result.parentId = valueDes;
+          break;
+        case r'conversationId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.conversationId = valueDes;
           break;
         case r'depth':
           final valueDes = serializers.deserialize(
