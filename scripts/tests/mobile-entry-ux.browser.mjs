@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile, mkdir, writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
 import path from 'node:path';
 import {chromium} from 'playwright';
 import {installFlutterEngineFonts} from './flutter-engine-font-fixture.mjs';
@@ -11,6 +12,8 @@ const output = path.resolve(process.env.MOBILE_UX_EVIDENCE ?? 'build/mobile-ux-e
 const source = process.env.MOBILE_UX_SOURCE;
 const baseline = process.env.MOBILE_UX_BASELINE === '1';
 assert.match(source ?? '', /^[a-f0-9]{40}$/);
+const {PNG} = createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
+const tokens = JSON.parse(await readFile('design/tokens.json', 'utf8'));
 const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.wasm': 'application/wasm', '.ttf': 'font/ttf', '.otf': 'font/otf', '.png': 'image/png', '.svg': 'image/svg+xml'};
 const server = createServer(async (request, response) => {
   try {
@@ -32,6 +35,7 @@ const bundleSha256 = createHash('sha256').update(await readFile(path.join(root, 
 async function capture(page, name, metadata) {
   const bytes = await page.screenshot({path: path.join(output, name + '.png')});
   results.push({name, ...metadata, sha256: createHash('sha256').update(bytes).digest('hex')});
+  return bytes;
 }
 try {
   for (const {width, height, scale, theme} of [
@@ -78,18 +82,37 @@ try {
     if (width === 320) {
       await page.setViewportSize({width, height: 340});
       await page.waitForTimeout(250);
-      if (!baseline) await redeem.scrollIntoViewIfNeeded();
+      await page.mouse.move(width / 2, 220);
+      await page.mouse.wheel(0, 500);
       await page.waitForTimeout(250);
-      await capture(page, `invite-constrained-${name}`, {...metadata, height: 340, note: 'Reduced browser viewport; native IME covered by widget test', redeemBox: await redeem.boundingBox()});
+      const bytes = await capture(page, `invite-constrained-${name}`, {...metadata, height: 340, note: 'Reduced browser viewport; native IME covered by widget test', redeemBox: await redeem.boundingBox()});
       if (!baseline) {
         const action = await redeem.boundingBox();
         assert.ok(action.y >= 0 && action.y + action.height <= 340 && action.height >= 48);
+        const png = PNG.sync.read(bytes);
+        const expected = tokens.color[theme].accent.slice(1).match(/../g).map(value => parseInt(value, 16));
+        let painted = 0, total = 0;
+        for (let y = Math.ceil(action.y + 4); y < action.y + action.height - 4; y++) {
+          for (let x = Math.ceil(action.x + 4); x < action.x + action.width - 4; x++) {
+            const offset = (y * png.width + x) * 4;
+            if (expected.every((channel, index) => Math.abs(channel - png.data[offset + index]) <= 8)) painted++;
+            total++;
+          }
+        }
+        results.at(-1).paintedActionFraction = painted / total;
+        assert.ok(painted / total > 0.5, 'The visible action must paint in the screenshot, not only move in the accessibility DOM');
       }
       await page.setViewportSize({width, height});
     }
     if (!baseline) {
       await redeem.click();
-      await page.getByText('Invite code is required.', {exact: true}).waitFor();
+      await page.locator('flt-semantics').getByText('Invite code is required.', {exact: true}).waitFor();
+      await page.waitForTimeout(350);
+      if (width === 320) {
+        await page.mouse.move(width / 2, 400);
+        await page.mouse.wheel(0, 400);
+        await page.waitForTimeout(250);
+      }
       await capture(page, `invite-error-${name}`, metadata);
     }
     await page.getByRole('button', {name: 'Back', exact: true}).click();
