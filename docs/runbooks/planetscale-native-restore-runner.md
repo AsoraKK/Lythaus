@@ -1,49 +1,86 @@
 # Fixed native restore runner
 
-This is preparation, not permission to dispatch execution. The runner has not
-restored a hosted backup, reset provider credentials or demonstrated that the
-existing protected API key has the required access. Mock success and disposable
-PG17 success are not operational restore evidence. Parent source review, normal
-required CI, exact merged-source review and the separate owner action packet
-remain required before dispatching `execute=true`.
+This is preparation, not permission to dispatch execution. Read-only run
+`40175663686` verified the dedicated restore token's nine target-database
+actions and organization `read_service_tokens`, then stopped because its pinned
+backup was stale. No hosted backup was restored, no credentials were reset, and
+no target was created. Mock success and disposable PG17 success are not
+operational restore evidence. Parent source review, normal required CI, exact
+merged-source review and the separate owner action packet remain required
+before dispatching `execute=true`.
 
 ## Fixed scope
 
 `planetscale-native-restore-check.yml` defaults to a read-only metadata plan.
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
-record. A prior execute run at the same SHA blocks another execution, even if
-that prior run failed. Never rerun an uncertain mutation.
+record. Every prior execute run in the complete workflow history blocks another
+execution, even across SHAs. The only reconciled prior executions are the two
+exact pinned runs #7 and #8; complete history must include both and every other
+non-plan execution blocks. Run #7 (`40184823787`, SHA
+`43829abc3424a88a22826695bbfdc7be4a116e62`) must remain a terminal cancellation
+with no production approval, one terminal job with no runner and an explicit
+empty step list, and no artifacts. Run #8 (`40193991312`, SHA
+`96ff66fa5c28c9780ce72ee23a40cd846372d6bd`) must remain the exact terminal
+pre-create failure: its one job must fail at step 6 during copied-role metadata
+validation, complete evidence finalization and upload, and retain the pinned
+single artifact ID, size and digest whose inspected report records zero
+provider mutations, no credential actions and no target. Any missing, changed,
+extra or uncertain evidence blocks. Before target creation, the runner also
+requires an exact target GET 404, a complete branch inventory without the
+target, and backup restore history without the target. These pinned
+reconciliations never permit retry after any other runner or step sequence, or
+after a provider mutation may have occurred.
 
-Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), backup `nxqskcldn8yk`.
+Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
+`zw0so7f5jbpu` (provisional until a fresh API read confirms its metadata).
 The only target is `lythaus-0021-native-restore-check-20261022`: PS-5 ARM,
 Frankfurt, zero replicas, minimum and maximum 21474836480 bytes. Any preexisting
 target is refused. The runner creates no database, role, GitHub secret,
 Hyperdrive, binding, traffic route or application deployment. Source passwords
 are never reset. Migration 0021 is never applied.
 
-The requested PITR timestamp is explicitly `2026-10-23T14:29:11.907Z`, the
-recorded completion of this backup. This is a requested recovery point, not
-proof of the actual replay point. Provider completion plus independent SQL
-checks must establish what was restored; all 17 previously approved privileges
-are tested directly. The API receipt does not expose an actual replay point,
-so provider attestation and owner acceptance remain a reviewed evidence step.
-Neither backup timestamps nor the provider checklist certify restored grants.
+This qualification restores the exact backup snapshot by sending its
+`backup_id`; it does not request PITR. PlanetScale documents `backup_id` as
+restoring that backup's schema and data. `restore_point` is a separate optional
+PostgreSQL PITR request and is omitted from the fixed create body. The backup's
+completion time is validated from API `completed_at` metadata; it is distinct
+from the dashboard's snapshot label. The candidate's last displayed “Backup
+time” was `2026-10-25T02:33:09.321Z`, while its snapshot label was
+`2026-10-25T02:25:02.838Z`; re-read API `completed_at` before qualification.
+Provider completion plus independent SQL checks must establish what was
+restored; all 17 previously approved privileges are tested directly. Neither
+backup timestamps nor the provider checklist certify restored grants.
+References: [backup GET](https://planetscale.com/docs/api/reference/get_backup),
+[branch creation](https://planetscale.com/docs/api/reference/create_branch).
 
 The whole two-hour window must fit before the backup reaches 24 hours old and
-before expiry. For this backup, start before 2026-10-24 12:29:11.907 UTC.
-Freshness ends 2026-10-24 14:29:11.907 UTC; normal unprotected expiry is
-2026-10-25 14:25:02.690 UTC. Freshness and expiry are different gates. No
-replacement is silently chosen. The backup must already be protected under a
-separately approved, finite retention and end-action plan before qualification.
-Neither phase changes protection or deletes a backup. The last verified
-inventory had this backup **unprotected**; source integration does not close
-that operational prerequisite or extend these dates.
+before expiry. From the last observed completion, start before
+`2026-10-26T00:33:09.321Z` and finish before
+`2026-10-26T02:33:09.321Z`; the displayed expiry was
+`2026-10-27T02:25:02.838Z`. Recompute these limits from a fresh API read.
+Freshness and expiry are different gates. No replacement is silently chosen.
+The backup must already be protected under a separately approved, finite
+retention and end-action plan before qualification. Neither phase changes
+protection or deletes a backup. The 08:37 UTC dashboard read had this candidate
+**unprotected**; source integration does not close that prerequisite or extend
+these dates.
 
 ## Existing-access and bootstrap limitations
 
-The runner uses the existing protected `PLANETSCALE_API_TOKEN` service-token
-pair and the existing `PLANETSCALE_SCHEMA_READ_DATABASE_URL`. It first reads
+Qualification and cleanup use only the separately approved production-environment
+secret `PLANETSCALE_RESTORE_API_TOKEN`, containing the complete service-token
+`ID:secret` pair with exactly one colon and no whitespace. No separate token-ID
+variable is needed. Missing or malformed dedicated access fails closed, even if
+the shared `PLANETSCALE_API_TOKEN` is available; there is no fallback. Other
+workflows retain their existing shared credential. Token creation, explicit
+database grants and protected-secret setup require separate owner approval;
+these workflows perform none of that setup. The dedicated token needs the nine
+database actions checked below and organization `read_service_tokens` for its
+self-read. Secret presence alone does not prove those grants or authorize a
+restore, copied-role reset, migration or deletion.
+
+Qualification also uses the existing `PLANETSCALE_SCHEMA_READ_DATABASE_URL`. It first reads
 database identity and that token's own permissions. Missing `read_service_tokens`
 or database-level access blocks before spending. No new scope is granted.
 The documented restore permission is `restore_production_branch_backup`
@@ -98,6 +135,22 @@ never guessed from SQL names. Metadata must match the source's inheritance:
 | Admin | `pscale_api_3vzps7bu44vo` |
 | Jobs | `pscale_api_9jfbtij9y4b2` |
 | Privacy | `pscale_api_wv7rzyuejknl` |
+
+The approved restore-copy SQL baseline is role-specific. The setup-only role is pinned to
+`NOSUPERUSER`, `BYPASSRLS`, `CREATEROLE`, `CREATEDB`, and `REPLICATION`, with
+only its observed memberships in `postgres`, `pg_read_all_data`, and
+`pg_write_all_data`. The four application roles remain `NOSUPERUSER`, without
+`BYPASSRLS`, `CREATEROLE`, `CREATEDB`, `REPLICATION`, or memberships. The
+setup role and all four application roles must remain login-enabled. The
+provider's `with_replication` field is documented as the PostgreSQL
+`REPLICATION` attribute, so it is true only for setup and false for the four
+application roles ([Terraform provider schema](https://github.com/planetscale/terraform-provider-planetscale/blob/main/docs/data-sources/postgres_branch_role.md),
+[official Go client](https://github.com/planetscale/planetscale-go/pull/323)).
+The verifier continues to require exact copied role metadata, including branch,
+lifecycle, and source-to-copy inheritance checks. Other REST fields remain
+strictly validated without normalization. Other SQL role fields and membership
+grant options are bound by exact source-to-copy catalog equality rather than
+invented static values. The source roles are never changed.
 
 Restored passwords are not usable until reset. It is therefore impossible to
 prove target SQL authority before the first reset without another already
@@ -154,20 +207,24 @@ or recovery gate is automatically marked passed.
 
 ## Owner packet and execution
 
-After exact merged-source review, prepare this wording with the actual SHA,
-approval reference, approver GitHub login and expiry:
+Before dispatch, bind the approval record to the exact merged SHA, freshly
+verified backup API metadata, absent fixed target, reviewed all-in estimate,
+finite retention plan, and an actually reserved operator/reviewer window. The
+candidate uses specified-snapshot restore only; it does not use a PITR
+timestamp. Never reuse an expired approval record or substitute the dashboard's
+snapshot label for API `completed_at`.
 
-> Approve one restore qualification on the fixed PS-5 ARM Frankfurt target
-> from backup nxqskcldn8yk, requesting 23 October 14:29:11.907 UTC, within US$5
-> total including tax/fees and the separately bounded backup/WAL retention plan.
-> The named backup must already be protected under that separately approved
-> plan. Reset only the five copied target identities listed above,
-> setup first for the authority probe; never change source credentials. Install
-> only the three named extensions if proven missing and authorized. Retain
-> sanitized evidence and retain the test target for human review. Reserve a
-> reviewer and operator for the whole two-hour window, including evidence
-> publication, review, separately approved cleanup and cost escalation. This
-> qualification approval alone does not authorize a DELETE.
+The protected production environment can delay the runner until a human
+approves it. Obtain a fresh UTC availability block of at least two hours and
+thirty minutes, dispatch only when the named operator/reviewer can approve
+promptly, and complete approval within the first thirty minutes. Set
+`availableFrom` to the block start, `availableUntil` and `expiresAt` to its
+end, and `decisionBy` to two hours after its start. This leaves the full
+two-hour runner window after any start in the first thirty minutes. If the
+approval margin is missed, do not approve a run that would start with less than
+two hours remaining; a runner-started failed preflight is not eligible for the
+one pinned pre-runner cancellation. Only the exact pinned run #8 pre-create
+failure described above can be reconciled after a runner starts.
 
 Known two-hour compute/storage plus a conservative 20-GiB additional backup/WAL
 day and 10-MiB egress is about US$0.038604429 before tax/fees. The packet must
@@ -190,12 +247,12 @@ No automatic unprotect, backup deletion or denied billing-read workaround exists
 ```json
 {
   "releaseSha": "EXACT_REVIEWED_MERGED_SHA",
-  "backupId": "nxqskcldn8yk",
+  "backupId": "zw0so7f5jbpu",
   "target": "lythaus-0021-native-restore-check-20261022",
   "maximumUsd": 5,
   "estimatedSubtotalUsd": 0.05,
   "taxAndFeeAllowanceUsd": 1,
-  "recoveryPointAcknowledged": true,
+  "backupSnapshotAcknowledged": true,
   "reference": "EXACT_OWNER_APPROVAL_REFERENCE",
   "manualOperator": "OWNER_GITHUB_LOGIN",
   "expiresAt": "UTC_EXPIRY_COVERING_THE_TWO_HOUR_WINDOW",
@@ -277,7 +334,7 @@ After qualification completes, use this operator-controlled sequence:
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `nxqskcldn8yk.json` record in an evidence-only PR
+   Commit it with the canonical `zw0so7f5jbpu.json` record in an evidence-only PR
    and merge it into protected main after all normal required checks pass.
    Both must be tracked regular files, unchanged in the checkout. The record
    binds source, backup, acknowledged target ID/creation time, verification
@@ -398,7 +455,8 @@ The implementation follows the official [service-token contract](https://planets
 The one-use reservation follows GitHub's documented
 [`GITHUB_RUN_NUMBER` and `GITHUB_RUN_ATTEMPT`](https://docs.github.com/en/actions/reference/workflows-and-actions/variables#default-environment-variables)
 semantics. Evidence review reads the exact PR/comment through the existing
-read-only GitHub token; neither workflow adds write permissions or new secrets.
+read-only GitHub token; neither workflow adds GitHub write permissions or creates
+secrets. Only their provider-operation steps receive the dedicated restore secret.
 Build cancellation uses esbuild's documented
 [context cancellation/disposal](https://esbuild.github.io/api/#cancel); the
 SQL and Worker cancellation adapters are verified with synthetic failure tests.

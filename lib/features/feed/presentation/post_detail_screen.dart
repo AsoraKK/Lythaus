@@ -437,7 +437,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               Icons.chat_bubble_outline,
                               size: 18,
                             ),
-                            label: Text('Comments (${post.commentCount})'),
+                            label: const Text('Comments'),
                           ),
                           if (post.hasAppeal)
                             const Chip(

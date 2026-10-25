@@ -5,6 +5,8 @@ import test from 'node:test';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const publicApi = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+const commentReader = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/comment-thread-reader.ts'), 'utf8');
+const commentVisibility = fs.readFileSync(path.join(root, 'packages/db/src/comment-visibility.ts'), 'utf8');
 const authRuntimePolicy = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/auth-runtime-policy.ts'), 'utf8');
 const contentRuntimePolicy = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/content-runtime-policy.ts'), 'utf8');
 const privacyRuntimePolicy = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/privacy-runtime-policy.ts'), 'utf8');
@@ -38,8 +40,12 @@ test('authenticated and personalized API responses are private while cacheable v
   const post = between(publicApi, 'async function getPost', 'async function getComments');
   assert.match(post, /feedResponse\(request, env, \{ post: presentFeedItems\(result\.rows\)\[0\] \}, 'post', Boolean\(viewer\)\)/);
 
-  const comments = between(publicApi, 'async function getComments', 'export default');
-  assert.match(comments, /feedResponse\(request, env,[\s\S]*'comments', Boolean\(viewer\)\)/);
+  const comments = between(publicApi, 'async function getComments', 'async function dispatchBeta');
+  assert.match(comments, /const body = await readCommentThread\(\{ request, postId, viewerId: viewer\?\.userId \?\? null/);
+  assert.match(comments, /query: \(sql, values\) => query\(env\.DB_APP_FRESH, sql, \[\.\.\.values\]\)/);
+  assert.match(comments, /return privateResponse\(request, env, body\)/);
+  assert.match(comments, /return privateResponse\(request, env, \{ error: \(error as Error\)\.message \}, \{ status \}\)/);
+  assert.doesNotMatch(comments, /return (?:feedResponse|response)\(/);
 
   for (const [start, end] of [
     ['async function notifications', 'async function notificationAction'],
@@ -57,7 +63,6 @@ test('all feed projections enforce publication state, relationship privacy, and 
   const custom = between(publicApi, 'async function customFeedItems', 'async function getEntitlements');
   const personal = between(publicApi, 'async function getPersonalFeed', 'async function getPost');
   const post = between(publicApi, 'async function getPost', 'async function getComments');
-  const comments = between(publicApi, 'async function getComments', 'export default');
 
   for (const feed of [discovery, custom]) {
     assert.match(feed, /p\.visibility = 'public'/);
@@ -84,11 +89,18 @@ test('all feed projections enforce publication state, relationship privacy, and 
   assert.match(post, /"reactionCounts"/);
   assert.match(post, /"viewerReaction"/);
 
-  assert.match(comments, /comment\.moderation_state = 'allowed'/);
-  assert.match(comments, /post\.deleted_at IS NULL AND post\.moderation_state = 'allowed'/);
-  assert.match(comments, /post\.visibility = 'public' OR post\.author_id = \$2 OR \(post\.visibility = 'followers'/);
-  assert.match(comments, /social\.blocks/);
-  assert.match(comments, /social\.mutes/);
+  assert.match(commentReader, /root\.moderation_state = 'allowed' AND root\.declared_creation_mode IN \('human', 'ai_assisted'\)/);
+  assert.match(commentReader, /child\.moderation_state = 'allowed' AND child\.declared_creation_mode IN \('human', 'ai_assisted'\)/);
+  assert.match(commentReader, /WHERE \$\{commentPostVisibilitySql\('\$2'\)\}/);
+  assert.match(commentReader, /if \(!postAccess\.rows\[0\]\) throw new Error\('post_not_found'\)/);
+  assert.match(commentVisibility, /post\.deleted_at IS NULL AND post\.moderation_state = 'allowed'/);
+  assert.match(commentVisibility, /post\.visibility = 'public' OR post\.author_id = \$\{viewer\}/);
+  assert.match(commentVisibility, /post\.visibility = 'followers' AND EXISTS \(SELECT 1 FROM social\.follows/);
+  assert.match(commentVisibility, /post_declaration\.public_label IN \('Human-authored', 'AI-assisted'\)/);
+  for (const source of [commentReader, commentVisibility]) {
+    assert.match(source, /social\.blocks/);
+    assert.match(source, /social\.mutes/);
+  }
 });
 
 test('public profiles require a saved profile row and expose only visible, allowed revisions', () => {
@@ -183,9 +195,16 @@ test('daily, relationship, and export throttles are enforced at their mutation b
   assert.match(upload, /await enforceDailyAction\(env, user\.userId, 'media'\)/);
   assert.match(flag, /await enforceDailyAction\(env, user\.userId, 'flag'\)/);
   const createComment = between(publicApi, 'async function createComment', 'async function updatePost');
-  assert.match(createComment, /parent\.moderation_state = 'allowed'/);
-  assert.match(createComment, /social\.blocks/);
-  assert.match(createComment, /social\.mutes/);
+  assert.match(createComment, /await enforceDailyAction\(env, user\.userId, 'comment'\)/);
+  assert.match(createComment, /commentReplyTargetQuery, \[comment\.parentId, postId, user\.userId\]/);
+  assert.match(createComment, /depth = nestedReplyDepth\(parent\.rows\[0\]\)/);
+  const replyTarget = between(commentVisibility, 'export const commentReplyTargetQuery', 'export function nestedReplyDepth');
+  assert.match(replyTarget, /comment\.deleted_at IS NULL/);
+  assert.match(replyTarget, /comment\.moderation_state = 'allowed'/);
+  assert.match(replyTarget, /commentParentVisibilitySql\('\$3', 63\)/);
+  assert.match(replyTarget, /social\.blocks/);
+  assert.match(replyTarget, /social\.mutes/);
+  assert.match(replyTarget, /FOR SHARE OF comment/);
 
   assert.match(relationship, /maxFollowStateChangesPerRelationshipPerDay/);
   assert.match(relationship, /throw new Error\('relationship_change_limit_reached'\)/);

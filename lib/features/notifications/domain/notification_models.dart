@@ -5,6 +5,8 @@
 /// Core models for notifications subsystem aligned with backend types
 library;
 
+import 'package:lythaus/features/feed/domain/comment_notification_link.dart';
+
 enum NotificationCategory {
   system,
   social,
@@ -114,6 +116,7 @@ class Notification {
         title: json['title'] as String,
         body: '',
         nativeType: json['notificationType'] as String,
+        deeplink: commentNotificationLink(json),
         targetId: json['entityId'] as String?,
         read: json['readAt'] != null,
         readAt: json['readAt'] as String?,

@@ -45,9 +45,13 @@ class MemberVerificationPolicyPreview extends StatelessWidget {
         contentPadding: EdgeInsets.zero,
         title: Text('Optional monthly security maintenance'),
         subtitle: Text(
-          'Unavailable. Requires whole-month credential coverage and a matching '
-          'server-verified event. Unlock choices earn no points and do not '
-          'change reputation. Face, fingerprint and PIN do not stack.',
+          'Unavailable until activation. Qualifying server coverage must span '
+          'the calendar month, with up to 24 cumulative hours of gaps. Longer '
+          'gaps forfeit only this benefit. Qualifying methods share one '
+          'benefit and do not stack; changing supported methods preserves '
+          'qualification while coverage stays continuous. Device unlock '
+          'remains a local preference and earns no points; refreshing status '
+          'does not establish qualifying server coverage.',
         ),
       ),
     ],

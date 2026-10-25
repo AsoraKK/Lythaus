@@ -153,7 +153,7 @@ export async function observeOwnedTarget(api, context, now, allowDeleted = false
 }
 
 export async function deleteReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, pendingBytes, downloadedPending,
-  read = suffix => githubRead(env, suffix), assertMain, api = new RestoreCleanupApi(env.PLANETSCALE_API_TOKEN),
+  read = suffix => githubRead(env, suffix), assertMain, api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN),
   now = Date.now, checkpoint = () => {} }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'cleanup', state: 'NOT_ATTEMPTED',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
@@ -184,7 +184,7 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
 }
 
 export async function reconcileReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, read = suffix => githubRead(env, suffix), assertMain,
-  api = new RestoreCleanupApi(env.PLANETSCALE_API_TOKEN), now = Date.now }) {
+  api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN), now = Date.now }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'read-only-reconciliation',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
     providerMutations: false, deletionVerified: false, recoveryCertified: false, blockers: [] };

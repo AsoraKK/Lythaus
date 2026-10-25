@@ -3,7 +3,7 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig } from './
 import { expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
 import { runtimeSchemaFingerprint, canonicalReleaseSchemaContract, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
-import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash } from './planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, assertRestoreRoleSqlBaseline } from './planetscale-native-restore-contract.mjs';
 
 export function sourceConnection(raw, expectedOrigin) {
   const target = branchQualifiedDatabaseTarget(raw);
@@ -57,9 +57,13 @@ export async function readOnly(raw, branchId, role, work, clientFactory = config
 export async function collectRestoreCatalog(client) {
   const sections = {};
   const queries = {
+    schemaOwnership: `SELECT n.nspname AS schema, pg_get_userbyid(n.nspowner) AS owner
+      FROM pg_namespace n WHERE n.nspname=ANY($1::text[]) ORDER BY schema`,
     relations: `SELECT CASE WHEN c.relkind = 'v' THEN 'VIEW' ELSE 'BASE TABLE' END AS table_type,
       n.nspname AS table_schema, c.relname AS table_name, c.relrowsecurity, c.relforcerowsecurity,
-      pg_get_userbyid(c.relowner) AS owner FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      pg_get_userbyid(c.relowner) AS owner, c.reloptions,
+      CASE WHEN c.relkind = 'v' THEN pg_get_viewdef(c.oid,true) ELSE NULL END AS view_definition
+      FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname=ANY($1::text[]) AND c.relkind IN ('r','p','v') ORDER BY table_type,table_schema,table_name`,
     columns: `SELECT n.nspname AS schema, c.relname AS relation, a.attname AS name, a.attnum,
       format_type(a.atttypid,a.atttypmod) AS type, a.attnotnull, a.attidentity, a.attgenerated,
@@ -72,7 +76,14 @@ export async function collectRestoreCatalog(client) {
       JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY($1::text[]) ORDER BY schema,relation,k.conname`,
     indexes: `SELECT schemaname,tablename,indexname,indexdef FROM pg_indexes WHERE schemaname=ANY($1::text[]) ORDER BY schemaname,tablename,indexname`,
     functions: `SELECT n.nspname AS schema,p.proname,pg_get_function_identity_arguments(p.oid) AS arguments,
-      pg_get_functiondef(p.oid) AS definition FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      pg_get_functiondef(p.oid) AS definition,pg_get_userbyid(p.proowner) AS owner,p.prosecdef AS security_definer,
+      p.proacl IS NULL AS acl_is_null,
+      ARRAY(SELECT json_build_object('grantor',pg_get_userbyid(e.grantor),
+        'grantee',CASE WHEN e.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(e.grantee) END,
+        'privilege',e.privilege_type,'grantable',e.is_grantable)
+        FROM aclexplode(p.proacl) e ORDER BY pg_get_userbyid(e.grantor),
+          CASE WHEN e.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(e.grantee) END,e.privilege_type) AS acl_entries
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname=ANY($1::text[]) AND p.prokind IN ('f','p') ORDER BY schema,p.proname,arguments`,
     policies: `SELECT schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check FROM pg_policies
       WHERE schemaname=ANY($1::text[]) ORDER BY schemaname,tablename,policyname`,
@@ -105,13 +116,14 @@ export async function collectRestoreCatalog(client) {
   requireThat(staged?.index_absent === true && staged.column_absent === true, '0021_catalog_must_be_absent');
   const roles = (await client.query(`SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls
     FROM pg_roles WHERE rolname=ANY($1::text[]) ORDER BY rolname`, [ROLE_NAMES])).rows;
-  requireThat(roles.length === 5 && roles.every(row => row.rolcanlogin === true && row.rolsuper === false
-    && row.rolbypassrls === false && row.rolreplication === false), 'restored_role_security_contract_invalid');
   const members = (await client.query(`SELECT r.rolname AS role,m.rolname AS member,g.rolname AS grantor,
     a.admin_option,a.inherit_option,a.set_option FROM pg_auth_members a JOIN pg_roles r ON r.oid=a.roleid
     JOIN pg_roles m ON m.oid=a.member JOIN pg_roles g ON g.oid=a.grantor
     WHERE r.rolname=ANY($1::text[]) OR m.rolname=ANY($1::text[]) ORDER BY role,member,grantor`, [ROLE_NAMES])).rows;
-  const extensions = (await client.query('SELECT extname,extversion FROM pg_extension WHERE extname=ANY($1::text[]) ORDER BY extname', [EXTENSIONS])).rows;
+  assertRestoreRoleSqlBaseline(roles, members);
+  const extensions = (await client.query(`SELECT e.extname,e.extversion,n.nspname AS schema,
+    pg_get_userbyid(e.extowner) AS owner,e.extrelocatable FROM pg_extension e
+    LEFT JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname=ANY($1::text[]) ORDER BY e.extname`, [EXTENSIONS])).rows;
   const checks = [];
   for (const [table, privilege, columns] of [['trust.reward_redemptions', 'SELECT', ['id','user_id','reward_id','reward_level','reward_title','redeemed_at','status']],
     ['trust.reward_redemptions','INSERT',['id','user_id','reward_id','reward_level','reward_title']],
@@ -124,9 +136,13 @@ export async function collectRestoreCatalog(client) {
   const canonicalRelations = canonicalReleaseSchemaContract().relations;
   const keys = rows => rows.map(row => `${row.table_type}:${row.table_schema}.${row.table_name}`).sort();
   requireThat(JSON.stringify(keys(relations)) === JSON.stringify(keys(canonicalRelations)), 'restore_relation_contract_incomplete');
-  return { catalogSha256: hash({ ...sections, migrations, roles, members, extensions }),
+  return { catalogSha256: restoreCatalogDigest({ sections, migrations, roles, members, extensions }),
     schemaFingerprint: runtimeSchemaFingerprint(relations, migrations), relationCount: relations.length,
     schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: extensions.length };
+}
+
+export function restoreCatalogDigest({ sections, migrations, roles, members, extensions }) {
+  return hash({ ...sections, migrations, roles, members, extensions });
 }
 
 export async function inspectExtensionAuthority(raw, branchId, clientFactory, signal) {

@@ -1,0 +1,124 @@
+{
+  "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+  "baseline": true,
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "name": "login-light-390x844-1x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "6828e452f2263995825612a592ff8253e9d7a454b0c0a3e824cedff1f567ced1"
+    },
+    {
+      "name": "invite-light-390x844-1x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "eaafc33e13b87f5bb3c8282a7dd0cd17be8cc14bff794b2e37471a3a2d7ca78c",
+      "redeemBox": {
+        "x": 24,
+        "y": 224,
+        "width": 342,
+        "height": 48
+      }
+    },
+    {
+      "name": "login-light-320x568-2x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 320,
+      "height": 568,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "ed4f79efef7864f9fc1cc7e9463530a2376a9155db91fe435153a7a80a7d2d94"
+    },
+    {
+      "name": "invite-light-320x568-2x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 320,
+      "height": 568,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "1b24d96cd5c47319f5d5f4626ee71f552034bb1b22f469dd6a46d395f34470f9",
+      "redeemBox": {
+        "x": 24,
+        "y": 429,
+        "width": 272,
+        "height": 63
+      }
+    },
+    {
+      "name": "invite-constrained-light-320x568-2x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 320,
+      "height": 340,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "note": "Reduced browser viewport; native IME covered by widget test",
+      "redeemBox": {
+        "x": 24,
+        "y": 429,
+        "width": 272,
+        "height": 63
+      },
+      "sha256": "70fdf599baab692218030e811c5b81dd963df2d661357bd43c8be377d99d2a99"
+    },
+    {
+      "name": "login-dark-390x844-1x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "dark",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "11e7d964b20a9f896bcc5ad13fb8fc9c726b35c7256ab41f2de206212f73331c"
+    },
+    {
+      "name": "invite-dark-390x844-1x",
+      "source": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+      "bundleSha256": "aaa17b0fd028da921ff7f72817a07951993a8ad89de6140a8cdac5bbde8f154b",
+      "build": "mobile-ux-before",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "dark",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "396dbce7594d51faf11abc0da6a0d141de5fd9873d3d598e31b4158d19835a54",
+      "redeemBox": {
+        "x": 24,
+        "y": 224,
+        "width": 342,
+        "height": 48
+      }
+    }
+  ]
+}

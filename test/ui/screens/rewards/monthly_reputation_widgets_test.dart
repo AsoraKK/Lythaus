@@ -13,7 +13,11 @@ import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 
+import '../../../golden_test_utils.dart';
+import '../../../helpers/inactive_state_screenshot_capture.dart';
+
 final _session = StateProvider<User?>((ref) => null);
+final _captureKey = GlobalKey();
 
 Map<String, dynamic> _response({
   String snapshotState = 'confirmed',
@@ -27,9 +31,11 @@ Map<String, dynamic> _response({
   'sourceScore': snapshotState == 'confirmed' ? 6000 : null,
   'snapshot': {
     'state': snapshotState,
-    'reasonCode': snapshotState == 'pending'
-        ? 'no_previous_assessment'
-        : 'source_month_assessed',
+    'reasonCode': switch (snapshotState) {
+      'pending' => 'no_previous_assessment',
+      'unavailable' => 'approval_unavailable',
+      _ => 'source_month_assessed',
+    },
     'effectiveMonth': '2026-10',
     'sourceMonth': snapshotState == 'pending' ? null : '2026-09',
     'sourceScore': snapshotState == 'pending' ? null : 6000,
@@ -40,9 +46,12 @@ Map<String, dynamic> _response({
   'selection': {'state': selectionState, 'reasonCode': 'approval_unavailable'},
 };
 
-const _tracker = MaterialApp(
+final _tracker = MaterialApp(
   home: Scaffold(
-    body: SingleChildScrollView(child: MonthlyReputationTrackerCard()),
+    body: RepaintBoundary(
+      key: _captureKey,
+      child: const SingleChildScrollView(child: MonthlyReputationTrackerCard()),
+    ),
   ),
 );
 
@@ -53,6 +62,21 @@ Widget _withResponse(Map<String, dynamic> payload) => ProviderScope(
     ),
   ],
   child: _tracker,
+);
+
+Widget _withReport(
+  Future<Map<String, dynamic>> Function(String sourceMonth) handler,
+) => ProviderScope(
+  overrides: [
+    monthlyReputationReportProvider.overrideWith(
+      (ref, sourceMonth) => handler(sourceMonth),
+    ),
+  ],
+  child: const MaterialApp(
+    home: Scaffold(
+      body: SingleChildScrollView(child: MonthlyReputationReportCard()),
+    ),
+  ),
 );
 
 User _user(String id) => User(
@@ -94,6 +118,8 @@ ResponseBody _json(Map<String, dynamic> payload) => ResponseBody.fromString(
 );
 
 void main() {
+  setUpAll(loadFontsForGoldenTests);
+
   testWidgets('pending default Level 1 is never labelled confirmed', (
     tester,
   ) async {
@@ -109,6 +135,100 @@ void main() {
     expect(find.textContaining('source score:'), findsNothing);
   });
 
+  testWidgets('unavailable assessment is not labelled pending', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(430, 420));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _withResponse(_response(snapshotState: 'unavailable')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Monthly level unavailable'), findsOneWidget);
+    expect(
+      find.textContaining('unavailable while owner approval is pending'),
+      findsOneWidget,
+    );
+    expect(find.text('Monthly level pending'), findsNothing);
+    expect(find.textContaining('source score:'), findsNothing);
+    await captureInactiveStateScreenshot(
+      tester,
+      _captureKey,
+      'monthly-level-unavailable',
+    );
+  });
+
+  testWidgets('report config absence remains pending owner approval', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _withReport(
+        (_) async => {
+          'reportState': 'pending',
+          'reasonCode': 'report_unavailable',
+          'sourceMonth': '2026-09',
+          'effectiveMonth': '2026-10',
+          'policyVersion': 'lythaus-monthly-rewards-2026-10-v1',
+          'levelAuthority': {
+            'state': 'unavailable',
+            'reasonCode': 'approval_unavailable',
+            'effectiveMonth': '2026-10',
+            'sourceMonth': null,
+            'sourceScore': null,
+            'level': null,
+            'levelKind': null,
+          },
+          'corrections': {
+            'sourceRevisions': <Object?>[],
+            'effectiveSnapshots': <Object?>[],
+          },
+          'report': null,
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('pending owner approval'), findsOneWidget);
+    expect(
+      find.textContaining('No score or entitlement has been activated.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('unavailable right now'), findsNothing);
+  });
+
+  testWidgets('report request failure uses the supported unavailable view', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _withReport((_) async => throw StateError('Synthetic transport failure')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Your private monthly report is unavailable right now.'),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.textContaining('pending owner approval'), findsNothing);
+  });
+
+  testWidgets('unavailable activation gate keeps its pending-approval reason', (
+    tester,
+  ) async {
+    final payload = _response(snapshotState: 'unavailable')
+      ..['reasonCode'] = 'activation_not_approved';
+    (payload['snapshot'] as Map<String, dynamic>)['reasonCode'] =
+        'activation_not_approved';
+    await tester.pumpWidget(_withResponse(payload));
+    await tester.pumpAndSettle();
+    expect(find.text('Monthly level unavailable'), findsOneWidget);
+    expect(find.textContaining('pending activation approval'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'No monthly level or reward entitlement is confirmed.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('confirmed month and pending reward selection stay separate', (
     tester,
   ) async {
@@ -118,6 +238,28 @@ void main() {
     expect(find.textContaining('fixed for 2026-10'), findsOneWidget);
     expect(find.textContaining('Reward selection is pending.'), findsOneWidget);
     expect(find.textContaining('6000 of 13,500'), findsOneWidget);
+  });
+
+  testWidgets('unavailable reward selection is not labelled pending', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 420));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _withResponse(_response(selectionState: 'unavailable')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Level 4 confirmed'), findsOneWidget);
+    expect(
+      find.textContaining('Reward selection is unavailable'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Reward selection is pending.'), findsNothing);
+    await captureInactiveStateScreenshot(
+      tester,
+      _captureKey,
+      'monthly-level-confirmed-selection-unavailable',
+    );
   });
 
   testWidgets('shadow snapshot shows its fixed period without confirmation', (

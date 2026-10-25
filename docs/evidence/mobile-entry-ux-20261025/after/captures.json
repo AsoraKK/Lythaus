@@ -1,0 +1,164 @@
+{
+  "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+  "baseline": false,
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "name": "login-light-390x844-1x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "6828e452f2263995825612a592ff8253e9d7a454b0c0a3e824cedff1f567ced1"
+    },
+    {
+      "name": "invite-light-390x844-1x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "77eb603073d215ba76bc531f3c34d1a6d6575ce2494e67f35e284b1ea9de0a06",
+      "redeemBox": {
+        "x": 24,
+        "y": 280,
+        "width": 342,
+        "height": 48
+      }
+    },
+    {
+      "name": "invite-error-light-390x844-1x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "5b6beb878b2b4ce810706ecb5568c214f1f84bc15782c917b7d2e4c23245d4af"
+    },
+    {
+      "name": "login-light-320x568-2x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 320,
+      "height": 568,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "ed4f79efef7864f9fc1cc7e9463530a2376a9155db91fe435153a7a80a7d2d94"
+    },
+    {
+      "name": "invite-light-320x568-2x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 320,
+      "height": 568,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "c4cc38ff77ec886cc85354c1ee9c63552129073b67fe2670ae51819d3d49686c",
+      "redeemBox": {
+        "x": 24,
+        "y": 485,
+        "width": 272,
+        "height": 63
+      }
+    },
+    {
+      "name": "invite-constrained-light-320x568-2x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 320,
+      "height": 340,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "note": "Reduced browser viewport; native IME covered by widget test",
+      "redeemBox": {
+        "x": 24,
+        "y": 253,
+        "width": 272,
+        "height": 63
+      },
+      "sha256": "b22e5ac4b8666925ab9eee3221d9afeef3908c02388038d0ec1e3c0492b17348",
+      "paintedActionFraction": 0.8735537190082645
+    },
+    {
+      "name": "invite-error-light-320x568-2x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 320,
+      "height": 568,
+      "textScale": 2,
+      "theme": "light",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "0f98414c3316d7d76e634f50d732841f3b14ca90bdac443684cdbe28cc7fe6a2"
+    },
+    {
+      "name": "login-dark-390x844-1x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "dark",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "11e7d964b20a9f896bcc5ad13fb8fc9c726b35c7256ab41f2de206212f73331c"
+    },
+    {
+      "name": "invite-dark-390x844-1x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "dark",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "c51ddfdcef9964b9ae19f37492b2a66bff89bffc36e96379ed283d4ec5bdb5d3",
+      "redeemBox": {
+        "x": 24,
+        "y": 280,
+        "width": 342,
+        "height": 48
+      }
+    },
+    {
+      "name": "invite-error-dark-390x844-1x",
+      "source": "8b46b671c8571f821cfefa0799a60699d316d7ca",
+      "bundleSha256": "44c25abcecccaf7d19fcaf9f4f08b0f8b0ae590b15c535a746568cdc1b2abf42",
+      "build": "mobile-ux-after",
+      "width": 390,
+      "height": 844,
+      "textScale": 1,
+      "theme": "dark",
+      "renderer": "Flutter CanvasKit / Chromium",
+      "synthetic": true,
+      "sha256": "757ae7584a4d1ef22e101a42257034f71ac6e5a0acd5dd4c0d25a831c4c2ca0e"
+    }
+  ]
+}

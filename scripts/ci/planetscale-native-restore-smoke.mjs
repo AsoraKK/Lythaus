@@ -56,33 +56,43 @@ export async function runRestoreSmoke(connections, branchId, baseline, scripts, 
       hyperdrives: { DB_JOBS_FRESH: connections.jobs, DB_PRIVACY_FRESH: connections.privacy } },
   ];
   let outbound = 0;
-  const options = { log: new Log(LogLevel.NONE),
-    workers: workers.map(worker => ({ ...worker, compatibilityDate: '2026-08-01', compatibilityFlags: ['nodejs_compat'],
-      outboundService: () => { outbound++; return new Response(null, { status: 403 }); } })) };
-  const mf = runtimeFactory ? runtimeFactory(options) : new Miniflare(convertV4MiniflareOptions(options));
-  let disposing;
-  const dispose = () => disposing ??= Promise.resolve().then(() => mf.dispose());
-  const abort = () => { void dispose().catch(() => {}); };
-  signal?.addEventListener('abort', abort, { once: true });
-  try {
-    for (const name of ['public', 'admin', 'jobs']) {
-      signal?.throwIfAborted();
-      const worker = await mf.getWorker(name);
-      signal?.throwIfAborted();
-      const response = await worker.fetch('https://restore.lythaus.test/internal/readiness/database-identity', {
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000),
-        headers: { authorization: `Bearer ${token}`, 'Cloudflare-Workers-Version-Overrides': `lythaus-public-api-development="${version}"` } });
-      requireThat(response.status === 200, 'isolated_application_readiness_failed');
-      const body = await response.json();
-      const databases = name === 'public' ? [body] : Object.values(body.databases ?? {});
-      requireThat(databases.length === (name === 'public' ? 1 : 2) && body.readiness === 'pass'
-        && databases.every(row => row.readiness === 'pass' && row.readyForAuthentication === false
-          && row.schemaFingerprint === baseline.schemaFingerprint && row.schemaVersion === baseline.schemaVersion
-          && row.databaseEnvironment === RESTORE.target && row.relationCount === baseline.relationCount)
-        && (name !== 'admin' || body.emailBinding?.bindingVerified === true), `isolated_application_${name}_contract_failed`);
-    }
-    requireThat(outbound === 0, 'unexpected_application_external_http_attempt');
-    return { services: 3, databaseBindings: 5, distinctRoles: 4, readOnlyDatabaseIdentity: true,
-      externalHttpRequests: 0, readyForProductionAuthentication: false };
-  } finally { try { await dispose(); } finally { signal?.removeEventListener('abort', abort); } }
+  const configuredWorkers = workers.map(worker => ({ ...worker, compatibilityDate: '2026-08-01',
+    compatibilityFlags: ['nodejs_compat'],
+    outboundService: () => { outbound++; return new Response(null, { status: 403 }); } }));
+  const validateReadiness = async (name, mf) => {
+    signal?.throwIfAborted();
+    const worker = await mf.getWorker(name);
+    signal?.throwIfAborted();
+    const response = await worker.fetch('https://restore.lythaus.test/internal/readiness/database-identity', {
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000),
+      headers: { authorization: `Bearer ${token}`, 'Cloudflare-Workers-Version-Overrides': `lythaus-public-api-development="${version}"` } });
+    requireThat(response.status === 200, 'isolated_application_readiness_failed');
+    const body = await response.json();
+    const databases = name === 'public' ? [body] : Object.values(body.databases ?? {});
+    requireThat(databases.length === (name === 'public' ? 1 : 2) && body.readiness === 'pass'
+      && databases.every(row => row.readiness === 'pass' && row.readyForAuthentication === false
+        && row.schemaFingerprint === baseline.schemaFingerprint && row.schemaVersion === baseline.schemaVersion
+        && row.databaseEnvironment === RESTORE.target && row.relationCount === baseline.relationCount)
+      && (name !== 'admin' || body.emailBinding?.bindingVerified === true), `isolated_application_${name}_contract_failed`);
+  };
+  const runGroup = async (group, names) => {
+    const bindingNames = group.flatMap(worker => Object.keys(worker.hyperdrives ?? {}));
+    requireThat(new Set(bindingNames).size === bindingNames.length, 'smoke_duplicate_hyperdrive_proxy_binding');
+    const options = { log: new Log(LogLevel.NONE), workers: group };
+    const mf = runtimeFactory ? runtimeFactory(options) : new Miniflare(convertV4MiniflareOptions(options));
+    let disposing;
+    const dispose = () => disposing ??= Promise.resolve().then(() => mf.dispose());
+    const abort = () => { void dispose().catch(() => {}); };
+    signal?.addEventListener('abort', abort, { once: true });
+    try { for (const name of names) await validateReadiness(name, mf); }
+    finally { try { await dispose(); } finally { signal?.removeEventListener('abort', abort); } }
+  };
+  // Miniflare's Hyperdrive TLS proxy registry is keyed by binding name. Keep each
+  // name unique within a runtime; admin still needs public for its email service
+  // binding, while jobs can run after that runtime has fully disposed.
+  await runGroup(configuredWorkers.slice(0, 2), ['public', 'admin']);
+  await runGroup(configuredWorkers.slice(2), ['jobs']);
+  requireThat(outbound === 0, 'unexpected_application_external_http_attempt');
+  return { services: 3, databaseBindings: 5, distinctRoles: 4, readOnlyDatabaseIdentity: true,
+    isolatedHyperdriveRuntimeGroups: 2, externalHttpRequests: 0, readyForProductionAuthentication: false };
 }

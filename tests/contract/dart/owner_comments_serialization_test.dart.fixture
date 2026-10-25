@@ -11,6 +11,7 @@ const wire = <String, Object?>{
       'authorId': '0192c000-0000-7000-8000-000000000002',
       'postId': '0192c000-0000-7000-8000-000000000003',
       'parentId': null,
+      'conversationId': '0192c000-0000-7000-8000-000000000001',
       'depth': 0,
       'body': 'Synthetic pending comment',
       'declaredCreationMode': 'human',
@@ -25,6 +26,8 @@ const wire = <String, Object?>{
 };
 
 class OwnerCommentsAdapter implements HttpClientAdapter {
+  OwnerCommentsAdapter([this.body = wire]);
+  final Object body;
   final requests = <RequestOptions>[];
 
   @override
@@ -35,7 +38,7 @@ class OwnerCommentsAdapter implements HttpClientAdapter {
   ) async {
     requests.add(options);
     return ResponseBody.fromString(
-      jsonEncode(wire),
+      jsonEncode(body),
       200,
       headers: {
         Headers.contentTypeHeader: ['application/json'],
@@ -48,6 +51,92 @@ class OwnerCommentsAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  final conversationWire = {
+    'items': [
+      {
+        'id': '0192c000-0000-7000-8000-000000000004',
+        'authorId': '0192c000-0000-7000-8000-000000000002',
+        'parentId': '0192c000-0000-7000-8000-000000000005',
+        'conversationId': '0192c000-0000-7000-8000-000000000001',
+        'replyCount': 0,
+        'replyToDeleted': true,
+        'body': 'Synthetic nested reply',
+        'depth': 1,
+        'declaredCreationMode': 'human',
+        'moderationState': 'allowed',
+        'deleted': false,
+        'createdAt': '2026-10-10T10:00:00.000Z',
+      },
+    ],
+    'nextCursor': null,
+    'refreshCursor': 'synthetic-reply-tail',
+    'revalidatedItems': [],
+    'capabilities': {
+      'conversations': true,
+      'nestedReplies': true,
+      'sorts': ['newest', 'oldest'],
+      'mostRelevantAvailable': false,
+      'mostRelevantUnavailableReason': 'Usefulness signals are not validated.',
+    },
+  };
+
+  test(
+    'public conversation page preserves exact reply links, counts and unavailable relevance',
+    () {
+      final page = standardSerializers.deserializeWith(
+        CommentPage.serializer,
+        conversationWire,
+      )!;
+      expect(
+        page.items.single.parentId,
+        '0192c000-0000-7000-8000-000000000005',
+      );
+      expect(
+        page.items.single.conversationId,
+        '0192c000-0000-7000-8000-000000000001',
+      );
+      expect(page.items.single.replyCount, 0);
+      expect(page.items.single.replyToDeleted, true);
+      expect(page.capabilities!.nestedReplies, true);
+      expect(page.capabilities!.mostRelevantAvailable, false);
+      expect(page.refreshCursor, 'synthetic-reply-tail');
+      expect(page.revalidatedItems, isEmpty);
+      final encoded = standardSerializers.serializeWith(
+          CommentPage.serializer, page) as Map;
+      expect((encoded['capabilities'] as Map)['mostRelevantAvailable'], false);
+      expect(
+        (encoded['items'] as List).single['parentId'],
+        page.items.single.parentId,
+      );
+    },
+  );
+
+  test(
+    'generated conversation operation sends the real filter and scoped reply cursor',
+    () async {
+      final adapter = OwnerCommentsAdapter(conversationWire);
+      final api = LythausApiClient(dio: Dio()..httpClientAdapter = adapter);
+      final result = await api.getPostsApi().postsCommentsList(
+            postId: '0192c000-0000-7000-8000-000000000003',
+            view: 'conversations',
+            sort: 'newest',
+            conversationId: '0192c000-0000-7000-8000-000000000001',
+            cursor: 'synthetic-reply-tail',
+            refresh: true,
+            revalidateIds: '0192c000-0000-7000-8000-000000000004',
+          );
+      expect(result.data!.capabilities!.mostRelevantAvailable, false);
+      expect(adapter.requests.single.queryParameters, {
+        'limit': 25,
+        'view': 'conversations',
+        'sort': 'newest',
+        'conversationId': '0192c000-0000-7000-8000-000000000001',
+        'cursor': 'synthetic-reply-tail',
+        'refresh': true,
+        'revalidateIds': '0192c000-0000-7000-8000-000000000004',
+      });
+    },
+  );
   test(
     'canonical comments page parses owned pending content and nullable fields',
     () {

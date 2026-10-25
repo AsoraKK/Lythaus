@@ -25,8 +25,23 @@ export function finalizeQualificationEvidence(directory, now = Date.now()) {
   report.status = 'INTERRUPTED_QUALIFICATION_REQUIRES_REVIEW'; report.qualificationOutcome = 'UNKNOWN';
   report.recoveryAcceptance = 'NOT_CERTIFIED'; report.verifiedScope = []; report.finishedAt = new Date(now).toISOString();
   report.costEscalationRequired = true;
-  if (report.creation?.acknowledged === true && report.creation.id === report.createdTargetId) {
+  const createMutations = Array.isArray(report.providerMutations)
+    ? report.providerMutations.filter(row => row?.action === 'create_fixed_restore') : [];
+  const createdAt = Date.parse(report.creation?.createdAt), startedAt = Date.parse(report.startedAt), finishedAt = Date.parse(report.finishedAt);
+  const ownedCreateAcknowledged = createMutations.length === 1 && createMutations[0].outcome === 'ACKNOWLEDGED'
+    && report.creation?.acknowledged === true && report.creation.id === report.createdTargetId
+    && typeof report.createdTargetId === 'string' && /^[a-z0-9]{1,64}$/.test(report.createdTargetId)
+    && report.createdTargetId !== RESTORE.sourceId && report.creation.name === RESTORE.target
+    && report.creation.sourceBranchId === RESTORE.sourceId && report.creation.kind === 'postgresql'
+    && report.creation.default === false && typeof report.creation.createdAt === 'string'
+    && Number.isFinite(startedAt) && Number.isFinite(finishedAt) && Number.isFinite(createdAt)
+    && createdAt >= startedAt - 60000 && createdAt <= finishedAt;
+  if (ownedCreateAcknowledged) {
     report.state = 'TARGET_RETAINED_PENDING_REVIEW'; report.cleanup = 'TARGET_RETAINED_PENDING_REVIEW';
+  } else if (report.creation !== undefined || report.createdTargetId !== null && report.createdTargetId !== undefined
+    || createMutations.some(row => !['BLOCKED', 'DENIED'].includes(row.outcome))) {
+    report.state = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
+    report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
   }
   const bytes = Buffer.from(JSON.stringify(report, null, 2) + '\n');
   fs.writeFileSync(destination, bytes, { flag: 'wx', mode: 0o600 }); return sha256(bytes);

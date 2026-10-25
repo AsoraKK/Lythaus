@@ -102,6 +102,36 @@ function fixture() {
 }
 const deletions = f => f.calls.filter(call => call.startsWith('DELETE ')).length;
 
+test('cleanup and reconciliation reject missing or malformed dedicated access even with a valid shared pair', async t => {
+  const request = t.mock.method(globalThis, 'fetch', async () => { throw new Error('unexpected provider request'); });
+  for (const operation of [deleteReviewedTarget, reconcileReviewedTarget]) {
+    for (const token of [undefined, '', 'id-only', ':secret', 'id:', 'id:secret:extra', 'id:secret\n']) {
+      const f = fixture(); f.options.api = undefined;
+      Object.assign(f.env, { PLANETSCALE_API_TOKEN: 'sharedsynthetic:shared-synthetic-value', PLANETSCALE_RESTORE_API_TOKEN: token });
+      await assert.rejects(() => operation(f.options), /existing_service_token_pair_required/);
+      assert.equal(f.calls.length, 0); assert.equal(deletions(f), 0);
+    }
+  }
+  assert.equal(request.mock.callCount(), 0);
+});
+test('dedicated access cannot bypass separate deletion consent; reconciliation uses it only for GET', async t => {
+  const f = fixture(), pair = 'restoresynthetic:restore-synthetic-value';
+  f.options.api = undefined;
+  Object.assign(f.env, { PLANETSCALE_RESTORE_API_TOKEN: pair, PLANETSCALE_API_TOKEN: 'sharedsynthetic:shared-synthetic-value' });
+  delete f.env.CLEANUP_APPROVAL_JSON;
+  const request = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(options.method, 'GET'); assert.equal(options.headers.authorization, pair);
+    assert.equal(url, `https://api.planetscale.com/v1/organizations/${RESTORE.organization}/databases/${RESTORE.database}/branches/${RESTORE.target}`);
+    return Response.json(branch());
+  });
+  const cleanup = await deleteReviewedTarget(f.options);
+  assert.equal(cleanup.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(cleanup.providerMutations, false);
+  assert.ok(cleanup.blockers.includes('separate_cleanup_owner_approval_required')); assert.equal(request.mock.callCount(), 0);
+  const reconciliation = await reconcileReviewedTarget(f.options);
+  assert.equal(reconciliation.state, 'TARGET_PRESENT_READ_ONLY'); assert.equal(reconciliation.providerMutations, false);
+  assert.equal(request.mock.callCount(), 1); assert.equal(deletions(f), 0);
+});
+
 test('reviewed tracked evidence and uploaded pending intent precede exactly one DELETE; qualification bytes stay unchanged', async () => {
   const f = fixture(), bytes = Buffer.from(f.evidence.bytes), result = await deleteReviewedTarget(f.options);
   assert.equal(result.state, 'DELETED_AND_READBACK_VERIFIED'); assert.equal(result.deleteAcknowledgment, 'ACKNOWLEDGED');
@@ -290,6 +320,33 @@ test('interrupted qualification finalizes once as retained UNKNOWN; final bytes 
   assert.equal(finalizeQualificationEvidence(root, instant + 60000), digest);
   assert.deepEqual(fs.readFileSync(path.join(root, 'qualification.json')), bytes);
 });
+test('interrupted create without a bound acknowledged target is manual reconciliation, never delete eligibility', t => {
+  const cases = [
+    { outcome: 'PENDING_OR_UNKNOWN', creation: null, createdTargetId: null },
+    { outcome: 'UNKNOWN_MUTATION_OUTCOME', creation: null, createdTargetId: null },
+    { outcome: 'ACKNOWLEDGED', creation: null, createdTargetId: 'newrestore123' },
+    { outcome: 'ACKNOWLEDGED', creation: { acknowledged: true, id: 'otherTarget', name: RESTORE.target }, createdTargetId: 'newrestore123' },
+  ];
+  for (const [index, scenario] of cases.entries()) {
+    const f = fixture(), root = fs.mkdtempSync(path.join(os.tmpdir(), `restore-create-finalize-${index}-`));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const report = structuredClone(f.report);
+    report.creation = scenario.creation;
+    report.createdTargetId = scenario.createdTargetId;
+    report.state = 'NO_TARGET_CREATED'; report.cleanup = 'NOT_NEEDED';
+    report.providerMutations = [{ action: 'create_fixed_restore', outcome: scenario.outcome }];
+    fs.writeFileSync(path.join(root, 'checkpoint.json'), encode(report));
+    finalizeQualificationEvidence(root, instant);
+    const finalized = JSON.parse(fs.readFileSync(path.join(root, 'qualification.json'), 'utf8'));
+    assert.equal(finalized.state, 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED');
+    assert.equal(finalized.cleanup, 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED');
+    assert.equal(finalized.qualificationOutcome, 'UNKNOWN');
+    assert.equal(finalized.recoveryAcceptance, 'NOT_CERTIFIED');
+    assert.equal(finalized.credentialActions?.length ?? 0, 0);
+    assert.equal(finalized.providerMutations.length, 1);
+    assert.equal(finalized.creation?.acknowledged === true && finalized.creation.id === finalized.createdTargetId, false);
+  }
+});
 test('provider capabilities separate qualification from deletion; cleanup cannot create, reset or protect', async () => {
   let calls = 0;
   const fetch = async () => { calls++; throw new Error('must never reach provider'); };
@@ -325,6 +382,42 @@ test('workflow phase boundary uploads pending evidence before DELETE and never e
   assert.match(cleanup, /default: reconcile/); assert.doesNotMatch(cleanup, /PLANETSCALE_SCHEMA_READ_DATABASE_URL|working-directory: restore-review/);
   assert.match(cleanup, /persist-credentials: false/); assert.doesNotMatch(cleanup, /contents: write|actions: write/);
   assert.notEqual(qualificationSha, evidenceSha); assert.equal(cleanupSha, evidenceSha);
+});
+test('only gated restore provider steps receive the dedicated secret; unrelated workflows keep shared access', () => {
+  const directory = new URL('../../.github/workflows/', import.meta.url);
+  const qualificationName = 'planetscale-native-restore-check.yml', cleanupName = 'planetscale-native-restore-cleanup.yml';
+  const qualification = YAML.parse(fs.readFileSync(new URL(qualificationName, directory), 'utf8'));
+  const cleanup = YAML.parse(fs.readFileSync(new URL(cleanupName, directory), 'utf8'));
+  const key = 'PLANETSCALE_RESTORE_API_TOKEN', value = '${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}';
+  for (const [workflow, job, commands] of [
+    [qualification, qualification.jobs.qualify, ['node scripts/ci/planetscale-native-restore-check.mjs']],
+    [cleanup, cleanup.jobs.cleanup, ['node scripts/ci/planetscale-native-restore-cleanup.mjs delete',
+      'node scripts/ci/planetscale-native-restore-cleanup.mjs reconcile']],
+  ]) {
+    assert.equal(job.environment, 'production'); assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
+    assert.equal(workflow.env?.[key], undefined); assert.equal(job.env?.[key], undefined);
+    const steps = job.steps.filter(step => Object.hasOwn(step.env ?? {}, key));
+    assert.deepEqual(steps.map(step => step.run), commands);
+    for (const step of steps) assert.equal(step.env[key], value);
+    assert.doesNotMatch(JSON.stringify(workflow), /PLANETSCALE_API_TOKEN/);
+  }
+  assert.equal(qualification.on.workflow_dispatch.inputs.execute.default, false);
+  assert.equal(cleanup.on.workflow_dispatch.inputs.mode.default, 'reconcile');
+  assert.equal(cleanup.jobs.cleanup.env.CLEANUP_APPROVAL_JSON, '${{ inputs.cleanup_approval_json }}');
+  const deletion = cleanup.jobs.cleanup.steps.find(step => step.run === 'node scripts/ci/planetscale-native-restore-cleanup.mjs delete');
+  assert.equal(deletion.if, "inputs.mode == 'cleanup'");
+  const sharedConsumers = ['deploy-alpha-web.yml', 'deploy-control-panel.yml', 'deploy-marketing.yml',
+    'native-adr003-acceptance.yml', 'native-budget-acceptance.yml', 'native-workers-deploy.yml',
+    'planetscale-account-audit.yml', 'planetscale-cutover-identity-preflight.yml', 'planetscale-production-migrations.yml',
+    'planetscale-verifier-stats.yml', 'product-privilege-grants.yml', 'product-privilege-preflight.yml', 'production-release.yml'];
+  for (const filename of fs.readdirSync(directory).filter(name => /\.ya?ml$/.test(name))) {
+    if ([qualificationName, cleanupName].includes(filename)) continue;
+    const source = fs.readFileSync(new URL(filename, directory), 'utf8');
+    assert.doesNotMatch(source, /PLANETSCALE_RESTORE_API_TOKEN/, filename);
+    if (sharedConsumers.includes(filename)) assert.match(source,
+      /PLANETSCALE_API_TOKEN:\s*\$\{\{ secrets\.PLANETSCALE_API_TOKEN \}\}/, filename);
+  }
+  assert.ok(sharedConsumers.every(filename => fs.existsSync(new URL(filename, directory))));
 });
 test('qualification work and finalization have independent budgets before escalation; phase locks cannot block each other', () => {
   const qualification = YAML.parse(fs.readFileSync(new URL('../../.github/workflows/planetscale-native-restore-check.yml', import.meta.url), 'utf8'));

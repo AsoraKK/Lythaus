@@ -7,7 +7,14 @@ import 'package:lythaus/features/member_verification/domain/device_unlock_prefer
 import 'package:lythaus/features/member_verification/presentation/member_verification_policy_preview.dart';
 import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 
+import '../../golden_test_utils.dart';
+import '../../helpers/inactive_state_screenshot_capture.dart';
+
+final _captureKey = GlobalKey();
+
 void main() {
+  setUpAll(loadFontsForGoldenTests);
+
   final user = User(
     id: 'synthetic',
     email: 'synthetic@example.invalid',
@@ -40,7 +47,7 @@ void main() {
   testWidgets('flag exposes only an honest, read-only policy preview', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(700, 1300));
+    await tester.binding.setSurfaceSize(const Size(430, 1500));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ProviderScope(
@@ -48,9 +55,15 @@ void main() {
           currentUserProvider.overrideWithValue(user),
           memberVerificationPreviewEnabledProvider.overrideWithValue(true),
         ],
-        child: const MaterialApp(home: AccountSecurityScreen()),
+        child: MaterialApp(
+          home: RepaintBoundary(
+            key: _captureKey,
+            child: const AccountSecurityScreen(),
+          ),
+        ),
       ),
     );
+    await tester.pumpAndSettle();
     expect(find.text('Member verification: draft policy'), findsOneWidget);
     for (final preference in DeviceUnlockPreference.values) {
       expect(find.text(preference.label), findsOneWidget);
@@ -60,13 +73,42 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.textContaining('Unlock choices earn no points'),
+      find.textContaining(
+        'Device unlock remains a local preference and earns no points',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('up to 24 cumulative hours of gaps'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Qualifying methods share one benefit and do not stack',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'changing supported methods preserves qualification while coverage stays continuous',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'refreshing status does not establish qualifying server coverage',
+      ),
       findsOneWidget,
     );
     expect(find.byType(Switch), findsNothing);
     expect(find.byType(Checkbox), findsNothing);
     expect(find.byType(DropdownButton<DeviceUnlockPreference>), findsNothing);
     expect(tester.takeException(), isNull);
+    await captureInactiveStateScreenshot(
+      tester,
+      _captureKey,
+      'account-security-inactive-preview',
+    );
   });
 
   testWidgets('guests see no member verification preview', (tester) async {
