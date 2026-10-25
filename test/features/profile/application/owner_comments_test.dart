@@ -260,6 +260,135 @@ void main() {
     expect(container.read(provider).valueOrNull, isNull);
   });
 
+  for (final status in [401, 403]) {
+    test('pagination $status drops private comments and its cursor', () async {
+      final service = _ControlledOwnerCommentsService();
+      final container = _container(service);
+      addTearDown(container.dispose);
+      final provider = ownerCommentsTimelineProvider(
+        const OwnerCommentsKey(userId: 'owner-a', sessionRevision: 0),
+      );
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+      await Future<void>.delayed(Duration.zero);
+      service.pending[0].complete(
+        _page('private-first', nextCursor: 'private-cursor'),
+      );
+      await container.read(provider.future);
+      final loading = container.read(provider.notifier).loadMore();
+      await Future<void>.delayed(Duration.zero);
+      final request = RequestOptions(path: '/api/users/me/comments');
+      service.pending[1].completeError(
+        DioException(
+          requestOptions: request,
+          response: Response(requestOptions: request, statusCode: status),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      await loading;
+      final result = container.read(provider);
+      expect(result.hasError, isTrue);
+      expect(result.valueOrNull?.items ?? [], isEmpty);
+      expect(result.valueOrNull?.nextCursor, isNull);
+      await container.read(provider.notifier).loadMore();
+      expect(service.pending, hasLength(2));
+      final recovered = container.read(provider.notifier).refresh();
+      await Future<void>.delayed(Duration.zero);
+      expect(service.requests.last.$2, isNull);
+      service.pending[2].complete(_page('fresh-after-sign-in'));
+      await recovered;
+      expect(
+        container.read(provider).requireValue.items.single.id,
+        'fresh-after-sign-in',
+      );
+    });
+  }
+
+  test(
+    'a late pagination denial from account A cannot clear account B comments',
+    () async {
+      final service = _ControlledOwnerCommentsService();
+      final container = _container(service);
+      addTearDown(container.dispose);
+      final providerA = ownerCommentsTimelineProvider(
+        const OwnerCommentsKey(userId: 'owner-a', sessionRevision: 0),
+      );
+      final subA = container.listen(providerA, (_, _) {});
+      addTearDown(subA.close);
+      await Future<void>.delayed(Duration.zero);
+      service.pending[0].complete(
+        _page('account-a-private', nextCursor: 'a-next'),
+      );
+      await container.read(providerA.future);
+      final older = container.read(providerA.notifier).loadMore();
+      await Future<void>.delayed(Duration.zero);
+      container.read(_session.notifier).state = _user('owner-b');
+      await container.pump();
+      final providerB = ownerCommentsTimelineProvider(
+        OwnerCommentsKey(
+          userId: 'owner-b',
+          sessionRevision: container.read(authSessionRevisionProvider),
+        ),
+      );
+      final subB = container.listen(providerB, (_, _) {});
+      addTearDown(subB.close);
+      await Future<void>.delayed(Duration.zero);
+      service.pending[2].complete(
+        OwnerCommentsPage.fromJson({
+          'items': [_commentJson('account-b-private', 'owner-b')],
+          'nextCursor': null,
+        }),
+      );
+      await container.read(providerB.future);
+      final request = RequestOptions(path: '/api/users/me/comments');
+      service.pending[1].completeError(
+        DioException(
+          requestOptions: request,
+          response: Response(requestOptions: request, statusCode: 403),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      await older;
+      expect(
+        container.read(providerB).requireValue.items.single.id,
+        'account-b-private',
+      );
+      expect(container.read(providerB).hasError, false);
+    },
+  );
+
+  test(
+    'pagination network failure preserves harmless data and its retry cursor',
+    () async {
+      final service = _ControlledOwnerCommentsService();
+      final container = _container(service);
+      addTearDown(container.dispose);
+      final provider = ownerCommentsTimelineProvider(
+        const OwnerCommentsKey(userId: 'owner-a', sessionRevision: 0),
+      );
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+      await Future<void>.delayed(Duration.zero);
+      service.pending[0].complete(
+        _page('private-first', nextCursor: 'retry-cursor'),
+      );
+      await container.read(provider.future);
+      final loading = container.read(provider.notifier).loadMore();
+      await Future<void>.delayed(Duration.zero);
+      service.pending[1].completeError(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/users/me/comments'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+      await loading;
+      final result = container.read(provider).requireValue;
+      expect(result.items.single.id, 'private-first');
+      expect(result.nextCursor, 'retry-cursor');
+      expect(result.loadMoreError, isA<DioException>());
+    },
+  );
+
   test('foreign author response fails closed', () async {
     final service = _ControlledOwnerCommentsService();
     final container = _container(service);

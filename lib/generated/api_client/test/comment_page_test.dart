@@ -13,6 +13,23 @@ void main() {
       // TODO
     });
 
+    // Reply tail cursor for an explicit check for new replies.
+    // String refreshCursor
+    test('to test the property `refreshCursor`', () async {
+      // TODO
+    });
+
+    // Authoritative current rows for the requested cached root/reply IDs. Missing IDs are unavailable; tombstones have no body. Canonical roots include their current visible reply count. Only the signed-in author's eligible pending body may be returned privately.
+    // BuiltList<Comment> revalidatedItems
+    test('to test the property `revalidatedItems`', () async {
+      // TODO
+    });
+
+    // CommentPageAllOfCapabilities capabilities
+    test('to test the property `capabilities`', () async {
+      // TODO
+    });
+
     // BuiltList<Comment> items
     test('to test the property `items`', () async {
       // TODO

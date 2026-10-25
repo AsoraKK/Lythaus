@@ -2,13 +2,16 @@ import 'package:lythaus/features/feed/application/content_recovery_storage.dart'
 import '../../../helpers/content_recovery.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -22,6 +25,9 @@ import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
+import '../../../golden_test_utils.dart';
+
+final _commentCaptureKey = GlobalKey();
 
 const _discover = FeedModel(
   id: 'discover',
@@ -139,8 +145,11 @@ Future<void> _pump(
   bool feed = false,
   MemoryContentRecoveryStorage? storage,
   bool canSubmit = true,
+  Size viewport = const Size(390, 900),
+  double textScale = 1,
+  String? initialCommentId,
 }) async {
-  tester.view.physicalSize = const Size(390, 900);
+  tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -167,44 +176,85 @@ Future<void> _pump(
         feedListProvider.overrideWithValue(const [_discover]),
         liveFeedStateProvider.overrideWith((ref, feed) => _StaticFeed()),
       ],
-      child: MaterialApp(
-        home: feed
-            ? const HomeFeedNavigator()
-            : Builder(
-                builder: (context) => Scaffold(
-                  body: Column(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => CommentThreadScreen(
-                              postId: 'p1',
-                              canSubmit: canSubmit,
+      child: RepaintBoundary(
+        key: _commentCaptureKey,
+        child: MaterialApp(
+          theme: LythausTheme.light(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
+          home: feed
+              ? const HomeFeedNavigator()
+              : Builder(
+                  builder: (context) => Scaffold(
+                    body: Column(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => CommentThreadScreen(
+                                postId: 'p1',
+                                initialCommentId: initialCommentId,
+                                canSubmit: canSubmit,
+                              ),
                             ),
                           ),
+                          child: const Text('Open comments'),
                         ),
-                        child: const Text('Open comments'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                const PostDetailScreen(postId: 'p1'),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  const PostDetailScreen(postId: 'p1'),
+                            ),
                           ),
+                          child: const Text('Open post'),
                         ),
-                        child: const Text('Open post'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
     ),
   );
   await tester.pumpAndSettle();
 }
+
+Future<void> _captureComments(WidgetTester tester, String name) async {
+  final directory = Platform.environment['COMMENT_SCREENSHOTS_DIR'];
+  if (directory == null) return;
+  await tester.runAsync(() async {
+    final boundary =
+        _commentCaptureKey.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+    final image = await boundary.toImage(pixelRatio: 1);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    await Directory(directory).create(recursive: true);
+    await File('$directory/$name.png').writeAsBytes(data!.buffer.asUint8List());
+    image.dispose();
+  });
+}
+
+Map<String, dynamic> _conversationPage(
+  List<Map<String, dynamic>> items, {
+  String? nextCursor,
+  String? refreshCursor,
+  List<Map<String, dynamic>>? revalidatedItems,
+  Map<String, dynamic>? root,
+}) => {
+  'items': items,
+  'nextCursor': nextCursor,
+  'refreshCursor': refreshCursor,
+  if (revalidatedItems != null || root != null)
+    'revalidatedItems': [if (root != null) root, ...?revalidatedItems],
+  'capabilities': {'conversations': true, 'nestedReplies': true},
+};
 
 Future<void> _openComments(WidgetTester tester) async {
   await tester.tap(find.text('Open comments'));
@@ -245,7 +295,12 @@ Future<void> _sendSyntheticComment(WidgetTester tester, String text) async {
 }
 
 void main() {
-  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  setUpAll(() async {
+    await loadFontsForGoldenTests();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+  });
 
   testWidgets(
     'discover card edit uses fresh disclosure and refreshes pending content out of feed',
@@ -1729,6 +1784,644 @@ void main() {
       await tester.tap(find.text('Delete').last);
       await tester.pumpAndSettle();
       expect(find.text('Private revised comment'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'conversation replies expand, keep context and check new replies explicitly',
+    (tester) async {
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 2,
+      };
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['conversationId'] == 'root') {
+          expect(request.queryParameters['sort'], 'newest');
+          if (request.queryParameters['refresh'] == 'true') {
+            expect(request.queryParameters['cursor'], 'reply-tail');
+            return _response(
+              _conversationPage(
+                [
+                  {
+                    ..._comment('late', author: 'other', parent: 'nested'),
+                    'conversationId': 'root',
+                    'createdAt': '2026-10-02T00:00:00Z',
+                  },
+                ],
+                refreshCursor: 'new-tail',
+                root: root,
+                revalidatedItems: [
+                  {
+                    ..._comment('reply', author: 'other', parent: 'root'),
+                    'conversationId': 'root',
+                  },
+                  {
+                    ..._comment('nested', author: 'other', parent: 'reply'),
+                    'conversationId': 'root',
+                    'createdAt': '2026-10-01T01:00:00Z',
+                  },
+                ],
+              ),
+            );
+          }
+          return _response(
+            _conversationPage(
+              [
+                {
+                  ..._comment('reply', author: 'other', parent: 'root'),
+                  'conversationId': 'root',
+                },
+                {
+                  ..._comment('nested', author: 'other', parent: 'reply'),
+                  'conversationId': 'root',
+                  'createdAt': '2026-10-01T01:00:00Z',
+                },
+              ],
+              refreshCursor: 'reply-tail',
+              root: root,
+            ),
+          );
+        }
+        return _response(_conversationPage([root]));
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      expect(find.text('Comment reply'), findsNothing);
+      expect(
+        tester
+            .widget<ChoiceChip>(
+              find.widgetWithText(ChoiceChip, 'Most relevant'),
+            )
+            .onSelected,
+        isNull,
+      );
+      await _captureComments(tester, 'comments-conversations-mobile');
+      await tester.tap(find.byKey(const ValueKey('expand:root')));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment reply'), findsOneWidget);
+      expect(find.text('Comment nested'), findsOneWidget);
+      expect(find.textContaining('Replying to'), findsNWidgets(2));
+      expect(find.text('Reply'), findsNWidgets(3));
+      final list = tester
+          .widget<ListView>(find.byType(ListView).first)
+          .controller!;
+      await tester.ensureVisible(find.text('Check for new replies'));
+      await tester.pumpAndSettle();
+      final before = list.offset;
+      await tester.tap(find.text('Check for new replies'));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment late'), findsOneWidget);
+      expect(list.offset, before);
+      await _captureComments(tester, 'comments-nested-mobile');
+      await tester.ensureVisible(find.text('Hide replies'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hide replies'));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment nested'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'sort switching discards stale reply reads and never reuses another filter cursor',
+    (tester) async {
+      final lateReplies = Completer<ResponseBody>();
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['conversationId'] == 'root') {
+          return lateReplies.future;
+        }
+        if (request.queryParameters['sort'] == 'oldest') {
+          expect(request.queryParameters['cursor'], isNull);
+          return _response(
+            _conversationPage([_comment('oldest', author: 'other')]),
+          );
+        }
+        return _response(
+          _conversationPage([
+            {..._comment('root', author: 'other'), 'replyCount': 1},
+          ], nextCursor: 'newest-only'),
+        );
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.tap(find.byKey(const ValueKey('expand:root')));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Oldest'));
+      await tester.pump();
+      lateReplies.complete(
+        _response(
+          _conversationPage([
+            {
+              ..._comment('stale', author: 'other', parent: 'root'),
+              'conversationId': 'root',
+            },
+          ]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Comment oldest'), findsOneWidget);
+      expect(find.text('Comment stale'), findsNothing);
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Oldest'))
+            .selected,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final revoked in ['blocked', 'under_review', 'deleted']) {
+    testWidgets(
+      'successful new-reply check revalidates a $revoked middle reply',
+      (tester) async {
+        var reads = 0;
+        final root = {
+          ..._comment('root', author: 'other'),
+          'conversationId': 'root',
+          'replyCount': 2,
+        };
+        final middle = {
+          ..._comment('middle', author: 'other', parent: 'root'),
+          'conversationId': 'root',
+        };
+        final child = {
+          ..._comment('child', author: 'other', parent: 'middle'),
+          'conversationId': 'root',
+        };
+        final adapter = _Adapter((request) async {
+          if (request.queryParameters['conversationId'] == 'root') {
+            if (++reads == 1) {
+              return _response(
+                _conversationPage(
+                  [middle, child],
+                  refreshCursor: 'tail',
+                  root: root,
+                ),
+              );
+            }
+            expect(
+              (request.queryParameters['revalidateIds'] as String).split(','),
+              containsAll(['middle', 'child']),
+            );
+            return _response(
+              _conversationPage(
+                [],
+                refreshCursor: 'tail',
+                root: root,
+                revalidatedItems: revoked == 'deleted'
+                    ? [
+                        {...middle, 'deleted': true, 'body': null},
+                        child,
+                      ]
+                    : [],
+              ),
+            );
+          }
+          return _response(
+            _conversationPage([
+              {..._comment('root', author: 'other'), 'replyCount': 2},
+            ]),
+          );
+        });
+        await _pump(tester, adapter);
+        await _openComments(tester);
+        await tester.tap(find.byKey(const ValueKey('expand:root')));
+        await tester.pumpAndSettle();
+        expect(find.text('Comment middle'), findsOneWidget);
+        await tester.ensureVisible(find.text('Check for new replies'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Check for new replies'));
+        await tester.pumpAndSettle();
+        expect(find.text('Comment middle'), findsNothing);
+        expect(
+          find.text('Comment child'),
+          revoked == 'deleted' ? findsOneWidget : findsNothing,
+        );
+      },
+    );
+  }
+
+  testWidgets(
+    'deleted root is authoritatively redacted while descendants and reading anchor survive',
+    (tester) async {
+      var deleted = false;
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 20,
+        'body': List.filled(12, 'Original root context.').join('\n'),
+      };
+      final replies = List.generate(
+        20,
+        (index) => {
+          ..._comment(
+            'child${index.toString().padLeft(2, '0')}',
+            author: 'other',
+            parent: 'root',
+          ),
+          'conversationId': 'root',
+        },
+      );
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['conversationId'] == 'root') {
+          expect(
+            (request.queryParameters['revalidateIds'] as String).split(','),
+            contains('root'),
+          );
+          return _response(
+            _conversationPage(
+              deleted ? [] : replies,
+              refreshCursor: 'tail',
+              root: {
+                ...root,
+                if (deleted) ...{'deleted': true, 'body': null},
+              },
+              revalidatedItems: deleted
+                  ? replies
+                        .map((row) => {...row, 'replyToDeleted': true})
+                        .toList()
+                  : [],
+            ),
+          );
+        }
+        return _response(
+          _conversationPage([
+            root,
+            {
+              ..._comment('other', author: 'other'),
+              'body': List.filled(30, 'Another conversation.').join('\n'),
+            },
+          ]),
+        );
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.ensureVisible(find.byKey(const ValueKey('expand:root')));
+      await tester.tap(find.byKey(const ValueKey('expand:root')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Check for new replies'));
+      await tester.pumpAndSettle();
+      final scroll = tester
+          .widget<ListView>(find.byType(ListView).first)
+          .controller!;
+      scroll.jumpTo(scroll.offset - 220);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment child19').hitTestable(), findsOneWidget);
+      final before = tester.getRect(find.text('Comment child19')).top;
+      deleted = true;
+      await tester.tap(find.text('Check for new replies'));
+      await tester.pumpAndSettle();
+      expect(find.text(root['body'] as String), findsNothing);
+      expect(find.text('[deleted]'), findsOneWidget);
+      expect(find.text('Comment child19').hitTestable(), findsOneWidget);
+      expect(
+        tester.getRect(find.text('Comment child19')).top,
+        closeTo(before, 1),
+      );
+      expect(find.text('Comment child00'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'fresh not-found owner receipt removes a previously submitted local comment',
+    (tester) async {
+      final adapter = _Adapter((request) async {
+        if (request.method == 'POST') {
+          return _response({
+            'id': 'submitted',
+            'postId': 'p1',
+            ..._body(request),
+            'moderationState': 'under_review',
+          }, 201);
+        }
+        if (request.path.endsWith('/owner-view')) {
+          return _response({'error': 'comment_not_found'}, 404);
+        }
+        return _response({'items': <Object>[]});
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await _draft(tester, 'Withdrawn pending reply');
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pumpAndSettle();
+      expect(find.text('Withdrawn pending reply'), findsOneWidget);
+      final refreshing = tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh();
+      await tester.pumpAndSettle();
+      await refreshing;
+      expect(find.text('Withdrawn pending reply'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'changing sort never silently reparents an unfinished reply draft',
+    (tester) async {
+      final adapter = _Adapter((request) async {
+        if (request.method == 'POST') {
+          return _response({
+            'id': 'pending',
+            'postId': 'p1',
+            ..._body(request),
+            'moderationState': 'under_review',
+          }, 201);
+        }
+        return _response(
+          _conversationPage([
+            _comment(
+              request.queryParameters['sort'] == 'oldest'
+                  ? 'older-root'
+                  : 'root',
+              author: 'other',
+            ),
+          ]),
+        );
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.tap(find.text('Reply'));
+      await _draft(tester, 'This stays a reply to the same root.');
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Oldest'));
+      await tester.pumpAndSettle();
+      expect(find.text('Saved reply target retained.'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pumpAndSettle();
+      expect(
+        _body(
+          adapter.requests.singleWhere((request) => request.method == 'POST'),
+        )['parentId'],
+        'root',
+      );
+    },
+  );
+
+  testWidgets(
+    'comment sort is remembered on this device for the current account',
+    (tester) async {
+      final storage = MemoryContentRecoveryStorage();
+      final adapter = _Adapter(
+        (request) async => _response(
+          _conversationPage([
+            _comment(
+              request.queryParameters['sort'] as String,
+              author: 'other',
+            ),
+          ]),
+        ),
+      );
+      await _pump(tester, adapter, storage: storage);
+      await _openComments(tester);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Oldest'));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment oldest'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, adapter, storage: storage);
+      await _openComments(tester);
+      expect(find.text('Comment oldest'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, adapter, storage: storage, actor: 'another-account');
+      await _openComments(tester);
+      expect(find.text('Comment newest'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'reply context resolves and links to the exact unloaded parent comment',
+    (tester) async {
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 2,
+      };
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['targetId'] == 'parent') {
+          return _response(
+            _conversationPage([
+              {
+                ..._comment('parent', author: 'other', parent: 'root'),
+                'conversationId': 'root',
+              },
+            ]),
+          );
+        }
+        if (request.queryParameters['conversationId'] == 'root') {
+          return _response(
+            _conversationPage([
+              {
+                ..._comment('nested', author: 'other', parent: 'parent'),
+                'conversationId': 'root',
+              },
+            ], root: root),
+          );
+        }
+        return _response(
+          _conversationPage([
+            {..._comment('root', author: 'other'), 'replyCount': 2},
+          ]),
+        );
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.tap(find.byKey(const ValueKey('expand:root')));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment parent'), findsNothing);
+      await tester.tap(
+        find.widgetWithText(TextButton, 'Replying to an earlier comment'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Comment parent'), findsOneWidget);
+      expect(
+        adapter.requests.where(
+          (request) => request.queryParameters['targetId'] == 'parent',
+        ),
+        hasLength(1),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a notification target opens its exact conversation beyond the first root page',
+    (tester) async {
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['targetId'] == 'target') {
+          return _response(
+            _conversationPage([
+              {
+                ..._comment('target', author: 'other', parent: 'old-root'),
+                'conversationId': 'old-root',
+              },
+            ]),
+          );
+        }
+        if (request.queryParameters['targetId'] == 'old-root') {
+          return _response(
+            _conversationPage([
+              {..._comment('old-root', author: 'other'), 'replyCount': 1},
+            ]),
+          );
+        }
+        return _response(
+          _conversationPage([_comment('new-root', author: 'other')]),
+        );
+      });
+      await _pump(tester, adapter, initialCommentId: 'target');
+      await _openComments(tester);
+      expect(find.text('Comment target'), findsOneWidget);
+      expect(find.text('Comment old-root'), findsOneWidget);
+      expect(find.text('Hide replies'), findsOneWidget);
+      expect(
+        adapter.requests.where(
+          (request) => request.queryParameters['targetId'] == 'target',
+        ),
+        hasLength(1),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a cached notification target is materialized outside the lazy viewport on repeated navigation',
+    (tester) async {
+      final roots = List.generate(
+        25,
+        (index) => _comment(
+          'root${index.toString().padLeft(2, '0')}',
+          author: 'other',
+        ),
+      );
+      final adapter = _Adapter(
+        (request) async => _response(
+          _conversationPage(
+            request.queryParameters['targetId'] != null
+                ? roots
+                      .where(
+                        (row) =>
+                            row['id'] == request.queryParameters['targetId'],
+                      )
+                      .toList()
+                : roots,
+          ),
+        ),
+      );
+      await _pump(tester, adapter, initialCommentId: 'root00');
+      for (var visit = 0; visit < 2; visit++) {
+        await _openComments(tester);
+        expect(find.text('Comment root00').hitTestable(), findsOneWidget);
+        final list = tester
+            .widget<ListView>(find.byType(ListView).first)
+            .controller!;
+        expect(list.offset, greaterThan(0));
+        final row = tester.getRect(find.text('Comment root00'));
+        final viewport = tester.getRect(find.byType(ListView).first);
+        expect(row.top, greaterThanOrEqualTo(viewport.top));
+        expect(row.bottom, lessThanOrEqualTo(viewport.bottom));
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final status in [404, 500]) {
+    testWidgets('exact-target denial $status handles cached content honestly', (
+      tester,
+    ) async {
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['targetId'] != null) {
+          return _response({'error': 'post_not_found'}, status);
+        }
+        return _response(
+          _conversationPage([_comment('cached', author: 'other')]),
+        );
+      });
+      await _pump(tester, adapter, initialCommentId: 'unavailable');
+      await _openComments(tester);
+      expect(
+        find.text('Comment cached'),
+        status == 404 ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.text('This post is unavailable.'),
+        status == 404 ? findsOneWidget : findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final status in [401, 403, 404]) {
+    testWidgets(
+      'withdrawn parent access $status clears cached children on refresh',
+      (tester) async {
+        var available = true;
+        final adapter = _Adapter(
+          (request) async => available
+              ? _response({
+                  'items': [_comment('sensitive', author: 'other')],
+                })
+              : _response({'error': 'post_not_found'}, status),
+        );
+        await _pump(tester, adapter);
+        await _openComments(tester);
+        expect(find.text('Comment sensitive'), findsOneWidget);
+        available = false;
+        final refreshing = tester
+            .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+            .onRefresh();
+        await tester.pumpAndSettle();
+        await refreshing;
+        expect(find.text('Comment sensitive'), findsNothing);
+        expect(find.byType(MaterialBanner), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets(
+    'nested conversations wrap at 320 pixels and large text without increasing indentation',
+    (tester) async {
+      await loadFontsForGoldenTests();
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 1,
+        'body': 'A conversation can stay readable on a small phone.',
+      };
+      final adapter = _Adapter(
+        (request) async => _response(
+          _conversationPage(
+            request.queryParameters['conversationId'] == 'root'
+                ? [
+                    {
+                      ..._comment('reply', author: 'other', parent: 'root'),
+                      'conversationId': 'root',
+                      'body': 'A clear reply with context on a narrow screen.',
+                    },
+                  ]
+                : [root],
+            root: request.queryParameters['conversationId'] == 'root'
+                ? root
+                : null,
+          ),
+        ),
+      );
+      await _pump(
+        tester,
+        adapter,
+        viewport: const Size(320, 900),
+        textScale: 1.6,
+      );
+      await _openComments(tester);
+      final semantics = tester.ensureSemantics();
+      await tester.tap(find.byKey(const ValueKey('expand:root')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Replying to'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await _captureComments(tester, 'comments-narrow-large-text');
+      semantics.dispose();
     },
   );
 

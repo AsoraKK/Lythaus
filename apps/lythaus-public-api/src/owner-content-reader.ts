@@ -1,5 +1,6 @@
 import { classifyPublicError } from './auth-runtime-policy.ts';
 import { assertFeedItemEligibility } from './feed-runtime-policy.ts';
+import { commentConversationRootSql, commentParentVisibilitySql, commentPostVisibilitySql } from '../../../packages/db/src/comment-visibility.ts';
 
 export interface OwnerContentReadDependencies {
   authenticate: () => Promise<{ userId: string }>;
@@ -33,6 +34,7 @@ export const ownerPostsQuery = `SELECT post.id, post.author_id AS "authorId", po
  ORDER BY post.created_at DESC, post.id DESC LIMIT $4`;
 
 export const ownerCommentQuery = `SELECT comment.id, comment.post_id AS "postId",
+       ${commentConversationRootSql} AS "conversationId",
        comment.author_id AS "authorId", comment.parent_id AS "parentId", comment.depth,
        comment.body, comment.declared_creation_mode AS "declaredCreationMode",
        comment.moderation_state AS "moderationState", comment.created_at AS "createdAt",
@@ -41,11 +43,14 @@ export const ownerCommentQuery = `SELECT comment.id, comment.post_id AS "postId"
   JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active'
   JOIN content.posts post ON post.id = comment.post_id AND post.deleted_at IS NULL
  WHERE comment.id = $1::uuid AND comment.author_id = $2::uuid AND comment.deleted_at IS NULL
-   AND comment.moderation_state IN ('allowed', 'under_review')`;
+   AND comment.moderation_state IN ('allowed', 'under_review')
+   AND ${commentPostVisibilitySql('$2')}
+   AND ${commentParentVisibilitySql('$2')}`;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const cursorTimestamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{6})Z$/;
 export const ownerCommentsQuery = `SELECT comment.id, comment.post_id AS "postId",
+       ${commentConversationRootSql} AS "conversationId",
        comment.author_id AS "authorId", comment.parent_id AS "parentId", comment.depth,
        comment.body, comment.declared_creation_mode AS "declaredCreationMode",
        comment.moderation_state AS "moderationState", comment.created_at AS "createdAt",
@@ -69,6 +74,7 @@ export const ownerCommentsQuery = `SELECT comment.id, comment.post_id AS "postId
    )))
    AND NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $1 AND b.blocked_id = post.author_id)
      OR (b.blocker_id = post.author_id AND b.blocked_id = $1))
+   AND ${commentParentVisibilitySql('$1')}
    AND ($2::timestamptz IS NULL OR (comment.created_at, comment.id) < ($2::timestamptz, $3::uuid))
  ORDER BY comment.created_at DESC, comment.id DESC LIMIT $4`;
 
@@ -163,7 +169,7 @@ export function presentOwnerContent(
   };
   return kind === 'post'
     ? { ...common, visibility: row.visibility }
-    : { ...common, postId: row.postId, parentId: row.parentId, depth: row.depth, deleted: false };
+    : { ...common, postId: row.postId, parentId: row.parentId, conversationId: row.conversationId, depth: row.depth, deleted: false };
 }
 
 export async function handleOwnerContentRead(

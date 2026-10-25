@@ -27,6 +27,11 @@ void main() {
       // TODO
     });
 
+    // String conversationId
+    test('to test the property `conversationId`', () async {
+      // TODO
+    });
+
     // int depth
     test('to test the property `depth`', () async {
       // TODO
