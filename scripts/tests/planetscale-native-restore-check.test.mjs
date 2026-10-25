@@ -132,6 +132,37 @@ test('plan mode performs no SQL, reset, protection, creation or cleanup', async 
   assert.equal(report.status, 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED');
   assert.ok(!f.calls.some(value => /^(SQL|POST|PATCH|DELETE)/.test(value)));
 });
+test('qualification rejects missing or malformed dedicated credentials without falling back to shared access', async t => {
+  const request = t.mock.method(globalThis, 'fetch', async () => { throw new Error('unexpected provider request'); });
+  for (const execute of [false, true]) for (const token of [undefined, '', 'id-only', ':secret', 'id:', 'id:secret:extra', 'id:secret\n']) {
+    const f = fixture(); f.options.api = undefined;
+    Object.assign(f.options.environment, { RESTORE_CHECK_EXECUTE: String(execute),
+      PLANETSCALE_API_TOKEN: 'sharedsynthetic:shared-synthetic-value', PLANETSCALE_RESTORE_API_TOKEN: token });
+    const report = await runNativeRestore(f.options);
+    assert.equal(report.status, 'BLOCKED'); assert.deepEqual(report.blockers, ['existing_service_token_pair_required']);
+    assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+    assert.equal(report.createdTargetId, null);
+  }
+  assert.equal(request.mock.callCount(), 0);
+});
+test('qualification uses the dedicated pair and its self identity when shared access is also present', async t => {
+  const f = fixture(), pair = 'restoresynthetic:restore-synthetic-value', urls = [];
+  f.options.api = undefined;
+  Object.assign(f.options.environment, { RESTORE_CHECK_EXECUTE: 'false', PLANETSCALE_RESTORE_API_TOKEN: pair,
+    PLANETSCALE_API_TOKEN: 'sharedsynthetic:shared-synthetic-value' });
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    urls.push(url); assert.equal(options.method, 'GET'); assert.equal(options.headers.authorization, pair);
+    if (url === apiBase) return Response.json({ id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' });
+    if (url.endsWith('/service-tokens/restoresynthetic')) return Response.json({ id: 'restoresynthetic',
+      service_token_accesses: authorityRows() });
+    assert.equal(url, apiBase + '/branches/main');
+    return Response.json({ id: 'different-source' });
+  });
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, ['source_branch_identity_changed']);
+  assert.equal(report.authorityDiagnostic.accessRowCount, 9); assert.equal(urls.length, 3);
+  assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+});
 test('consumed cleanup reservation blocks qualification before spending', async () => {
   const f = fixture(); f.options.reserveCleanup = async () => ({ workflowId: 42, runNumber: 2 });
   const report = await runNativeRestore(f.options);
