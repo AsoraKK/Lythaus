@@ -64,6 +64,21 @@ Widget _withResponse(Map<String, dynamic> payload) => ProviderScope(
   child: _tracker,
 );
 
+Widget _withReport(
+  Future<Map<String, dynamic>> Function(String sourceMonth) handler,
+) => ProviderScope(
+  overrides: [
+    monthlyReputationReportProvider.overrideWith(
+      (ref, sourceMonth) => handler(sourceMonth),
+    ),
+  ],
+  child: const MaterialApp(
+    home: Scaffold(
+      body: SingleChildScrollView(child: MonthlyReputationReportCard()),
+    ),
+  ),
+);
+
 User _user(String id) => User(
   id: id,
   email: '$id@example.invalid',
@@ -139,6 +154,57 @@ void main() {
       _captureKey,
       'monthly-level-unavailable',
     );
+  });
+
+  testWidgets('report config absence remains pending owner approval', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _withReport(
+        (_) async => {
+          'reportState': 'pending',
+          'reasonCode': 'report_unavailable',
+          'sourceMonth': '2026-09',
+          'effectiveMonth': '2026-10',
+          'policyVersion': 'lythaus-monthly-rewards-2026-10-v1',
+          'levelAuthority': {
+            'state': 'unavailable',
+            'reasonCode': 'approval_unavailable',
+            'effectiveMonth': '2026-10',
+            'sourceMonth': null,
+            'sourceScore': null,
+            'level': null,
+            'levelKind': null,
+          },
+          'corrections': {'sourceRevisions': [], 'effectiveSnapshots': []},
+          'report': null,
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('pending owner approval'), findsOneWidget);
+    expect(
+      find.textContaining('No score or entitlement has been activated.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('unavailable right now'), findsNothing);
+  });
+
+  testWidgets('report request failure uses the supported unavailable view', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _withReport((_) async => throw StateError('Synthetic transport failure')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Your private monthly report is unavailable right now.'),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.textContaining('pending owner approval'), findsNothing);
   });
 
   testWidgets('unavailable activation gate keeps its pending-approval reason', (
