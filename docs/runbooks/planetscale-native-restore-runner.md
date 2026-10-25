@@ -14,8 +14,17 @@ before dispatching `execute=true`.
 `planetscale-native-restore-check.yml` defaults to a read-only metadata plan.
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
-record. A prior execute run at the same SHA blocks another execution, even if
-that prior run failed. Never rerun an uncertain mutation.
+record. Every prior execute run in the complete workflow history blocks another
+execution, even across SHAs. The only reconciled history item is pinned run
+`40184823787` at `43829abc3424a88a22826695bbfdc7be4a116e62`; it is accepted only
+when GitHub still proves the exact workflow and attempt, terminal cancellation,
+no production approval, one terminal cancelled job with no assigned runner and
+an explicit empty step list, and no artifacts. Any missing, changed, extra or
+uncertain evidence blocks. Before target creation, the runner also requires an
+exact target GET 404, a complete branch inventory without the target, and
+backup restore history without the target. This one-run reconciliation never
+permits retry after a runner or step starts, or after a provider mutation may
+have occurred.
 
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
 `zw0so7f5jbpu` (provisional until a fresh API read confirms its metadata).
@@ -182,6 +191,17 @@ finite retention plan, and an actually reserved operator/reviewer window. The
 candidate uses specified-snapshot restore only; it does not use a PITR
 timestamp. Never reuse an expired approval record or substitute the dashboard's
 snapshot label for API `completed_at`.
+
+The protected production environment can delay the runner until a human
+approves it. Obtain a fresh UTC availability block of at least two hours and
+thirty minutes, dispatch only when the named operator/reviewer can approve
+promptly, and complete approval within the first thirty minutes. Set
+`availableFrom` to the block start, `availableUntil` and `expiresAt` to its
+end, and `decisionBy` to two hours after its start. This leaves the full
+two-hour runner window after any start in the first thirty minutes. If the
+approval margin is missed, do not approve a run that would start with less than
+two hours remaining; a runner-started failed preflight is not eligible for the
+one pinned pre-runner reconciliation.
 
 Known two-hour compute/storage plus a conservative 20-GiB additional backup/WAL
 day and 10-MiB egress is about US$0.038604429 before tax/fees. The packet must
