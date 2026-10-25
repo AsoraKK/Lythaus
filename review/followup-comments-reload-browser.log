@@ -1,0 +1,10 @@
+{"status":"FAILED","failure":"Restored comment draft","body":"Back\nComments\nReply\nEdit comment\nDelete comment\nReply\nDraft restored on this device.\nSend reply\nAI-generated public content is not allowed. AI-assisted text is limited to 249 user-perceived characters.","errors":[],"blocked":[]}
+file:///workspace/lythaus-comments-review/review/comment-reload.browser.mjs:25
+    if (Date.now() - start > timeout) throw new Error(message);
+                                            ^
+
+Error: Restored comment draft
+    at until (file:///workspace/lythaus-comments-review/review/comment-reload.browser.mjs:25:45)
+    at async file:///workspace/lythaus-comments-review/review/comment-reload.browser.mjs:66:3
+
+Node.js v22.23.3

@@ -1,0 +1,14 @@
+Command:
+source /workspace/.lythaus-tools/activate.sh && flutter test --no-pub test/review/affected_screen_accessibility_test.dart
+
+Output:
+00:00 +0: loading /workspace/lythaus-e2e-review/test/review/affected_screen_accessibility_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: feed post actions expose a named tappable button target
+00:00 +1: comment composer exposes a labeled text field and send button
+00:01 +2: comment reply semantics remain usable at 200% text on compact viewports
+00:01 +3: rewards failure presents a named enabled retry button
+00:01 +4: (tearDownAll)
+00:01 +4: All tests passed!
+
+Exit status: 0

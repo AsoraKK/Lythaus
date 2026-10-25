@@ -1,0 +1,11 @@
+✔ CS01 exact target must alter the real handler lookup (20.593431ms)
+✔ CS02 conversation newest mode must alter the legacy flat query (1.535023ms)
+✔ CS03 conversation response must expose capabilities expected by pending UI (0.937999ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 419.240015

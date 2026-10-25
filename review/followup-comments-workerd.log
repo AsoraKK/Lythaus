@@ -1,0 +1,18 @@
+✔ proposed shared hooks execute authenticated nested create with exact idempotent replay and one outbox record (3942.940506ms)
+{"timestamp":"2026-10-25T04:29:49.883Z","service":"lythaus-public-api","correlationId":"1b51dc8c-9b60-4a17-8ed9-4c2be8df5f81","errorCode":"idempotency_in_progress","internalErrorCode":"idempotency_in_progress","route":"/api/posts/01a17152-6d7c-7bfd-8e8d-18ebbf352ed0/comments"}
+✔ concurrent same-key submissions and distinct replies neither duplicate nor double-count (322.329481ms)
+{"timestamp":"2026-10-25T04:29:50.285Z","service":"lythaus-public-api","correlationId":"7319778e-646e-416f-b7d6-1e4153d1d9f3","errorCode":"ai_generated_public_content_blocked","internalErrorCode":"ai_generated_public_content_blocked","route":"/api/posts/01a17152-6ec0-7c37-9536-815016e2eba1/comments"}
+{"timestamp":"2026-10-25T04:29:50.348Z","service":"lythaus-public-api","correlationId":"81c62bb0-31bd-4efa-8e53-2b80a890effa","errorCode":"ai_assisted_character_limit_exceeded","internalErrorCode":"ai_assisted_character_limit_exceeded","route":"/api/posts/01a17152-6ec0-7c37-9536-815016e2eba1/comments"}
+{"timestamp":"2026-10-25T04:29:50.414Z","service":"lythaus-public-api","correlationId":"bc74eebb-df10-4271-946a-cec1e040a98f","errorCode":"invalid_comment_parent","internalErrorCode":"invalid_comment_parent","route":"/api/posts/01a17152-6ec0-7c37-9536-815016e2eba1/comments"}
+{"timestamp":"2026-10-25T04:29:50.478Z","service":"lythaus-public-api","correlationId":"50e1fcab-6f4c-43f0-be5a-d26ea4cb1496","errorCode":"comment_not_found","internalErrorCode":"comment_not_found","route":"/api/comments/01a17152-6ef8-72c3-8cea-80cadc769506"}
+{"timestamp":"2026-10-25T04:29:50.703Z","service":"lythaus-public-api","correlationId":"2b71eb4b-4a21-4ff0-a8c8-15b70754ab5a","errorCode":"post_not_available","internalErrorCode":"post_not_available","route":"/api/posts/01a17152-6ec0-7c37-9536-815016e2eba1/comments"}
+✔ reply producers preserve disclosure, ownership, parent visibility and revision moderation gates (596.746982ms)
+✔ notification adapter rolls back interruption, retries once, respects preferences and filters current read/unread counts (375.647648ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5535.753052

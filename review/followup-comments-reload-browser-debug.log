@@ -1,0 +1,18 @@
+{"commentResponse":"{\"items\":[{\"id\":\"c1\",\"postId\":\"p1\",\"authorId\":\"owner\",\"authorDisplayName\":\"Kai Rivers\",\"body\":\"Synthetic owner comment\",\"parentId\":null,\"declaredCreationMode\":\"human\",\"moderationState\":\"allowed\",\"createdAt\":\"2026-10-01T00:00:00Z\"},{\"id\":\"c2\",\"postId\":\"p1\",\"authorId\":\"other\",\"authorDisplayName\":\"Rowan West\",\"body\":\"Synthetic other comment\",\"parentId\":null,\"declaredCreationMode\":\"human\",\"moderationState\":\"allowed\",\"createdAt\":\"2026-10-01T00:00:00Z\"}],\"nextCursor\":null}"}
+{"status":"FAILED","failure":"locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Synthetic owner comment') to be visible\u001b[22m\n","body":"Back\nComments\nReply\nEdit comment\nDelete comment\nReply\nSend reply\nAI-generated public content is not allowed. AI-assisted text is limited to 249 user-perceived characters.","errors":[],"blocked":[]}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 20000ms exceeded.
+Call log:
+[2m  - waiting for getByText('Synthetic owner comment') to be visible[22m
+
+    at /workspace/lythaus-comments-review/review/comment-reload.browser.mjs:31:44 {
+  log: [
+    "  - waiting for getByText('Synthetic owner comment') to be visible"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v22.23.3

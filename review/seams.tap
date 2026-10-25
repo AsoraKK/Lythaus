@@ -1,0 +1,20 @@
+✔ S01 serialized post revision survives producer-consumer boundary (0.976367ms)
+✔ S02 serialized comment revision uses commentId, not postId (0.84633ms)
+✔ S03 stale event after edit (0.1126ms)
+✔ S04 stale text hash after edit (0.086681ms)
+✔ S05 changed creation mode (0.07309ms)
+✔ S06 deletion before processing (0.066591ms)
+✔ S07 already published delivery (0.054062ms)
+✔ S08 missing canonical content cannot become current (0.083537ms)
+✔ S09 content and media events reach their declared queue routes (0.289217ms)
+✔ S10 ordinary duplicate workflow create is idempotently accepted (1.206986ms)
+✔ S11 interrupted workflow create remains retryable error (0.274876ms)
+✔ S12 event id mismatch rejects a stale payload before persistence (0.105099ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 98.702784

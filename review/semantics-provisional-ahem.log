@@ -1,0 +1,12 @@
+Provisional run without bundled app fonts loaded. This run is superseded and must not be treated as a product defect reproduction.
+
+Command:
+source /workspace/.lythaus-tools/activate.sh && flutter test --no-pub test/review/affected_screen_accessibility_test.dart --plain-name='comment reply semantics remain usable at 200% text on compact viewports'
+
+Relevant output:
+00:00 +0: comment reply semantics remain usable at 200% text on compact viewports
+Expected: empty
+  Actual: ['Size(320.0, 640.0): A RenderFlex overflowed by 318 pixels on the bottom.']
+00:01 +0 -1: comment reply semantics remain usable at 200% text on compact viewports [E]
+
+Exit status: 1. The fallback Ahem font changed line metrics. After loading the bundled Manrope Regular/Medium/SemiBold/Bold fonts and Material Icons, the same viewport comparison passed without overflow.

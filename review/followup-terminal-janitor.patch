@@ -1,0 +1,28 @@
+diff --git a/packages/media/tests/standard-upload.workerd.mjs b/packages/media/tests/standard-upload.workerd.mjs
+--- a/packages/media/tests/standard-upload.workerd.mjs
++++ b/packages/media/tests/standard-upload.workerd.mjs
+@@ -413,3 +413,24 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
+       assert.equal(state.ledgerReserved, png.length);
+     });
++    await t.test('terminal janitor deletes unreferenced derivatives and retries a failed approved-bucket delete', async () => {
++      const input = await seed('cancelled', { unexpired: false, cleanupDue: true });
++      state.ledgerReserved = 0;
++      const derivativeKey = `approved/${input.userId}/${input.sessionId}.webp`;
++      const quarantineKey = state.session.object_key;
++      await fixture.approved.put(derivativeKey, png);
++
++      assert.equal((await fixture.cleanup({ failApprovedDelete: true })).status, 204);
++      assert.equal(state.session.quarantine_deleted_at, null);
++      assert.equal(await fixture.quarantine.head(quarantineKey), null);
++      assert.ok(await fixture.approved.head(derivativeKey));
++      assert.equal(state.ledgerWrites, 0);
++      assert.equal(state.ledgerReserved, 0);
++
++      assert.equal((await fixture.cleanup()).status, 204);
++      assert.equal(state.session.quarantine_deleted_at, true);
++      assert.equal(await fixture.approved.head(derivativeKey), null);
++      await fixture.cleanup();
++      assert.equal(state.ledgerWrites, 0);
++      assert.equal(state.ledgerReserved, 0);
++    });
+     await t.test('owner finalization returns a private queued receipt, no publication or storage locator', async () => {

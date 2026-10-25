@@ -1,0 +1,23 @@
+✔ monthly report route authenticates and binds report reads to the fresh principal (23.178743ms)
+✔ monthly report CSV is private, formula-safe and remains owner scoped (1.848537ms)
+✔ monthly report accepts explicit JSON format and does not overload its typed response with CSV (1.248349ms)
+✔ invalid report months and formats fail before querying monthly data (0.657045ms)
+✔ anonymous monthly reads are rejected before any report query (0.479345ms)
+✔ monthly rewards stays pending without approved server configuration and performs no monthly query (1.101277ms)
+✔ monthly confirmed projection preserves authority under the selection period lock (1.646381ms)
+✔ monthly shadow projection preserves authority under the selection period lock (0.992021ms)
+✔ monthly pending projection preserves authority under the selection period lock (0.651757ms)
+✔ feature-off monthly readers return a pending route projection without reading proposal tables (0.713019ms)
+✔ unrelated paths and methods are left to the main dispatcher (0.22468ms)
+✔ source overflow returns the published private unavailable error with fresh server correlation and no partial report (2.129943ms)
+✔ JSON and CSV output bounds return a private error instead of emitting an oversized successful response (1.261289ms)
+✔ unavailable reports preserve their exact private v1 JSON and CSV shapes (0.849666ms)
+✔ each monthly request refreshes the principal and never accepts a request-supplied owner or bound (1.188559ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 238.434976

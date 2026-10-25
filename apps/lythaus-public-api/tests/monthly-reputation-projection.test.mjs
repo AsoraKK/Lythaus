@@ -76,3 +76,16 @@ test('fresh account projections never retain another account confirmed fields', 
   assert.equal(second.sourceScore, null);
   assert.equal(projectMonthlyRewards(assessed, { ...selection, state: 'ready' }).currentLevel, 5);
 });
+
+test('serialized fresh pending projection keeps confirmed fields explicitly empty', () => {
+  const confirmedAccount = projectMonthlyRewards(assessed, { ...selection, state: 'ready' });
+  const freshAccount = projectMonthlyRewards({ state: 'pending', reasonCode: 'no_previous_assessment',
+    effectiveMonth: '2026-10', level: 1, levelKind: 'unassessed_default', sourceMonth: null, sourceScore: null }, selection);
+  const payload = JSON.parse(JSON.stringify(freshAccount));
+  assert.equal(confirmedAccount.currentLevel, 5);
+  assert.equal(payload.state, 'pending');
+  assert.equal(payload.currentLevel, null);
+  assert.equal(payload.sourceMonth, null);
+  assert.equal(payload.sourceScore, null);
+  assert.equal(payload.reasonCode, 'no_previous_assessment');
+});

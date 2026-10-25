@@ -1,0 +1,168 @@
+Applying 0000_preflight.sql
+Applying 0001_extensions_and_schemas.sql
+Applying 0002_core_tables.sql
+Applying 0003_domain_extensions.sql
+Applying 0004_launch_contract.sql
+Applying 0005_auth_revocation.sql
+Applying 0006_admin_role_expansion.sql
+Applying 0007_contact_emails.sql
+Applying 0008_legacy_relink_status.sql
+Applying 0009_cost_budget_enforcement.sql
+Applying 0010_native_runtime_parity.sql
+Applying 0011_email_guest_auth_only.sql
+Applying 0012_product_integrity_v2.sql
+Applying 0013_marketing_waitlist.sql
+Applying 0014_transactional_email_outbox.sql
+Applying 0015_production_auth_acceptance_coordinator.sql
+Applying 0016_transactional_email_envelope_boundary.sql
+Applying 0017_authenticity_beta.sql
+Applying 0018_authenticity_private_alpha.sql
+Applying 0019_authenticity_alpha_hardening.sql
+Applying 0020_auth_recovery_delivery.sql
+Applying 0021_media_quarantine_cleanup.sql
+{
+  "serverVersion": 170011,
+  "migrations": [
+    {
+      "name": "0000_preflight.sql",
+      "checksum": "8d4466de2ffa8c1fb3f6cb46464045e5ef199a64fcba312682623945636eaf33"
+    },
+    {
+      "name": "0001_extensions_and_schemas.sql",
+      "checksum": "30ed94cab4f9aae8b5ca9701214c0ec6e1b7a8182daa1c4a76bca8f37e7da610"
+    },
+    {
+      "name": "0002_core_tables.sql",
+      "checksum": "81e3ad9f8f6253219384164c5f36cdc15ad91442371e62497aa27f9e326c0070"
+    },
+    {
+      "name": "0003_domain_extensions.sql",
+      "checksum": "71b5afe5a01158cc437e75bb82cebbfced6921fc815ad35a647e3da4e1c2818d"
+    },
+    {
+      "name": "0004_launch_contract.sql",
+      "checksum": "962ccce035cac919de65101c713f4d0db079760550e646af32b794a4c76e8020"
+    },
+    {
+      "name": "0005_auth_revocation.sql",
+      "checksum": "47cd39f391a296009bda9abede39dbeddef6519ecffeda3a58b50e0742f09961"
+    },
+    {
+      "name": "0006_admin_role_expansion.sql",
+      "checksum": "aa3ba8a9aa252ff250dd5ea9e4c7c975c23b04ff8eef40ee30c2137b98d917a7"
+    },
+    {
+      "name": "0007_contact_emails.sql",
+      "checksum": "b6bb0a30b7cc42de61c89fee153d99ab662ccb7271d98ac63b6376f9153c6fa9"
+    },
+    {
+      "name": "0008_legacy_relink_status.sql",
+      "checksum": "ae74550e61dcd93aebaae29ed4ec91587284524a0f6b6ef3e35b36467dec891a"
+    },
+    {
+      "name": "0009_cost_budget_enforcement.sql",
+      "checksum": "f01612bd36151317d08c3dc7d9903e1c46e62ec076876fc3e4890ad794c7602b"
+    },
+    {
+      "name": "0010_native_runtime_parity.sql",
+      "checksum": "01bd4c8fc4548fed3d6504f242ca146504fe60c8b49eed868880f82d8d0c0c94"
+    },
+    {
+      "name": "0011_email_guest_auth_only.sql",
+      "checksum": "0536054f579e4f0bad3f459a19abeae3706b45d1c488a205aa8a1274632f356e"
+    },
+    {
+      "name": "0012_product_integrity_v2.sql",
+      "checksum": "b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725"
+    },
+    {
+      "name": "0013_marketing_waitlist.sql",
+      "checksum": "a31d54931bf93bcc7a3518ea77753390a7a7768924de073e6e5711f087bda7e7"
+    },
+    {
+      "name": "0014_transactional_email_outbox.sql",
+      "checksum": "7d4352cc6f74d8216a9ece9b8e2c5bcef53088b1000e53d1f3303ef09c121222"
+    },
+    {
+      "name": "0015_production_auth_acceptance_coordinator.sql",
+      "checksum": "e8db5a46be476750632d1f184eb27aa2c1d9fbf5ecd9969bd7ad880397df4fef"
+    },
+    {
+      "name": "0016_transactional_email_envelope_boundary.sql",
+      "checksum": "7d80f32da5bf9a7b598b09f403a3dd8bcf3e86b8a9c7341cbe1b18fac6917ce7"
+    },
+    {
+      "name": "0017_authenticity_beta.sql",
+      "checksum": "1a766eb057c2da5fbc9eba34f57454043bc92dba87bb86003ec8452ec697e05e"
+    },
+    {
+      "name": "0018_authenticity_private_alpha.sql",
+      "checksum": "8f786a649cc38ff025e52e1092891c5373247e3553324b2ff76a8ba176312972"
+    },
+    {
+      "name": "0019_authenticity_alpha_hardening.sql",
+      "checksum": "0992aa575b2da6d2da4c30c8ea24bcf792415077e8e0de7d171c7e756ed44531"
+    },
+    {
+      "name": "0020_auth_recovery_delivery.sql",
+      "checksum": "6edabdee6786478650f4f08f0daae5a5d923e15f5c8e2cbe14644fcbb18610dc"
+    },
+    {
+      "name": "0021_media_quarantine_cleanup.sql",
+      "checksum": "c2ba4708020de699604373ad0d5a6fff1d113de9d36c747adb731d4667a8f564"
+    }
+  ],
+  "checks": {
+    "users": "identity.users",
+    "posts": "content.posts",
+    "subject_locations": "privacy.subject_data_locations",
+    "idempotency": "system.idempotency_keys",
+    "contact_emails": "identity.contact_emails",
+    "locator_function": "privacy.reconcile_subject_data_locations(uuid)",
+    "retention_function": "privacy.set_retention_rule(uuid,uuid,text,interval,text)",
+    "budget_periods": "system.cost_budget_periods",
+    "budget_reservations": "system.cost_budget_reservations",
+    "usage_events": "system.cost_usage_events",
+    "kill_switches": "system.cost_kill_switches",
+    "waitlist_signups": "marketing.waitlist_signups",
+    "production_auth_acceptance_runs": "system.production_auth_acceptance_runs",
+    "production_auth_acceptance_events": "system.production_auth_acceptance_events",
+    "waitlist_retention_column_count": "4",
+    "extension_count": "3",
+    "relation_count": "103",
+    "table_count": "102"
+  },
+  "privileges": {
+    "runtime_privacy_request_allowed": true,
+    "runtime_legal_holds_forbidden": false,
+    "runtime_content_ddl_forbidden": false,
+    "runtime_database_ddl_forbidden": false,
+    "jobs_post_update_allowed": true,
+    "jobs_privacy_ddl_forbidden": false,
+    "jobs_database_ddl_forbidden": false,
+    "admin_decision_allowed": true,
+    "runtime_waitlist_insert_allowed": true,
+    "runtime_waitlist_read_forbidden": false,
+    "admin_waitlist_ciphertext_allowed": true,
+    "admin_waitlist_status_update_allowed": true,
+    "admin_waitlist_hmac_forbidden": false,
+    "admin_waitlist_insert_forbidden": false,
+    "privacy_waitlist_purge_allowed": true,
+    "privacy_waitlist_delete_allowed": true,
+    "privacy_waitlist_ciphertext_forbidden": false,
+    "privacy_legal_holds_allowed": true,
+    "privacy_credentials_read_forbidden": false,
+    "migrations_ddl_allowed": true,
+    "runtime_create_role_forbidden": false,
+    "jobs_create_role_forbidden": false,
+    "admin_create_role_forbidden": false
+  },
+  "transactionChecks": {
+    "duplicateRejected": true,
+    "orphanRejected": true,
+    "runtimeLegalHoldReadRejected": true,
+    "runtimeDdlRejected": true,
+    "subjectLocatorReconciled": true,
+    "rollbackClean": true
+  }
+}

@@ -1,0 +1,11 @@
+00:00 +0: loading /workspace/lythaus-e2e-review/review/malformed_receipt_test.dart
+00:00 +0: I-02 malformed creation receipt: missing id
+✅ Post created successfully
+Post creation response could not be processed
+00:00 +1: I-02 malformed creation receipt: null id
+✅ Post created successfully
+Post creation response could not be processed
+00:00 +2: I-02 malformed creation receipt: empty id
+✅ Post created successfully
+Post creation response could not be processed
+00:00 +3: All tests passed!

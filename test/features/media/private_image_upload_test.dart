@@ -146,6 +146,22 @@ class _PollingApi extends PrivateImageApi {
   }
 }
 
+class _RecordingPostRepository implements PostRepository {
+  int submissions = 0;
+
+  @override
+  Future<CreatePostResult> createPost({
+    required CreatePostRequest request,
+    required String token,
+  }) async {
+    submissions++;
+    throw StateError('Unexpected post submission in leave-composer test');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   test(
     'upload uses canonical stored receipt and never follows a returned URL',
@@ -453,6 +469,75 @@ void main() {
       await tester.tap(find.text('Clear selection'));
       await tester.pumpAndSettle();
       expect(tester.widget<FilledButton>(post).onPressed, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'UP-24 valid local selection blocks close until cleared, then leaves without upload or submission',
+    (tester) async {
+      final fixture = _Fixture();
+      final repository = _RecordingPostRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWith((ref) => ref.watch(_owner)),
+            canCreatePostProvider.overrideWithValue(true),
+            privateImageUploadsEnabledProvider.overrideWithValue(true),
+            privateImageApiProvider.overrideWithValue(fixture.api),
+            privateImagePickerProvider.overrideWithValue(
+              () async => XFile.fromData(_png),
+            ),
+            postRepositoryProvider.overrideWithValue(repository),
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CreatePostScreen(),
+                    ),
+                  ),
+                  child: const Text('Prior route'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Prior route'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CreatePostScreen), findsOneWidget);
+      await tester.ensureVisible(find.text('Choose image'));
+      await tester.tap(find.text('Choose image'));
+      await tester.pumpAndSettle();
+      expect(find.text('Image selected on this device.'), findsOneWidget);
+      expect(fixture.calls, isEmpty);
+      expect(repository.submissions, 0);
+
+      await tester.tap(find.byTooltip('Close composer'));
+      await tester.pump();
+      expect(find.byType(CreatePostScreen), findsOneWidget);
+      expect(find.textContaining('Finish or clear the private image'), findsOneWidget);
+      expect(fixture.calls, isEmpty);
+      expect(repository.submissions, 0);
+
+      await tester.ensureVisible(find.text('Clear selection'));
+      await tester.tap(find.text('Clear selection'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose image'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close composer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prior route'), findsOneWidget);
+      expect(find.byType(CreatePostScreen), findsNothing);
+      expect(fixture.calls, isEmpty);
+      expect(repository.submissions, 0);
     },
   );
 

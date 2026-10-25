@@ -1,0 +1,10 @@
+✔ pagination remains continuous beyond 25 synthetic roots (104.215878ms)
+✔ inactive author root and replies are excluded from public thread (25.199785ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 311.10677

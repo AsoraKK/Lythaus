@@ -1,0 +1,191 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 91.0.0 (110.0.0 available)
+  _flutterfire_internals 1.3.59 (1.3.79 available)
+  analyzer 8.4.1 (14.6.0 available)
+  app_links 6.4.1 (7.2.2 available)
+  app_links_linux 1.0.3 (1.0.4 available)
+  app_links_platform_interface 2.0.2 (2.0.4 available)
+  app_links_web 1.0.4 (1.0.5 available)
+  async 2.13.0 (2.13.1 available)
+  build 3.1.0 (5.0.0 available)
+  build_config 1.2.0 (1.4.0 available)
+  build_daemon 4.0.4 (4.1.7 available)
+  build_resolvers 3.0.3 (3.0.4 available)
+  build_runner 2.7.1 (2.17.1 available)
+  build_runner_core 9.3.1 (9.3.2 available)
+  built_collection 5.1.1 (5.1.2 available)
+  built_value 8.12.0 (8.13.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_builder 4.11.0 (4.13.0 available)
+  coverage 1.15.0 (1.16.0 available)
+  cross_file 0.3.5+2 (0.4.0 available)
+  crypto 3.0.6 (3.0.7 available)
+  cupertino_icons 1.0.8 (2.0.0 available)
+  dart_style 3.1.3 (3.1.14 available)
+  dbus 0.7.11 (0.8.0 available)
+  dio 5.9.0 (5.11.1 available)
+  dio_web_adapter 2.1.1 (2.2.2 available)
+  ffi 2.1.4 (2.2.0 available)
+  file_selector 1.0.3 (1.1.0 available)
+  file_selector_android 0.5.2+6 (0.5.2+11 available)
+  file_selector_ios 0.5.3+6 (0.5.3+7 available)
+  file_selector_macos 0.9.5+1 (0.9.5+2 available)
+  firebase_core 3.15.2 (5.1.0 available)
+  firebase_core_platform_interface 6.0.2 (8.1.1 available)
+  firebase_core_web 2.24.1 (4.1.0 available)
+  firebase_crashlytics 4.3.10 (6.0.1 available)
+  firebase_crashlytics_platform_interface 3.8.10 (3.9.2 available)
+  firebase_messaging 15.2.10 (17.0.1 available)
+  firebase_messaging_platform_interface 4.6.10 (4.11.1 available)
+  firebase_messaging_web 3.10.10 (4.3.1 available)
+  flutter_lints 4.0.0 (6.0.0 available)
+  flutter_local_notifications 18.0.1 (22.3.3 available)
+  flutter_local_notifications_linux 5.0.0 (8.0.2 available)
+  flutter_local_notifications_platform_interface 8.0.0 (12.2.0 available)
+  flutter_plugin_android_lifecycle 2.0.30 (2.0.35 available)
+  flutter_riverpod 2.6.1 (3.4.3 available)
+  flutter_secure_storage 9.2.4 (11.2.0 available)
+  flutter_secure_storage_linux 1.2.3 (3.0.3 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.1.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.1 available)
+  flutter_secure_storage_windows 3.1.2 (4.2.2 available)
+  flutter_svg 2.2.3 (2.3.0 available)
+  frontend_server_client 4.0.0 (4.2.0 available)
+  glob 2.1.3 (2.2.0 available)
+  go_router 17.1.0 (18.1.1 available)
+  google_fonts 6.3.3 (9.0.0 available)
+  gtk 2.1.0 (2.2.0 available)
+  http 1.5.0 (1.6.0 available)
+  http_multi_server 3.2.2 (3.2.3 available)
+  intl 0.19.0 (0.20.3 available)
+  io 1.0.5 (1.1.0 available)
+  js 0.6.7 (0.7.2 available)
+  json_annotation 4.9.0 (4.12.0 available)
+  lints 4.0.0 (6.1.0 available)
+  local_auth 2.3.0 (3.0.2 available)
+  local_auth_android 1.0.53 (2.3.0 available)
+  local_auth_darwin 1.6.0 (2.0.5 available)
+  local_auth_platform_interface 1.0.10 (1.1.0 available)
+  local_auth_windows 1.0.11 (2.0.2 available)
+  matcher 0.12.18 (0.12.20 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.17.0 (1.19.0 available)
+  mime 1.0.6 (2.1.0 available)
+  mockito 5.6.3 (5.8.1 available)
+  mocktail 1.0.4 (1.0.5 available)
+  opentelemetry 0.18.10 (0.18.11+1 available)
+  package_config 2.2.0 (3.0.0 available)
+  path_provider 2.1.5 (2.1.6 available)
+  path_provider_android 2.2.18 (2.3.1 available)
+  path_provider_foundation 2.4.2 (2.6.0 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  permission_handler 12.0.1 (13.0.2 available)
+  permission_handler_android 13.0.1 (14.1.0 available)
+  permission_handler_apple 9.4.7 (9.6.4 available)
+  permission_handler_html 0.1.3+5 (0.1.4+1 available)
+  permission_handler_platform_interface 4.3.0 (4.4.1 available)
+  permission_handler_windows 0.2.1 (0.2.2 available)
+  petitparser 7.0.1 (7.1.0 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.1 (1.5.3 available)
+  process 5.0.5 (5.0.6 available)
+  protobuf 3.1.0 (6.1.0 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.7.0 available)
+  riverpod 2.6.1 (3.4.3 available)
+  share_plus 12.0.1 (13.3.1 available)
+  share_plus_platform_interface 6.1.0 (7.2.0 available)
+  shelf 1.4.2 (1.4.3 available)
+  shelf_static 1.1.3 (1.2.0 available)
+  source_gen 3.1.0 (4.3.1 available)
+  source_maps 0.10.13 (0.10.14 available)
+  source_span 1.10.1 (1.10.2 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  test 1.29.0 (1.33.0 available)
+  test_api 0.7.9 (0.7.15 available)
+  test_core 0.6.15 (0.6.21 available)
+  timezone 0.9.4 (0.11.2 available)
+  url_launcher 6.3.2 (6.3.3 available)
+  url_launcher_android 6.3.21 (6.3.33 available)
+  url_launcher_ios 6.3.4 (6.4.2 available)
+  url_launcher_linux 3.2.1 (3.2.3 available)
+  url_launcher_macos 3.2.3 (3.2.6 available)
+  url_launcher_web 2.4.1 (2.4.3 available)
+  url_launcher_windows 3.1.4 (3.1.6 available)
+  uuid 4.5.2 (4.6.0 available)
+  vector_graphics 1.1.19 (1.2.4 available)
+  vector_graphics_compiler 1.1.19 (1.3.2 available)
+  vector_math 2.2.0 (2.4.3 available)
+  vm_service 15.0.2 (15.4.0 available)
+  watcher 1.1.3 (1.2.1 available)
+  web 1.1.1 (1.1.2 available)
+  webdriver 3.1.0 (3.2.0 available)
+  win32 5.14.0 (6.4.0 available)
+  xml 6.6.1 (7.1.0 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+127 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /workspace/lythaus-comments-review/test/features/feed/presentation/post_comment_journey_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: discover card edit uses fresh disclosure and refreshes pending content out of feed
+00:01 +1: discover feed refreshes after a covered edit is explicitly closed
+00:02 +2: canonical body, declaration, parent and tombstone parse without legacy fields
+00:02 +3: bare canonical create response clears draft and shows pending publication
+00:02 +4: replies use parentId and do not alter body or allow deeper replies
+00:02 +5: declaration and AI-assisted grapheme limit block writes locally
+00:02 +6: timeout retry reuses body and key without reloading the list
+00:03 +7: idempotency_in_progress retry reuses body and key without reloading the list
+00:03 +8: idempotency_outcome_unknown retry reuses body and key without reloading the list
+00:03 +9: duplicate send and back during a delayed write keep one submission
+00:03 +10: an incomplete write response preserves the draft and exposes retry
+00:03 +11: guest or another author cannot see mutation controls: null
+00:03 +12: guest or another author cannot see mutation controls: other
+00:04 +13: pending post disables new comments while preserving owner controls
+00:04 +14: owner edits a comment with a fresh declaration and pending result
+00:04 +15: post detail receives a covered edit acknowledgement when editor closes
+00:04 +16: comment thread receives a covered edit acknowledgement when editor closes
+00:05 +17: synthetic late edit response cannot restore a comment removed by refresh
+00:05 +18: owner deletion is confirmed, retains content on 403, then removes on acknowledgement
+00:05 +19: wrong deletion acknowledgement retains content and replay key
+00:05 +20: canonical partial post revision preserves owner and enters pending state
+00:05 +21: pending edit survives leaving and reopening with the same key
+00:06 +22: post deletion requires confirmation and pops only after matching acknowledgement
+00:06 +23: unconfirmed post deletion stays visible and retries the same key
+00:06 +24: late comments response after disposal does not update disposed state
+00:06 +25: synthetic stale initial read reloads after a second mutation succeeds
+00:06 +26: synthetic stale initial read reloads after a second mutation fails with 503
+00:07 +27: synthetic stale initial read reloads after a second mutation fails with 403
+00:07 +28: synthetic deferred refresh stays scoped to the active account
+00:07 +29: synthetic queued refresh preserves delete rejection and its retry
+00:07 +30: stale pagination cannot overwrite a newer refresh
+00:07 +31: synthetic stale pagination cannot overwrite a newer comment edit
+00:08 +32: synthetic stale pagination cannot restore a deleted comment
+00:08 +33: deleted comment bodies become tombstones without mutation or reply actions
+00:08 +34: pending owner post survives reopening and can be edited and deleted
+00:09 +35: own pending comment is restored privately after process restart
+00:09 +36: conversation replies expand, keep context and check new replies explicitly
+00:09 +37: sort switching discards stale reply reads and never reuses another filter cursor
+00:09 +38: successful new-reply check revalidates a blocked middle reply
+00:09 +39: successful new-reply check revalidates a under_review middle reply
+00:09 +40: successful new-reply check revalidates a deleted middle reply
+00:09 +41: deleted root is authoritatively redacted while descendants and reading anchor survive
+00:10 +42: fresh not-found owner receipt removes a previously submitted local comment
+00:10 +43: changing sort never silently reparents an unfinished reply draft
+00:10 +44: comment sort is remembered on this device for the current account
+00:10 +45: reply context resolves and links to the exact unloaded parent comment
+00:10 +46: a notification target opens its exact conversation beyond the first root page
+00:10 +47: a cached notification target is materialized outside the lazy viewport on repeated navigation
+00:11 +48: exact-target denial 404 handles cached content honestly
+00:11 +49: exact-target denial 500 handles cached content honestly
+00:11 +50: withdrawn parent access 401 clears cached children on refresh
+00:11 +51: withdrawn parent access 403 clears cached children on refresh
+00:11 +52: withdrawn parent access 404 clears cached children on refresh
+00:11 +53: nested conversations wrap at 320 pixels and large text without increasing indentation
+00:11 +54: reopening after a lost deletion acknowledgement exposes only the saved replay
+00:11 +55: (tearDownAll)
+00:11 +55: All tests passed!

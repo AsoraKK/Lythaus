@@ -1,0 +1,9 @@
+Command:
+source /workspace/.lythaus-tools/activate.sh && flutter test --no-pub test/features/media/private_image_upload_test.dart --plain-name='UP-24 valid local selection blocks close until cleared, then leaves without upload or submission'
+
+Output:
+00:00 +0: loading /workspace/lythaus-e2e-review/test/features/media/private_image_upload_test.dart
+00:00 +0: UP-24 valid local selection blocks close until cleared, then leaves without upload or submission
+00:01 +1: All tests passed!
+
+Exit status: 0

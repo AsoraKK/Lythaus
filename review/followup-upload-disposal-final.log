@@ -1,0 +1,11 @@
+Command:
+source /workspace/.lythaus-tools/activate.sh && flutter test --no-pub review/upload_disposal_test.dart
+
+Output:
+00:00 +0: loading /workspace/lythaus-e2e-review/review/upload_disposal_test.dart
+00:00 +0: UP-23 uses the default 5-second interval and 24-poll limit; manual retry reuses the same attempt
+00:00 +1: UP-24 valid local selection disposed before upload makes no API call
+00:00 +2: UP-22 disposal cancels queued polling and releases local reload block
+00:00 +3: All tests passed!
+
+Exit status: 0

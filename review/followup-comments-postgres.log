@@ -1,0 +1,19 @@
+✔ post-backed articles share one conversation; nested replies are chronological and counted once (91.938262ms)
+✔ newest/oldest use precise deterministic cursors bound to the post, filter and conversation (76.468373ms)
+✔ hidden ancestors, cross-post links, cycles, blocks and mutes cannot expose descendants or private receipts (118.272303ms)
+✔ current parent access controls guest and A to B to A reads independently (50.110421ms)
+✔ reply tail revalidation authoritatively removes hidden ancestors and redacts tombstones on 200 reads (72.529643ms)
+✔ reply refresh authoritatively redacts a remotely deleted root and preserves its allowed descendants (32.996999ms)
+✔ reply pagination holds its snapshot until the reader explicitly checks for new replies (70.469134ms)
+✔ bounded ancestor traversal rejects over-limit writes and corrupt descendants without changing stored depth (84.145771ms)
+✔ malformed and mismatched cursor state fails before SQL and relevance never becomes a chronological alias (1.67877ms)
+✔ delayed notifications use live relationships and revisions; replay stays unique and reads hide withdrawn children (72.995702ms)
+✔ notification revision lock orders a concurrent edit before any subsequent eligible delivery (29.474593ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 919.207683

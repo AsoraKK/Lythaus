@@ -1,0 +1,42 @@
+00:00 +0: loading /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart
+00:00 +0: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: (setUpAll)
+00:00 +0: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: Post Creation Integration Tests successful post creation flow - happy path
+00:01 +1: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: Post Creation Integration Tests content blocked flow - moderation rejection
+00:01 +2: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: Post Creation Integration Tests daily limit exceeded flow
+00:01 +3: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: Post Creation Integration Tests network error flow with retry
+00:01 +4: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: Post Creation Integration Tests validates input before submission
+00:01 +5: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: Post Creation Integration Tests preserves text when moderation blocks content
+00:02 +6: /workspace/lythaus-e2e-review/test/integration/post_creation_integration_test.dart: (tearDownAll)
+00:02 +6: loading /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart
+00:02 +6: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: Rewards redemption flow updates dashboard after redeem
+00:03 +7: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: real redemption stays alive until session change cancels it
+00:03 +8: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: lost response refreshes rewards and scopes manual retry keys to accounts
+00:04 +9: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios locked reward shows Locked chip and omits Redeem button
+00:04 +10: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios already-redeemed offer shows Redeemed chip and no Redeem button
+00:04 +11: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios restricted account shows all offers locked with restriction reason
+00:04 +12: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios API error during redeem shows error snackbar and does not refresh snapshot
+00:04 +13: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios uncertain idempotency outcome refreshes rewards and reuses its key
+00:04 +14: /workspace/lythaus-e2e-review/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios already redeemed response refreshes the dashboard state
+00:04 +15: loading /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart
+00:05 +15: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: rewardsSnapshotProvider parses the authenticated rewards snapshot
+00:05 +16: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: rewardsSnapshotProvider guest access fails without making a request
+00:05 +17: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: rewardsSnapshotProvider a missing token reports an expired session without a request
+00:05 +18: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: rewardsSnapshotProvider account changes cancel old reads and clear cached account data
+00:05 +19: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: rewardsSnapshotProvider surfaces authentication failures as request errors
+00:05 +20: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: redeemRewardProvider posts an authenticated redemption and parses the response
+00:05 +21: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: redeemRewardProvider guest access fails without making a redemption request
+00:05 +22: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: redeemRewardProvider a failed redemption can be explicitly retried with the session
+00:05 +23: /workspace/lythaus-e2e-review/test/features/rewards/application/reward_providers_test.dart: redeemRewardProvider lost response requires manual retry with the same idempotency key
+00:05 +24: loading /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart
+00:06 +24: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen shows app bar title and status header
+00:07 +25: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen shows error state with retry button
+00:07 +26: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen retry shows progress and a repeated failure stays an error
+00:07 +27: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen retry recovers only when the server returns rewards
+00:07 +28: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen connection failure remains readable at narrow width and large text
+00:07 +29: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen HTTP 403 is explained without exposing server details
+00:07 +30: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen HTTP 503 is explained without exposing server details
+00:07 +31: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen shows XP and tier data when loaded
+00:07 +32: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen shows redemption history section
+00:07 +33: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen shows locked reward state
+00:07 +34: /workspace/lythaus-e2e-review/test/ui/screens/rewards/rewards_dashboard_test.dart: RewardsDashboardScreen shows affiliate disclosure
+00:07 +35: All tests passed!
