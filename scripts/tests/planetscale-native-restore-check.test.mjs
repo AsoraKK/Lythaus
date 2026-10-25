@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, ROLE_SQL_SECURITY_BASELINE,
   ROLE_SQL_MEMBERSHIP_BASELINE, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
   checkedRoles, assertRestoreRoleSqlBaseline, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
-import { runNativeRestore, githubReadiness } from '../ci/planetscale-native-restore-check.mjs';
+import { runNativeRestore, githubReadiness, assertPinnedManualCleanupProof } from '../ci/planetscale-native-restore-check.mjs';
 import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions, restoreCatalogDigest } from '../ci/planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
@@ -45,6 +45,7 @@ function fixture(mode = '') {
       if (path === '/branches') {
         branchInventories++;
         if (mode === 'target_found_before_create' && branchInventories === 2) return [target()];
+        if (mode === 'previous_target_reappeared' && branchInventories === 2) return [{ id: 'gnbnmpsu7r5k', name: 'different-name' }];
         return mode === 'preexisting' ? [target()] : [];
       }
       const rows = roleRows(path.includes('/main/') ? RESTORE.sourceId : newId);
@@ -918,12 +919,36 @@ test('restored SQL role contract pins observed setup flags and memberships while
     /restored_role_security_contract_invalid/);
 });
 
-test('GitHub preconditions reconcile only the two pinned prior runs with complete evidence', async () => {
+test('pinned manual cleanup proof rejects missing, altered and appended evidence bytes', () => {
+  const root = new URL('../../docs/evidence/production-cutover/0021-restore-evidence/', import.meta.url);
+  const qualification = fs.readFileSync(new URL('artifacts/qualification-40212030891.json', root));
+  const receipt = fs.readFileSync(new URL('manual-cleanup-40212030891.json', root));
+  const proof = assertPinnedManualCleanupProof(qualification, receipt);
+  assert.equal(proof.targetId, 'gnbnmpsu7r5k'); assert.equal(proof.cleanupMode, 'MANUAL');
+  assert.equal(proof.recoveryAcceptance, 'NOT_CERTIFIED'); assert.equal(proof.artifactCredentialActionCount, 0);
+  for (const [reportBytes, receiptBytes] of [[undefined, receipt], [qualification, undefined],
+    [Buffer.concat([qualification, Buffer.from(' ')]), receipt], [qualification, Buffer.concat([receipt, Buffer.from(' ')])],
+    [Buffer.from(JSON.stringify({ ...JSON.parse(qualification), credentialActions: [{ outcome: 'UNKNOWN' }] })), receipt],
+    [qualification, Buffer.from(JSON.stringify({ ...JSON.parse(receipt), manualCleanup: { outcome: 'not-proven' } }))]]) {
+    assert.throws(() => assertPinnedManualCleanupProof(reportBytes, receiptBytes), /prior_manual_cleanup_file_hash_mismatch/);
+  }
+});
+
+test('old target identity reappearing under another name blocks create without mutations', async () => {
+  const f = fixture('previous_target_reappeared');
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('preexisting_target_refused'));
+  assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+  assert.ok(f.calls.every(value => !/^(POST|PATCH|DELETE) /.test(value)));
+});
+
+test('GitHub preconditions reconcile only the three pinned prior runs with complete evidence', async () => {
   const env = { ...environment(), GH_TOKEN: password, GITHUB_SHA: sha, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
     GITHUB_REPOSITORY_ID: '1010752912', GITHUB_REPOSITORY: 'fixture-owner/Lythaus', GITHUB_RUN_ATTEMPT: '1' };
   const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
   const cancelledSha = '43829abc3424a88a22826695bbfdc7be4a116e62';
   const failedSha = '96ff66fa5c28c9780ce72ee23a40cd846372d6bd';
+  const manuallyDeletedSha = '9447561658c139f1e9e48cedad66b2f035661fb9';
   const cancelledRun = () => ({ id: 40184823787, run_number: 7, workflow_id: 394786946, path: workflowPath,
     head_sha: cancelledSha, head_branch: 'main', event: 'workflow_dispatch', run_attempt: 1, status: 'completed', conclusion: 'cancelled',
     display_title: `Native restore execute ${cancelledSha}`, name: `Native restore execute ${cancelledSha}`,
@@ -958,6 +983,14 @@ test('GitHub preconditions reconcile only the two pinned prior runs with complet
     digest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac', expired: false,
     created_at: '2026-10-25T12:41:37Z', expires_at: '2026-11-01T12:41:36Z',
     workflow_run: { id: 40193991312, repository_id: 1010752912, head_sha: failedSha } });
+  const manuallyDeletedRun = () => ({ ...failedRun(), id: 40212030891, run_number: 9, head_sha: manuallyDeletedSha,
+    display_title: `Native restore execute ${manuallyDeletedSha}`, name: `Native restore execute ${manuallyDeletedSha}` });
+  const manuallyDeletedJob = () => ({ ...failedJob(), id: 121225106539, run_id: 40212030891, head_sha: manuallyDeletedSha });
+  const manuallyDeletedArtifact = () => ({ ...failedArtifact(), id: 12606067757,
+    name: `native-restore-qualification-${manuallyDeletedSha}-40212030891`, size_in_bytes: 3199,
+    digest: 'sha256:50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a',
+    created_at: '2026-10-25T16:39:28Z', expires_at: '2026-11-01T16:39:28Z',
+    workflow_run: { id: 40212030891, repository_id: 1010752912, head_sha: manuallyDeletedSha } });
   const planRuns = [sha, 'b'.repeat(40)].map((headSha, index) => ({ id: 50 + index, workflow_id: 394786946,
     path: workflowPath, head_sha: headSha, head_branch: 'main', event: 'workflow_dispatch',
     display_title: `Native restore plan ${headSha}` }));
@@ -970,7 +1003,7 @@ test('GitHub preconditions reconcile only the two pinned prior runs with complet
       if (pathname.endsWith(`/actions/runs/${env.GITHUB_RUN_ID}/approvals`)) return Response.json(overrides.currentApprovals
         ?? [{ state: 'approved', user: { type: overrides.bot ? 'Bot' : 'User', login: 'owner' }, environments: [{ name: 'production' }] }]);
       if (pathname.includes('/actions/workflows/') && pathname.endsWith('/runs')) {
-        const runs = overrides.history ?? [...planRuns, cancelledRun(), failedRun()];
+        const runs = overrides.history ?? [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun()];
         return Response.json({ total_count: overrides.historyCount ?? runs.length, workflow_runs: runs });
       }
       if (pathname.endsWith('/actions/runs/40184823787/approvals')) return Response.json(overrides.priorApprovals ?? []);
@@ -986,6 +1019,13 @@ test('GitHub preconditions reconcile only the two pinned prior runs with complet
         artifacts: Object.hasOwn(overrides, 'failedArtifacts') ? overrides.failedArtifacts : [failedArtifact()] });
       if (pathname.endsWith('/actions/runs/40193991312')) return Response.json(overrides.malformedFailedRun
         ? null : { ...failedRun(), ...(overrides.failedRun ?? {}) });
+      if (pathname.endsWith('/actions/runs/40212030891/jobs')) return Response.json({ total_count: overrides.manualJobCount ?? 1,
+        jobs: Object.hasOwn(overrides, 'manualJobs') ? overrides.manualJobs : [manuallyDeletedJob()] });
+      if (pathname.endsWith('/actions/runs/40212030891/approvals')) return Response.json(overrides.manualApprovals
+        ?? [{ state: 'approved', user: { type: 'User', login: 'AsoraKK' }, environments: [{ name: 'production' }] }]);
+      if (pathname.endsWith('/actions/runs/40212030891/artifacts')) return Response.json({ total_count: overrides.manualArtifactCount ?? 1,
+        artifacts: Object.hasOwn(overrides, 'manualArtifacts') ? overrides.manualArtifacts : [manuallyDeletedArtifact()] });
+      if (pathname.endsWith('/actions/runs/40212030891')) return Response.json({ ...manuallyDeletedRun(), ...(overrides.manualRun ?? {}) });
       if (pathname === `/repos/${env.GITHUB_REPOSITORY}`) return Response.json({ id: 1010752912, full_name: env.GITHUB_REPOSITORY });
       throw new Error(`unexpected GitHub read ${pathname}`);
     };
@@ -1004,6 +1044,14 @@ test('GitHub preconditions reconcile only the two pinned prior runs with complet
         artifactDigest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac',
         artifactProviderMutationCount: 0, artifactCredentialActionCount: 0, artifactTargetCreated: false,
         artifactState: 'NO_TARGET_CREATED', artifactCount: 1 },
+      { status: 'PINNED_MANUALLY_DELETED_FAILURE_RECONCILED', workflowPath, workflowId: 394786946,
+        runId: '40212030891', runNumber: 9, runAttempt: 1, headSha: manuallyDeletedSha, event: 'workflow_dispatch', conclusion: 'failure',
+        jobId: 121225106539, artifactId: 12606067757,
+        artifactDigest: 'sha256:50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a',
+        targetId: 'gnbnmpsu7r5k', qualificationSha256: '4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618',
+        manualReceiptSha256: 'eeb8e95eb43990739722bf65da07cb6b249f687828d281593529d12cc1a4bccf',
+        cleanupMode: 'MANUAL', cleanupOutcome: 'TARGET_ABSENT_VERIFIED', recoveryAcceptance: 'NOT_CERTIFIED',
+        artifactProviderMutationCount: 1, artifactCredentialActionCount: 0 },
     ] });
   assert.ok(good.reads.every(row => row.method === 'GET'));
   const noPrior = fixtureFetch({ history: planRuns });
@@ -1027,10 +1075,11 @@ test('GitHub preconditions reconcile only the two pinned prior runs with complet
     ['missing steps', { jobs: [{ ...cancelledJob(), steps: undefined }] }], ['started step', { jobs: [{ ...cancelledJob(), steps: [{ name: 'checkout' }] }] }],
     ['artifact present', { artifactCount: 1, artifacts: [{ id: 1 }] }], ['artifact inventory incomplete', { artifactCount: 1 }],
     ['missing artifacts', { artifacts: undefined }], ['history count mismatch', { historyCount: 99 }], ['history over limit', { historyCount: 101 }],
-    ['unclassifiable history', { history: [...planRuns, cancelledRun(), failedRun(), { ...planRuns[0], id: 99, display_title: 'unexpected' }] }],
-    ['pinned history title mismatch', { history: [...planRuns, { ...cancelledRun(), display_title: `Native restore plan ${cancelledSha}` }, failedRun()] }],
-    ['pinned history SHA mismatch', { history: [...planRuns, { ...cancelledRun(), head_sha: 'e'.repeat(40) }, failedRun()] }],
-    ['second execute run', { history: [...planRuns, cancelledRun(), failedRun(), { ...failedRun(), id: 40193991313 }] }],
+    ['unclassifiable history', { history: [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(), { ...planRuns[0], id: 99, display_title: 'unexpected' }] }],
+    ['pinned history title mismatch', { history: [...planRuns, { ...cancelledRun(), display_title: `Native restore plan ${cancelledSha}` }, failedRun(), manuallyDeletedRun()] }],
+    ['pinned history SHA mismatch', { history: [...planRuns, { ...cancelledRun(), head_sha: 'e'.repeat(40) }, failedRun(), manuallyDeletedRun()] }],
+    ['second execute run', { history: [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(), { ...failedRun(), id: 40193991313 }] }],
+    ['missing manually deleted run', { history: [...planRuns, cancelledRun(), failedRun()] }],
     ['failed run SHA mismatch', { failedRun: { head_sha: 'f'.repeat(40) } }],
     ['failed run event mismatch', { failedRun: { event: 'push' } }],
     ['failed run attempt mismatch', { failedRun: { run_attempt: 2 } }],
@@ -1046,11 +1095,39 @@ test('GitHub preconditions reconcile only the two pinned prior runs with complet
     ['artifact digest mismatch', { failedArtifacts: [{ ...failedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] }],
     ['artifact expired', { failedArtifacts: [{ ...failedArtifact(), expired: true }] }],
     ['artifact source mismatch', { failedArtifacts: [{ ...failedArtifact(), workflow_run: { ...failedArtifact().workflow_run, head_sha: 'f'.repeat(40) } }] }],
+    ['manual run SHA mismatch', { manualRun: { head_sha: '0'.repeat(40) } }],
+    ['manual run rerun', { manualRun: { run_attempt: 2 } }],
+    ['manual run provenance mismatch', { manualRun: { path: '.github/workflows/other.yml' } }],
+    ['manual run not failed', { manualRun: { conclusion: 'success' } }],
+    ['manual production approval missing', { manualApprovals: [] }],
+    ['manual production approval wrong user', { manualApprovals: [{ state: 'approved', user: { type: 'User', login: 'other' }, environments: [{ name: 'production' }] }] }],
+    ['manual job inventory incomplete', { manualJobCount: 2 }],
+    ['manual job missing steps', { manualJobs: [{ ...manuallyDeletedJob(), steps: undefined }] }],
+    ['manual job runner missing', { manualJobs: [{ ...manuallyDeletedJob(), runner_id: 0 }] }],
+    ['manual upload failed', { manualJobs: [{ ...manuallyDeletedJob(), steps: manuallyDeletedJob().steps.map(step =>
+      step.number === 9 ? { ...step, conclusion: 'failure' } : step) }] }],
+    ['manual artifact absent', { manualArtifactCount: 0, manualArtifacts: [] }],
+    ['manual artifact replaced', { manualArtifacts: [{ ...manuallyDeletedArtifact(), id: 1 }] }],
+    ['manual artifact expired', { manualArtifacts: [{ ...manuallyDeletedArtifact(), expired: true }] }],
+    ['manual artifact hash changed', { manualArtifacts: [{ ...manuallyDeletedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] }],
   ]) {
     const candidate = fixtureFetch(overrides);
     await assert.rejects(() => githubReadiness(env, candidate.fetcher, true), undefined, label);
     assert.ok(candidate.reads.every(row => row.method === 'GET'), `${label} must remain read-only`);
   }
+  let proofReads = 0;
+  const changesBeforeCreate = async (url, options) => {
+    if (new URL(url).pathname.endsWith('/actions/runs/40212030891/artifacts') && ++proofReads === 2) {
+      return Response.json({ total_count: 1, artifacts: [{ ...manuallyDeletedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] });
+    }
+    return good.fetcher(url, options);
+  };
+  const runner = fixture(); runner.options.environment = env;
+  runner.options.assertMain = () => githubReadiness(env, changesBeforeCreate, true);
+  const blocked = await runNativeRestore(runner.options);
+  assert.ok(blocked.blockers.includes('prior_manual_cleanup_artifact_mismatch'));
+  assert.deepEqual(blocked.providerMutations, []); assert.deepEqual(blocked.credentialActions, []);
+  assert.ok(runner.calls.every(value => !/^(POST|PATCH|DELETE) /.test(value)));
   await assert.rejects(() => githubReadiness({ ...env, GITHUB_RUN_ATTEMPT: '2' }, fixtureFetch().fetcher, true));
 });
 
