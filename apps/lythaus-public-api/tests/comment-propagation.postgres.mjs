@@ -366,3 +366,62 @@ test('notification revision lock orders a concurrent edit before any subsequent 
     await editing;
   }
 });
+
+test('rollout hides legacy comment notices missing revision or decision evidence without rewriting history', async () => {
+  const owner = await actor(), author = await actor(), postId = await post(owner), root = await comment(postId, owner);
+  const legacyWithoutRevision = await comment(postId, author, { parent: root });
+  const partialWithoutDecision = await comment(postId, author, { parent: root });
+  const current = await comment(postId, author, { parent: root });
+  const legacyTime = '2026-10-06T10:00:00Z';
+  const revisionEvent = await publication(legacyWithoutRevision, legacyTime);
+  const revisionPayload = (await control.query('SELECT payload FROM system.outbox_events WHERE id=$1', [revisionEvent])).rows[0].payload;
+  const partialEvent = await publication(partialWithoutDecision, '2026-10-06T11:00:00Z');
+  const partialPayload = (await control.query('SELECT payload FROM system.outbox_events WHERE id=$1', [partialEvent])).rows[0].payload;
+  const currentEvent = await publication(current, '2026-10-06T12:00:00Z');
+
+  const insertLegacyEvent = async (commentId, payload) => {
+    const id = uuidv7(); events.push(id);
+    await control.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,payload,created_at)
+      VALUES($1,'content.comment.published','comment',$2,$3::jsonb,$4)`, [id, commentId, JSON.stringify(payload), legacyTime]);
+    return id;
+  };
+  const commonLegacyPayload = commentId => ({ contentType: 'comment', contentId: commentId,
+    authorId: author, postId, parentId: root, declaredCreationMode: 'human', reasonCode: 'SYNTHETIC.ALLOW' });
+  const noRevisionEvent = await insertLegacyEvent(legacyWithoutRevision, {
+    ...commonLegacyPayload(legacyWithoutRevision), decisionId: revisionPayload.decisionId,
+  });
+  const noDecisionEvent = await insertLegacyEvent(partialWithoutDecision, {
+    ...commonLegacyPayload(partialWithoutDecision), sourceEventId: partialPayload.sourceEventId,
+  });
+  const notificationIds = [uuidv7(), uuidv7(), uuidv7()];
+  await control.query(`INSERT INTO feed.notifications(id,recipient_id,notification_type,entity_id,source_event_id)
+    VALUES ($1,$2,'content.reply_received',$3,$4),
+           ($5,$2,'content.reply_received',$6,$7),
+           ($8,$2,'content.reply_received',$9,$10)`,
+  [notificationIds[0], owner, legacyWithoutRevision, noRevisionEvent,
+    notificationIds[1], partialWithoutDecision, noDecisionEvent,
+    notificationIds[2], current, currentEvent]);
+
+  const runtimeList = () => query(`SELECT id, entity_id AS "entityId" FROM feed.notifications
+      WHERE recipient_id=$1 AND dismissed_at IS NULL AND ${commentNotificationVisibilitySql}
+      ORDER BY created_at DESC,id DESC`, [owner]);
+  const runtimeUnread = () => query(`SELECT count(*)::int AS count FROM feed.notifications
+      WHERE recipient_id=$1 AND read_at IS NULL AND dismissed_at IS NULL AND ${commentNotificationVisibilitySql}`, [owner]);
+  assert.deepEqual((await runtimeList()).rows.map(row => row.id), [notificationIds[2]]);
+  assert.equal((await runtimeUnread()).rows[0].count, 1);
+
+  await control.query('UPDATE feed.notifications SET read_at=now() WHERE id=$1', [notificationIds[2]]);
+  assert.deepEqual((await runtimeList()).rows.map(row => row.id), [notificationIds[2]]);
+  assert.equal((await runtimeUnread()).rows[0].count, 0);
+
+  const retainedRows = await control.query('SELECT id,entity_id,source_event_id FROM feed.notifications WHERE id=ANY($1::uuid[]) ORDER BY id', [notificationIds]);
+  assert.equal(retainedRows.rowCount, 3);
+  assert.deepEqual(new Set(retainedRows.rows.map(row => row.id)), new Set(notificationIds));
+  const retainedEvents = await control.query('SELECT id,payload FROM system.outbox_events WHERE id=ANY($1::uuid[])', [[noRevisionEvent, noDecisionEvent]]);
+  assert.equal(retainedEvents.rowCount, 2);
+  const byId = new Map(retainedEvents.rows.map(row => [row.id, row.payload]));
+  assert.equal(byId.get(noRevisionEvent).sourceEventId, undefined);
+  assert.equal(byId.get(noRevisionEvent).decisionId, revisionPayload.decisionId);
+  assert.equal(byId.get(noDecisionEvent).sourceEventId, partialPayload.sourceEventId);
+  assert.equal(byId.get(noDecisionEvent).decisionId, undefined);
+});
