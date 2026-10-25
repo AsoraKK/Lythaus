@@ -724,6 +724,14 @@ test('restored SQL role contract pins observed setup flags and memberships while
   }
   const setupDrift = roles.map(row => ({ ...row })); setupDrift[0].rolsuper = true;
   assert.throws(() => assertRestoreRoleSqlBaseline(setupDrift, members), /restored_role_security_contract_invalid/);
+  for (const name of ROLE_NAMES) {
+    const nonLogin = roles.map(row => ({ ...row })); nonLogin.find(row => row.rolname === name).rolcanlogin = false;
+    assert.throws(() => assertRestoreRoleSqlBaseline(nonLogin, members), /restored_role_security_contract_invalid/,
+      `${name} must remain login-enabled`);
+    const missingLogin = roles.map(row => ({ ...row })); delete missingLogin.find(row => row.rolname === name).rolcanlogin;
+    assert.throws(() => assertRestoreRoleSqlBaseline(missingLogin, members), /restored_role_security_contract_invalid/,
+      `${name} must include an explicit login flag`);
+  }
   assert.throws(() => assertRestoreRoleSqlBaseline(roles, members.slice(1)), /restored_role_security_contract_invalid/);
   assert.throws(() => assertRestoreRoleSqlBaseline(roles, [...members, { ...members[0], role: RESTORE.runtime }]),
     /restored_role_security_contract_invalid/);

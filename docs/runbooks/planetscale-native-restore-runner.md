@@ -135,6 +135,7 @@ The approved restore-copy SQL baseline is role-specific. The setup-only role is 
 only its observed memberships in `postgres`, `pg_read_all_data`, and
 `pg_write_all_data`. The four application roles remain `NOSUPERUSER`, without
 `BYPASSRLS`, `CREATEROLE`, `CREATEDB`, `REPLICATION`, or memberships. The
+setup role and all four application roles must remain login-enabled. The
 verifier continues to require exact copied role metadata, including branch,
 lifecycle, and source-to-copy inheritance checks; it does not normalize
 unknown provider representations. Other SQL role fields and membership grant

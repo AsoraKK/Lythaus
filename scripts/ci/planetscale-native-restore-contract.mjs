@@ -13,15 +13,15 @@ export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lytha
 export const ROLE_NAMES = Object.freeze([RESTORE.setup, RESTORE.runtime, RESTORE.admin, RESTORE.jobs, RESTORE.privacy]);
 export const ROLE_SQL_SECURITY_BASELINE = Object.freeze({
   [RESTORE.setup]: Object.freeze({ rolsuper: false, rolbypassrls: true, rolcreaterole: true, rolcreatedb: true,
-    rolreplication: true }),
+    rolreplication: true, rolcanlogin: true }),
   [RESTORE.runtime]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
-    rolreplication: false }),
+    rolreplication: false, rolcanlogin: true }),
   [RESTORE.admin]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
-    rolreplication: false }),
+    rolreplication: false, rolcanlogin: true }),
   [RESTORE.jobs]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
-    rolreplication: false }),
+    rolreplication: false, rolcanlogin: true }),
   [RESTORE.privacy]: Object.freeze({ rolsuper: false, rolbypassrls: false, rolcreaterole: false, rolcreatedb: false,
-    rolreplication: false }),
+    rolreplication: false, rolcanlogin: true }),
 });
 export const ROLE_SQL_MEMBERSHIP_BASELINE = Object.freeze([
   Object.freeze({ role: 'postgres', member: RESTORE.setup }),
