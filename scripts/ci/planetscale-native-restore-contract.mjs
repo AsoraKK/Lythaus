@@ -113,7 +113,15 @@ export function checkedRoles(rows, branchId, sourceRoles) {
 
 const diagnosticPermissions = new Set(['read_database', 'read_databases', 'read_service_tokens', 'read_branch', 'read_backups',
   'delete_branch', 'delete_production_branch', 'create_branch', 'connect_branch', 'connect_production_branch',
-  'restore_backup', 'restore_production_branch_backup', 'restore_production_branch_backups']);
+  'restore_backup', 'restore_production_branch_backup', 'restore_production_branch_backups',
+  'read_organization', 'read_invoices', 'read_audit_logs', 'create_databases', 'delete_databases',
+  'read_oauth_applications', 'read_oauth_tokens', 'write_oauth_tokens', 'delete_oauth_tokens',
+  'write_service_tokens', 'delete_service_tokens', 'write_teams', 'read_metrics_endpoints',
+  'write_organization', 'delete_organization', 'write_databases', 'write_members', 'read_members', 'delete_members',
+  'read_branches', 'write_branches', 'delete_branches', 'promote_branches', 'delete_production_branches',
+  'manage_production_branch_passwords', 'write_deploy_requests', 'read_deploy_requests', 'deploy_deploy_requests',
+  'approve_deploy_requests', 'write_comments', 'read_comments', 'manage_passwords', 'write_backups', 'delete_backups',
+  'delete_production_branch_backups', 'restore_backups', 'write_database', 'delete_database', 'write_branch']);
 const diagnosticLimit = 64;
 function fieldKind(row, key) {
   if (!object(row) || !Object.hasOwn(row, key)) return 'MISSING';
@@ -166,12 +174,45 @@ function descriptorDiagnostic(value) {
     deletedAtNull: resource.deleted_at === null,
   };
 }
+function valueKind(row, key) {
+  if (!object(row) || !Object.hasOwn(row, key)) return 'MISSING';
+  if (Array.isArray(row[key])) return 'ARRAY';
+  if (object(row[key])) return 'OBJECT';
+  const kind = fieldKind(row, key);
+  return kind === 'STRING' ? 'UNKNOWN_STRING' : kind;
+}
+function collectionDiagnostic(row, key, project) {
+  const values = object(row) && Array.isArray(row[key]) ? row[key] : null;
+  return { kind: valueKind(row, key), count: values?.length ?? null,
+    truncated: (values?.length ?? 0) > diagnosticLimit, rows: values?.slice(0, diagnosticLimit).map(project) ?? [] };
+}
+function oauthResourceDiagnostic(value) {
+  const row = object(value) ? value : {};
+  return { rowKind: rowKind(value), idKind: fieldKind(row, 'id'), nameKind: fieldKind(row, 'name'),
+    organizationKind: fieldKind(row, 'organization'), databaseKind: fieldKind(row, 'database'),
+    idMatchesDatabase: row.id === RESTORE.databaseId, nameMatchesDatabase: row.name === RESTORE.database,
+    nameMatchesOrganization: row.name === RESTORE.organization, organizationMatches: row.organization === RESTORE.organization,
+    idMatchesSourceBranch: row.id === RESTORE.sourceId, nameMatchesSourceBranch: row.name === RESTORE.source,
+    databaseMatches: row.database === RESTORE.database };
+}
+function oauthDiagnostic(token) {
+  const value = object(token.oauth_accesses_by_resource) ? token.oauth_accesses_by_resource : {};
+  const groups = {};
+  for (const [key, resources] of [['organization', 'organizations'], ['database', 'databases'], ['branch', 'branches']]) {
+    const group = object(value[key]) ? value[key] : {};
+    groups[key] = { kind: valueKind(value, key), resources: collectionDiagnostic(group, resources, oauthResourceDiagnostic),
+      accesses: collectionDiagnostic(group, 'accesses', access => ({ rowKind: rowKind(access), access: permissionKind(access, 'name') })) };
+  }
+  return { kind: valueKind(token, 'oauth_accesses_by_resource'), groups, userKind: valueKind(value, 'user'),
+    unknownGroupCount: Object.keys(value).filter(key => !['organization', 'database', 'branch', 'user'].includes(key)).length };
+}
 function authorityDiagnostic(token) {
   return {
-    version: 2, databaseId: RESTORE.databaseId,
+    version: 3, databaseId: RESTORE.databaseId,
     tokenMatchesCodeXToken: token.id === 'estjkwtxzsmh', tokenMatchesOtherKnownToken: token.id === 'v6pg9b7rz38a',
     accessRowCount: token.service_token_accesses.length, rowsTruncated: token.service_token_accesses.length > diagnosticLimit,
     rows: token.service_token_accesses.slice(0, diagnosticLimit).map(descriptorDiagnostic),
+    oauthAccessesByResource: oauthDiagnostic(token),
     grants: { status: 'NOT_REQUESTED' },
   };
 }
@@ -223,9 +264,12 @@ export class RestoreApi {
     requireThat(response.redirected !== true && (!response.url || response.url === url), 'provider_redirect_rejected',
       method === 'GET' ? 'BLOCKED' : 'UNKNOWN_MUTATION_OUTCOME');
     if (method === 'GET' && absent && response.status === 404) return null;
-    requireThat(response.status >= 200 && response.status < 300,
-      [401, 403].includes(response.status) ? 'provider_access_denied' : 'provider_request_failed',
-      method === 'GET' || [400, 401, 403, 404, 409, 422].includes(response.status) ? 'DENIED' : 'UNKNOWN_MUTATION_OUTCOME');
+    if (!(response.status >= 200 && response.status < 300)) {
+      const error = new RestoreFailure([401, 403].includes(response.status) ? 'provider_access_denied' : 'provider_request_failed',
+        method === 'GET' || [400, 401, 403, 404, 409, 422].includes(response.status) ? 'DENIED' : 'UNKNOWN_MUTATION_OUTCOME');
+      if (method === 'GET' && Number.isInteger(response.status) && response.status >= 100 && response.status <= 599) error.httpStatus = response.status;
+      throw error;
+    }
     if (response.status === 204) {
       requireThat(method === 'DELETE', 'provider_response_invalid', method === 'GET' ? 'BLOCKED' : 'UNKNOWN_MUTATION_OUTCOME');
       return null;
@@ -285,7 +329,8 @@ export class RestoreApi {
         if (evidence.grants.status !== 'COLLECTED') grantDiagnosticFailure = new RestoreFailure('token_grants_diagnostic_truncated');
       } catch (error) {
         grantDiagnosticFailure = error;
-        evidence.grants = { status: error instanceof RestoreFailure ? error.outcome : 'BLOCKED', errorCode: failureCode(error) };
+        evidence.grants = { status: error instanceof RestoreFailure ? error.outcome : 'BLOCKED', errorCode: failureCode(error),
+          httpStatus: Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? error.httpStatus : null };
       }
       if (evidence.rowsTruncated && !grantDiagnosticFailure) grantDiagnosticFailure = new RestoreFailure('token_authority_diagnostic_truncated');
       await onEvidence(structuredClone(evidence));
