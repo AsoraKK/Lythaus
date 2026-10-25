@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
@@ -8,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lythaus/core/routing/auth_return_location.dart';
 
 import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/components/lyth_snackbar.dart';
@@ -53,10 +56,23 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
 
   void _logScreenView() {
     if (_screenLogged) return;
-    ref
-        .read(analyticsClientProvider)
-        .logEvent(AnalyticsEvents.inviteScreenView);
+    _logEvent(
+      ref.read(analyticsClientProvider),
+      AnalyticsEvents.inviteScreenView,
+    );
     _screenLogged = true;
+  }
+
+  void _logEvent(
+    AnalyticsClient analytics,
+    String event, {
+    Map<String, Object?>? properties,
+  }) {
+    unawaited(
+      Future<void>.sync(
+        () => analytics.logEvent(event, properties: properties),
+      ).catchError((Object _) {}),
+    );
   }
 
   @override
@@ -153,6 +169,7 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
 
     try {
       final token = await ref.read(jwtProvider.future);
+      if (!mounted) return;
       if (token == null || token.isEmpty) {
         // Preserve the code through the login flow so the router redirects
         // back here once the user has authenticated.
@@ -174,8 +191,8 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
       final service = ref.read(inviteRedeemServiceProvider);
       await service.redeemInvite(accessToken: token, inviteCode: code);
 
-      await analytics.logEvent(AnalyticsEvents.inviteRedeemSuccess);
       if (!mounted) return;
+      _logEvent(analytics, AnalyticsEvents.inviteRedeemSuccess);
       LythSnackbar.success(
         context: context,
         message: 'Invite redeemed. Welcome to Lythaus.',
@@ -189,14 +206,18 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
         }
       }
     } on DioException catch (error) {
+      if (!mounted) return;
       final reason = _mapInviteFailure(error);
-      await analytics.logEvent(
+      _logEvent(
+        analytics,
         AnalyticsEvents.inviteRedeemFail,
         properties: {AnalyticsEvents.propInviteRedeemReason: reason.value},
       );
       setState(() => _error = _messageForInviteFailure(reason));
     } catch (_) {
-      await analytics.logEvent(
+      if (!mounted) return;
+      _logEvent(
+        analytics,
         AnalyticsEvents.inviteRedeemFail,
         properties: {
           AnalyticsEvents.propInviteRedeemReason:

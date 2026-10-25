@@ -213,7 +213,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await signIn(password);
     await page.waitForURL('https://app.lythaus.co/');
     await enableFlutter(page);
-    await page.getByText('No posts yet',{ exact:true }).waitFor({ timeout:60000 });
+    await page.locator('flt-semantics').getByText('No public posts yet',{ exact:true }).waitFor({ timeout:60000 });
     if (process.env.AUTH_QA_DIR) {
       await mkdir(process.env.AUTH_QA_DIR,{ recursive:true });
       await page.screenshot({ path:path.join(process.env.AUTH_QA_DIR,`real-handler-${engineName}-${width}-signed-in.png`) });
@@ -224,7 +224,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     assert.ok(!(await page.evaluate(()=>Object.keys(localStorage))).some(key=>/^(jwt|refreshToken|userData)$/.test(key)));
     const secondTab=await context.newPage(); secondTab.setDefaultTimeout(30000);
     await Promise.all([openApp(page),openApp(secondTab)]);
-    await Promise.all([page.getByText('No posts yet',{ exact:true }).waitFor(),secondTab.getByText('No posts yet',{ exact:true }).waitFor()]);
+    await Promise.all([page.locator('flt-semantics').getByText('No public posts yet',{ exact:true }).waitFor(),secondTab.locator('flt-semantics').getByText('No public posts yet',{ exact:true }).waitFor()]);
     assert.equal(maximumRefreshInFlight,1,'Real rotating cookies must survive concurrent tab restoration');
     await navigate('/forgot-password','Reset your password');
     await page.locator('#reset-email').fill(email);
@@ -255,14 +255,20 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await signIn(nextPassword);
     await page.waitForURL('https://app.lythaus.co/');
     await enableFlutter(page);
-    await page.getByText('No posts yet',{ exact:true }).waitFor();
-    if (width<700) await page.getByRole('button',{ name:/^Profile(?:\b|$)/ }).click();
-    await page.getByRole('button',{ name:'Settings',exact:true }).click();
+    await page.locator('flt-semantics').getByText('No public posts yet',{ exact:true }).waitFor();
+    if (width<700) {
+      await page.getByRole('button',{ name:/^Profile(?:\b|$)/ }).click();
+      await page.getByRole('button',{ name:'Open settings',exact:true }).click();
+    } else {
+      await page.getByRole('button',{ name:'Settings',exact:true }).click();
+    }
+    await page.waitForURL(url=>url.pathname==='/settings');
     await page.getByText('Account security',{ exact:true }).click();
     await page.getByRole('button',{ name:'Sign out of all sessions',exact:true }).click();
     await page.getByRole('button',{ name:'Sign in with email',exact:true }).waitFor();
     await openApp(page);
     await page.getByRole('button',{ name:'Sign in with email',exact:true }).waitFor();
+    await page.waitForFunction(()=>localStorage.getItem('lythaus-session-logout-pending')===null);
     assert.equal((await context.cookies('https://api.lythaus.co')).some(cookie=>cookie.name==='__Host-lythaus_refresh'),false);
     assert.equal((await sql('SELECT count(*)::int n FROM identity.auth_sessions WHERE user_id=$1 AND revoked_at IS NULL',[userId])).rows[0].n,0);
     assert.equal(await page.evaluate(()=>localStorage.getItem('lythaus-session-logout-pending')),null);
