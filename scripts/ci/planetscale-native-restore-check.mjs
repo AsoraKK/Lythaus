@@ -122,9 +122,9 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     const branches = await api.list('/branches');
     requireThat(!branches.some(row => row.name === RESTORE.target || row.id === report.createdTargetId), 'preexisting_target_refused');
     const sourceRoles = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId);
-    report.backup = { protected: backup.protected, completedAt: backup.completed_at, expiresAt: backup.expires_at,
-      pvcBytes: backup.pvc_size, logicalBytes: backup.uncompressed_size, requestedRecoveryPoint: RESTORE.recoveryPoint,
-      actualRecoveryPoint: 'PROVIDER_ATTESTATION_AND_OWNER_REVIEW_REQUIRED' };
+    report.backup = { id: backup.id, restoreMode: 'SPECIFIED_BACKUP_SNAPSHOT', protected: backup.protected,
+      completedAt: backup.completed_at, expiresAt: backup.expires_at,
+      pvcBytes: backup.pvc_size, logicalBytes: backup.uncompressed_size };
     report.cost = { maximumUsd: 5, computeStorageBackupEstimateBeforeTaxUsd: 0.038604429, maximumExerciseSeconds: 7200,
       enforcedProviderHardCap: false, allInReviewedEstimateUsd: approval ? approval.estimatedSubtotalUsd + approval.taxAndFeeAllowanceUsd : null };
     await save();
