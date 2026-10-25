@@ -1,9 +1,11 @@
 import type { MonthlyRewardSnapshotRead } from '../../../packages/db/src/monthly-reward-snapshots.ts';
 import type { readOwnMonthlyRewardSelections } from '../../../packages/db/src/monthly-reward-selections.ts';
+import type { projectRewardsV05Candidate } from '../../../packages/contracts/src/monthly-rewards-v05.ts';
 
 type MonthlyRewardSelectionRead = Awaited<ReturnType<typeof readOwnMonthlyRewardSelections>>;
 
-export function projectMonthlyRewards(snapshot: MonthlyRewardSnapshotRead, selection: MonthlyRewardSelectionRead) {
+export function projectMonthlyRewards(snapshot: MonthlyRewardSnapshotRead, selection: MonthlyRewardSelectionRead,
+  prospective?: ReturnType<typeof projectRewardsV05Candidate> | null) {
   const confirmed = snapshot.state === 'confirmed' && snapshot.preparationOnly !== true;
   const ready = confirmed && selection.state === 'ready';
   return {
@@ -15,5 +17,6 @@ export function projectMonthlyRewards(snapshot: MonthlyRewardSnapshotRead, selec
     sourceScore: confirmed ? snapshot.sourceScore : null,
     snapshot,
     selection,
+    ...(prospective ? { prospective } : {}),
   };
 }

@@ -24,6 +24,7 @@ const suites = [
 ];
 
 const membershipRewardSuites = [
+  ['monthly_rewards_v05', 'packages/db/tests/monthly-rewards-v05.postgres.mjs'],
   ['rewards', 'apps/lythaus-public-api/tests/rewards-acceptance.postgres.mjs'],
   ['membership', 'apps/lythaus-public-api/tests/membership-entitlements.postgres.mjs'],
   ['membership_admin', 'apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs'],
@@ -36,7 +37,7 @@ const commentSuites = [
 ];
 
 export function publicationFailureAnnotation(stage) {
-  assert.match(stage, /^(control|(?:moderation|rereview|admission|safety|tx|attach|rewards|membership|membership_admin|comment_propagation|comment_workerd|feed_post_read_native)\.(?:create|baseline|suite|drop))$/);
+  assert.match(stage, /^(control|(?:moderation|rereview|admission|safety|tx|attach|rewards|monthly_rewards_v05|membership|membership_admin|comment_propagation|comment_workerd|feed_post_read_native)\.(?:create|baseline|suite|drop))$/);
   return `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`;
 }
 

@@ -146,11 +146,14 @@ jobs:
           packages/contracts/tests/monthly-earning.test.mjs
           packages/contracts/tests/monthly-earning-human-eligibility.test.mjs
           packages/contracts/tests/monthly-maintenance.test.mjs
+          packages/contracts/tests/monthly-rewards-v05.test.mjs
       - name: Verify monthly response and projection contracts
         run: >-
-          node --experimental-strip-types --test
+          node --experimental-strip-types --experimental-test-module-mocks --test
           packages/contracts/tests/monthly-rewards-response-preparation.test.mjs
           apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs
+          packages/db/tests/monthly-rewards-v05.test.mjs
+          packages/db/tests/monthly-rewards-v05-assembly.test.mjs
       - run: npm run test:critical-coverage
       - name: Verify text revision evidence, decision binding and account fencing
         run: npm run test:text-review

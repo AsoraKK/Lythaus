@@ -3,6 +3,19 @@
 Status: active documentation authority as of 11 October 2026; implementation,
 deployment, certification and activation require separate evidence.
 
+Prospective rewards update, 25 October 2026: the separate
+[v0.5 preparation](../architecture/monthly-rewards-v05.md) retains both security
+maintenance categories (250 MFA and 1,000 credential points), permits one verified
+method to support both only when its evidence qualifies independently, and
+preserves the inclusive cumulative-union 24-hour grace. UTC Monday–Sunday weeks
+belonging to the closing-Sunday month are approved. The configurable 72-hour
+settlement candidate remains provisional pending actual late-evidence and
+completeness validation. Provisional benefits are visible and nonredeemable until
+finalised, with no merchant exceptions. The final v0.5 total remains to be
+recalculated; 13,650 is a dated v2/current-component bound, not its fixed final
+ceiling. These prospective decisions do not relabel historical policy bytes,
+approve unsupported evidence producers or activate features.
+
 ## Sources and precedence
 
 This reconciliation starts from the [Lythaus repository](https://github.com/AsoraKK/Lythaus/) commit

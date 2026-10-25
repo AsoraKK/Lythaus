@@ -3,12 +3,20 @@ import test from 'node:test';
 import { handleMonthlyReputationRead } from '../src/monthly-reputation-routes.ts';
 import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { MONTHLY_REPUTATION_DECISIONS } from '../../../packages/contracts/src/monthly-reputation-decisions.ts';
+import { REWARDS_V05_CONFIGURATION, calculateMonthlyRewardsV05 } from '../../../packages/contracts/src/monthly-rewards-v05.ts';
+import { PROPOSED_MONTHLY_MAINTENANCE_RULES } from '../../../packages/contracts/src/monthly-maintenance-policy.ts';
 
 const owner = '01900000-0000-7000-8000-000000000001';
 const other = '01900000-0000-7000-8000-000000000002';
 const snapshotId = '01900000-0000-7000-8000-000000000010';
 const sourceId = '01900000-0000-7000-8000-000000000011';
 const assessmentId = '01900000-0000-7000-8000-000000000012';
+const candidateConfiguration = { ...REWARDS_V05_CONFIGURATION,
+  prospectiveFrom: '2026-09-01T00:00:00.000Z', firstSourceMonth: '2026-09' };
+const prospectiveCandidate = calculateMonthlyRewardsV05({ subjectUserId: owner, sourceMonth: '2026-09',
+  evaluatedAt: '2026-10-04T00:00:00.000Z', configuration: candidateConfiguration,
+  weeks: [], maintenanceRules: PROPOSED_MONTHLY_MAINTENANCE_RULES,
+  evidence: [], securityCoverage: [], suggestionRevisions: [], ingestionComplete: false });
 
 const snapshot = {
   id: snapshotId, subject_user_id: owner, source_month: new Date('2026-08-01T00:00:00Z'),
@@ -156,7 +164,7 @@ test('monthly rewards stays pending without approved server configuration and pe
   assert.equal(deps.calls.transactions, 0);
 });
 
-for (const mode of ['confirmed', 'shadow', 'pending']) test(`monthly ${mode} projection preserves authority under the selection period lock`, async () => {
+for (const mode of ['confirmed', 'shadow', 'pending']) for (const prospective of [false, true]) test(`monthly ${mode} projection preserves authority under the selection period lock with candidate=${prospective}`, async () => {
   const calls = [];
   let locked = false;
   let current = { ...snapshot, source_month: new Date('2026-09-01T00:00:00Z'),
@@ -164,6 +172,8 @@ for (const mode of ['confirmed', 'shadow', 'pending']) test(`monthly ${mode} pro
     revision: 1, source_revision: 1, source_score: 500, level: 1 };
   const client = { async query(sql, values = []) {
     calls.push({ sql, values });
+    if (sql.includes('SELECT configuration FROM trust.lock_monthly_rewards_v05_configuration')) return { rows: [{ configuration: candidateConfiguration }], rowCount: 1 };
+    if (sql.includes('SELECT candidate.report')) return { rows: [{ report: prospectiveCandidate }], rowCount: 1 };
     if (sql.includes('SELECT pg_advisory_xact_lock')) {
       if (values[0] === `monthly-reputation:${owner}:2026-09` && !locked) {
         // Model a writer that commits immediately before the request obtains its
@@ -209,11 +219,13 @@ for (const mode of ['confirmed', 'shadow', 'pending']) test(`monthly ${mode} pro
     assert.fail(`unexpected query: ${sql}`);
   } };
   const deps = dependencies({ selectionRulesVersion: 'synthetic-selection-rules',
+    prospectiveRulesVersion: prospective ? candidateConfiguration.version : undefined,
     transaction: async work => work(client) });
   const response = await handleMonthlyReputationRead(request('/api/rewards/me/monthly'), deps);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
   const body = await response.json();
+  assert.equal(body.prospective?.state, prospective ? 'provisional' : undefined);
   assert.equal(locked, true);
   assert.equal(body.snapshot.state, mode);
   if (mode === 'pending') {

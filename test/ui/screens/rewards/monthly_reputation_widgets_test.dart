@@ -118,6 +118,73 @@ ResponseBody _json(Map<String, dynamic> payload) => ResponseBody.fromString(
 );
 
 void main() {
+  testWidgets(
+    'fixed confirmed level remains visible beside a provisional candidate',
+    (tester) async {
+      await tester.pumpWidget(
+        _withResponse({
+          ..._response(),
+          'prospective': {
+            'policyVersion': 'lythaus-monthly-rewards-v0.5-candidate',
+            'state': 'provisional',
+            'sourceMonth': '2026-09',
+            'effectiveMonth': '2026-10',
+            'sourceScore': 1250,
+            'level': 2,
+            'finalMaximumSourceMonth': null,
+            'maximumForCurrentComponents': 13650,
+            'redeemable': false,
+            'runtimeActivationAllowed': false,
+            'appliedPoints': 0,
+          },
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Level 4 confirmed'), findsOneWidget);
+      expect(find.text('Provisional level 2'), findsOneWidget);
+      expect(
+        find.textContaining('cannot be redeemed until finalised'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'provisional benefits display while redemption remains unavailable',
+    (tester) async {
+      await tester.pumpWidget(
+        _withResponse({
+          'state': 'pending',
+          'prospective': {
+            'policyVersion': 'lythaus-monthly-rewards-v0.5-candidate',
+            'state': 'provisional',
+            'sourceMonth': '2026-11',
+            'effectiveMonth': '2026-12',
+            'sourceScore': 1250,
+            'level': 2,
+            'finalMaximumSourceMonth': null,
+            'maximumForCurrentComponents': 13650,
+            'redeemable': false,
+            'runtimeActivationAllowed': false,
+            'appliedPoints': 0,
+          },
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Provisional level 2'), findsOneWidget);
+      expect(
+        find.textContaining('cannot be redeemed until finalised'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Current activity continues earning'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('source score: 1250'), findsOneWidget);
+      expect(find.textContaining('13,650'), findsNothing);
+    },
+  );
+
   setUpAll(loadFontsForGoldenTests);
 
   testWidgets('pending default Level 1 is never labelled confirmed', (

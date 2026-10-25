@@ -37,6 +37,22 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
             ),
           ),
           data: (view) {
+            final prospective = view.prospective;
+            Widget? prospectiveMessage;
+            if (prospective != null) {
+              prospectiveMessage = _TrackerMessage(
+                icon: Icons.hourglass_empty,
+                title: 'Provisional level ${prospective.level}',
+                message:
+                    'Benefits for ${prospective.effectiveMonth} are provisional and cannot be redeemed until finalised. Current activity continues earning for its own period.',
+                detail:
+                    'Provisional ${prospective.sourceMonth} source score: ${prospective.sourceScore}. The final rewards total is pending.',
+                action: TextButton(
+                  onPressed: () => ref.invalidate(monthlyRewardsViewProvider),
+                  child: const Text('Refresh'),
+                ),
+              );
+            }
             final snapshot = view.snapshot;
             final confirmed = view.hasConfirmedLevel;
             final shadow = snapshot.isShadow;
@@ -44,7 +60,7 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
             final maximum = snapshot.maximumSourceMonth == 13500
                 ? '13,500'
                 : '13,650';
-            return _TrackerMessage(
+            final currentMessage = _TrackerMessage(
               icon: confirmed || shadow
                   ? Icons.insights_outlined
                   : Icons.hourglass_empty,
@@ -69,6 +85,13 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
                 onPressed: () => ref.invalidate(monthlyRewardsViewProvider),
                 child: const Text('Refresh'),
               ),
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (confirmed || prospective == null) currentMessage,
+                if (prospectiveMessage != null) prospectiveMessage,
+              ],
             );
           },
         ),

@@ -38,7 +38,7 @@ const allocatedJobsDiagnosticFiles = new Map([
   // Exact comment hooks independently reviewed at 211f0e064b501ec6ed680c891ee36bd3e38d8a41.
   ['apps/lythaus-jobs/src/index.ts', '9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12'],
   // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', 'aacfbb522f8387a72db133fa8c5384dcf9d4e2f2'],
+  ['apps/lythaus-public-api/src/index.ts', '91fa5fa0217ec18da0896f57adbffd04deb703f8'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],

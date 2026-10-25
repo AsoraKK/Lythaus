@@ -141,6 +141,7 @@ class MonthlyRewardsView {
     this.snapshot = const MonthlyLevelSnapshot(state: 'unavailable'),
     this.selectionState = 'unavailable',
     this.selectionReasonCode,
+    this.prospective,
   });
 
   final String state;
@@ -152,6 +153,7 @@ class MonthlyRewardsView {
   final MonthlyLevelSnapshot snapshot;
   final String selectionState;
   final String? selectionReasonCode;
+  final MonthlyProvisionalRewards? prospective;
 
   bool get hasConfirmedLevel =>
       snapshot.isConfirmed &&
@@ -175,6 +177,60 @@ class MonthlyRewardsView {
       snapshot: MonthlyLevelSnapshot.fromResponse(json),
       selectionState: _monthlyString(selection['state']) ?? 'unavailable',
       selectionReasonCode: _monthlyString(selection['reasonCode']),
+      prospective: MonthlyProvisionalRewards.fromJson(
+        _monthlyObject(json['prospective']),
+      ),
+    );
+  }
+}
+
+class MonthlyProvisionalRewards {
+  const MonthlyProvisionalRewards({
+    required this.sourceMonth,
+    required this.effectiveMonth,
+    required this.sourceScore,
+    required this.level,
+  });
+
+  final String sourceMonth;
+  final String effectiveMonth;
+  final int sourceScore;
+  final int level;
+
+  static MonthlyProvisionalRewards? fromJson(Map<String, dynamic> value) {
+    final sourceMonth = _monthlyMonth(value['sourceMonth']);
+    final effectiveMonth = _monthlyMonth(value['effectiveMonth']);
+    final score = _monthlyInteger(value['sourceScore'], 0, 13650);
+    final level = _monthlyInteger(value['level'], 1, 5);
+    final expectedLevel = score == null
+        ? null
+        : score >= 10000
+        ? 5
+        : score >= 6000
+        ? 4
+        : score >= 3000
+        ? 3
+        : score >= 1000
+        ? 2
+        : 1;
+    if (value['policyVersion'] != 'lythaus-monthly-rewards-v0.5-candidate' ||
+        value['state'] != 'provisional' ||
+        value['redeemable'] != false ||
+        value['runtimeActivationAllowed'] != false ||
+        value['appliedPoints'] != 0 ||
+        value['finalMaximumSourceMonth'] != null ||
+        value['maximumForCurrentComponents'] != 13650 ||
+        sourceMonth == null ||
+        effectiveMonth != _followingMonthlyMonth(sourceMonth) ||
+        score == null ||
+        level != expectedLevel) {
+      return null;
+    }
+    return MonthlyProvisionalRewards(
+      sourceMonth: sourceMonth,
+      effectiveMonth: effectiveMonth!,
+      sourceScore: score,
+      level: level!,
     );
   }
 }

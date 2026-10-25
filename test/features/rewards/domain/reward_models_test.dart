@@ -56,6 +56,49 @@ Map<String, dynamic> _preparedMonthlyResponse() => {
 };
 
 void main() {
+  test(
+    'provisional monthly candidate remains visible without claim authority',
+    () {
+      final payload = <String, dynamic>{
+        'state': 'pending',
+        'prospective': <String, dynamic>{
+          'policyVersion': 'lythaus-monthly-rewards-v0.5-candidate',
+          'state': 'provisional',
+          'sourceMonth': '2026-11',
+          'effectiveMonth': '2026-12',
+          'sourceScore': 1250,
+          'level': 2,
+          'finalMaximumSourceMonth': null,
+          'maximumForCurrentComponents': 13650,
+          'redeemable': false,
+          'runtimeActivationAllowed': false,
+          'appliedPoints': 0,
+        },
+      };
+      final view = MonthlyRewardsView.fromJson(payload);
+      expect(view.prospective?.sourceScore, 1250);
+      expect(view.prospective?.level, 2);
+      expect(view.hasConfirmedLevel, isFalse);
+      expect(view.rewardsReady, isFalse);
+      for (final patch in [
+        {'redeemable': true},
+        {'state': 'confirmed'},
+        {'sourceScore': 13651},
+        {'level': 5},
+        {'effectiveMonth': '2026-11'},
+        {'runtimeActivationAllowed': true},
+      ]) {
+        expect(
+          MonthlyRewardsView.fromJson({
+            ...payload,
+            'prospective': {...payload['prospective'] as Map, ...patch},
+          }).prospective,
+          isNull,
+        );
+      }
+    },
+  );
+
   Map<String, dynamic> receipt(String status) => {
     'id': 'redemption-1',
     'userId': 'account-1',

@@ -13,6 +13,7 @@ import { previewProspectiveMonthlyReputation, PROSPECTIVE_REPUTATION_POLICY_VERS
 import type { SuggestionAcceptanceRevision } from '../../contracts/src/monthly-suggestion-policy.ts';
 import { requireMonthlyPeerIngestionDrained } from './monthly-peer-participation.ts';
 import { requireMonthlyContextIngestionDrained } from './monthly-context-review.ts';
+import { assembleRewardsV05Candidate } from './monthly-rewards-v05.ts';
 
 interface AssemblyInput {
   subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string; contextRulesVersion?: string;
@@ -46,6 +47,11 @@ export async function assemblePreparedMonthlyReputation(client: Client, input: A
 }
 export async function assembleMonthlyReputation(client: Client, input: AssemblyInput) {
   return assembleCanonicalMonthlyReputation(client, input);
+}
+export async function assembleProspectiveMonthlyRewards(client: Client, input: {
+  subjectUserId: string; sourceMonth: string; rulesVersion?: string; peerRulesVersion?: string; contextRulesVersion?: string;
+}) {
+  return assembleRewardsV05Candidate(client, { ...input, version: input.rulesVersion });
 }
 async function assembleCanonicalMonthlyReputation(client: Client, input: AssemblyInput, preparation?: AssemblyPreparation) {
   const policyVersion = preparation ? PROSPECTIVE_REPUTATION_POLICY_VERSION : MONTHLY_REPUTATION_POLICY_VERSION;

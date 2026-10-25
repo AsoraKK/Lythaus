@@ -63,6 +63,7 @@ interface Env extends EnvBindings {
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
   MONTHLY_REPUTATION_SELECTION_RULES?: string;
+  MONTHLY_REWARDS_V05_RULES?: string;
   SUPPORT_FEEDBACK_ENABLED?: string;
   SUPPORT_FEEDBACK_POLICY?: string;
   TAG_SEARCH_INDEX_MAINTENANCE_ENABLED?: string;
@@ -3731,6 +3732,7 @@ export default {
           transaction: (work) => transaction(env.DB_APP_FRESH, work),
           snapshotRulesVersion: env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
           selectionRulesVersion: env.MONTHLY_REPUTATION_SELECTION_RULES,
+          prospectiveRulesVersion: env.MONTHLY_REWARDS_V05_RULES,
           respond: (body, status, headers = {}) => typeof body === 'string'
             ? privateTextResponse(request, env, body, { status, headers })
             : privateResponse(request, env, body, { status, headers }),

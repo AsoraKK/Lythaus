@@ -3,7 +3,8 @@ import { logEvent } from '@lythaus/observability';
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { loadMonthlyEarningConfiguration } from '../../../packages/db/src/monthly-earning.ts';
 import { loadMonthlyMaintenanceConfiguration } from '../../../packages/db/src/monthly-maintenance.ts';
-import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
+import { assembleMonthlyReputation, assembleProspectiveMonthlyRewards } from '../../../packages/db/src/monthly-assembly.ts';
+import { monthlyRewardsV05Configuration } from '../../../packages/db/src/monthly-rewards-v05.ts';
 
 export interface MonthlyAssemblyEnv {
   DB_JOBS_FRESH: HyperdriveBinding;
@@ -11,16 +12,18 @@ export interface MonthlyAssemblyEnv {
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  MONTHLY_REWARDS_V05_RULES?: string;
 }
 
 export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise<{ processed: number }> {
+  const prospective = await reconcileProspectiveMonthlyRewards(env);
   const weeklyVersion = env.MONTHLY_REPUTATION_SHADOW_RULES, maintenanceVersion = env.MONTHLY_REPUTATION_MAINTENANCE_RULES;
-  if (!weeklyVersion || !maintenanceVersion) return { processed: 0 };
+  if (!weeklyVersion || !maintenanceVersion) return { processed: prospective };
   const configuration = await transaction(env.DB_JOBS_FRESH, async client => ({
     weekly: await loadMonthlyEarningConfiguration(client, weeklyVersion),
     maintenance: await loadMonthlyMaintenanceConfiguration(client, maintenanceVersion),
   }));
-  if (!configuration.weekly || !configuration.maintenance) return { processed: 0 };
+  if (!configuration.weekly || !configuration.maintenance) return { processed: prospective };
   const candidates = await query<{ subject_user_id: string; source_month: string }>(env.DB_JOBS_FRESH,
     `WITH periods AS (
        SELECT month FROM generate_series(date_trunc('month', greatest($2::timestamptz, $3::timestamptz) AT TIME ZONE 'UTC'),
@@ -50,7 +53,7 @@ export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise
        ))) ORDER BY period.month, account.id LIMIT 50`,
     [MONTHLY_REPUTATION_POLICY_VERSION, configuration.weekly.collectFrom, configuration.maintenance.collectFrom,
       configuration.maintenance.rules.monthSettlementHours, maintenanceVersion, weeklyVersion]);
-  let processed = 0;
+  let processed = prospective;
   for (const row of candidates.rows) {
     try {
       const result = await transaction(env.DB_JOBS_FRESH, client => assembleMonthlyReputation(client, {
@@ -65,4 +68,32 @@ export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise
     }
   }
   return { processed };
+}
+
+async function reconcileProspectiveMonthlyRewards(env: MonthlyAssemblyEnv): Promise<number> {
+  if (!env.MONTHLY_REWARDS_V05_RULES) return 0;
+  const configuration = await transaction(env.DB_JOBS_FRESH, client => monthlyRewardsV05Configuration(client, env.MONTHLY_REWARDS_V05_RULES));
+  if (!configuration?.firstSourceMonth) return 0;
+  const candidates = await query<{ subject_user_id: string; source_month: string }>(env.DB_JOBS_FRESH,
+    `SELECT account.id AS subject_user_id, to_char(period.month, 'YYYY-MM') AS source_month
+     FROM identity.users account CROSS JOIN generate_series($1::date,
+       (date_trunc('month', now() AT TIME ZONE 'UTC') - interval '1 month')::date, interval '1 month') period(month)
+     LEFT JOIN LATERAL (SELECT checked_at FROM trust.monthly_rewards_v05_candidates candidate
+       WHERE candidate.subject_user_id = account.id AND candidate.source_month = period.month::date
+       ORDER BY revision DESC LIMIT 1) latest ON true
+     WHERE account.status = 'active' AND account.deleted_at IS NULL AND NOT account.is_production_acceptance
+       AND account.created_at < (period.month + interval '1 month') AT TIME ZONE 'UTC'
+     ORDER BY latest.checked_at NULLS FIRST, period.month, account.id LIMIT 50`, [`${configuration.firstSourceMonth}-01`]);
+  let processed = 0;
+  for (const candidate of candidates.rows) {
+    try {
+      const result = await transaction(env.DB_JOBS_FRESH, client => assembleProspectiveMonthlyRewards(client, {
+        subjectUserId: candidate.subject_user_id, sourceMonth: candidate.source_month,
+        rulesVersion: env.MONTHLY_REWARDS_V05_RULES, peerRulesVersion: env.MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES,
+        contextRulesVersion: env.MONTHLY_REPUTATION_CONTEXT_RULES,
+      }));
+      if (result?.created) processed++;
+    } catch { logEvent({ service: 'lythaus-jobs', event: 'monthly_rewards_v05_reconciliation_failed' }); }
+  }
+  return processed;
 }
