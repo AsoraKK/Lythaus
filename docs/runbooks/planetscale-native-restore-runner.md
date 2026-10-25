@@ -130,8 +130,7 @@ never guessed from SQL names. Metadata must match the source's inheritance:
 | Jobs | `pscale_api_9jfbtij9y4b2` |
 | Privacy | `pscale_api_wv7rzyuejknl` |
 
-The proposed restore-copy SQL baseline is role-specific and remains pending
-owner review before activation. The setup-only role is pinned to
+The approved restore-copy SQL baseline is role-specific. The setup-only role is pinned to
 `NOSUPERUSER`, `BYPASSRLS`, `CREATEROLE`, `CREATEDB`, and `REPLICATION`, with
 only its observed memberships in `postgres`, `pg_read_all_data`, and
 `pg_write_all_data`. The four application roles remain `NOSUPERUSER`, without
