@@ -7,11 +7,11 @@ import { compileDetectionEvidence, detectionBindingHash, detectionOwnerStatus,
 export interface DetectionStore {
   admit(id: string, binding: ImageDetectionBinding, expiresAt: string): Promise<DetectionJob>;
   read(id: string, ownerId: string): Promise<DetectionJob | null>;
-  claim(id: string, eventId: string, bindingHash: string, attemptId: string, leaseMs: number): Promise<DetectionJob | null>;
+  claim(id: string, eventId: string, bindingHash: string, attemptId: string, leaseMs: number): Promise<DetectionJob | 'busy' | null>;
   startDispatch(id: string, attemptId: string): Promise<DetectionJob | null>;
   settle(id: string, attemptId: string, state: 'completed' | 'failed' | 'inconclusive',
     evidence: ImageDetectionEvidence | null, reason: DetectionReason | null): Promise<boolean>;
-  retryBeforeDispatch(id: string, attemptId: string, reason: DetectionReason): Promise<void>;
+  retryBeforeDispatch(id: string, attemptId: string, reason: DetectionReason): Promise<boolean>;
   invalidate(id: string, ownerId: string, reason: 'CANCELLED' | 'DELETED' | 'CLEANUP' | 'SUPERSEDED'): Promise<void>;
 }
 
@@ -70,11 +70,12 @@ export async function enqueueImageDetection(deps: DetectionDependencies, binding
 }
 
 export async function processImageDetection(deps: DetectionDependencies,
-  message: { jobId: string; sourceEventId: string; bindingHash: string }, signal?: AbortSignal): Promise<'disabled' | 'ignored' | 'settled'> {
+  message: { jobId: string; sourceEventId: string; bindingHash: string }, signal?: AbortSignal): Promise<'disabled' | 'ignored' | 'settled' | 'retry'> {
   if (!enabled(deps)) return 'disabled';
   const timeoutMs = deps.timeoutMs ?? 30_000;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) throw new Error('image_detection_timeout_invalid');
   const job = await deps.store.claim(message.jobId, message.sourceEventId, message.bindingHash, uuidv7(), timeoutMs);
+  if (job === 'busy') return 'retry';
   if (!job?.binding || !job.attemptId) return 'ignored';
   const { binding } = job, attemptId = job.attemptId;
   const controller = new AbortController();
@@ -142,7 +143,8 @@ export async function processImageDetection(deps: DetectionDependencies,
     signal?.removeEventListener('abort', abort);
     controller.abort();
   }
-  return 'settled';
+  const state = (await deps.store.read(job.id, binding.ownerId))?.state;
+  return state === 'queued' || state === 'processing' ? 'retry' : 'settled';
 }
 
 export async function imageDetectionStatus(deps: Pick<DetectionDependencies, 'store' | 'originals'>, jobId: string, ownerId: string) {

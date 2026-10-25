@@ -140,10 +140,11 @@ test('candidate consumer + SQL store + local R2, synthetic outputs only', { time
     await t.test('transient pre-dispatch transport errors retry with a three-attempt bound', async () => {
       const s = await seed(), original = s.deps.originals;
       s.deps.originals = { get: async () => { throw new Error('synthetic_unavailable'); } };
-      await s.run(); assert.equal((await s.read()).state, 'queued'); assert.equal(s.calls(), 0);
+      assert.equal(await s.run(), 'retry'); assert.equal((await s.read()).state, 'queued'); assert.equal(s.calls(), 0);
       s.deps.originals = original; await s.run(); assert.equal((await s.read()).state, 'completed'); assert.equal(s.calls(), 1);
       const exhausted = await seed({ originals: { get: async () => { throw new Error('synthetic_unavailable'); } } });
-      for (let i = 0; i < 4; i++) await exhausted.run();
+      assert.equal(await exhausted.run(), 'retry'); assert.equal(await exhausted.run(), 'retry');
+      assert.equal(await exhausted.run(), 'settled'); assert.equal(await exhausted.run(), 'ignored');
       assert.equal((await exhausted.read()).state, 'failed'); assert.equal((await exhausted.read()).attempts, 3);
     });
 
@@ -152,11 +153,29 @@ test('candidate consumer + SQL store + local R2, synthetic outputs only', { time
         const s = await seed(), attempt = uuidv7();
         await store.claim(s.job.id, s.event.sourceEventId, s.job.bindingHash, attempt, 30_000);
         if (dispatched) await store.startDispatch(s.job.id, attempt);
+        assert.equal(await s.run(), 'retry');
+        assert.equal(s.calls(), 0); assert.equal((await s.read()).attempts, 1);
         await admin.query("UPDATE media.image_detection_jobs SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1", [s.job.id]);
         await s.run();
         assert.equal((await s.read()).state, dispatched ? 'inconclusive' : 'completed');
         assert.equal(s.calls(), dispatched ? 0 : 1);
         assert.equal(await store.settle(s.job.id, attempt, 'failed', null, 'SOURCE_UNAVAILABLE'), false);
+      }
+    });
+
+    await t.test('lease expiry during settlement returns retry only for undispatched work', async () => {
+      for (const stage of ['missing', 'integrity', 'evaluated']) {
+        const s = await seed();
+        if (stage === 'missing') s.deps.originals = { get: async () => null };
+        if (stage === 'integrity') s.deps.originals = { get: async () => ({ ...s.binding.original,
+          size: png.length, body: new Response(new Uint8Array(png.length)).body }) };
+        s.deps.store = { ...store, async settle(...args) {
+          await admin.query("UPDATE media.image_detection_jobs SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1", [s.job.id]);
+          return store.settle(...args);
+        } };
+        assert.equal(await s.run(), stage === 'evaluated' ? 'settled' : 'retry');
+        assert.equal((await s.read()).state, stage === 'evaluated' ? 'inconclusive' : 'queued');
+        assert.equal(s.calls(), stage === 'evaluated' ? 1 : 0);
       }
     });
 
@@ -175,7 +194,7 @@ test('candidate consumer + SQL store + local R2, synthetic outputs only', { time
       const s = await seed({ timeoutMs: 200 }); let cancelled = 0;
       s.deps.originals = { get: async () => ({ ...s.binding.original, size: png.length,
         body: new ReadableStream({ pull: () => new Promise(() => {}), cancel: () => { cancelled++; } }) }) };
-      await s.run();
+      assert.equal(await s.run(), 'retry');
       assert.equal(cancelled, 1); assert.equal(s.calls(), 0); assert.equal((await s.read()).state, 'queued');
     });
 
@@ -193,6 +212,22 @@ test('candidate consumer + SQL store + local R2, synthetic outputs only', { time
       const s = await seed(); let calls = 0;
       s.deps.evaluator.evaluate = async () => { calls++; throw new Error('synthetic_provider_ambiguous'); };
       await s.run(); await s.run(); assert.equal(calls, 1); assert.equal((await s.read()).reason, 'ATTEMPT_CONSUMED');
+    });
+
+    await t.test('lost dispatch or settlement acknowledgement cannot repeat evaluator execution', async () => {
+      for (const lose of ['dispatch', 'settlement']) {
+        const s = await seed(); let lost = false;
+        s.deps.store = createImageDetectionStore(async work => {
+          const result = await transaction(work);
+          if (!lost && (lose === 'dispatch' ? result?.dispatchStartedAt && result?.state === 'processing' : result === true)) {
+            lost = true; throw new Error('synthetic_commit_acknowledgement_lost');
+          }
+          return result;
+        });
+        await s.run(); await s.run(); assert.equal(lost, true);
+        assert.equal((await s.read()).state, lose === 'dispatch' ? 'inconclusive' : 'completed');
+        assert.equal(s.calls(), lose === 'dispatch' ? 0 : 1); assert.equal((await s.read()).attempts, 1);
+      }
     });
 
     await t.test('cancellation, deletion and cleanup fence an in-flight success', async () => {
@@ -244,6 +279,47 @@ test('candidate consumer + SQL store + local R2, synthetic outputs only', { time
       await store.invalidate(s.job.id, s.binding.ownerId, 'CLEANUP');
       await bucket.delete(s.binding.original.key);
       assert.equal((await s.read()).state, 'deleted'); assert.equal((await other.read()).state, 'queued');
+    });
+
+    await t.test('canonical deletion scrubs cancelled jobs even after original cleanup', async () => {
+      for (const target of ['account', 'media', 'media-after-cleanup']) {
+        const s = await seed(), other = await seed();
+        await s.run();
+        await store.invalidate(s.job.id, s.binding.ownerId, 'CANCELLED');
+        assert.equal((await s.read()).state, 'cancelled');
+        if (target === 'account') await admin.query("UPDATE identity.users SET deleted_at=clock_timestamp(),status='deleted' WHERE id=$1", [s.binding.ownerId]);
+        else {
+          if (target === 'media-after-cleanup') await admin.query('UPDATE media.upload_sessions SET quarantine_deleted_at=clock_timestamp() WHERE id=$1', [s.binding.uploadSessionId]);
+          await admin.query("UPDATE media.objects SET deleted_at=clock_timestamp(),state='deleted' WHERE id=$1", [s.binding.objectId]);
+        }
+        assert.equal(await mf.request('/status', { id: s.job.id, ownerId: s.binding.ownerId }), null);
+        const row = await s.read();
+        assert.equal(row.state, 'deleted'); assert.equal(row.reason, 'DELETED');
+        assert.equal(row.binding, null); assert.equal(row.evidence, null);
+        await store.invalidate(s.job.id, s.binding.ownerId, 'CLEANUP');
+        await store.invalidate(s.job.id, s.binding.ownerId, 'CANCELLED');
+        assert.equal(await s.run(), 'ignored'); assert.equal(s.calls(), 1);
+        assert.equal((await s.read()).state, 'deleted'); assert.equal((await other.read()).state, 'queued');
+      }
+    });
+
+    await t.test('late result cannot preserve a cancelled binding after canonical deletion', async () => {
+      const s = await seed(), evaluate = s.deps.evaluator.evaluate;
+      s.deps.evaluator.evaluate = async input => {
+        await store.invalidate(s.job.id, s.binding.ownerId, 'CANCELLED');
+        await admin.query("UPDATE identity.users SET deleted_at=clock_timestamp(),status='deleted' WHERE id=$1", [s.binding.ownerId]);
+        return evaluate(input);
+      };
+      await s.run();
+      const raw = (await admin.query('SELECT state,binding,evidence FROM media.image_detection_jobs WHERE id=$1', [s.job.id])).rows[0];
+      assert.deepEqual(raw, { state: 'deleted', binding: null, evidence: null });
+    });
+
+    await t.test('explicit owner deletion scrubs even an invalid binding hash', async () => {
+      const s = await seed();
+      await admin.query('UPDATE media.image_detection_jobs SET binding_hash=$2 WHERE id=$1', [s.job.id, 'f'.repeat(64)]);
+      await store.invalidate(s.job.id, s.binding.ownerId, 'DELETED');
+      assert.equal((await s.read()).binding, null); assert.equal((await s.read()).state, 'deleted');
     });
 
     await t.test('database constraints reject missing or authority-bearing evidence', async () => {

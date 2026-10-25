@@ -9,7 +9,9 @@ retention policy, public API, Flutter screen or publication gate is changed.
 ## Source and concurrent ownership
 
 `git ls-remote origin refs/heads/main` on 25 October 2026 returned
-`c0963c36693476ecc49ab1fcba0572454926b4d3`, which is this branch's base.
+`c0963c36693476ecc49ab1fcba0572454926b4d3`, the initial implementation base.
+The resumed candidate includes current main
+`3e1edce56cba5b9dcc357b96983ee8eea9c8c36f` without merge conflicts.
 This is a source pin, not a deployed-release identity. Root `AGENTS.md`, current
 policy authority, approved migration manifest and the saved environment setup
 instructions were read. No additional repository SKILL.md or nested AGENTS.md
@@ -24,9 +26,11 @@ Pending work inspected before implementation:
 - #1087, `9c73ac3a39b3c2374071ad30b37f4deb5c854dbc`: private beta adapter tests and
   bounded real-evaluation proposal. Its source/raster lineage, authorization and
   real-provider limitations remain. No model, checkpoint or private fixture ran.
-- #1101 owns shared comment hooks, regression CI and monthly state changes;
-  #1102 owns release/database workflows and authority verification. All files in
-  this candidate are new. Main merge order and deployment belong to the parent.
+- #1101's shared comment hooks, regression CI and monthly state changes and
+  #1102's release/database workflow changes are now in main. The resumed diff
+  adds a focused image-test CI step after the existing standard-upload tests;
+  runtime entrypoints and release/database workflows are untouched. Deployment
+  remains with the integration lane.
 
 The existing `beta.ts` binding/result validation, source-version checks and
 consumed-attempt semantics informed this design. `verifyStandardUploadBytes` is
@@ -88,7 +92,10 @@ State transitions:
 - Queued → processing after a durable claim. Duplicate deliveries observe the
   existing lease or terminal state and do not dispatch.
 - Pre-dispatch transport failure or abandoned lease → queued, at most three
-  attempts; exhaustion → failed. Integrity mismatch → failed without inference.
+  attempts; exhaustion → failed. The consumer returns `retry` while work remains
+  queued, including redelivery during a live processing lease. Future queue
+  wiring must map that result to delayed retry rather than acknowledgement.
+  Integrity mismatch → failed without inference.
 - Missing/replaced original → inconclusive. There is no derivative fallback.
 - Dispatch is persisted before invoking the adapter. Unknown/failed/timeout
   outcome after that point → inconclusive, with the attempt consumed. A retry
@@ -101,6 +108,14 @@ State transitions:
   scrubbed. Cleanup or supersession invalidates evidence. Cancellation cannot be
   relabelled by later cleanup; deletion is terminal. Minimal IDs/hash/timestamps
   remain as a private tombstone pending the approved retention policy.
+
+Canonical account/media deletion dominates cancellation, including when the
+session's cleanup marker was recorded first. Both store reads and the Workerd
+status consumer scrub the binding and evidence, return no owner-visible record,
+and reject late/replayed results. Explicit owner deletion also scrubs a row with
+an invalid binding hash; integrity-validation failure cannot block that deletion.
+Regression cases exercise these paths plus lost dispatch/settlement
+acknowledgements and live-lease redelivery.
 
 Before admission, dispatch, settlement and status reads, the SQL store rechecks
 canonical account/session/media/event identity and cleanup markers. Parent rows
@@ -196,12 +211,19 @@ the same consumer and store under Node. Generated PNGs and evaluator outputs are
 synthetic and do not demonstrate detection quality, rights, false-positive rates,
 provider availability or production acceptance.
 
-The current shared CI has explicit test lists; these new suites need to be added
-by the #1101 regression-CI owner. Exact-head hosted checks can validate the new
-TypeScript and existing regression coverage, but must not be described as having
-run these new suites until their commands appear in job logs. Independent review
-and all required exact-head checks remain prerequisites for parent-coordinated
-merge. No CI or release workflow is edited here.
+Resumed local validation: 29 focused contract/PG17/R2 tests pass, including the
+new deletion, retry, lease-expiry and lost-acknowledgement cases. The existing
+standard-upload regressions, native architecture suite and authenticity
+foundation are also exercised; exact final commands/results and hosted job
+identities are recorded in the PR handoff. Cached workspace package links must
+resolve to this candidate checkout when running coverage, rather than to the
+saved older checkout. No tracked dependency or lockfile change is needed.
+
+The shared CI now explicitly runs both new suites in its existing Native
+Workers/PlanetScale job, after the standard-upload tests. Hosted execution must
+still be verified from the candidate's job logs. Independent review and all
+required checks on the exact candidate remain merge prerequisites. No release
+or provider workflow is edited here.
 
 ## Activation checklist
 

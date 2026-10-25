@@ -31,13 +31,13 @@ async function lockParents(client: DatabaseClient, b: ImageDetectionBinding): Pr
       AND purpose='standard' AND status='approved') AS current, quarantine_deleted_at, expires_at
      FROM media.upload_sessions WHERE id=$1 FOR SHARE`,
     [b.uploadSessionId, b.ownerId, b.original.key, b.original.sha256, b.original.bytes, b.original.mime]);
-  if (!session.rows[0]?.current) return { reason: 'SUPERSEDED', expiresAt: null };
-  if (session.rows[0].quarantine_deleted_at) return { reason: 'CLEANUP', expiresAt: null };
   const media = await client.query<{ current: boolean; deleted_at: Date | null }>(
     `SELECT (owner_id=$2 AND sha256=$3 AND state='review' AND object_key=$4) AS current, deleted_at
        FROM media.objects WHERE id=$1 FOR SHARE`,
     [b.objectId, b.ownerId, b.contentVersion, `approved/${b.ownerId}/${b.uploadSessionId}.webp`]);
   if (media.rows[0]?.deleted_at || !media.rows[0]) return { reason: 'DELETED', expiresAt: null };
+  if (!session.rows[0]?.current) return { reason: 'SUPERSEDED', expiresAt: null };
+  if (session.rows[0].quarantine_deleted_at) return { reason: 'CLEANUP', expiresAt: null };
   if (!media.rows[0].current) return { reason: 'SUPERSEDED', expiresAt: null };
   const ownership = await client.query<{ owner_id: string }>('SELECT owner_id FROM media.ownership WHERE object_id=$1 FOR SHARE', [b.objectId]);
   if (ownership.rows[0]?.owner_id !== b.ownerId) return { reason: 'SUPERSEDED', expiresAt: null };
@@ -62,7 +62,12 @@ async function current(client: DatabaseClient, snapshot: DetectionJob): Promise<
   const parents = snapshot.binding ? await lockParents(client, snapshot.binding) : { reason: null, expiresAt: null };
   const job = await load(client, snapshot.id, true);
   if (!job) throw new Error('image_detection_job_removed');
-  if (job.state === 'deleted' || job.state === 'cancelled') return job;
+  if (job.state === 'deleted') return job;
+  if (parents.reason === 'DELETED') {
+    await invalidateLocked(client, job.id, 'DELETED');
+    return (await load(client, job.id))!;
+  }
+  if (job.state === 'cancelled') return job;
   if (parents.reason) await invalidateLocked(client, job.id, parents.reason);
   else {
     await client.query(`UPDATE media.image_detection_jobs SET state='inconclusive',reason='EXPIRED',evidence=NULL,
@@ -115,6 +120,7 @@ export function createImageDetectionStore(transaction: DetectionTransaction): De
         const snapshot = await load(client, id);
         if (!snapshot?.binding || snapshot.binding.sourceEventId !== eventId || snapshot.bindingHash !== bindingHash) return null;
         const job = await current(client, snapshot);
+        if (job.state === 'processing') return 'busy';
         if (job.state !== 'queued' || job.attempts >= 3) return null;
         const result = await client.query<StoredJob>(`UPDATE media.image_detection_jobs SET state='processing',attempts=attempts+1,
           attempt_id=$2,dispatch_started_at=NULL,reason=NULL,lease_until=LEAST(expires_at,clock_timestamp()+$3*interval '1 millisecond'),
@@ -152,19 +158,25 @@ export function createImageDetectionStore(transaction: DetectionTransaction): De
     },
     async retryBeforeDispatch(id, attemptId, reason) {
       return transaction(async client => {
-        const job = await active(client, id, attemptId);
-        if (!job) return;
-        await client.query(`UPDATE media.image_detection_jobs SET
+        const snapshot = await load(client, id);
+        if (!snapshot) return false;
+        const job = await current(client, snapshot);
+        if (job.attemptId !== attemptId) return false;
+        if (job.state === 'queued' && !job.dispatchStartedAt) return true;
+        if (job.state !== 'processing') return false;
+        const result = await client.query<{ state: string }>(`UPDATE media.image_detection_jobs SET
           state=CASE WHEN dispatch_started_at IS NOT NULL THEN 'inconclusive' WHEN attempts>=3 THEN 'failed' ELSE 'queued' END,
           reason=CASE WHEN dispatch_started_at IS NOT NULL THEN 'ATTEMPT_CONSUMED' ELSE $3 END,
-          lease_until=NULL,updated_at=clock_timestamp() WHERE id=$1 AND attempt_id=$2`, [id, attemptId, reason]);
+          lease_until=NULL,updated_at=clock_timestamp() WHERE id=$1 AND attempt_id=$2 RETURNING state`, [id, attemptId, reason]);
+        return result.rows[0]?.state === 'queued';
       });
     },
     async invalidate(id, ownerId, reason) {
       return transaction(async client => {
         const row = await client.query<StoredJob>('SELECT * FROM media.image_detection_jobs WHERE id=$1 AND owner_id=$2', [id, ownerId]);
         if (!row.rows[0]) return;
-        await current(client, project(row.rows[0]));
+        if (reason === 'DELETED') await load(client, id, true);
+        else await current(client, project(row.rows[0]));
         await invalidateLocked(client, id, reason);
       });
     },
