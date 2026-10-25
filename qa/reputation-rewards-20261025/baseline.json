@@ -1,0 +1,27 @@
+{
+  "scope": "Ordinary reputation/rewards business-rule QA; replacement scope authorized 2026-10-25T04:07:36.933555Z",
+  "main": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+  "branch": "codex/reputation-rewards-business-rules-20261025",
+  "production": {
+    "sha": "3880a8be4c89459dd7ef831c9385817a887511ef",
+    "status": "last-known source supplied by parent, not independently verified as current deployment"
+  },
+  "pendingReferences": [
+    { "pr": 1084, "head": "ef288ef2819382afd571256d3f9e31e8bb8383bb", "observedState": "open draft", "qaUse": "Five exact contract files loaded locally for interval tests; branch not merged or exercised as a server" },
+    { "pr": 1091, "head": "c1456d9bfaab372c9a529b81b5c2a76dfcb2ce75", "observedState": "open draft", "qaUse": "Suggestion observation adapter reference only; not tested in replacement scope" },
+    { "pr": 1092, "head": "b85fe4f1ae367c8ef461c8fd127a75ebde56b9b2", "observedState": "open draft", "qaUse": "Client verification/settings reference only; not tested or treated as a completed monthly earning bridge" },
+    { "pr": 1090, "head": "a10c381213373c0cb93e7dbc14404806ddf21cf2", "observedState": "open draft", "qaUse": "Comment work reference only; not tested in replacement scope" },
+    { "pr": 1093, "head": "d64d00b0c97a9a2063bfdb4dc9b8b5c9db1038ae", "observedState": "open draft", "qaUse": "Comment work reference only; not tested in replacement scope" }
+  ],
+  "mergedReferences": [
+    { "pr": 1085, "head": "294a297c729bfcd0da5511e9b739da0a55bba576", "merge": "517badf5a6017975cb403e53517cf92b2b3e1f70", "qaUse": "Monthly projection is included in pinned main" },
+    { "pr": 1100, "merge": "c0963c36693476ecc49ab1fcba0572454926b4d3", "qaUse": "Pins main only; diagnostic work not repeated" }
+  ],
+  "excludedReference": { "pr": 1086, "head": "3cdddaaaf7107d009bc89f5dd474a037f1168eec", "qaUse": "Independent approval lane; branch not fetched, edited or tested" },
+  "referenceEvidence": "PR metadata read earlier in this task before replacement scope. No live API refresh in this QA phase; local git objects are pinned. Metadata is a dated observation, not proof of deployment or activation.",
+  "runtime": {
+    "node": "v24.19.0",
+    "npm": "11.9.0"
+  },
+  "restrictions": "Pure calculation and local mocks only. No network, database, permission, account, credential or production operations."
+}

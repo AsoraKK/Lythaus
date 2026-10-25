@@ -1,0 +1,17 @@
+{
+  "scope": "ordinary-business-rule-qa",
+  "startedAt": "2026-10-25T04:20:19.432Z",
+  "finishedAt": "2026-10-25T04:20:20.588Z",
+  "sourceMain": "c0963c36693476ecc49ab1fcba0572454926b4d3",
+  "intervalCandidate": "ef288ef2819382afd571256d3f9e31e8bb8383bb",
+  "node": "v24.19.0",
+  "command": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=tap qa/reputation-rewards-20261025/events.test.mjs qa/reputation-rewards-20261025/calendar-display.test.mjs qa/reputation-rewards-20261025/intervals.test.mjs",
+  "code": 0,
+  "signal": null,
+  "tests": 47,
+  "passed": 47,
+  "failed": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "method": "Pure calculators and local fake SQL/transaction driver only; no database/socket/provider calls."
+}

@@ -1,0 +1,292 @@
+TAP version 13
+# Subtest: C01 best four of five weeks are selected deterministically under input rotations
+ok 1 - C01 best four of five weeks are selected deterministically under input rotations
+  ---
+  duration_ms: 2.349506
+  type: 'test'
+  ...
+# Subtest: C02 tied weeks use earliest closing time consistently
+ok 2 - C02 tied weeks use earliest closing time consistently
+  ---
+  duration_ms: 0.212732
+  type: 'test'
+  ...
+# Subtest: C03 a week spanning months belongs only to its closing-Sunday month
+ok 3 - C03 a week spanning months belongs only to its closing-Sunday month
+  ---
+  duration_ms: 0.172211
+  type: 'test'
+  ...
+# Subtest: C04 each week has one owner across 28/29/30/31-day and year-end calendars
+ok 4 - C04 each week has one owner across 28/29/30/31-day and year-end calendars
+  ---
+  duration_ms: 0.630835
+  type: 'test'
+  ...
+# Subtest: C05 duplicate identifiers and overlapping windows are rejected instead of counted twice
+ok 5 - C05 duplicate identifiers and overlapping windows are rejected instead of counted twice
+  ---
+  duration_ms: 0.512026
+  type: 'test'
+  ...
+# Subtest: C06 month closes exactly at cutoff; weekly settlement opens at its exact candidate boundary
+ok 6 - C06 month closes exactly at cutoff; weekly settlement opens at its exact candidate boundary
+  ---
+  duration_ms: 0.848234
+  type: 'test'
+  ...
+# Subtest: C07 UTC representation and source-month ownership are explicit input contracts
+ok 7 - C07 UTC representation and source-month ownership are explicit input contracts
+  ---
+  duration_ms: 0.26429
+  type: 'test'
+  ...
+# Subtest: C08 correction changes best-four selection without duplicating the week
+ok 8 - C08 correction changes best-four selection without duplicating the week
+  ---
+  duration_ms: 0.239042
+  type: 'test'
+  ...
+# Subtest: D01 an unassessed default remains pending without a confirmed score
+ok 9 - D01 an unassessed default remains pending without a confirmed score
+  ---
+  duration_ms: 0.221706
+  type: 'test'
+  ...
+# Subtest: D02 a shadow calculation is inspectable but never confirmed
+ok 10 - D02 a shadow calculation is inspectable but never confirmed
+  ---
+  duration_ms: 0.247174
+  type: 'test'
+  ...
+# Subtest: D03 confirmed level and pending reward selection remain separate
+ok 11 - D03 confirmed level and pending reward selection remain separate
+  ---
+  duration_ms: 0.114624
+  type: 'test'
+  ...
+# Subtest: D04 proposal/preparation values do not become entitlements
+ok 12 - D04 proposal/preparation values do not become entitlements
+  ---
+  duration_ms: 0.09251
+  type: 'test'
+  ...
+# Subtest: D05 a later pending/unavailable projection retains no prior confirmed values
+ok 13 - D05 a later pending/unavailable projection retains no prior confirmed values
+  ---
+  duration_ms: 0.12566
+  type: 'test'
+  ...
+# Subtest: E01 sequential delivery of one event persists one contribution
+ok 14 - E01 sequential delivery of one event persists one contribution
+  ---
+  duration_ms: 2.633457
+  type: 'test'
+  ...
+# Subtest: E02 independent events on separate dates have the same total in either delivery order
+ok 15 - E02 independent events on separate dates have the same total in either delivery order
+  ---
+  duration_ms: 1.615736
+  type: 'test'
+  ...
+# Subtest: E03 reversing counted work removes its points and repeated delivery has no extra effect
+ok 16 - E03 reversing counted work removes its points and repeated delivery has no extra effect
+  ---
+  duration_ms: 0.572067
+  type: 'test'
+  ...
+# Subtest: E04 reversal delivered before its contribution can retry after the contribution arrives
+ok 17 - E04 reversal delivered before its contribution can retry after the contribution arrives
+  ---
+  duration_ms: 0.955216
+  type: 'test'
+  ...
+# Subtest: E05 original event redelivery after reversal does not restore the old points
+ok 18 - E05 original event redelivery after reversal does not restore the old points
+  ---
+  duration_ms: 0.447237
+  type: 'test'
+  ...
+# Subtest: E06 two delivery identifiers for one reversal cannot apply two inverse entries
+ok 19 - E06 two delivery identifiers for one reversal cannot apply two inverse entries
+  ---
+  duration_ms: 0.286043
+  type: 'test'
+  ...
+# Subtest: W01 identical current evidence recomputation creates one weekly revision and outbox row
+ok 20 - W01 identical current evidence recomputation creates one weekly revision and outbox row
+  ---
+  duration_ms: 5.942436
+  type: 'test'
+  ...
+# Subtest: W02 latest reversed evidence corrects a settled week and correction replay is stable
+ok 21 - W02 latest reversed evidence corrects a settled week and correction replay is stable
+  ---
+  duration_ms: 1.901238
+  type: 'test'
+  ...
+# Subtest: W03 pending-to-accepted transition credits the original week once
+ok 22 - W03 pending-to-accepted transition credits the original week once
+  ---
+  duration_ms: 1.113085
+  type: 'test'
+  ...
+# Subtest: T01 a work failure rolls back local state; retry commits one contribution
+ok 23 - T01 a work failure rolls back local state; retry commits one contribution
+  ---
+  duration_ms: 2.208343
+  type: 'test'
+  ...
+# Subtest: T02 lost COMMIT response stays unknown; an ordinary replay observes one committed event
+ok 24 - T02 lost COMMIT response stays unknown; an ordinary replay observes one committed event
+  ---
+  duration_ms: 1.165645
+  type: 'test'
+  ...
+# Subtest: T03 failed rollback acknowledgement does not claim a known no-effect outcome
+ok 25 - T03 failed rollback acknowledgement does not claim a known no-effect outcome
+  ---
+  duration_ms: 0.502931
+  type: 'test'
+  ...
+# Subtest: I01 uninterrupted full month qualifies with zero nonqualifying time
+ok 26 - I01 uninterrupted full month qualifies with zero nonqualifying time
+  ---
+  duration_ms: 2.481987
+  type: 'test'
+  ...
+# Subtest: I02 exactly 24 hours remains eligible
+ok 27 - I02 exactly 24 hours remains eligible
+  ---
+  duration_ms: 1.503957
+  type: 'test'
+  ...
+# Subtest: I03 24 hours plus one millisecond is ineligible
+ok 28 - I03 24 hours plus one millisecond is ineligible
+  ---
+  duration_ms: 0.337191
+  type: 'test'
+  ...
+# Subtest: I04 separate ordinary gaps accumulate within the same month
+ok 29 - I04 separate ordinary gaps accumulate within the same month
+  ---
+  duration_ms: 0.539978
+  type: 'test'
+  ...
+# Subtest: I05 overlapping absence records contribute their union once
+ok 30 - I05 overlapping absence records contribute their union once
+  ---
+  duration_ms: 1.09036
+  type: 'test'
+  ...
+# Subtest: I06 adjoining disabled intervals are one continuous interval
+ok 31 - I06 adjoining disabled intervals are one continuous interval
+  ---
+  duration_ms: 0.273934
+  type: 'test'
+  ...
+# Subtest: I07 overlapping qualifying coverage is unioned without double-counting the month
+ok 32 - I07 overlapping qualifying coverage is unioned without double-counting the month
+  ---
+  duration_ms: 0.218111
+  type: 'test'
+  ...
+# Subtest: I08 normal method change with continuous qualifying coverage has zero gap
+ok 33 - I08 normal method change with continuous qualifying coverage has zero gap
+  ---
+  duration_ms: 0.272042
+  type: 'test'
+  ...
+# Subtest: I09 each qualifying method receives one equal benefit for either existing action mapping
+ok 34 - I09 each qualifying method receives one equal benefit for either existing action mapping
+  ---
+  duration_ms: 1.428042
+  type: 'test'
+  ...
+# Subtest: I10 a gap crossing month-start counts only the current-month portion
+ok 35 - I10 a gap crossing month-start counts only the current-month portion
+  ---
+  duration_ms: 0.319985
+  type: 'test'
+  ...
+# Subtest: I11 a gap crossing month-end counts only the current-month portion
+ok 36 - I11 a gap crossing month-end counts only the current-month portion
+  ---
+  duration_ms: 0.262948
+  type: 'test'
+  ...
+# Subtest: I12 zero-duration changes do not consume grace
+ok 37 - I12 zero-duration changes do not consume grace
+  ---
+  duration_ms: 0.262618
+  type: 'test'
+  ...
+# Subtest: I13 28/29/30/31-day months have their exact calendar duration
+ok 38 - I13 28/29/30/31-day months have their exact calendar duration
+  ---
+  duration_ms: 7.6819
+  type: 'test'
+  ...
+# Subtest: I14 ordinary out-of-order delivery is normalized by recorded revision order
+ok 39 - I14 ordinary out-of-order delivery is normalized by recorded revision order
+  ---
+  duration_ms: 1.160667
+  type: 'test'
+  ...
+# Subtest: I15 missing coverage after a normal method change remains explicitly unknown
+ok 40 - I15 missing coverage after a normal method change remains explicitly unknown
+  ---
+  duration_ms: 0.195987
+  type: 'test'
+  ...
+# Subtest: I16 current candidate treats midmonth enrollment and incomplete collection as insufficient evidence
+ok 41 - I16 current candidate treats midmonth enrollment and incomplete collection as insufficient evidence
+  ---
+  duration_ms: 0.181735
+  type: 'test'
+  ...
+# Subtest: I17 open month and settlement period have explicit non-final states
+ok 42 - I17 open month and settlement period have explicit non-final states
+  ---
+  duration_ms: 0.167614
+  type: 'test'
+  ...
+# Subtest: I18 local unlock setting alone remains unavailable as qualifying server evidence
+ok 43 - I18 local unlock setting alone remains unavailable as qualifying server evidence
+  ---
+  duration_ms: 0.155095
+  type: 'test'
+  ...
+# Subtest: I19 absent mapping and disabled collection cannot produce a ready result
+ok 44 - I19 absent mapping and disabled collection cannot produce a ready result
+  ---
+  duration_ms: 0.109726
+  type: 'test'
+  ...
+# Subtest: I20 missing current-month observation remains a distinct policy input
+ok 45 - I20 missing current-month observation remains a distinct policy input
+  ---
+  duration_ms: 0.157579
+  type: 'test'
+  ...
+# Subtest: I21 deterministic interval property checks sum, ordering, clipping and threshold for 64 schedules
+ok 46 - I21 deterministic interval property checks sum, ordering, clipping and threshold for 64 schedules
+  ---
+  duration_ms: 8.357863
+  type: 'test'
+  ...
+# Subtest: I22 partially overlapping absence spans count 36 hours, not their 48-hour sum
+ok 47 - I22 partially overlapping absence spans count 36 hours, not their 48-hour sum
+  ---
+  duration_ms: 0.231731
+  type: 'test'
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 47
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1118.638636
