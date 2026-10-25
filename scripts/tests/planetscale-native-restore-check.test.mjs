@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import test from 'node:test';
 import fs from 'node:fs';
 import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, ROLE_SQL_SECURITY_BASELINE,
@@ -225,6 +226,90 @@ test('readiness smoke uses sequential Miniflare groups with unique Hyperdrive pr
   assert.equal(result.isolatedHyperdriveRuntimeGroups, 2);
   assert.equal(result.readOnlyDatabaseIdentity, true);
   assert.equal(result.readyForProductionAuthentication, false);
+});
+
+test('real Miniflare TLS proxies dispose and let success and abort subprocesses exit naturally', { timeout: 65000 }, async () => {
+  const requireUrl = JSON.stringify(new URL('../../node_modules/wrangler/package.json', import.meta.url).href);
+  const common = `
+    const { createRequire } = require('node:module');
+    const req = createRequire(${requireUrl});
+    const { Miniflare, convertV4MiniflareOptions, Log, LogLevel } = req('miniflare');
+    const url = 'postgresql://fixture:never-used@127.0.0.1:5432/postgres?sslmode=verify-full';
+    const log = new Log(LogLevel.NONE);
+    const worker = (name, script, hyperdrives) => ({ name, modules: true, script,
+      compatibilityDate: '2026-08-01', hyperdrives });
+  `;
+  const scenarios = [
+    ['success', common + `
+      (async () => {
+        const groups = [
+          [worker('public', 'export default { async fetch(){ return new Response("ok") } }', { DB_A: url }),
+            worker('admin', 'export default { async fetch(){ return new Response("ok") } }', { DB_B: url, DB_C: url })],
+          [worker('jobs', 'export default { async fetch(){ return new Response("ok") } }', { DB_A: url })],
+        ];
+        for (const group of groups) {
+          const mf = new Miniflare(convertV4MiniflareOptions({ log, workers: group }));
+          try {
+            for (const spec of group) {
+              const response = await (await mf.getWorker(spec.name)).fetch('https://restore.lythaus.test/');
+              assert.ok(response.status === 200 && await response.text() === 'ok');
+            }
+          } finally { await mf.dispose(); }
+        }
+        console.log('success-disposed');
+      })().catch(error => { console.error(error.stack || error); process.exitCode = 2; });
+    `],
+    ['abort', common + `
+      (async () => {
+        const spec = worker('abort', 'export default { async fetch(){ await new Promise(resolve => setTimeout(resolve, 5000)); return new Response("late"); } }', { DB_ABORT: url });
+        const mf = new Miniflare(convertV4MiniflareOptions({ log, workers: [spec] }));
+        const controller = new AbortController();
+        try {
+          const workerInstance = await mf.getWorker('abort');
+          const pending = workerInstance.fetch('https://restore.lythaus.test/wait', { signal: controller.signal })
+            .then(() => 'resolved', () => 'rejected');
+          const abortTimer = setTimeout(() => controller.abort(), 50);
+          let abortWatchdog;
+          const outcome = await Promise.race([
+            pending,
+            new Promise(resolve => { abortWatchdog = setTimeout(() => resolve('timed-out'), 1000); }),
+          ]);
+          clearTimeout(abortTimer);
+          clearTimeout(abortWatchdog);
+          assert.equal(controller.signal.aborted, true);
+          assert.notEqual(outcome, 'timed-out', 'aborted Worker fetch must settle before its delayed response');
+        } finally { await mf.dispose(); }
+        console.log('abort-disposed');
+      })().catch(error => { console.error(error.stack || error); process.exitCode = 2; });
+    `],
+  ];
+  for (const [scenario, source] of scenarios) {
+    const result = await new Promise(resolve => {
+      const child = spawn(process.execPath, ['-e', source], {
+        cwd: process.cwd(), detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let stdout = '', stderr = '', timedOut = false, forceKill;
+      child.stdout.on('data', chunk => { stdout += chunk; });
+      child.stderr.on('data', chunk => { stderr += chunk; });
+      const watchdog = setTimeout(() => {
+        timedOut = true;
+        try { process.kill(-child.pid, 'SIGTERM'); } catch {}
+        forceKill = setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} }, 1000);
+      }, 20000);
+      child.on('error', error => { stderr += String(error); });
+      child.on('close', (code, signal) => {
+        clearTimeout(watchdog);
+        if (timedOut) {
+          clearTimeout(forceKill);
+          try { process.kill(-child.pid, 'SIGKILL'); } catch {}
+        }
+        resolve({ code, signal, timedOut, stdout: stdout.trim(), stderr: stderr.trim() });
+      });
+    });
+    assert.equal(result.timedOut, false, `${scenario} Miniflare subprocess failed to exit naturally: ${result.stderr}`);
+    assert.equal(result.code, 0, `${scenario} Miniflare subprocess failed: ${result.stderr}`);
+    assert.equal(result.stdout, `${scenario}-disposed`);
+  }
 });
 
 for (const [mode, blocker, cleanup] of [
