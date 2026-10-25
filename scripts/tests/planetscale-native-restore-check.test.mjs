@@ -23,7 +23,7 @@ const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GI
       decisionBy: '2026-10-25T05:00:00Z', estimatedUsd: 0.01 } }) });
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
-  dropped_at: null, expires_at: null, with_replication: false, inherited_roles: ['pg_read_all_settings'],
+  dropped_at: null, expires_at: null, with_replication: name === RESTORE.setup, inherited_roles: ['pg_read_all_settings'],
   branch: { id, name: id === RESTORE.sourceId ? 'main' : RESTORE.target, deleted_at: null } }));
 const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-25T04:00:00Z', deleted_at: null,
   default: false, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false,
@@ -685,12 +685,12 @@ test('role-class checks accept only the exact observed setup baseline and strict
   assert.equal(checkedRoles(sourceRows, RESTORE.sourceId).size, ROLE_NAMES.length);
   assert.equal(checkedRoles(roleRows(), newId, source).size, ROLE_NAMES.length);
 
-  const wrongSetupReplication = roleRows(); wrongSetupReplication[0].with_replication = true;
+  const wrongSetupReplication = roleRows(); wrongSetupReplication[0].with_replication = false;
   assert.throws(() => checkedRoles(wrongSetupReplication, newId), error => {
     assert.equal(error.code, 'copied_role_metadata_invalid');
     assert.equal(error.safeDiagnostic.role.roleClass, 'setup');
     assert.deepEqual(error.safeDiagnostic.role.fields.withReplication,
-      { present: true, type: 'BOOLEAN', expected: false, observed: true, matches: false });
+      { present: true, type: 'BOOLEAN', expected: true, observed: false, matches: false });
     return true;
   });
   const privilegedApplication = roleRows(); privilegedApplication[1].with_replication = true;

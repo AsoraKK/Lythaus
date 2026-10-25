@@ -129,7 +129,7 @@ function safeRoleField(row, key, matcher, expected) {
 
 function roleMetadataDiagnostic(name, branchId, found, row, sourceRow) {
   const branch = object(row?.branch) ? row.branch : undefined;
-  const expectedReplication = false;
+  const expectedReplication = name === RESTORE.setup;
   const actualInherited = Array.isArray(row?.inherited_roles) ? row.inherited_roles : undefined;
   const inheritedMatches = actualInherited !== undefined
     && actualInherited.every(item => typeof item === 'string' && /^[A-Za-z0-9_.-]+$/.test(item));
