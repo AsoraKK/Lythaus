@@ -949,6 +949,8 @@ test('GitHub preconditions reconcile only the three pinned prior runs with compl
   const cancelledSha = '43829abc3424a88a22826695bbfdc7be4a116e62';
   const failedSha = '96ff66fa5c28c9780ce72ee23a40cd846372d6bd';
   const manuallyDeletedSha = '9447561658c139f1e9e48cedad66b2f035661fb9';
+  const pinnedHuman = JSON.parse(fs.readFileSync(new URL(
+    '../../docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-40212030891.json', import.meta.url))).reviewWindow.operator;
   const cancelledRun = () => ({ id: 40184823787, run_number: 7, workflow_id: 394786946, path: workflowPath,
     head_sha: cancelledSha, head_branch: 'main', event: 'workflow_dispatch', run_attempt: 1, status: 'completed', conclusion: 'cancelled',
     display_title: `Native restore execute ${cancelledSha}`, name: `Native restore execute ${cancelledSha}`,
@@ -1022,7 +1024,7 @@ test('GitHub preconditions reconcile only the three pinned prior runs with compl
       if (pathname.endsWith('/actions/runs/40212030891/jobs')) return Response.json({ total_count: overrides.manualJobCount ?? 1,
         jobs: Object.hasOwn(overrides, 'manualJobs') ? overrides.manualJobs : [manuallyDeletedJob()] });
       if (pathname.endsWith('/actions/runs/40212030891/approvals')) return Response.json(overrides.manualApprovals
-        ?? [{ state: 'approved', user: { type: 'User', login: 'AsoraKK' }, environments: [{ name: 'production' }] }]);
+        ?? [{ state: 'approved', user: { type: 'User', login: pinnedHuman }, environments: [{ name: 'production' }] }]);
       if (pathname.endsWith('/actions/runs/40212030891/artifacts')) return Response.json({ total_count: overrides.manualArtifactCount ?? 1,
         artifacts: Object.hasOwn(overrides, 'manualArtifacts') ? overrides.manualArtifacts : [manuallyDeletedArtifact()] });
       if (pathname.endsWith('/actions/runs/40212030891')) return Response.json({ ...manuallyDeletedRun(), ...(overrides.manualRun ?? {}) });
@@ -1051,7 +1053,7 @@ test('GitHub preconditions reconcile only the three pinned prior runs with compl
         targetId: 'gnbnmpsu7r5k', qualificationSha256: '4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618',
         manualReceiptSha256: 'eeb8e95eb43990739722bf65da07cb6b249f687828d281593529d12cc1a4bccf',
         cleanupMode: 'MANUAL', cleanupOutcome: 'TARGET_ABSENT_VERIFIED', recoveryAcceptance: 'NOT_CERTIFIED',
-        artifactProviderMutationCount: 1, artifactCredentialActionCount: 0 },
+        artifactProviderMutationCount: 1, artifactCredentialActionCount: 0, manualOperator: pinnedHuman },
     ] });
   assert.ok(good.reads.every(row => row.method === 'GET'));
   const noPrior = fixtureFetch({ history: planRuns });

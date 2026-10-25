@@ -136,7 +136,8 @@ export function assertPinnedManualCleanupProof(qualificationBytes, receiptBytes)
     && report.creation.sourceBranchId === RESTORE.sourceId && report.creation.createdAt === '2026-10-25T16:37:31.931Z'
     && report.providerMutations?.length === 1 && report.providerMutations[0].action === 'create_fixed_restore'
     && report.providerMutations[0].outcome === 'ACKNOWLEDGED' && Array.isArray(report.credentialActions)
-    && report.credentialActions.length === 0 && JSON.stringify(report.blockers) === '["copied_role_metadata_invalid"]',
+    && report.credentialActions.length === 0 && /^[A-Za-z0-9-]{1,39}$/.test(report.reviewWindow?.operator ?? '')
+    && JSON.stringify(report.blockers) === '["copied_role_metadata_invalid"]',
   'prior_manual_cleanup_qualification_mismatch');
   requireThat(receipt.schemaVersion === 'lythaus-manual-native-restore-cleanup-v1'
     && receipt.recordType === 'manual_cleanup_observation' && receipt.qualificationRunId === pinned.runId
@@ -151,7 +152,8 @@ export function assertPinnedManualCleanupProof(qualificationBytes, receiptBytes)
   'prior_manual_cleanup_receipt_mismatch');
   return { targetId: pinned.targetId, qualificationSha256: pinned.qualificationSha256,
     manualReceiptSha256: pinned.manualReceiptSha256, cleanupMode: 'MANUAL', cleanupOutcome: 'TARGET_ABSENT_VERIFIED',
-    recoveryAcceptance: 'NOT_CERTIFIED', artifactProviderMutationCount: 1, artifactCredentialActionCount: 0 };
+    recoveryAcceptance: 'NOT_CERTIFIED', artifactProviderMutationCount: 1, artifactCredentialActionCount: 0,
+    manualOperator: report.reviewWindow.operator };
 }
 
 async function verifyPinnedManuallyDeletedFailure(run, read, env) {
@@ -160,10 +162,6 @@ async function verifyPinnedManuallyDeletedFailure(run, read, env) {
     && run.repository.full_name === env.GITHUB_REPOSITORY && run.head_repository?.id === 1010752912
     && run.head_repository.full_name === env.GITHUB_REPOSITORY && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
   'prior_execution_provenance_mismatch');
-  const approvals = await read(`/actions/runs/${pinned.runId}/approvals`);
-  requireThat(Array.isArray(approvals) && approvals.length === 1 && approvals[0].state === 'approved'
-    && approvals[0].user?.type === 'User' && approvals[0].user.login === 'AsoraKK'
-    && approvals[0].environments?.some(row => row.name === 'production'), 'prior_manual_cleanup_production_approval_mismatch');
   const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
   requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
     'prior_execution_job_inventory_incomplete');
@@ -194,6 +192,10 @@ async function verifyPinnedManuallyDeletedFailure(run, read, env) {
     return fs.readFileSync(file);
   });
   const proof = assertPinnedManualCleanupProof(...files);
+  const approvals = await read(`/actions/runs/${pinned.runId}/approvals`);
+  requireThat(Array.isArray(approvals) && approvals.length === 1 && approvals[0].state === 'approved'
+    && approvals[0].user?.type === 'User' && approvals[0].user.login === proof.manualOperator
+    && approvals[0].environments?.some(row => row.name === 'production'), 'prior_manual_cleanup_production_approval_mismatch');
   return { status: 'PINNED_MANUALLY_DELETED_FAILURE_RECONCILED', workflowPath, workflowId,
     runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha,
     event: 'workflow_dispatch', conclusion: 'failure', jobId: pinned.jobId, artifactId: pinned.artifactId,
