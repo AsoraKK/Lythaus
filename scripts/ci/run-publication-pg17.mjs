@@ -54,7 +54,8 @@ export async function runPublicationSuites(value, group = 'publication') {
     if (interrupted) throw new Error('publication_test_interrupted');
     const status = await new Promise((resolve, reject) => {
       child = spawn(process.execPath, args, { stdio: 'inherit', env: { ...process.env,
-        PLANETSCALE_PG17_TEST_DATABASE_URL: connectionString } });
+        PLANETSCALE_PG17_TEST_DATABASE_URL: connectionString,
+        ...(group === 'comments' ? { COMMENT_FIXTURE_MODE: 'candidate', COMMENT_REQUIRE_APPLIED_HOOKS: 'true' } : {}) } });
       child.once('error', reject);
       child.once('exit', (code, signal) => resolve({ code, signal }));
     });

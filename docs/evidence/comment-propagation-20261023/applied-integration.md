@@ -8,9 +8,12 @@ execution, security/policy activation, release or merge is performed here.
 
 The notification-model import follows `library;`. A generator regression checks
 directive order. Patch helpers accept an already fully applied hook set without
-duplicating it; incomplete marked integrations fail assertions. Setting
-`COMMENT_REQUIRE_APPLIED_HOOKS=true` makes runtime fixtures read actual API/Jobs
-source without applying their in-memory transforms.
+duplicating it; incomplete marked integrations fail assertions. Candidate
+fixtures now read actual API, Jobs and Admin source by default, without applying
+integration transforms. `COMMENT_FIXTURE_MODE=historical-staging` explicitly
+opts into the historical transformed fixture; `COMMENT_REQUIRE_APPLIED_HOOKS=true`
+rejects that mode. The current combined validation and synthetic authentication
+boundary are recorded in [the 25 October implementation evidence](../../testing/review-improvements-2026-10-25.md).
 
 ## Actual applied validation
 

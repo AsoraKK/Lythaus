@@ -50,7 +50,7 @@ final _tracker = MaterialApp(
   home: Scaffold(
     body: RepaintBoundary(
       key: _captureKey,
-      child: SingleChildScrollView(child: MonthlyReputationTrackerCard()),
+      child: const SingleChildScrollView(child: MonthlyReputationTrackerCard()),
     ),
   ),
 );

@@ -1,5 +1,9 @@
 # Comment conversations and propagation candidate
 
+Current integration: [25 October candidate and acceptance evidence](review-improvements-2026-10-25.md).
+The staging boundary below records the original module work; the current
+candidate applies the shared API, Jobs, Admin and native hooks as real files.
+
 Base: `868be4ee163ba5f7968212230d731682ff005e45` (main verified read-only on
 23 October 2026). This is a draft implementation for parent review. No provider
 writes, deployment, production migration, posting or notification delivery was

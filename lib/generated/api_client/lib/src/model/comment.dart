@@ -18,7 +18,7 @@ part 'comment.g.dart';
 /// * [authorId]
 /// * [parentId]
 /// * [conversationId] - Canonical top-level comment for this conversation.
-/// * [replyCount] - Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions.
+/// * [replyCount] - Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero.
 /// * [replyToAuthorId]
 /// * [replyToDeleted]
 /// * [body]
@@ -43,7 +43,7 @@ abstract class Comment implements Built<Comment, CommentBuilder> {
   @BuiltValueField(wireName: r'conversationId')
   String? get conversationId;
 
-  /// Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions.
+  /// Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero.
   @BuiltValueField(wireName: r'replyCount')
   int? get replyCount;
 

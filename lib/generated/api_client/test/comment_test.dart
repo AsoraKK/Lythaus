@@ -28,7 +28,7 @@ void main() {
       // TODO
     });
 
-    // Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions.
+    // Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero.
     // int replyCount
     test('to test the property `replyCount`', () async {
       // TODO

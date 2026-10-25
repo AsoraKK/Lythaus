@@ -17553,7 +17553,7 @@
           "replyCount": {
             "type": "integer",
             "minimum": 0,
-            "description": "Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions."
+            "description": "Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero."
           },
           "replyToAuthorId": {
             "type": "string",

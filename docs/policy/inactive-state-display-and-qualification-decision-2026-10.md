@@ -55,7 +55,11 @@ pixels, with bundled fonts. The captures are:
 
 - [Account security preview](../evidence/inactive-state-display-2026-10-25/account-security-inactive-preview.png)
 - [Unavailable monthly level](../evidence/inactive-state-display-2026-10-25/monthly-level-unavailable.png)
-- [Confirmed level with unavailable reward selection](../evidence/inactive-state-display-2026-10-25/monthly-level-confirmed-selection-unavailable.png)
+- [Historical v1 fixture: confirmed level with unavailable reward selection](../evidence/inactive-state-display-2026-10-25/monthly-level-confirmed-selection-unavailable.png)
+
+The confirmed capture uses historical v1's 13,500 maximum; it is not evidence
+of a confirmed prospective v2 level. The v2 13,650 preparation remains a shadow
+projection and does not activate rewards.
 
 Reproduce them by setting `LYTHAUS_INACTIVE_EVIDENCE_DIR` to
 `docs/evidence/inactive-state-display-2026-10-25` and running

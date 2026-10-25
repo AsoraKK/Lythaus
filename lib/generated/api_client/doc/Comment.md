@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **authorId** | **String** |  |
 **parentId** | **String** |  | [optional]
 **conversationId** | **String** | Canonical top-level comment for this conversation. | [optional]
-**replyCount** | **int** | Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions. | [optional]
+**replyCount** | **int** | Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero. | [optional]
 **replyToAuthorId** | **String** |  | [optional]
 **replyToDeleted** | **bool** |  | [optional]
 **body** | **String** |  |

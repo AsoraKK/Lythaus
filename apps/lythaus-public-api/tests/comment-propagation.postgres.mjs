@@ -73,6 +73,7 @@ test('post-backed articles share one conversation; nested replies are chronologi
   assert.equal(page.items[0].replyCount, 2);
   const replies = await read(postId, null, { conversationId: root });
   assert.deepEqual(ids(replies), [reply, nested]);
+  assert.ok(replies.items.every(item => item.replyCount === 0));
   assert.equal(replies.items[1].parentId, reply);
   assert.equal(replies.items[1].conversationId, root);
   assert.equal(replies.items[1].replyToAuthorId, author);
