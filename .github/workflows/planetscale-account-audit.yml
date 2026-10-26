@@ -66,7 +66,7 @@ jobs:
           assertions="$(jq -c '.assertions' "$report")"
           database_summary="$(jq -c '{name:.database.name,kind:.database.kind,region:.database.region,branchesCount:.database.branchesCount,openSchemaRecommendationsCount:.database.openSchemaRecommendationsCount,schemaLastUpdatedAt:.database.schemaLastUpdatedAt}' "$report")"
           if [[ -f "$contract" ]]; then
-            contract_summary="$(jq -c '{postgresVersion,transactionReadOnly,verifierPassed,post0021Required,extensions,migrationLedger,visibleGrantMetadata,verifierOutput}' "$contract")"
+            contract_summary="$(jq -c '{postgresVersion,transactionReadOnly,verifierPassed,post0021Required,evidenceClass,baselineStatus,baselineFailure,releaseIdentity,verifierDiagnostic,observedSchema,extensions,migrationLedger,visibleGrantMetadata,verifierOutput}' "$contract")"
           else
             contract_summary='{"state":"UNKNOWN/BLOCKED","reason":"production contract verifier did not emit a sanitized contract artifact"}'
           fi
