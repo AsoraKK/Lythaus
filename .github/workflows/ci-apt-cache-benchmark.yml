@@ -1,0 +1,259 @@
+name: CI Playwright apt cache experiment
+
+on:
+  push:
+    branches: [codex/ci-runner-consumption-apt-cache-20261026]
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_APP_SOURCE_SHA: 9e9759181069c3636af3ffefe1d8ec9a3de22f37
+
+jobs:
+  playwright_cache_prime:
+    name: Prime Playwright apt package cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 73
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+      - name: Verify exact application source tree
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_APP_SOURCE_SHA"
+          test "$(git diff --name-only "$EXPECTED_APP_SOURCE_SHA" HEAD)" = '.github/workflows/ci-apt-cache-benchmark.yml'
+          echo "Application source SHA: $EXPECTED_APP_SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Workflow harness SHA: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Record hosted runner image version
+        id: runner_image
+        run: |
+          set -euo pipefail
+          test -n "$ImageOS"
+          test -n "$ImageVersion"
+          echo "image_os=$ImageOS" >> "$GITHUB_OUTPUT"
+          echo "image_version=$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Restore exact Playwright apt archive cache
+        id: playwright_apt_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/playwright-apt-archives
+          key: playwright-apt-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.runner_image.outputs.image_os }}-${{ steps.runner_image.outputs.image_version }}-${{ hashFiles('package-lock.json', 'apps/control-panel/package-lock.json', 'apps/marketing-site/package-lock.json') }}
+      - name: Record cache state
+        env:
+          CACHE_HIT: ${{ steps.playwright_apt_cache.outputs.cache-hit }}
+        run: |
+          echo "Exact cache hit: ${CACHE_HIT:-false}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Configure isolated apt archive directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/playwright-apt-archives/partial"
+          printf 'Dir::Cache::archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' \
+            "$RUNNER_TEMP/playwright-apt-archives" \
+            | sudo tee /etc/apt/apt.conf.d/99-playwright-runner-cache >/dev/null
+      - name: Install locked Chromium, Firefox, WebKit and system packages
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Measure primed package archive
+        run: |
+          set -euo pipefail
+          archive_count=$(find "$RUNNER_TEMP/playwright-apt-archives" -maxdepth 1 -type f -name '*.deb' | wc -l)
+          archive_bytes=$(du -sb "$RUNNER_TEMP/playwright-apt-archives" | cut -f1)
+          echo "APT package archives: $archive_count files, $archive_bytes bytes" >> "$GITHUB_STEP_SUMMARY"
+          test "$archive_count" -gt 0
+      - name: Save Playwright apt archive cache
+        if: steps.playwright_apt_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/playwright-apt-archives
+          key: ${{ steps.playwright_apt_cache.outputs.cache-primary-key }}
+
+  activity_pilot:
+    name: Activity pilot cache-hit suite
+    needs: playwright_cache_prime
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lythaus_auth_test_activity_pilot
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lythaus_auth_test_activity_pilot"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_activity_pilot
+      ACTIVITY_PILOT_FIXTURE_OUTPUT: /tmp/lythaus-activity-snapshot.json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+      - name: Verify exact application source tree
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_APP_SOURCE_SHA"
+          test "$(git diff --name-only "$EXPECTED_APP_SOURCE_SHA" HEAD)" = '.github/workflows/ci-apt-cache-benchmark.yml'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Record hosted runner image version
+        id: runner_image
+        run: |
+          set -euo pipefail
+          test -n "$ImageOS"
+          test -n "$ImageVersion"
+          echo "image_os=$ImageOS" >> "$GITHUB_OUTPUT"
+          echo "image_version=$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Restore exact Playwright apt archive cache
+        id: playwright_apt_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/playwright-apt-archives
+          key: playwright-apt-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.runner_image.outputs.image_os }}-${{ steps.runner_image.outputs.image_version }}-${{ hashFiles('package-lock.json', 'apps/control-panel/package-lock.json', 'apps/marketing-site/package-lock.json') }}
+      - name: Require exact primed cache hit
+        env:
+          CACHE_HIT: ${{ steps.playwright_apt_cache.outputs.cache-hit }}
+        run: test "$CACHE_HIT" = true
+      - name: Record cache state
+        env:
+          CACHE_HIT: ${{ steps.playwright_apt_cache.outputs.cache-hit }}
+        run: |
+          echo "Exact cache hit: ${CACHE_HIT}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Configure isolated apt archive directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/playwright-apt-archives/partial"
+          printf 'Dir::Cache::archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' \
+            "$RUNNER_TEMP/playwright-apt-archives" \
+            | sudo tee /etc/apt/apt.conf.d/99-playwright-runner-cache >/dev/null
+      - run: npm run validate:planetscale-postgres17
+      - name: Verify purpose contracts and privacy hooks
+        run: >-
+          node --experimental-strip-types --experimental-test-coverage
+          --test packages/contracts/tests/activity-measurement.test.mjs
+          apps/lythaus-public-api/tests/activity-measurement-handler.test.mjs
+          apps/lythaus-admin-api/tests/activity-measurement-handler.test.mjs
+          apps/lythaus-jobs/tests/activity-measurement.test.mjs
+      - name: Verify restricted PG17 races and actual native routes and Workflows
+        run: >-
+          node --experimental-strip-types --test --test-concurrency=1 --test-timeout=120000
+          packages/db/tests/activity-measurement.postgres.mjs
+          packages/db/tests/activity-integration.postgres.mjs
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/control-panel
+      - name: Build disabled-purpose synthetic visual fixture
+        env:
+          VITE_ACTIVITY_MEASUREMENT_PILOT: 'true'
+        run: npm --prefix apps/control-panel run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Verify labelled synthetic responsive and keyboard rendering
+        env:
+          ACTIVITY_PILOT_BROWSER_OUTPUT: build/activity-pilot-browser
+        run: |
+          set -euo pipefail
+          npm --prefix apps/control-panel run preview -- --host 127.0.0.1 --port 5183 --strictPort > /tmp/activity-preview.log 2>&1 &
+          activity_preview_pid=$!
+          trap 'kill "$activity_preview_pid" 2>/dev/null || true' EXIT
+          for _attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5183/ > /dev/null; then break; fi
+            sleep 1
+          done
+          ACTIVITY_PILOT_BROWSER_ENGINE=chromium node scripts/tests/activity-pilot.browser.mjs
+          ACTIVITY_PILOT_BROWSER_ENGINE=webkit node scripts/tests/activity-pilot.browser.mjs
+      - name: Upload purpose-local synthetic visual evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: activity-pilot-browser-evidence
+          path: build/activity-pilot-browser
+          if-no-files-found: warn
+          retention-days: 7
+
+  frontends:
+    name: Frontends cache-hit suite
+    needs: playwright_cache_prime
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Verify exact application source tree
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_APP_SOURCE_SHA"
+          test "$(git diff --name-only "$EXPECTED_APP_SOURCE_SHA" HEAD)" = '.github/workflows/ci-apt-cache-benchmark.yml'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/control-panel
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/marketing-site
+      - name: Record hosted runner image version
+        id: runner_image
+        run: |
+          set -euo pipefail
+          test -n "$ImageOS"
+          test -n "$ImageVersion"
+          echo "image_os=$ImageOS" >> "$GITHUB_OUTPUT"
+          echo "image_version=$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Restore exact Playwright apt archive cache
+        id: playwright_apt_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/playwright-apt-archives
+          key: playwright-apt-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.runner_image.outputs.image_os }}-${{ steps.runner_image.outputs.image_version }}-${{ hashFiles('package-lock.json', 'apps/control-panel/package-lock.json', 'apps/marketing-site/package-lock.json') }}
+      - name: Require exact primed cache hit
+        env:
+          CACHE_HIT: ${{ steps.playwright_apt_cache.outputs.cache-hit }}
+        run: test "$CACHE_HIT" = true
+      - name: Record cache state
+        env:
+          CACHE_HIT: ${{ steps.playwright_apt_cache.outputs.cache-hit }}
+        run: |
+          echo "Exact cache hit: ${CACHE_HIT}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Configure isolated apt archive directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/playwright-apt-archives/partial"
+          printf 'Dir::Cache::archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' \
+            "$RUNNER_TEMP/playwright-apt-archives" \
+            | sudo tee /etc/apt/apt.conf.d/99-playwright-runner-cache >/dev/null
+      - run: npm --prefix apps/control-panel test
+      - run: node --test apps/marketing-site/tests/*.test.mjs
+      - run: npm --prefix apps/control-panel run build
+      - run: npm --prefix apps/marketing-site run build
+      - name: Verify critical marketing output files
+        working-directory: apps/marketing-site
+        run: |
+          test -f dist/index.html
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          test -f dist/features/index.html
+          test -f dist/pricing/index.html
+          test -f dist/about/index.html
+          test -f dist/ai-moderation/index.html
+          test -f dist/contact/index.html
+          echo "All critical marketing site files present"
+      - run: node scripts/cloudflare/validate-marketing-output.mjs apps/marketing-site/dist
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify existing browsers receive new app entrypoints
+        run: node scripts/tests/web-release-cache.browser.mjs
+      - name: Verify homepage optical and accessibility contracts
+        run: npm run marketing:test:browser
+      - name: Verify rendered email authentication controls
+        run: |
+          node --test --test-name-pattern='^chromium ' --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
+          node --test --test-name-pattern='^webkit ' --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
+      - name: Verify protected email confirmation controls
+        run: node --experimental-strip-types --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/email-landing.browser.mjs
