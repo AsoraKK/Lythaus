@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 
 export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lythaus-core', databaseId: 'hzhe0cbn6rxi',
-  source: 'main', sourceId: 'vqa2g2xc9wsl', backupId: 'zw0so7f5jbpu',
-  backupCompletedAt: '2026-10-25T02:33:09.321Z',
-  target: 'lythaus-0021-native-restore-check-20261022', cluster: 'PS_5_AWS_ARM', region: 'eu-central',
+  source: 'main', sourceId: 'vqa2g2xc9wsl', backupId: 'tfqwht9d9bt4',
+  backupCompletedAt: '2026-10-26T02:27:04.589Z',
+  target: 'lythaus-0021-native-restore-check-20261026-01', cluster: 'PS_5_AWS_ARM', region: 'eu-central',
   bytes: 21474836480, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
   qualificationStopMs: 20 * 60000, escalationMs: 45 * 60000, reviewMs: 60 * 60000, cleanupStartMs: 105 * 60000,
   setup: 'pscale_api_47syed2xlt6p', runtime: 'pscale_api_ysl604shosjg', admin: 'pscale_api_3vzps7bu44vo',
