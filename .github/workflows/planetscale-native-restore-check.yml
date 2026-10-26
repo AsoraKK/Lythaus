@@ -30,7 +30,7 @@ jobs:
   qualify:
     name: Qualify isolated native restore without cleanup
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 36
     environment: production
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
@@ -63,6 +63,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Require complete approval and pinned backup window before dependency setup
+        if: inputs.execute
+        timeout-minutes: 1
+        run: node scripts/ci/planetscale-native-restore-admission.mjs
       - run: npm ci --ignore-scripts --no-audit
         timeout-minutes: 4
       - name: Run fixed-target runner using only existing protected access

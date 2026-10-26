@@ -223,15 +223,17 @@ candidate uses specified-snapshot restore only; it does not use a PITR
 timestamp. Never reuse an expired approval record or substitute the dashboard's
 snapshot label for API `completed_at`.
 
-The protected production environment can delay the runner until a human
-approves it. Obtain a fresh UTC availability block of at least two hours and
-thirty minutes, dispatch only when the named operator/reviewer can approve
-promptly, and complete approval within the first thirty minutes. Set
-`availableFrom` to the block start, `availableUntil` and `expiresAt` to its
-end, and `decisionBy` to two hours after its start. This leaves the full
-two-hour runner window after any start in the first thirty minutes. If the
-approval margin is missed, do not approve a run that would start with less than
-two hours remaining; a runner-started failed preflight is not eligible for the
+The protected production environment and queue can delay execution. Reserve
+the actual queue and setup allowance before the full two-hour runner window;
+approval at thirty minutes into a two-and-a-half-hour block is too late once
+setup time is included. Checkout, the main guard and Node setup each have a
+one-minute limit. The pre-dependency admission then reserves five further
+minutes for itself and dependency installation, and checks the complete packet
+and pinned backup freshness without provider access. The runner repeats live
+admission and source catalog verification immediately before creation. These
+checks cannot reserve GitHub queue capacity. Dispatch only with a named
+available reviewer/operator and enough remaining time for the observed queue,
+all setup limits and the original two hours. A runner-started failed preflight is not eligible for the
 one pinned pre-runner cancellation. Only the exact pinned run #8 pre-create
 failure and run #9's separately verified manual deletion described above can
 be reconciled after a runner starts. No later failure is automatically eligible.
@@ -251,6 +253,15 @@ this finite plan but cannot enforce provider billing or perform its end action.
 If retention must continue past that end time, obtain a separately bounded
 retention/cost decision; the exercise does not approve indefinite protection.
 No automatic unprotect, backup deletion or denied billing-read workaround exists.
+The US$5 ceiling is cumulative across this exercise, including run `40212030891`
+and any continuing protected-backup liability. The packet must bind an explicit
+owner-reviewed upper bound to private supporting evidence by SHA256 and reference.
+The runner checks the arithmetic and human approval, not the underlying bill.
+Unknown prior spend or unbounded retention cannot be represented as zero. A
+completed prior retention end action may be recorded with its actual past end
+time; a future action needs separate authority and an end within 24 hours.
+The dedicated token's documented `expires_at` must cover the original cleanup
+deadline (or explicitly be null). This does not renew a token or authorize its use.
 
 `approval_json` fields (replace placeholders; arrays must preserve this order):
 
@@ -269,6 +280,15 @@ No automatic unprotect, backup deletion or denied billing-read workaround exists
   "actions": ["restore_fixed_target", "reset_five_copied_roles", "install_only_missing_named_extensions", "retain_target_for_review", "reserved_review_and_cost_watch"],
   "roles": ["pscale_api_47syed2xlt6p", "pscale_api_ysl604shosjg", "pscale_api_3vzps7bu44vo", "pscale_api_9jfbtij9y4b2", "pscale_api_wv7rzyuejknl"],
   "cleanupPermit": {"workflowId": 0, "runNumber": 0},
+  "cumulativeBudget": {
+    "operator": "OWNER_GITHUB_LOGIN", "priorQualificationRunId": "40212030891",
+    "evidenceSha256": "SHA256_OF_PRIVATE_REVIEWED_PRIOR_COST_AND_RETENTION_EVIDENCE",
+    "reference": "OWNER_REVIEWED_UPPER_BOUND_REFERENCE",
+    "priorSpendUpperBoundUsd": 0,
+    "priorRetentionUpperBoundUsd": 0,
+    "priorRetentionEndActionReference": "SEPARATE_PRIOR_RETENTION_END_ACTION_AUTHORITY_OR_RECEIPT",
+    "priorRetentionEndsAt": "ACTUAL_OR_SEPARATELY_APPROVED_FINITE_END_TIME"
+  },
   "reviewWindow": {
     "reviewer": "REVIEWER_GITHUB_LOGIN", "operator": "OWNER_GITHUB_LOGIN", "reserved": true,
     "availableFrom": "UTC_START", "availableUntil": "UTC_AT_LEAST_TWO_HOURS_LATER"
@@ -285,7 +305,8 @@ No automatic unprotect, backup deletion or denied billing-read workaround exists
 
 `estimatedSubtotalUsd` is the reviewed known estimate, with `taxAndFeeAllowanceUsd`
 reserved on top for any remaining taxes/fees and uncertainty. Their sum is the
-reviewed upper allowance. No secret belongs in this record. The approver's
+new-attempt allowance; add both prior upper bounds for the cumulative ceiling.
+The zero prior-spend placeholder is deliberately rejected. No secret belongs in this record. The approver's
 actual GitHub review history must match `manualOperator`; supplying JSON does
 not substitute for normal protected production review. Placeholder zero permit
 values are rejected. Read the active cleanup workflow's numeric ID and next
@@ -298,7 +319,7 @@ consumes the reservation and blocks further qualification mutations.
 Reserve the reviewer/operator before spending. Qualification stops starting new
 work at 20 minutes; its runner step has a 22-minute timeout, the always-run
 checkpoint finalizer and artifact upload have two minutes each, and the whole
-qualification job has a 35-minute timeout. These leave reserve before escalation
+qualification job has a 36-minute timeout. These leave reserve before escalation
 at 45 minutes and evidence review by 60 minutes. Cleanup must start before
 105 minutes and retains the original overall 120-minute deadline. No phase
 resets that clock. There is no automatic deletion
@@ -309,9 +330,47 @@ defer creation. Outages may leave a billable target beyond the budget/window;
 that is an incident requiring immediate owner/operator attention, not implicit
 permission to skip review, extend spending or retry an uncertain DELETE.
 The read-only checkout/main guard/Node setup have one minute each and locked
-dependency installation has four minutes. All step budgets total 34 minutes,
-leaving one minute inside the 35-minute job for teardown; slow preparation fails
+dependency installation has four minutes, plus one minute for static admission.
+All step budgets total 35 minutes, leaving one minute inside the 36-minute job for teardown; slow preparation fails
 before provider access rather than consuming the finalization reserve.
+
+Branch readiness does not prove role inventory readiness. The runner allows at
+most twelve complete read-only role observations, ten seconds apart, within a
+two-minute phase and the original qualification budget. Only absent or
+not-yet-ready roles may converge. Malformed metadata, authority or identity
+conflicts stop immediately. All five exact identities and connection metadata
+must pass together before any reset; observed role IDs cannot change between
+samples or before their single reset. Evidence retains sanitized counts and
+outcomes, never credentials. This behavior does not establish the cause of a
+past failure whose raw inventory was not retained.
+
+Extension reconstruction captures source version, schema, owner and relocation
+metadata. Only the three existing approved names in `public`, owned by `postgres`
+or the approved setup role, are supported. Existing target metadata must match.
+Every missing exact version and existing owner authority is checked before DDL
+and again in the installation transaction. Installation uses explicit VERSION
+and SCHEMA under the source owner through already-granted SET ROLE authority;
+it creates no roles, grants or schemas and performs no upgrades. Unsupported
+owners/schemas/versions or unavailable authority require a separately reviewed
+scope decision. Final catalog equality remains mandatory. See PostgreSQL's
+[CREATE EXTENSION](https://www.postgresql.org/docs/17/sql-createextension.html)
+and [SET ROLE](https://www.postgresql.org/docs/17/sql-set-role.html) contracts.
+
+Cleanup rechecks the acknowledged target after awaited checkpoint/GitHub work,
+then checks consent and the original deadline immediately before DELETE. The
+provider endpoint is name-addressed; the ID verification is not an atomic
+conditional deletion. Exclusive target ownership remains required. After one
+DELETE attempt, at most twelve GET observations may reconcile delayed absence
+within the original deadline. A replacement or conflict stops reconciliation;
+no uncertain mutation is repeated.
+
+The active policy still requires canonical evidence review and merge before
+cleanup. Qualification, evidence preparation, CI, merge and human attestation
+must all fit the original 60-minute review limit. A 20-minute qualification plus
+41 minutes 38 seconds of CI already exceeds that limit before handling. No
+longer availability block repairs this inner deadline. An unmerged-evidence
+containment path requires explicit owner policy approval and a separate source
+change; it is not enabled by this hardening.
 
 Long operations also have internal cancellation budgets: each catalog snapshot,
 Worker build and application smoke is capped at two minutes; the extension

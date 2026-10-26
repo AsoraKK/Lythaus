@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { RESTORE, RestoreCleanupApi, RestoreFailure, requireThat, failureCode, checkOwnedBranch } from './planetscale-native-restore-contract.mjs';
 import { githubReadiness } from './planetscale-native-restore-check.mjs';
 import { githubRead, readTrackedEvidence, validateCleanupEvidence, verifyReviewedEvidence,
@@ -125,9 +126,10 @@ function deletionTimestampValid(branch, context, now) {
     && new Date(time).toISOString().slice(0, 19) === value.slice(0, 19);
 }
 
-export async function observeOwnedTarget(api, context, now, allowDeleted = false, allowPresent = false) {
+export async function observeOwnedTarget(api, context, now, allowDeleted = false, allowPresent = false, signal) {
   let present = false;
-  const branch = await api.request(targetPath, { absent: allowDeleted });
+  const branch = await api.request(targetPath, { absent: allowDeleted, signal });
+  signal?.throwIfAborted();
   if (branch === null) {
     requireThat(allowDeleted, 'owned_target_absence_not_expected');
   } else if (!(allowDeleted && deletionTimestampValid(branch, context, now))) {
@@ -137,14 +139,16 @@ export async function observeOwnedTarget(api, context, now, allowDeleted = false
     present = true;
   }
   if (!allowPresent) {
-    const backup = await api.request(backupPath);
+    const backup = await api.request(backupPath, { signal });
+    signal?.throwIfAborted();
     requireThat(backup.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
       && backup.database_branch.name === 'main', 'cleanup_backup_identity_changed');
     if (!allowDeleted) requireThat(backup.protected === true && backup.restored_branches?.some(row => row.id === context.creation.id
       && row.name === RESTORE.target), 'cleanup_backup_binding_changed');
   }
   if (allowDeleted && !present) {
-    const inventory = await api.list('/branches');
+    const inventory = await api.list('/branches', { signal });
+    signal?.throwIfAborted();
     for (const row of inventory.filter(row => row.id === context.creation.id || row.name === RESTORE.target)) {
       requireThat(deletionTimestampValid(row, context, now), 'target_identity_still_present_or_replaced');
     }
@@ -154,7 +158,7 @@ export async function observeOwnedTarget(api, context, now, allowDeleted = false
 
 export async function deleteReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, pendingBytes, downloadedPending,
   read = suffix => githubRead(env, suffix), assertMain, api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN),
-  now = Date.now, checkpoint = () => {} }) {
+  now = Date.now, checkpoint = () => {}, sleep = milliseconds => delay(milliseconds) }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'cleanup', state: 'NOT_ATTEMPTED',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
     providerMutations: false, deletionVerified: false, recoveryCertified: false, blockers: [] };
@@ -164,15 +168,33 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
     assertDownloadedQualification(evidence, downloadedQualification);
     receipt.pendingSha256 = await provePendingUpload({ env, context, pendingBytes, downloadedBytes: downloadedPending, read });
     receipt.targetId = context.creation.id; receipt.qualificationSha = context.report.sourceMainSha;
-    await api.authority(); await observeOwnedTarget(api, context, now()); receipt.preDeleteBindingVerified = true;
-    if (assertMain) await assertMain(); else await githubReadiness(env);
+    await api.authority(() => {}, false, context.deadline);
+    await observeOwnedTarget(api, context, now()); receipt.preDeleteBindingVerified = true;
     requireThat(now() < context.deadline - 60000, 'cleanup_phase_deadline_expired');
     receipt.state = 'DELETE_PENDING'; await checkpoint(structuredClone(receipt));
+    if (assertMain) await assertMain(); else await githubReadiness(env);
+    const finalTarget = await api.request(targetPath);
+    checkOwnedBranch(finalTarget, context.creation.id);
+    requireThat(finalTarget.created_at === context.creation.createdAt, 'owned_target_creation_timestamp_changed');
+    const deleteAt = now();
+    requireThat(deleteAt < context.deadline - 60000 && deleteAt < Date.parse(context.report.approvalExpiresAt),
+      'cleanup_phase_deadline_expired');
+    cleanupConsent(env, evidence, deleteAt);
     attempted = true; receipt.providerMutations = true;
     let deleteError;
     try { await api.request(targetPath, { method: 'DELETE' }); receipt.deleteAcknowledgment = 'ACKNOWLEDGED'; }
     catch (error) { deleteError = error; receipt.deleteAcknowledgment = 'UNKNOWN_OR_DENIED'; receipt.blockers.push(failureCode(error)); }
-    await observeOwnedTarget(api, context, now(), true);
+    receipt.deletionObservations = [];
+    let absent = false;
+    for (let attempt = 1; attempt <= 12 && now() < context.deadline; attempt++) {
+      const signal = AbortSignal.timeout(Math.max(1, Math.min(15000, context.deadline - now())));
+      const observation = await observeOwnedTarget(api, context, now(), true, true, signal);
+      receipt.deletionObservations.push({ attempt, observedAt: new Date(now()).toISOString(),
+        state: observation.present ? 'PRESENT' : 'ABSENCE_VERIFIED' });
+      if (observation.deletionObserved) { absent = true; break; }
+      if (attempt < 12) await sleep(Math.min(5000, Math.max(0, context.deadline - now())));
+    }
+    requireThat(absent, 'target_deletion_not_confirmed');
     receipt.state = deleteError ? 'DELETED_READBACK_VERIFIED_ACK_UNCERTAIN' : 'DELETED_AND_READBACK_VERIFIED';
     receipt.deletionVerified = true;
   } catch (error) {
