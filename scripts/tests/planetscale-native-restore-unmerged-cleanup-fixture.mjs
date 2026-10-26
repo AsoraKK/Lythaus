@@ -6,7 +6,7 @@ import { pendingReceipt, pendingName } from '../ci/planetscale-native-restore-cl
 import { REQUIRED_0021_RESTORE_SCOPE, hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
 import { proveUnmergedCleanupContext, unmergedCleanupAttestation } from '../ci/planetscale-native-restore-unmerged-cleanup-prototype.mjs';
 
-export const start = Date.parse('2026-10-25T04:00:00Z');
+export const start = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000;
 export const time = minutes => new Date(start + minutes * 60000).toISOString();
 export const codeSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), targetId = 'newrestore123';
 export const repository = 'SyntheticOwner/Lythaus', repositoryId = 1010752912;

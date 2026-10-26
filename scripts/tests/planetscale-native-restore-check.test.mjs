@@ -11,33 +11,34 @@ import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-res
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 import { checkSetupWindow, DEPENDENCY_SETUP_RESERVE_MS } from '../ci/planetscale-native-restore-admission.mjs';
 
-const instant = Date.parse('2026-10-25T04:00:00Z');
+const instant = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000;
+const time = minutes => new Date(instant + minutes * 60000).toISOString();
 const sha = 'a'.repeat(40), newId = 'newrestore123', password = 'synthetic-secret-never-output';
 const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GITHUB_RUN_ID: '12345',
   PLANETSCALE_SCHEMA_READ_DATABASE_URL: `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:${password}@aws.connect.psdb.cloud/postgres?sslmode=verify-full`,
   RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, backupId: RESTORE.backupId, target: RESTORE.target,
     maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
-    reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: '2026-10-25T08:00:00Z',
+    reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: time(240),
     cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
       reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
-      priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: '2026-10-26T03:00:00Z' },
+      priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: time(23 * 60) },
     actions: ACTIONS, roles: ROLE_NAMES, cleanupPermit: { workflowId: 42, runNumber: 1 },
-    reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: '2026-10-25T03:00:00Z', availableUntil: '2026-10-25T08:00:00Z' },
+    reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: time(-60), availableUntil: time(240) },
     retention: { operator: 'owner', reference: 'finite-retention-approval', manualEndActionApprovalReference: 'manual-decision-approval',
-      endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: '2026-10-26T03:00:00Z',
-      decisionBy: '2026-10-25T05:00:00Z', estimatedUsd: 0.01 } }) });
+      endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: time(23 * 60),
+      decisionBy: time(60), estimatedUsd: 0.01 } }) });
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
   access_host_url: 'aws.connect.psdb.cloud',
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
   dropped_at: null, expires_at: null, with_replication: name === RESTORE.setup, inherited_roles: ['pg_read_all_settings'],
   branch: { id, name: id === RESTORE.sourceId ? 'main' : RESTORE.target, deleted_at: null } }));
-const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-25T04:00:00Z', deleted_at: null,
+const target = () => ({ id: newId, name: RESTORE.target, created_at: time(0), deleted_at: null,
   default: false, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false,
   cluster_name: RESTORE.cluster, cluster_architecture: 'aarch64', region: { slug: RESTORE.region }, replicas: 0,
   minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes, ready: true, state: 'ready', frozen: false });
 const backup = () => ({ id: RESTORE.backupId, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
-  state: 'success', deleted_at: null, protected: true, completed_at: '2026-10-25T02:33:09.321Z',
-  expires_at: '2026-10-27T02:25:02.838Z', pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
+  state: 'success', deleted_at: null, protected: true, completed_at: RESTORE.backupCompletedAt,
+  expires_at: time(48 * 60), pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
 const extensionSpecifications = () => ['pg_trgm','pgcrypto','unaccent'].map(extname => ({ extname, extversion: '1.0',
   schema: 'public', owner: 'postgres', extrelocatable: true }));
 const extensionPlanRows = (missing = ['unaccent']) => extensionSpecifications().map(row => ({ ...row,
@@ -86,8 +87,8 @@ function fixture(mode = '') {
       if (path === '/branches/main') return { id: RESTORE.sourceId, name: 'main', kind: 'postgresql', default: true, deleted_at: null, ready: true };
       if (path.endsWith(`/backups/${RESTORE.backupId}`)) {
         if (mode === 'unprotected') b.protected = false;
-        if (mode === 'stale') b.completed_at = '2026-10-22T14:00:00Z';
-        if (mode === 'completion_mismatch') b.completed_at = '2026-10-25T02:34:00Z';
+        if (mode === 'stale') b.completed_at = time(-36 * 60);
+        if (mode === 'completion_mismatch') b.completed_at = new Date(Date.parse(RESTORE.backupCompletedAt) + 60000).toISOString();
         if (mode === 'binding_mismatch' && created) b.restored_branches = [{ id: 'other', name: RESTORE.target }];
         if (mode === 'backup_target_history') b.restored_branches = [{ id: 'oldrestore', name: RESTORE.target }];
         return b;
@@ -386,7 +387,7 @@ for (const mode of ['absent', 'pending', 'expired', 'malformed', 'identity_drift
       reads++;
       if (mode === 'denied') throw new RestoreFailure('provider_access_denied', 'DENIED');
       if (mode === 'malformed') { delete rows[0].base_username; return rows; }
-      if (mode === 'expired') { rows[0].expires_at = '2026-10-25T03:00:00Z'; rows[0].expired = true; return rows; }
+      if (mode === 'expired') { rows[0].expires_at = time(-60); rows[0].expired = true; return rows; }
       if (mode === 'authority_drift') { rows[0].inherited_roles = []; return rows; }
       if (mode === 'identity_drift' && reads > 1) rows[1].id = 'replacementrole';
       if (mode === 'budget') f.setNow(instant + RESTORE.qualificationStopMs);
@@ -555,7 +556,7 @@ test('only proven missing named extensions are installed', async () => {
 test('missing, stale, wrong-target, broader-role and unbounded tax/budget records block before any API call', async () => {
   for (const change of [() => undefined, record => ({ ...record, maximumUsd: 6 }), record => ({ ...record, taxAndFeeAllowanceUsd: 0 }),
     record => ({ ...record, estimatedSubtotalUsd: 5 }), record => ({ ...record, target: 'main' }),
-    record => ({ ...record, roles: [...ROLE_NAMES, 'postgres'] }), record => ({ ...record, expiresAt: '2026-10-23T18:00:00Z' }),
+    record => ({ ...record, roles: [...ROLE_NAMES, 'postgres'] }), record => ({ ...record, expiresAt: time(-600) }),
     record => ({ ...record, reviewWindow: { ...record.reviewWindow, reserved: false } }),
     record => ({ ...record, retention: { ...record.retention, endsAt: '2026-11-23T18:00:00Z' } }),
     record => ({ ...record, retention: { ...record.retention, estimatedUsd: 5 } })]) {
@@ -716,7 +717,9 @@ test('authority diagnostic preserves missing, null, organization and exact datab
 });
 
 test('provider token expiry must cover the original cleanup window and is retained without secret fields', async () => {
-  for (const expiry of [undefined, null, 'bad-synthetic-date', '2026-10-25T05:59:59Z', '2026-10-25T06:00:00Z', '2026-10-25T06:00:01Z']) {
+  const afterDeadline = new Date(instant + RESTORE.maximumMs + 1000).toISOString();
+  for (const expiry of [undefined, null, 'bad-synthetic-date', new Date(instant + RESTORE.maximumMs - 1000).toISOString(),
+    new Date(instant + RESTORE.maximumMs).toISOString(), afterDeadline]) {
     let evidence;
     const api = new RestoreApi('syntheticid:synthetic-value', async url => Response.json(url === apiBase
       ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
@@ -726,9 +729,9 @@ test('provider token expiry must cover the original cleanup window and is retain
             resource_id: RESTORE.databaseId, resource_type: 'Database',
             resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } })) }));
     const work = () => api.authority(row => { evidence = row; }, false, instant + RESTORE.maximumMs);
-    if (expiry === null || expiry === '2026-10-25T06:00:01Z') await work();
+    if (expiry === null || expiry === afterDeadline) await work();
     else await assert.rejects(work, /existing_token_lifetime_insufficient_or_unverifiable/);
-    assert.equal(evidence.tokenLifetime.coversRequiredWindow, expiry === null || expiry === '2026-10-25T06:00:01Z');
+    assert.equal(evidence.tokenLifetime.coversRequiredWindow, expiry === null || expiry === afterDeadline);
     assert.doesNotMatch(JSON.stringify(evidence), /synthetic-value|bad-synthetic-date|synthetic-secret/);
   }
 });
@@ -1054,7 +1057,7 @@ test('all five nonsecret connection metadata records must decode before the firs
   assert.ok(report.blockers.includes('restored_credential_identity_invalid'));
   assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
 });
-for (const [field, value] of [['ready', false], ['expired', true], ['deleted_at', '2026-10-25T04:00:00Z'],
+for (const [field, value] of [['ready', false], ['expired', true], ['deleted_at', time(0)],
   ['with_replication', false], ['inherited_roles', ['unexpected-authority']]]) {
   test(`post-reset ${field} drift fails closed without repeating the reset`, async () => {
     const f = fixture(), original = f.options.api.request;
@@ -1211,6 +1214,9 @@ test('pinned manual cleanup proof rejects missing, altered and appended evidence
   for (const [reportBytes, receiptBytes] of [[undefined, receipt], [qualification, undefined],
     [Buffer.concat([qualification, Buffer.from(' ')]), receipt], [qualification, Buffer.concat([receipt, Buffer.from(' ')])],
     [Buffer.from(JSON.stringify({ ...JSON.parse(qualification), credentialActions: [{ outcome: 'UNKNOWN' }] })), receipt],
+    [Buffer.from(JSON.stringify({ ...JSON.parse(qualification), backupId: 'syntheticreplacementbackup', targetName: 'synthetic-replacement-target' })), receipt],
+    [qualification, Buffer.from(JSON.stringify({ ...JSON.parse(receipt), targetBeforeDeletion: { ...JSON.parse(receipt).targetBeforeDeletion,
+      name: 'synthetic-replacement-target' } }))],
     [qualification, Buffer.from(JSON.stringify({ ...JSON.parse(receipt), manualCleanup: { outcome: 'not-proven' } }))]]) {
     assert.throws(() => assertPinnedManualCleanupProof(reportBytes, receiptBytes), /prior_manual_cleanup_file_hash_mismatch/);
   }

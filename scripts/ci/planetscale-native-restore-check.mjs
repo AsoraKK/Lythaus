@@ -23,7 +23,8 @@ const pinnedPrecreateFailure = Object.freeze({ runId: '40193991312', runNumber: 
   artifactSize: 1925, artifactDigest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac' });
 const pinnedManuallyDeletedFailure = Object.freeze({ runId: '40212030891', runNumber: 9, runAttempt: 1,
   headSha: '9447561658c139f1e9e48cedad66b2f035661fb9', jobId: 121225106539, targetId: 'gnbnmpsu7r5k',
-  backupId: 'zw0so7f5jbpu', artifactId: 12606067757, artifactSize: 3199,
+  backupId: 'zw0so7f5jbpu', targetName: 'lythaus-0021-native-restore-check-20261022',
+  artifactId: 12606067757, artifactSize: 3199,
   artifactDigest: 'sha256:50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a',
   qualificationSha256: '4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618',
   manualReceiptSha256: 'eeb8e95eb43990739722bf65da07cb6b249f687828d281593529d12cc1a4bccf' });
@@ -132,7 +133,7 @@ export function assertPinnedManualCleanupProof(qualificationBytes, receiptBytes)
   catch { throw new RestoreFailure('prior_manual_cleanup_files_invalid'); }
   requireThat(report.runId === pinned.runId && report.sourceMainSha === pinned.headSha && report.mode === 'execute'
     && report.phase === 'qualification' && report.qualificationOutcome === 'FAILED' && report.recoveryAcceptance === 'NOT_CERTIFIED'
-    && report.sourceBranchId === RESTORE.sourceId && report.backupId === pinned.backupId && report.targetName === RESTORE.target
+    && report.sourceBranchId === RESTORE.sourceId && report.backupId === pinned.backupId && report.targetName === pinned.targetName
     && report.createdTargetId === pinned.targetId && report.creation?.acknowledged === true && report.creation.id === pinned.targetId
     && report.creation.sourceBranchId === RESTORE.sourceId && report.creation.createdAt === '2026-10-25T16:37:31.931Z'
     && report.providerMutations?.length === 1 && report.providerMutations[0].action === 'create_fixed_restore'
@@ -144,7 +145,7 @@ export function assertPinnedManualCleanupProof(qualificationBytes, receiptBytes)
     && receipt.recordType === 'manual_cleanup_observation' && receipt.qualificationRunId === pinned.runId
     && receipt.qualification?.artifactSha256 === pinned.qualificationSha256 && receipt.qualification.outcome === 'FAILED'
     && receipt.qualification.recoveryAcceptance === 'NOT_CERTIFIED' && receipt.database?.id === RESTORE.databaseId
-    && receipt.targetBeforeDeletion?.id === pinned.targetId && receipt.targetBeforeDeletion.name === RESTORE.target
+    && receipt.targetBeforeDeletion?.id === pinned.targetId && receipt.targetBeforeDeletion.name === pinned.targetName
     && receipt.manualCleanup?.outcome === 'TARGET_ABSENT_VERIFIED' && receipt.manualCleanup.submitCount === 1
     && receipt.manualCleanup.exactTargetGetResult === 'not_found' && receipt.postCleanupInventory?.totalCount === 1
     && receipt.postCleanupInventory.branches?.[0]?.id === RESTORE.sourceId

@@ -14,7 +14,7 @@ import { QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, RECORD_PATH, artifactPath, sh
 import { proveCleanupContext, pendingReceipt, pendingName, deleteReviewedTarget, reconcileReviewedTarget,
   observeOwnedTarget } from '../ci/planetscale-native-restore-cleanup.mjs';
 
-const start = Date.parse('2026-10-25T04:00:00Z'), instant = start + 35 * 60000;
+const start = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000, instant = start + 35 * 60000;
 const time = minutes => new Date(start + minutes * 60000).toISOString();
 const targetId = 'newrestore123', qualificationSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), cleanupSha = evidenceSha;
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
@@ -128,7 +128,7 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
     if (path === '/branches/main') return Response.json(source);
     if (path.endsWith(`/backups/${RESTORE.backupId}`)) return Response.json({ id: RESTORE.backupId,
       database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null }, state: 'success', deleted_at: null,
-      protected: true, completed_at: RESTORE.backupCompletedAt, expires_at: '2026-10-27T02:25:02.838Z',
+      protected: true, completed_at: RESTORE.backupCompletedAt, expires_at: time(48 * 60),
       pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: created ? [{ id: targetId, name: RESTORE.target }] : [] });
     if (options.method === 'POST' && path === '/branches') {
       assert.deepEqual(JSON.parse(options.body), CREATE_TARGET_BODY);
