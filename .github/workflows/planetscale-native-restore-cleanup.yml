@@ -5,20 +5,20 @@ on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact reviewed current protected main cleanup code SHA
+        description: Qualified protected main code SHA for cleanup; current protected main descendant for read-only reconciliation
         required: true
         type: string
       evidence_sha:
-        description: Tracked canonical evidence commit; cleanup requires current main, reconciliation permits an older main ancestor
+        description: Exact reviewed unmerged evidence PR head containing only the two canonical data files
         required: true
         type: string
       evidence_pr:
-        description: Merged same-repository canonical evidence PR number
-        required: false
+        description: Same-repository unmerged evidence PR number
+        required: true
         type: string
       review_comment_id:
         description: Unedited human attestation comment on that exact evidence PR
-        required: false
+        required: true
         type: string
       qualification_run_id:
         description: Original acknowledged qualification run; never a discovered target name
@@ -81,9 +81,7 @@ jobs:
           test "$GITHUB_SHA" = "$RELEASE_SHA"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           printf '%s\n' \
-            "EVIDENCE_DIR=$RUNNER_TEMP/native-restore-cleanup" \
-            "QUALIFICATION_DOWNLOAD=$RUNNER_TEMP/native-restore-qualification-download" \
-            "PENDING_DOWNLOAD=$RUNNER_TEMP/native-restore-pending-download" >> "$GITHUB_ENV"
+            "EVIDENCE_DIR=$RUNNER_TEMP/native-restore-cleanup" >> "$GITHUB_ENV"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
@@ -100,18 +98,12 @@ jobs:
           lfs: false
       - name: Prove exact reviewed evidence and immutable qualification upload
         id: prepare
-        run: node scripts/ci/planetscale-native-restore-cleanup.mjs prepare
+        run: node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs prepare
       - name: Download immutable qualification artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          artifact-ids: ${{ steps.prepare.outputs.qualification_artifact_id }}
-          run-id: ${{ steps.prepare.outputs.qualification_run_id }}
-          github-token: ${{ github.token }}
-          path: ${{ env.QUALIFICATION_DOWNLOAD }}
-          merge-multiple: true
+        run: node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs download
       - name: Verify unchanged qualification bytes and stage one-use pending intent
         if: inputs.mode == 'cleanup'
-        run: node scripts/ci/planetscale-native-restore-cleanup.mjs stage
+        run: node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs stage
       - name: Persist pending deletion before any DELETE
         if: inputs.mode == 'cleanup'
         id: pending
@@ -121,30 +113,32 @@ jobs:
           path: ${{ env.EVIDENCE_DIR }}/pending.json
           retention-days: 7
           if-no-files-found: error
+          overwrite: false
       - name: Download and verify durable pending attempt
         if: inputs.mode == 'cleanup'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          artifact-ids: ${{ steps.pending.outputs.artifact-id }}
-          path: ${{ env.PENDING_DOWNLOAD }}
-          merge-multiple: true
+        env:
+          PENDING_ARTIFACT_ID: ${{ steps.pending.outputs.artifact-id }}
+          PENDING_ARTIFACT_DIGEST: ${{ steps.pending.outputs.artifact-digest }}
+        run: node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs verify-pending
       - name: Delete original acknowledged target once after reviewed durable evidence
         if: inputs.mode == 'cleanup'
         env:
           PLANETSCALE_RESTORE_API_TOKEN: ${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}
-          PENDING_ARTIFACT_ID: ${{ steps.pending.outputs.artifact-id }}
-          PENDING_ARTIFACT_DIGEST: ${{ steps.pending.outputs.artifact-digest }}
-        run: node scripts/ci/planetscale-native-restore-cleanup.mjs delete
+        run: node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs delete
       - name: Reconcile read-only without retrying deletion or qualification
         if: inputs.mode == 'reconcile'
         env:
           PLANETSCALE_RESTORE_API_TOKEN: ${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}
-        run: node scripts/ci/planetscale-native-restore-cleanup.mjs reconcile
+        run: node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs reconcile
       - name: Retain separate sanitized cleanup receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: native-restore-cleanup-${{ inputs.qualification_run_id }}-${{ github.run_id }}
-          path: ${{ env.EVIDENCE_DIR }}/cleanup.json
+          path: |
+            ${{ env.EVIDENCE_DIR }}/cleanup.json
+            ${{ env.EVIDENCE_DIR }}/reconciliation.json
+            ${{ env.EVIDENCE_DIR }}/stage-error-*.json
+            ${{ env.EVIDENCE_DIR }}/cleanup-checkpoint-*.json
           retention-days: 7
           if-no-files-found: warn

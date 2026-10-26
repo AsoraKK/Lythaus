@@ -56,6 +56,27 @@ jobs:
       - uses: github/codeql-action/analyze@42947a340483f03ba47bb1a039b2c519aab3df85
         with:
           upload: ${{ steps.code_scanning.outputs.upload }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - name: Prepare tiny synthetic restore artifact transport fixture
+        id: artifact_fixture
+        run: node scripts/ci/validate-native-restore-artifact-transport.mjs prepare
+      - name: Upload synthetic restore artifact with cleanup action contract
+        id: artifact_roundtrip
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.artifact_fixture.outputs.artifact_name }}
+          path: ${{ steps.artifact_fixture.outputs.artifact_path }}
+          retention-days: 1
+          overwrite: false
+          if-no-files-found: error
+      - name: Verify real Actions archive transport and exact synthetic bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REHEARSAL_ARTIFACT_ID: ${{ steps.artifact_roundtrip.outputs.artifact-id }}
+          REHEARSAL_ARTIFACT_DIGEST: ${{ steps.artifact_roundtrip.outputs.artifact-digest }}
+        run: node scripts/ci/validate-native-restore-artifact-transport.mjs verify
       - name: Write exact-SHA security evidence
         shell: bash
         env:

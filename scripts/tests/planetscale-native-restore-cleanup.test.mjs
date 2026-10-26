@@ -609,8 +609,8 @@ test('only gated restore provider steps receive the dedicated secret; unrelated 
   const key = 'PLANETSCALE_RESTORE_API_TOKEN', value = '${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}';
   for (const [workflow, job, commands] of [
     [qualification, qualification.jobs.qualify, ['node scripts/ci/planetscale-native-restore-check.mjs']],
-    [cleanup, cleanup.jobs.cleanup, ['node scripts/ci/planetscale-native-restore-cleanup.mjs delete',
-      'node scripts/ci/planetscale-native-restore-cleanup.mjs reconcile']],
+    [cleanup, cleanup.jobs.cleanup, ['node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs delete',
+      'node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs reconcile']],
   ]) {
     assert.equal(job.environment, 'production'); assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
     assert.equal(workflow.env?.[key], undefined); assert.equal(job.env?.[key], undefined);
@@ -622,7 +622,7 @@ test('only gated restore provider steps receive the dedicated secret; unrelated 
   assert.equal(qualification.on.workflow_dispatch.inputs.execute.default, false);
   assert.equal(cleanup.on.workflow_dispatch.inputs.mode.default, 'reconcile');
   assert.equal(cleanup.jobs.cleanup.env.CLEANUP_APPROVAL_JSON, '${{ inputs.cleanup_approval_json }}');
-  const deletion = cleanup.jobs.cleanup.steps.find(step => step.run === 'node scripts/ci/planetscale-native-restore-cleanup.mjs delete');
+  const deletion = cleanup.jobs.cleanup.steps.find(step => step.run === 'node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs delete');
   assert.equal(deletion.if, "inputs.mode == 'cleanup'");
   const sharedConsumers = ['deploy-alpha-web.yml', 'deploy-control-panel.yml', 'deploy-marketing.yml',
     'native-adr003-acceptance.yml', 'native-budget-acceptance.yml', 'native-workers-deploy.yml',
