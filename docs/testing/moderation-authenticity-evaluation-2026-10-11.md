@@ -5,6 +5,10 @@ currently certify text as human-written, and no safety approval grants publishin
 authority. **Keep public posting withheld.** All new measurements here are scripted
 synthetic schema tests. Numeric posting thresholds remain **UNEVALUATED**.
 
+The original evaluation evidence below is dated 11 October. A source-head and
+documentation refresh was completed on 12 October; it does not add live provider
+measurements or change runtime behavior.
+
 ## Source and lane
 
 Original base is `49cca9caa34b34c7ded7f4842792f698be9bd41f`, the exact clean reviewed
@@ -22,14 +26,13 @@ Registry evidence is historical provider
 inventory, not a newly verified production state. No provider inventory call,
 database DDL, grant, write, credential creation, feature activation or launch occurs.
 
-The normally authorized workspace identity read confirmed the repository owner and the open-PR
-inventory succeeded. Existing prospective monthly-v2/research work is not duplicated.
-The current acceptance #990 edits shared `ci.yml`; Jobs #989 owns orchestration;
-configuration #988 owns configs/types and was subsequently merged by the parent.
-The new, separately allocated `posting-feedback-evaluation.yml` and validation
-script overlap none of their published paths. This lane edits no runtime,
-existing contract, migration, flag, reward, appeal or existing shared CI file.
-It reuses the existing safety and authenticity adapters for protocol testing.
+During the original review, the evaluation lane did not duplicate prospective
+monthly-v2/research work, Jobs orchestration #989 or shared CI work #990. Parent-
+approved configuration/types #988 were subsequently merged. The separately
+allocated `posting-feedback-evaluation.yml` and validation script use no privileged
+triggers or secrets. This lane edits no runtime, existing contract, migration,
+flag, reward, appeal or existing shared CI file; it reuses the existing safety
+and authenticity adapters for protocol testing.
 
 The parent-reported release 108 smoke and supplied uncertified-manifest audit are
 context only. Release/run/job/artifact/current-main API operations previously
@@ -37,6 +40,32 @@ denied with 401 and production-approval/protection/variable/artifact-download re
 denied with 403 are not retried. A successful identity/open-PR read is not evidence
 that those permissions recovered. This lane certifies neither production auth,
 the release manifest nor detection readiness.
+
+## 12 October source-head refresh
+
+The checkout and local `origin/main` ref were both at
+`a64697181d242426da65cea66ad68a937ac408ca` before this documentation-only refresh.
+The existing harness, collector and ledger work from #992, #994 and #997 is already
+in that base. This lane adds no Jobs orchestration, shared CI, provider integration,
+contract, database or feature-flag change.
+
+The exact-source offline validation command passed 37 tests with no failures or
+skips. It generated 32 synthetic rows with corpus SHA-256
+`6451e25921d0dffe109fa4152b892172b9d8f2af5f0a468d98c632828389766c`, recorded
+zero external requests, and kept public posting withheld. Native TypeScript
+checking passed. OpenAPI lint passed with two inherited warnings in
+`EmailAuthRequest` and `PrivacyRequestAccepted`. The static migration validator
+passed with 20 migration files and 102 launch tables.
+
+The checked-in Jobs config at that base sets
+`AUTHENTICITY_BETA_ENABLED`, `AUTHENTICITY_ALPHA_ENABLED`, alpha storage/observer/
+adviser, and `AUTHENTICITY_ENFORCEMENT_ENABLED` to `false`; it sets
+`AUTHENTICITY_AI_ENABLED`, `AUTHENTICITY_SHADOW_MODE`, and
+`AUTHENTICITY_BETA_STORAGE_ENABLED` to `true`. These are source-config values, not
+verified production values or publication authority. The evaluation lane changed
+none of them. The owner-provided release 108 smoke and uncertified-manifest audit
+remain separate evidence; no release manifest, denied GitHub endpoint, or live
+provider was queried during this refresh.
 
 ## What the existing components return
 
@@ -63,6 +92,13 @@ and live qualification; this task adds no deployed or measured provider evidence
 Version `lythaus-posting-bands-unevaluated-v1` sets safety/authorship allow and
 block thresholds to **null**, calibration attempted to **false**, and activation
 to **false**. No numeric bands have empirical support from this task.
+
+This is the threshold recommendation: keep detector-derived posting cutoffs
+unset. A coherent, unflagged safety result is only `ALLOW_EVIDENCE`; a flag merits
+contextual review rather than automatic blocking; missing, contradictory,
+unsupported, drifted or failed evidence abstains, and stale revisions are rejected.
+Existing deterministic declaration rules remain separate. No detector result
+proves human authorship, and no safety result makes a post publicly publishable.
 
 | Candidate evidence state | Offline interpretation | Posting-level implication |
 | --- | --- | --- |
@@ -153,14 +189,14 @@ the additional provenance and CI regressions below.
 
 | Check | Evidence |
 | --- | --- |
-| New offline harness, Workerd and CI suites | 20 passed after approved baseline integration: 16 Node harness, 2 native Workerd, 2 CI regression cases; no skips |
-| Scoped tooling TypeScript and `typecheck:native` | Passed; no dependency or runtime export change |
-| Existing evaluation/beta/private-alpha/provider/content/security regression set | Original 39 passed; selected final integration regression command passed 28 cases with no skips (exact command in local validation receipt) |
+| New offline harness, Workerd and CI suites | Inspected-base exact-source gate: 37 passed, 0 failed, 0 skipped; synthetic report contains 32 rows and 0 external requests |
+| Scoped tooling TypeScript and `typecheck:native` | Scoped tooling check and root native TypeScript check passed on the inspected base |
+| Existing evaluation/beta/private-alpha/provider/content/security regression set | Original 39 passed; selected integration regression command passed 28 cases with no skips in the original lane validation |
 | `test:native-architecture` | Original 315 passed; 334 passed after approved configuration integration, no skips; expected negative-path fixture errors do not represent live failures |
 | `openapi:lint` | Passed with 2 inherited warnings: EmailAuthRequest required-property definition and PrivacyRequestAccepted single-member allOf |
 | `openapi:test:contract` | 70 passed; 17 live-server/auth tests skipped because live contract configuration is absent and live calls are not authorized |
-| Migration baseline / registry | 20 migration files, 102 tables and 33 resource guardrails validated statically; no live schema evidence |
-| `validate:native-workers` | Initial local npm failure was reported as stale/unverifiable; default-cache version probe reproduces `ENOENT`. With writable `npm_config_cache=/tmp/lythaus-evaluation-npm-cache` the exact pinned check passed before and after #988 integration; prior head CI also passed all 3 checks. Root Wrangler 4.129.1/workerd 1.20260907.1 differs from release-pinned 4.123.0/workerd 1.20260811.1, but no stale-type defect was established. No independent config/type edits |
+| Migration baseline / registry | Static validator passed for 20 migration files and 102 launch tables; no live schema evidence |
+| `validate:native-workers` | On 12 October the default npm cache could not verify generated types; one run with the documented writable `npm_config_cache=/tmp/lythaus-evaluation-npm-cache` passed for 4 Worker configs and 3 generated type files. Earlier validation passed before and after #988 integration. No config/type edits were made here. |
 | Native scope, provider retirement, branding | Initial scan omitted the untracked report. Current CI correctly caught its bare account handle; removed it in this lane and reran the tracked-file scan |
 | Syntax, documentation security, whitespace and tracked-file hygiene | Passed locally |
 | Repository secret scan | Pinned Gitleaks 8.18.0 subsequently installed by the existing script; 1,833 commits scanned, no leaks found. Initial absence did not count as a pass |
@@ -168,7 +204,7 @@ the additional provenance and CI regressions below.
 | Release 110 Dart journey test / Flutter analyze | Unrun after merge because the Flutter SDK is unavailable in this environment; release 110 includes comment-thread UI and journey-test changes |
 | Real provider measurements, checkpoint inference, licensed labelled corpus, costs | Unrun/unauthorized; zero live calls, zero added paid resources; no empirical band qualification |
 | Release manifest, production auth, actual public posting | Unrun/uncertified. Do not retry prior denied operations or infer from unrelated successful reads |
-| Remote SHA / current-head checks / requiredness | Draft PR #997 received independent source clearance at `8c535535e0c099c5bb51ade9eb5dc6e9457efeda`; this branch now merges release 110 main `d286890d42907f05065e47af3139f4fe96efac3e` without changing the approved ledger/collector blobs. Current-head checks and requiredness remain unverified: prior check/job/artifact and protection reads returned 403 and are not retried. |
+| Remote deployment and current-head checks | Not verified in this lane. Prior release/run/job/artifact/current-main reads returned 401 and production-approval/protection/variable/artifact-download reads returned 403; those denied operations were not retried. The owner-supplied release 108 smoke and uncertified-manifest audit remain separate; neither is treated as detection or publishing certification. |
 
 The [machine-readable plan](../../packages/authenticity/evaluation/posting-feedback/evaluation-plan.json)
 defines the exact future gate: owner-approved provider/model/modalities, rights and
@@ -242,12 +278,12 @@ retain UNEVALUATED bands. A hidden change behind `latest` cannot be detected mer
 by comparing the returned alias; a new evaluation or documented snapshot evidence
 is needed. Public publishing still requires independent complete-pipeline review.
 
-**Implemented:** new offline tooling, synthetic fixtures and this report only.
-**Tested:** local synthetic protocol/measurement paths and listed regressions.
-**Deployed:** none in this lane. **Activated:** none; public posting withheld.
-Review risks are limited measurement coverage, declared rather than discovered
-family lineage, unverified human scenario labels, mutable model aliases, inherited
-policy/version differences and separate live/provider/runtime/CI gates.
-Rollback removes the new evaluation directory, isolated workflow/script and this document, or reverts this
-lane's commits through review. There is no DB, feature, deployment or provider
-rollback operation to perform.
+**Implemented:** the original offline harness, synthetic fixtures and report are
+already present in the inspected base; this refresh changes only report evidence.
+**Tested:** 37 exact-source evaluation checks, native typing, OpenAPI lint and the
+static migration baseline. **Deployed:** no change in this lane. **Activated:** no
+change; public posting remains withheld. Review risks include limited measurement
+coverage, declared rather than discovered family lineage, unverified human scenario
+labels, mutable model aliases, inherited policy/version differences and separate
+live-provider/runtime gates. Rollback is a normal revert of this documentation
+refresh; it requires no database, feature, deployment or provider operation.
