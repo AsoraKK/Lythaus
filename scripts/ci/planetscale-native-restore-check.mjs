@@ -6,7 +6,7 @@ import { RESTORE, ROLE_NAMES, EXTENSIONS, CREATE_TARGET_BODY, RestoreApi, Restor
 import { sourceConnection, restoredConnection, readOnly, collectRestoreCatalog, inspectExtensionAuthority,
   installMissingExtensions } from './planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
-import { inspectCleanupReservation, finalizeQualificationEvidence } from './planetscale-native-restore-evidence.mjs';
+import { inspectCleanupReservation, finalizeQualificationEvidence, sha256 } from './planetscale-native-restore-evidence.mjs';
 
 const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
 const targetPath = `/branches/${RESTORE.target}`;
@@ -20,6 +20,12 @@ const pinnedPrecreateFailure = Object.freeze({ runId: '40193991312', runNumber: 
   artifactId: 12599287272,
   artifactName: 'native-restore-qualification-96ff66fa5c28c9780ce72ee23a40cd846372d6bd-40193991312',
   artifactSize: 1925, artifactDigest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac' });
+const pinnedManuallyDeletedFailure = Object.freeze({ runId: '40212030891', runNumber: 9, runAttempt: 1,
+  headSha: '9447561658c139f1e9e48cedad66b2f035661fb9', jobId: 121225106539, targetId: 'gnbnmpsu7r5k',
+  backupId: 'zw0so7f5jbpu', artifactId: 12606067757, artifactSize: 3199,
+  artifactDigest: 'sha256:50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a',
+  qualificationSha256: '4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618',
+  manualReceiptSha256: 'eeb8e95eb43990739722bf65da07cb6b249f687828d281593529d12cc1a4bccf' });
 const pinnedPrecreateSteps = Object.freeze([
   ['Set up job', 'success'],
   ['Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'success'],
@@ -115,6 +121,87 @@ function verifyPinnedHistoryEntry(run, pinned, conclusion) {
     && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`;
 }
 
+export function assertPinnedManualCleanupProof(qualificationBytes, receiptBytes) {
+  const pinned = pinnedManuallyDeletedFailure;
+  requireThat(ArrayBuffer.isView(qualificationBytes) && ArrayBuffer.isView(receiptBytes)
+    && sha256(qualificationBytes) === pinned.qualificationSha256 && sha256(receiptBytes) === pinned.manualReceiptSha256,
+  'prior_manual_cleanup_file_hash_mismatch');
+  let report, receipt;
+  try { report = JSON.parse(Buffer.from(qualificationBytes).toString('utf8')); receipt = JSON.parse(Buffer.from(receiptBytes).toString('utf8')); }
+  catch { throw new RestoreFailure('prior_manual_cleanup_files_invalid'); }
+  requireThat(report.runId === pinned.runId && report.sourceMainSha === pinned.headSha && report.mode === 'execute'
+    && report.phase === 'qualification' && report.qualificationOutcome === 'FAILED' && report.recoveryAcceptance === 'NOT_CERTIFIED'
+    && report.sourceBranchId === RESTORE.sourceId && report.backupId === pinned.backupId && report.targetName === RESTORE.target
+    && report.createdTargetId === pinned.targetId && report.creation?.acknowledged === true && report.creation.id === pinned.targetId
+    && report.creation.sourceBranchId === RESTORE.sourceId && report.creation.createdAt === '2026-10-25T16:37:31.931Z'
+    && report.providerMutations?.length === 1 && report.providerMutations[0].action === 'create_fixed_restore'
+    && report.providerMutations[0].outcome === 'ACKNOWLEDGED' && Array.isArray(report.credentialActions)
+    && report.credentialActions.length === 0 && /^[A-Za-z0-9-]{1,39}$/.test(report.reviewWindow?.operator ?? '')
+    && JSON.stringify(report.blockers) === '["copied_role_metadata_invalid"]',
+  'prior_manual_cleanup_qualification_mismatch');
+  requireThat(receipt.schemaVersion === 'lythaus-manual-native-restore-cleanup-v1'
+    && receipt.recordType === 'manual_cleanup_observation' && receipt.qualificationRunId === pinned.runId
+    && receipt.qualification?.artifactSha256 === pinned.qualificationSha256 && receipt.qualification.outcome === 'FAILED'
+    && receipt.qualification.recoveryAcceptance === 'NOT_CERTIFIED' && receipt.database?.id === RESTORE.databaseId
+    && receipt.targetBeforeDeletion?.id === pinned.targetId && receipt.targetBeforeDeletion.name === RESTORE.target
+    && receipt.manualCleanup?.outcome === 'TARGET_ABSENT_VERIFIED' && receipt.manualCleanup.submitCount === 1
+    && receipt.manualCleanup.exactTargetGetResult === 'not_found' && receipt.postCleanupInventory?.totalCount === 1
+    && receipt.postCleanupInventory.branches?.[0]?.id === RESTORE.sourceId
+    && receipt.automation?.cleanupWorkflowDispatched === false && receipt.automation.cleanupPermitRunNumber2Consumed === false
+    && receipt.automation.automatedCleanupPassClaimed === false,
+  'prior_manual_cleanup_receipt_mismatch');
+  return { targetId: pinned.targetId, qualificationSha256: pinned.qualificationSha256,
+    manualReceiptSha256: pinned.manualReceiptSha256, cleanupMode: 'MANUAL', cleanupOutcome: 'TARGET_ABSENT_VERIFIED',
+    recoveryAcceptance: 'NOT_CERTIFIED', artifactProviderMutationCount: 1, artifactCredentialActionCount: 0,
+    manualOperator: report.reviewWindow.operator };
+}
+
+async function verifyPinnedManuallyDeletedFailure(run, read, env) {
+  const pinned = pinnedManuallyDeletedFailure;
+  requireThat(verifyPinnedHistoryEntry(run, pinned, 'failure') && run.repository?.id === 1010752912
+    && run.repository.full_name === env.GITHUB_REPOSITORY && run.head_repository?.id === 1010752912
+    && run.head_repository.full_name === env.GITHUB_REPOSITORY && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
+  'prior_execution_provenance_mismatch');
+  const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
+  requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
+    'prior_execution_job_inventory_incomplete');
+  const [job] = jobs.jobs;
+  requireThat(object(job) && job.id === pinned.jobId && String(job.run_id) === pinned.runId && job.run_attempt === 1
+    && job.head_sha === pinned.headSha && job.name === 'Qualify isolated native restore without cleanup'
+    && job.status === 'completed' && job.conclusion === 'failure' && Number.isSafeInteger(job.runner_id) && job.runner_id > 0
+    && typeof job.runner_name === 'string' && job.runner_name.length > 0 && Number.isSafeInteger(job.runner_group_id)
+    && Array.isArray(job.steps) && job.steps.length === pinnedPrecreateSteps.length
+    && pinnedPrecreateSteps.every(([name, conclusion], index) => job.steps[index]?.name === name
+      && job.steps[index].number === [1,2,3,4,5,6,7,8,9,17,18,19][index]
+      && job.steps[index].status === 'completed' && job.steps[index].conclusion === conclusion),
+  'prior_manual_cleanup_step_evidence_mismatch');
+  const artifacts = await read(`/actions/runs/${pinned.runId}/artifacts?per_page=100`);
+  requireThat(object(artifacts) && artifacts.total_count === 1 && Array.isArray(artifacts.artifacts) && artifacts.artifacts.length === 1,
+    'prior_execution_artifact_inventory_incomplete');
+  const [artifact] = artifacts.artifacts;
+  requireThat(artifact.id === pinned.artifactId && artifact.size_in_bytes === pinned.artifactSize
+    && artifact.name === `native-restore-qualification-${pinned.headSha}-${pinned.runId}`
+    && artifact.digest === pinned.artifactDigest && artifact.expired === false
+    && artifact.created_at === '2026-10-25T16:39:28Z' && artifact.expires_at === '2026-11-01T16:39:28Z'
+    && String(artifact.workflow_run?.id) === pinned.runId && artifact.workflow_run?.repository_id === 1010752912
+    && artifact.workflow_run?.head_sha === pinned.headSha, 'prior_manual_cleanup_artifact_mismatch');
+  const evidenceRoot = new URL('../../docs/evidence/production-cutover/0021-restore-evidence/', import.meta.url);
+  const files = [`artifacts/qualification-${pinned.runId}.json`, `manual-cleanup-${pinned.runId}.json`].map(relative => {
+    const file = new URL(relative, evidenceRoot);
+    requireThat(fs.lstatSync(file).isFile(), 'prior_manual_cleanup_file_not_regular');
+    return fs.readFileSync(file);
+  });
+  const proof = assertPinnedManualCleanupProof(...files);
+  const approvals = await read(`/actions/runs/${pinned.runId}/approvals`);
+  requireThat(Array.isArray(approvals) && approvals.length === 1 && approvals[0].state === 'approved'
+    && approvals[0].user?.type === 'User' && approvals[0].user.login === proof.manualOperator
+    && approvals[0].environments?.some(row => row.name === 'production'), 'prior_manual_cleanup_production_approval_mismatch');
+  return { status: 'PINNED_MANUALLY_DELETED_FAILURE_RECONCILED', workflowPath, workflowId,
+    runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha,
+    event: 'workflow_dispatch', conclusion: 'failure', jobId: pinned.jobId, artifactId: pinned.artifactId,
+    artifactDigest: pinned.artifactDigest, ...proof };
+}
+
 export async function githubReadiness(environment, fetchImpl = fetch, execute = false) {
   const env = environment;
   requireThat(/^[a-f0-9]{40}$/.test(env.RELEASE_SHA ?? '') && env.GITHUB_SHA === env.RELEASE_SHA
@@ -147,7 +234,7 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
         && typeof run.display_title === 'string'), 'execution_history_incomplete');
     requireThat(new Set(prior.workflow_runs.map(run => run.id)).size === prior.workflow_runs.length, 'execution_history_duplicate_run');
     const previous = prior.workflow_runs.filter(run => String(run.id) !== env.GITHUB_RUN_ID);
-    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure];
+    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure, pinnedManuallyDeletedFailure];
     const pinnedRows = new Map(pinnedExecutions.map(pinned => [pinned.runId,
       previous.filter(run => String(run.id) === pinned.runId)]));
     const pinnedIds = new Set(pinnedExecutions.map(pinned => pinned.runId));
@@ -156,14 +243,17 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
     requireThat([...pinnedRows.values()].every(rows => rows.length === 1) && unexpectedRows.length === 0,
       'prior_execution_requires_manual_reconciliation');
     requireThat(verifyPinnedHistoryEntry(pinnedRows.get(pinnedCancelledExecution.runId)[0], pinnedCancelledExecution, 'cancelled')
-      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedPrecreateFailure.runId)[0], pinnedPrecreateFailure, 'failure'),
+      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedPrecreateFailure.runId)[0], pinnedPrecreateFailure, 'failure')
+      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedManuallyDeletedFailure.runId)[0], pinnedManuallyDeletedFailure, 'failure'),
     'prior_execution_history_entry_mismatch');
     const cancelledRun = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
     const cancelledProof = await verifyPinnedCancelledExecution(cancelledRun, read, env);
     const precreateRun = await read(`/actions/runs/${pinnedPrecreateFailure.runId}`);
     const precreateProof = await verifyPinnedPrecreateFailure(precreateRun, read, env);
+    const manuallyDeletedRun = await read(`/actions/runs/${pinnedManuallyDeletedFailure.runId}`);
+    const manuallyDeletedProof = await verifyPinnedManuallyDeletedFailure(manuallyDeletedRun, read, env);
     return { executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED', workflowPath, workflowId,
-      pinnedExecutions: [cancelledProof, precreateProof] } };
+      pinnedExecutions: [cancelledProof, precreateProof, manuallyDeletedProof] } };
   }
   return { executionHistoryReconciliation: null };
 }
@@ -228,7 +318,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       const directTarget = await api.request(targetPath, { absent: true });
       requireThat(directTarget === null, 'preexisting_target_refused');
       const branches = await api.list('/branches');
-      requireThat(!branches.some(row => row.name === RESTORE.target), 'preexisting_target_refused');
+      requireThat(!branches.some(row => row.name === RESTORE.target || row.id === pinnedManuallyDeletedFailure.targetId), 'preexisting_target_refused');
       const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
       requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
       requireThat(Array.isArray(protectedBackup.restored_branches)
@@ -274,7 +364,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     const backup = await api.request(backupPath); checkBackup(backup, now());
     requireThat(backup.protected === true, 'protected_backup_with_finite_retention_plan_is_manual_prerequisite');
     const branches = await api.list('/branches');
-    requireThat(!branches.some(row => row.name === RESTORE.target || row.id === report.createdTargetId), 'preexisting_target_refused');
+    requireThat(!branches.some(row => row.name === RESTORE.target || row.id === report.createdTargetId
+      || row.id === pinnedManuallyDeletedFailure.targetId), 'preexisting_target_refused');
     const sourceRoles = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId);
     report.backup = { id: backup.id, restoreMode: 'SPECIFIED_BACKUP_SNAPSHOT', protected: backup.protected,
       completedAt: backup.completed_at, expiresAt: backup.expires_at,

@@ -2,12 +2,14 @@
 
 This is preparation, not permission to dispatch execution. Read-only run
 `40175663686` verified the dedicated restore token's nine target-database
-actions and organization `read_service_tokens`, then stopped because its pinned
-backup was stale. No hosted backup was restored, no credentials were reset, and
-no target was created. Mock success and disposable PG17 success are not
-operational restore evidence. Parent source review, normal required CI, exact
-merged-source review and the separate owner action packet remain required
-before dispatching `execute=true`.
+actions and organization `read_service_tokens`. Later qualification run #9
+`40212030891` created an isolated target, then failed copied-role REST metadata
+validation before resetting any copied credentials. Its exact target was
+manually deleted under a separately recorded incident decision; the original
+failed qualification and distinct manual receipt remain preserved. Recovery is
+not certified. Mock success and disposable PG17 success are not operational
+restore evidence. Source review, normal required CI, exact merged-source review
+and a fresh separate owner action packet remain required before execution.
 
 ## Fixed scope
 
@@ -15,8 +17,8 @@ before dispatching `execute=true`.
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
 record. Every prior execute run in the complete workflow history blocks another
-execution, even across SHAs. The only reconciled prior executions are the two
-exact pinned runs #7 and #8; complete history must include both and every other
+execution, even across SHAs. The only reconciled prior executions are the three
+exact pinned runs #7, #8 and #9; complete history must include all three and every other
 non-plan execution blocks. Run #7 (`40184823787`, SHA
 `43829abc3424a88a22826695bbfdc7be4a116e62`) must remain a terminal cancellation
 with no production approval, one terminal job with no runner and an explicit
@@ -25,12 +27,19 @@ empty step list, and no artifacts. Run #8 (`40193991312`, SHA
 pre-create failure: its one job must fail at step 6 during copied-role metadata
 validation, complete evidence finalization and upload, and retain the pinned
 single artifact ID, size and digest whose inspected report records zero
-provider mutations, no credential actions and no target. Any missing, changed,
-extra or uncertain evidence blocks. Before target creation, the runner also
+provider mutations, no credential actions and no target. Run #9 must retain its
+exact failed run/job/step sequence and immutable uploaded artifact identity,
+size and digest. Its committed original qualification and separate manual
+cleanup observation must match pinned byte hashes, proving one acknowledged
+create, zero credential actions, the original target ID `gnbnmpsu7r5k` and the
+recorded manual deletion. This does not convert manual cleanup to an automated
+PASS or certify recovery. The restored-role REST representation remains
+unresolved; this reconciliation does not change role matching or reset gates.
+Any missing, changed, extra or uncertain evidence blocks. Before target creation, the runner also
 requires an exact target GET 404, a complete branch inventory without the
-target, and backup restore history without the target. These pinned
-reconciliations never permit retry after any other runner or step sequence, or
-after a provider mutation may have occurred.
+target name or old acknowledged target ID, and backup restore history without
+the target. These pinned reconciliations never permit retry after any other
+runner or step sequence, or after an uncertain provider mutation.
 
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
 `zw0so7f5jbpu` (provisional until a fresh API read confirms its metadata).
@@ -224,7 +233,8 @@ two-hour runner window after any start in the first thirty minutes. If the
 approval margin is missed, do not approve a run that would start with less than
 two hours remaining; a runner-started failed preflight is not eligible for the
 one pinned pre-runner cancellation. Only the exact pinned run #8 pre-create
-failure described above can be reconciled after a runner starts.
+failure and run #9's separately verified manual deletion described above can
+be reconciled after a runner starts. No later failure is automatically eligible.
 
 Known two-hour compute/storage plus a conservative 20-GiB additional backup/WAL
 day and 10-MiB egress is about US$0.038604429 before tax/fees. The packet must
