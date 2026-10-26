@@ -5,14 +5,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import YAML from 'yaml';
-import { RESTORE, RestoreApi, RestoreCleanupApi, RestoreFailure, CREATE_TARGET_BODY } from '../ci/planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, ACTIONS, RestoreApi, RestoreCleanupApi, RestoreFailure, CREATE_TARGET_BODY, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
+import { runNativeRestore } from '../ci/planetscale-native-restore-check.mjs';
+import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 import { REQUIRED_0021_RESTORE_SCOPE, hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
 import { QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, RECORD_PATH, artifactPath, sha256, readTrackedEvidence,
   validateCleanupEvidence, reviewAttestation, inspectCleanupReservation, finalizeQualificationEvidence, githubRead } from '../ci/planetscale-native-restore-evidence.mjs';
 import { proveCleanupContext, pendingReceipt, pendingName, deleteReviewedTarget, reconcileReviewedTarget,
   observeOwnedTarget } from '../ci/planetscale-native-restore-cleanup.mjs';
 
-const start = Date.parse('2026-10-23T17:00:00Z'), instant = start + 35 * 60000;
+const start = Date.parse('2026-10-25T04:00:00Z'), instant = start + 35 * 60000;
 const time = minutes => new Date(start + minutes * 60000).toISOString();
 const targetId = 'newrestore123', qualificationSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), cleanupSha = evidenceSha;
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
@@ -85,7 +87,7 @@ function fixture() {
       throw new Error(`unexpected synthetic provider path ${suffix}`);
     } };
   const options = { env, evidence, evidenceHead: evidenceSha, read, assertMain: async () => { calls.push('MAIN'); },
-    api, now: () => instant, checkpoint: receipt => checkpoints.push(receipt) };
+    api, now: () => instant, checkpoint: receipt => checkpoints.push(receipt), sleep: async () => {} };
   const refresh = () => {
     evidence.bytes = encode(report); record.evidenceSha256 = sha256(evidence.bytes);
     record.recordSha256 = hash0021RestoreEvidenceRecord(record); evidence.recordBytes = encode(record);
@@ -101,6 +103,105 @@ function fixture() {
     setDeleted: value => { deleted = value; } };
 }
 const deletions = f => f.calls.filter(call => call.startsWith('DELETE ')).length;
+
+for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test(`one whole path ${fault ?? 'converges raw REST roles with reissued IDs, preserves immutable evidence and performs reviewed cleanup'}`, async t => {
+  const f = fixture(), requests = [], sourceReads = [], resets = []; let clock = start, created = false, targetReads = 0;
+  const roleRows = (source, pending = false) => ROLE_NAMES.map((name, index) => ({ id: `${source ? 'sourceapi' : 'targetapi'}${index}`,
+    access_host_url: 'aws.connect.psdb.cloud',
+    name: 'synthetic display label', base_username: name, username: `${name}.${source ? RESTORE.sourceId : targetId}`,
+    database_name: 'postgres', ready: !(pending && index === 0), expired: false, deleted_at: null, disabled_at: null,
+    dropped_at: null, expires_at: null, with_replication: index === 0, inherited_roles: [], default: index === 0,
+    branch: { id: source ? RESTORE.sourceId : targetId, name: source ? 'main' : RESTORE.target, deleted_at: null } }));
+  const target = () => ({ ...branch(), cluster_name: RESTORE.cluster, cluster_architecture: 'aarch64',
+    region: { slug: RESTORE.region }, replicas: 0, minimum_storage_bytes: RESTORE.bytes,
+    maximum_storage_bytes: RESTORE.bytes, ready: true, state: 'ready', frozen: false });
+  const source = { id: RESTORE.sourceId, name: 'main', kind: 'postgresql', default: true, deleted_at: null, ready: true };
+  const api = new RestoreApi('syntheticid:synthetic-value', async (url, options) => {
+    const parsed = new URL(url), path = parsed.pathname.slice(new URL(apiBase).pathname.length);
+    requests.push({ path, method: options.method });
+    if (url === apiBase) return Response.json({ id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' });
+    if (url.endsWith('/service-tokens/syntheticid')) return Response.json({ id: 'syntheticid', expires_at: time(180),
+      service_token_accesses: ['read_database','read_branch','delete_branch','delete_production_branch','read_backups',
+        'create_branch','connect_branch','connect_production_branch','restore_production_branch_backup'].map(access => ({
+          access, resource_id: RESTORE.databaseId, resource_type: 'Database',
+          resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } })) });
+    if (path === '/branches/main') return Response.json(source);
+    if (path.endsWith(`/backups/${RESTORE.backupId}`)) return Response.json({ id: RESTORE.backupId,
+      database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null }, state: 'success', deleted_at: null,
+      protected: true, completed_at: RESTORE.backupCompletedAt, expires_at: '2026-10-27T02:25:02.838Z',
+      pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: created ? [{ id: targetId, name: RESTORE.target }] : [] });
+    if (options.method === 'POST' && path === '/branches') {
+      assert.deepEqual(JSON.parse(options.body), CREATE_TARGET_BODY);
+      created = true; clock = start + 60000; return Response.json(target(), { status: 201 });
+    }
+    if (path === `/branches/${RESTORE.target}`) return created ? Response.json(target()) : new Response(null, { status: 404 });
+    if (path.endsWith('/reset')) {
+      assert.ok(targetReads >= 3, 'no reset before all five pass together');
+      const role = roleRows(false).find(row => path === `/branches/${RESTORE.target}/roles/${row.id}/reset`);
+      assert.ok(role, 'reset uses a discovered target API ID'); resets.push(role.base_username);
+      return Response.json({ ...role, password: 'synthetic-password-only', access_host_url: 'aws.connect.psdb.cloud' });
+    }
+    const page = Number(parsed.searchParams.get('page'));
+    let rows;
+    if (path === '/branches') rows = created ? [source,target()] : [source];
+    else if (path === '/branches/main/roles') rows = roleRows(true);
+    else if (path === `/branches/${RESTORE.target}/roles`) {
+      if (page === 1) targetReads++;
+      rows = roleRows(false, targetReads === 2); if (targetReads === 1) rows.shift();
+      if (fault === 'contradictory_identity') rows[0].branch.id = RESTORE.sourceId;
+    } else throw new Error('unexpected synthetic request');
+    const next = page === 1 && rows.length > 3 ? 2 : null;
+    return Response.json({ type: 'list', current_page: page, per_page: 100,
+      total_count: rows.length + (fault === 'partial_pagination' && path.endsWith(`${RESTORE.target}/roles`) && page === 2 ? 1 : 0),
+      next_page: next, data: rows.slice((page - 1) * 3, page * 3) });
+  });
+  const sourceUrl = `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:synthetic-password-only@aws.connect.psdb.cloud/postgres?sslmode=verify-full`;
+  const env = { RELEASE_SHA: qualificationSha, GITHUB_RUN_ID: '12345', RESTORE_CHECK_EXECUTE: 'true',
+    PLANETSCALE_SCHEMA_READ_DATABASE_URL: sourceUrl,
+    RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: qualificationSha, backupId: RESTORE.backupId, target: RESTORE.target,
+      maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
+      reference: 'synthetic-owner-approval-reference', manualOperator: 'owner', expiresAt: time(150), actions: ACTIONS, roles: ROLE_NAMES,
+      cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
+        reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
+        priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: time(1380) },
+      cleanupPermit: { workflowId: 42, runNumber: 1 }, reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true,
+        availableFrom: time(0), availableUntil: time(150) }, retention: { operator: 'owner', reference: 'synthetic-retention-approval',
+        manualEndActionApprovalReference: 'synthetic-end-action', endAction: 'separately_approved_manual_decision_no_automatic_unprotect',
+        endsAt: time(1380), decisionBy: time(60), estimatedUsd: 0.01 } }) };
+  const baseline = { catalogSha256: 'c'.repeat(64), schemaFingerprint: 'd'.repeat(64), relationCount: 103,
+    schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3,
+    extensionSpecifications: ['pg_trgm','pgcrypto','unaccent'].map(extname => ({ extname, extversion: '1.0',
+      schema: 'public', owner: 'postgres', extrelocatable: true })) };
+  const qualification = await runNativeRestore({ environment: env, api, now: () => clock,
+    reviewedOriginFingerprint: branchQualifiedDatabaseTarget(sourceUrl).originFingerprint,
+    assertMain: async () => {}, reserveCleanup: async () => ({ workflowId: 42, runNumber: 1 }),
+    sleep: async milliseconds => { clock += milliseconds; }, prepareSmoke: async () => ({}),
+    readSession: async (_url, id) => { sourceReads.push(id); return baseline; }, extensionAuthority: async () => [],
+    smoke: async connections => { assert.equal(Object.keys(connections).length, 4); return { readOnlyDatabaseIdentity: true, distinctRoles: 4 }; } });
+  if (fault) {
+    assert.equal(qualification.qualificationOutcome, 'FAILED'); assert.deepEqual(resets, []);
+    assert.equal(qualification.cleanup, 'TARGET_RETAINED_PENDING_REVIEW');
+    assert.equal(requests.filter(row => row.method === 'POST').length, 1);
+    assert.equal(qualification.recoveryAcceptance, 'NOT_CERTIFIED');
+    return;
+  }
+  assert.equal(qualification.qualificationOutcome, 'PASSED'); assert.deepEqual(resets, ROLE_NAMES);
+  assert.deepEqual(qualification.roleInventoryObservations.map(row => [row.missing.length,row.pending.length]), [[1,0],[0,1],[0,0]]);
+  assert.equal(sourceReads.filter(id => id === RESTORE.sourceId).length, 3);
+  assert.equal(requests.filter(row => row.method === 'POST').length, 6);
+  assert.ok(requests.every(row => !['DELETE','PATCH'].includes(row.method)));
+  Object.assign(f.report, qualification); f.record.verifiedAt = qualification.verifiedAt;
+  f.record.restoredBranch.createdAt = qualification.creation.createdAt; f.refresh();
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'restore-whole-path-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(root, 'qualification.json'), f.evidence.bytes, { flag: 'wx' });
+  assert.equal(finalizeQualificationEvidence(root, instant), sha256(f.evidence.bytes));
+  const before = fs.readFileSync(path.join(root, 'qualification.json'));
+  const cleanup = await deleteReviewedTarget(f.options);
+  assert.equal(cleanup.state, 'DELETED_AND_READBACK_VERIFIED'); assert.equal(deletions(f), 1);
+  assert.equal(cleanup.recoveryCertified, false); assert.equal(qualification.recoveryAcceptance, 'NOT_CERTIFIED');
+  assert.deepEqual(fs.readFileSync(path.join(root, 'qualification.json')), before);
+});
 
 test('cleanup and reconciliation reject missing or malformed dedicated access even with a valid shared pair', async t => {
   const request = t.mock.method(globalThis, 'fetch', async () => { throw new Error('unexpected provider request'); });
@@ -140,6 +241,123 @@ test('reviewed tracked evidence and uploaded pending intent precede exactly one 
   assert.ok(f.calls.indexOf('GITHUB /actions/artifacts/52') < f.calls.findIndex(call => call.startsWith('DELETE ')));
   assert.deepEqual(f.evidence.bytes, bytes); assert.equal(f.report.state, 'TARGET_RETAINED_PENDING_REVIEW');
   assert.equal(f.calls.filter(call => /^(POST|PATCH|SQL)/.test(call)).length, 0);
+});
+
+for (const boundary of ['provider preflight', 'main recheck', 'pending checkpoint', 'final target read']) {
+  test(`expired deletion consent after ${boundary} blocks the final DELETE`, async () => {
+    const f = fixture(); let clock = instant;
+    const consent = JSON.parse(f.env.CLEANUP_APPROVAL_JSON);
+    consent.expiresAt = time(36); f.env.CLEANUP_APPROVAL_JSON = JSON.stringify(consent);
+    f.options.now = () => clock;
+    if (boundary === 'provider preflight') f.options.api.authority = async () => { clock = start + 36 * 60000; };
+    if (boundary === 'main recheck') {
+      let checks = 0;
+      f.options.assertMain = async () => { if (++checks === 2) clock = start + 36 * 60000; };
+    }
+    if (boundary === 'pending checkpoint') f.options.checkpoint = receipt => {
+      f.checkpoints.push(receipt);
+      if (receipt.state === 'DELETE_PENDING') clock = start + 36 * 60000;
+    };
+    if (boundary === 'final target read') {
+      const request = f.options.api.request; let reads = 0;
+      f.options.api.request = async (path, options) => {
+        const row = await request(path, options);
+        if (path === `/branches/${RESTORE.target}` && !options?.method && ++reads === 2) clock = start + 36 * 60000;
+        return row;
+      };
+    }
+    const result = await deleteReviewedTarget(f.options);
+    assert.equal(result.state, 'BLOCKED_WITHOUT_DELETE');
+    assert.equal(result.providerMutations, false); assert.equal(deletions(f), 0);
+    assert.ok(result.blockers.includes('cleanup_owner_approval_binding_invalid'));
+    assert.equal(result.recoveryCertified, false);
+  });
+}
+
+test('a pending checkpoint crossing the final deadline reserve blocks DELETE', async () => {
+  const f = fixture(); let clock = instant;
+  f.options.now = () => clock;
+  f.options.checkpoint = receipt => {
+    f.checkpoints.push(receipt);
+    if (receipt.state === 'DELETE_PENDING') clock = start + 119 * 60000;
+  };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.state, 'BLOCKED_WITHOUT_DELETE');
+  assert.equal(result.providerMutations, false); assert.equal(deletions(f), 0);
+  assert.ok(result.blockers.includes('cleanup_phase_deadline_expired'));
+});
+
+test('the original qualification approval must remain valid at DELETE', async () => {
+  const f = fixture(); let clock = instant;
+  f.report.approvalExpiresAt = time(36); f.refresh();
+  f.options.now = () => clock;
+  f.options.checkpoint = receipt => {
+    if (receipt.state === 'DELETE_PENDING') clock = start + 36 * 60000;
+  };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
+  assert.ok(result.blockers.includes('cleanup_phase_deadline_expired'));
+});
+
+test('protected main is rechecked after the durable pending checkpoint', async () => {
+  const f = fixture(); let pending = false;
+  f.options.checkpoint = receipt => { if (receipt.state === 'DELETE_PENDING') pending = true; };
+  f.options.assertMain = async () => { if (pending) throw new RestoreFailure('current_protected_main_changed'); };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
+  assert.ok(result.blockers.includes('current_protected_main_changed'));
+});
+
+for (const boundary of ['pending checkpoint', 'main recheck']) test(`same-name replacement during ${boundary} blocks DELETE`, async () => {
+  const f = fixture(), request = f.options.api.request; let replaced = false, mainChecks = 0;
+  f.options.api.request = async (path, options) => {
+    const row = await request(path, options);
+    return replaced && path === `/branches/${RESTORE.target}` && options?.method !== 'DELETE'
+      ? { ...row, id: 'replacementid' } : row;
+  };
+  if (boundary === 'pending checkpoint') f.options.checkpoint = receipt => { if (receipt.state === 'DELETE_PENDING') replaced = true; };
+  else f.options.assertMain = async () => { if (++mainChecks === 2) replaced = true; };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
+  assert.ok(result.blockers.includes('created_target_ownership_changed'));
+});
+
+test('post-DELETE readback converges GET-only under the original deadline without repeating DELETE', async () => {
+  const f = fixture(), request = f.options.api.request; let sent = false, reads = 0;
+  f.options.api.request = async (path, options = {}) => {
+    if (options.method === 'DELETE') sent = true;
+    const row = await request(path, options);
+    return sent && path === `/branches/${RESTORE.target}` && options.method !== 'DELETE' && ++reads < 3 ? branch() : row;
+  };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.deletionVerified, true); assert.equal(deletions(f), 1);
+  assert.deepEqual(result.deletionObservations.map(row => row.state), ['PRESENT','PRESENT','ABSENCE_VERIFIED']);
+});
+
+test('post-DELETE replacement is terminal and cannot trigger a second DELETE', async () => {
+  const f = fixture(), request = f.options.api.request; let sent = false;
+  f.options.api.request = async (path, options = {}) => {
+    if (options.method === 'DELETE') sent = true;
+    const row = await request(path, options);
+    return sent && path === `/branches/${RESTORE.target}` && options.method !== 'DELETE' ? { ...branch(), id: 'replacementid' } : row;
+  };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.deletionVerified, false); assert.equal(deletions(f), 1);
+  assert.ok(result.blockers.includes('created_target_ownership_changed'));
+});
+
+test('post-DELETE polling cannot create a new cleanup window or issue reads after the original deadline', async () => {
+  const f = fixture(), request = f.options.api.request; let sent = false, clock = instant, reads = 0;
+  f.options.now = () => clock;
+  f.options.sleep = async () => { clock = start + RESTORE.maximumMs; };
+  f.options.api.request = async (path, options = {}) => {
+    if (options.method === 'DELETE') sent = true;
+    const row = await request(path, options);
+    if (sent && path === `/branches/${RESTORE.target}` && options.method !== 'DELETE') { reads++; return branch(); }
+    return row;
+  };
+  const result = await deleteReviewedTarget(f.options);
+  assert.equal(result.deletionVerified, false); assert.equal(deletions(f), 1); assert.equal(reads, 1);
 });
 
 for (const [name, change] of [
@@ -432,7 +650,7 @@ test('qualification work and finalization have independent budgets before escala
   assert.ok(runner['timeout-minutes'] + finalizer['timeout-minutes'] + upload['timeout-minutes'] < job['timeout-minutes']);
   assert.ok(job.steps.every(step => Number.isInteger(step['timeout-minutes']) && step['timeout-minutes'] > 0));
   assert.ok(job.steps.reduce((total, step) => total + step['timeout-minutes'], 0) < job['timeout-minutes']);
-  assert.equal(job['timeout-minutes'], 35); assert.ok(job['timeout-minutes'] * 60000 < RESTORE.escalationMs);
+  assert.equal(job['timeout-minutes'], 36); assert.ok(job['timeout-minutes'] * 60000 < RESTORE.escalationMs);
   assert.ok(RESTORE.escalationMs < RESTORE.reviewMs); assert.ok(RESTORE.reviewMs < RESTORE.maximumMs);
   assert.equal(qualification.concurrency.group, 'lythaus-fixed-native-restore-qualification');
   assert.equal(cleanup.concurrency.group, 'lythaus-fixed-native-restore-cleanup');

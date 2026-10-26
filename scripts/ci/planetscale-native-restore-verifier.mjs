@@ -3,7 +3,7 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig } from './
 import { expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
 import { runtimeSchemaFingerprint, canonicalReleaseSchemaContract, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
-import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, assertRestoreRoleSqlBaseline } from './planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, assertRestoreRoleSqlBaseline, checkCopiedRoleMetadata } from './planetscale-native-restore-contract.mjs';
 
 export function sourceConnection(raw, expectedOrigin) {
   const target = branchQualifiedDatabaseTarget(raw);
@@ -12,11 +12,17 @@ export function sourceConnection(raw, expectedOrigin) {
   return raw;
 }
 
-export function restoredConnection(row, branchId, expectedRole) {
+export function restoredConnectionMetadata(row, branchId, expectedRole, sourceRow) {
   requireThat(branchId !== RESTORE.sourceId && row?.base_username === expectedRole && ROLE_NAMES.includes(expectedRole)
     && row.username === `${expectedRole}.${branchId}` && row.branch?.id === branchId && row.branch.name === RESTORE.target
-    && row.database_name === 'postgres' && typeof row.password === 'string' && row.password.length >= 16
+    && row.database_name === 'postgres'
     && typeof row.access_host_url === 'string' && /^[a-z0-9.-]+\.psdb\.cloud$/.test(row.access_host_url), 'restored_credential_identity_invalid');
+  checkCopiedRoleMetadata(row, branchId, expectedRole, sourceRow);
+}
+
+export function restoredConnection(row, branchId, expectedRole, sourceRow) {
+  restoredConnectionMetadata(row, branchId, expectedRole, sourceRow);
+  requireThat(typeof row.password === 'string' && row.password.length >= 16, 'restored_credential_identity_invalid');
   const url = new URL(`postgresql://${row.access_host_url}:5432/postgres?sslmode=verify-full`);
   url.username = row.username; url.password = row.password;
   return url.toString();
@@ -41,7 +47,7 @@ export async function readOnly(raw, branchId, role, work, clientFactory = config
     signal?.throwIfAborted();
     await client.connect();
     signal?.throwIfAborted();
-    await client.query('BEGIN READ ONLY');
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     const row = (await client.query(`SELECT current_database() AS database, current_user AS username,
       session_user AS session, current_setting('transaction_read_only') AS read_only,
       current_setting('server_version_num') AS version`)).rows[0];
@@ -138,34 +144,64 @@ export async function collectRestoreCatalog(client) {
   requireThat(JSON.stringify(keys(relations)) === JSON.stringify(keys(canonicalRelations)), 'restore_relation_contract_incomplete');
   return { catalogSha256: restoreCatalogDigest({ sections, migrations, roles, members, extensions }),
     schemaFingerprint: runtimeSchemaFingerprint(relations, migrations), relationCount: relations.length,
-    schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: extensions.length };
+    schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: extensions.length,
+    extensionSpecifications: extensions };
 }
 
 export function restoreCatalogDigest({ sections, migrations, roles, members, extensions }) {
   return hash({ ...sections, migrations, roles, members, extensions });
 }
 
-export async function inspectExtensionAuthority(raw, branchId, clientFactory, signal) {
-  return readOnly(raw, branchId, RESTORE.setup, async client => {
-    const rows = (await client.query(`SELECT e.name,e.default_version,e.installed_version,v.trusted,v.superuser,
-      has_database_privilege(current_user,current_database(),'CREATE') AS can_create_database,
-      has_schema_privilege(current_user,'public','CREATE') AS can_create_schema,
-      (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) AS is_superuser
-      FROM pg_available_extensions e JOIN pg_available_extension_versions v ON v.name=e.name AND v.version=e.default_version
-      WHERE e.name=ANY($1::text[]) ORDER BY e.name`, [EXTENSIONS])).rows;
-    requireThat(rows.length === 3 && new Set(rows.map(row => row.name)).size === 3, 'required_extensions_unavailable');
-    const missing = rows.filter(row => row.installed_version === null);
-    requireThat(missing.every(row => row.can_create_database === true && row.can_create_schema === true
-      && (row.trusted === true || row.superuser === false || row.is_superuser === true)), 'missing_extension_install_authority_unproven');
-    return missing.map(row => row.name);
-  }, clientFactory, signal);
+export function checkedExtensionSpecifications(specifications) {
+  requireThat(Array.isArray(specifications) && specifications.length === EXTENSIONS.length
+    && new Set(specifications.map(row => row?.extname)).size === EXTENSIONS.length
+    && specifications.every(row => EXTENSIONS.includes(row?.extname) && /^[0-9][0-9A-Za-z_.-]{0,31}$/.test(row.extversion)
+      && row.schema === 'public' && ['postgres', RESTORE.setup].includes(row.owner) && typeof row.extrelocatable === 'boolean'),
+  'source_extension_reconstruction_scope_unapproved');
+  return specifications;
 }
 
-export async function installMissingExtensions(raw, branchId, missing, clientFactory = config => new pg.Client(config), signal) {
+async function extensionPlan(client, specifications) {
+  checkedExtensionSpecifications(specifications);
+  const rows = (await client.query(`SELECT s.extname,s.extversion,s.schema,s.owner,s.extrelocatable,
+    e.extversion AS installed_version,n.nspname AS installed_schema,pg_get_userbyid(e.extowner) AS installed_owner,
+    e.extrelocatable AS installed_relocatable,v.version AS available_version,v.schema AS required_schema,v.relocatable,
+    v.trusted,v.superuser,pg_has_role(session_user,r.oid,'SET') AS can_set_owner,
+    has_database_privilege(r.oid,current_database(),'CREATE') AS can_create_database,
+    has_schema_privilege(r.oid,s.schema,'CREATE') AS can_create_schema,r.rolsuper AS is_superuser
+    FROM jsonb_to_recordset($1::jsonb) AS s(extname text,extversion text,schema text,owner text,extrelocatable boolean)
+    LEFT JOIN pg_extension e ON e.extname=s.extname LEFT JOIN pg_namespace n ON n.oid=e.extnamespace
+    LEFT JOIN pg_available_extension_versions v ON v.name=s.extname AND v.version=s.extversion
+    LEFT JOIN pg_roles r ON r.rolname=s.owner ORDER BY s.extname`, [JSON.stringify(specifications)])).rows;
+  requireThat(rows.length === EXTENSIONS.length && new Set(rows.map(row => row.extname)).size === EXTENSIONS.length,
+    'extension_probe_invalid');
+  const missing = [];
+  for (const row of rows) {
+    if (row.installed_version !== null) {
+      requireThat(row.installed_version === row.extversion && row.installed_schema === row.schema
+        && row.installed_owner === row.owner && row.installed_relocatable === row.extrelocatable,
+      'existing_extension_metadata_mismatch');
+    } else {
+      requireThat(row.available_version === row.extversion && (row.required_schema === null || row.required_schema === row.schema)
+        && row.relocatable === row.extrelocatable, 'required_extension_version_or_schema_unavailable');
+      requireThat(row.can_set_owner === true && row.can_create_database === true && row.can_create_schema === true
+        && (row.trusted === true || row.superuser === false || row.is_superuser === true), 'missing_extension_install_authority_unproven');
+      missing.push(row.extname);
+    }
+  }
+  return missing;
+}
+
+export async function inspectExtensionAuthority(raw, branchId, clientFactory, signal, specifications) {
+  return readOnly(raw, branchId, RESTORE.setup, client => extensionPlan(client, specifications), clientFactory, signal);
+}
+
+export async function installMissingExtensions(raw, branchId, missing, clientFactory = config => new pg.Client(config), signal, specifications) {
   requireThat(branchId !== RESTORE.sourceId && missing.every(name => EXTENSIONS.includes(name)) && new Set(missing).size === missing.length,
     'extension_scope_invalid');
   const target = branchQualifiedDatabaseTarget(raw);
   requireThat(target.branchId === branchId && target.role === RESTORE.setup, 'extension_target_invalid');
+  checkedExtensionSpecifications(specifications);
   if (missing.length === 0) return;
   const client = clientFactory({ ...adminDatabaseConnectionConfig(raw), connectionTimeoutMillis: 10000, statement_timeout: 15000 });
   client.on?.('error', () => {});
@@ -175,7 +211,15 @@ export async function installMissingExtensions(raw, branchId, missing, clientFac
     signal?.throwIfAborted(); await client.connect(); signal?.throwIfAborted(); await client.query('BEGIN');
     const row = (await client.query('SELECT current_user AS username,current_database() AS database')).rows[0];
     requireThat(row?.database === 'postgres' && [RESTORE.setup,`${RESTORE.setup}.${branchId}`].includes(row.username), 'extension_session_mismatch');
-    for (const name of missing) { signal?.throwIfAborted(); await client.query(`CREATE EXTENSION "${name}"`); }
+    requireThat(JSON.stringify(await extensionPlan(client, specifications)) === JSON.stringify([...missing].sort()),
+      'extension_plan_changed_before_install');
+    for (const name of missing) {
+      const spec = specifications.find(row => row.extname === name);
+      signal?.throwIfAborted(); await client.query(`SET LOCAL ROLE "${spec.owner}"`);
+      await client.query(`CREATE EXTENSION "${name}" WITH SCHEMA "${spec.schema}" VERSION '${spec.extversion}'`);
+      await client.query('SET LOCAL ROLE NONE');
+    }
+    requireThat((await extensionPlan(client, specifications)).length === 0, 'installed_extension_metadata_mismatch');
     signal?.throwIfAborted();
     committing = true; const committed = await client.query('COMMIT');
     requireThat(committed?.command === 'COMMIT', 'extension_commit_ack_missing', 'UNKNOWN_MUTATION_OUTCOME');

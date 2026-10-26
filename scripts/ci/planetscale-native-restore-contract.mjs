@@ -52,7 +52,7 @@ export function approvalRecord(raw, environment, now) {
   let record;
   try { record = JSON.parse(raw); } catch { throw new RestoreFailure('explicit_owner_approval_record_required'); }
   requireThat(object(record) && Object.keys(record).sort().join(',') ===
-    'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd',
+    'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd',
   'approval_record_fields_invalid');
   requireThat(record.releaseSha === environment.RELEASE_SHA && record.backupId === RESTORE.backupId && record.target === RESTORE.target
     && JSON.stringify(record.roles) === JSON.stringify(ROLE_NAMES) && JSON.stringify(record.actions) === JSON.stringify(ACTIONS)
@@ -70,7 +70,8 @@ export function approvalRecord(raw, environment, now) {
     && window.operator === record.manualOperator && window.reserved === true
     && Date.parse(window.availableFrom) <= now && Date.parse(window.availableUntil) >= now + RESTORE.maximumMs,
   'reserved_reviewer_operator_window_required');
-  requireThat(object(permit) && Number.isSafeInteger(permit.workflowId) && permit.workflowId > 0
+  requireThat(object(permit) && Object.keys(permit).sort().join(',') === 'runNumber,workflowId'
+    && Number.isSafeInteger(permit.workflowId) && permit.workflowId > 0
     && Number.isSafeInteger(permit.runNumber) && permit.runNumber > 0, 'one_use_cleanup_reservation_required');
   requireThat(object(retention) && retention.operator === record.manualOperator
     && typeof retention.reference === 'string' && retention.reference.length >= 8
@@ -81,6 +82,22 @@ export function approvalRecord(raw, environment, now) {
     && Number.isFinite(retention.estimatedUsd) && retention.estimatedUsd > 0
     && record.estimatedSubtotalUsd >= retention.estimatedUsd + 0.025,
   'finite_separately_approved_backup_retention_plan_required');
+  const budget = record.cumulativeBudget;
+  requireThat(object(budget) && Object.keys(budget).sort().join(',') ===
+    'evidenceSha256,operator,priorQualificationRunId,priorRetentionEndActionReference,priorRetentionEndsAt,priorRetentionUpperBoundUsd,priorSpendUpperBoundUsd,reference'
+    && budget.operator === record.manualOperator && budget.priorQualificationRunId === '40212030891'
+    && /^[a-f0-9]{64}$/.test(budget.evidenceSha256 ?? '')
+    && typeof budget.reference === 'string' && budget.reference.length >= 8 && budget.reference.length <= 250
+    && typeof budget.priorRetentionEndActionReference === 'string' && budget.priorRetentionEndActionReference.length >= 8
+    && budget.priorRetentionEndActionReference.length <= 250
+    && Number.isFinite(Date.parse(budget.priorRetentionEndsAt))
+    && Date.parse(budget.priorRetentionEndsAt) <= now + 24 * 3600000
+    && Number.isFinite(budget.priorSpendUpperBoundUsd) && budget.priorSpendUpperBoundUsd > 0
+    && Number.isFinite(budget.priorRetentionUpperBoundUsd) && budget.priorRetentionUpperBoundUsd >= 0,
+  'reviewed_prior_exercise_liability_bound_required');
+  requireThat(budget.priorSpendUpperBoundUsd + budget.priorRetentionUpperBoundUsd
+    + record.estimatedSubtotalUsd + record.taxAndFeeAllowanceUsd <= RESTORE.maximumUsd,
+  'cumulative_exercise_budget_exceeded');
   return record;
 }
 
@@ -192,15 +209,17 @@ function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow) {
   };
 }
 
-export function checkedRoles(rows, branchId, sourceRoles) {
+function inspectRoles(rows, branchId, sourceRoles, allowPending = false) {
   requireThat(Array.isArray(rows), 'copied_role_inventory_invalid');
   const result = new Map();
   for (const name of ROLE_NAMES) {
     const found = rows.filter(row => object(row) && row.base_username === name);
+    if (allowPending && found.length === 0) continue;
     const row = found.length === 1 ? found[0] : undefined;
     const sourceRow = sourceRoles?.get(name);
     const diagnostic = roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow);
-    const checks = Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches')
+    const checks = Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches'
+      && !(allowPending && key === 'ready' && typeof row?.ready === 'boolean'))
       .every(([, value]) => value.matches === true);
     if (found.length !== 1 || !checks) {
       throw new RestoreFailure('copied_role_metadata_invalid', 'BLOCKED', { version: 1, role: diagnostic });
@@ -208,9 +227,36 @@ export function checkedRoles(rows, branchId, sourceRoles) {
     if (sourceRoles && (!sourceRow || diagnostic.fields.sourceInheritanceMatches?.matches !== true)) {
       throw new RestoreFailure('copied_role_authority_changed', 'BLOCKED', { version: 1, role: diagnostic });
     }
-    result.set(name, { id: row.id, base_username: name, username: row.username, inherited_roles: row.inherited_roles });
+    result.set(name, { id: row.id, base_username: name, username: row.username, inherited_roles: row.inherited_roles,
+      ...(allowPending ? { ready: row.ready } : {}) });
   }
   return result;
+}
+
+export function checkedRoles(rows, branchId, sourceRoles) { return inspectRoles(rows, branchId, sourceRoles); }
+
+export function checkCopiedRoleMetadata(row, branchId, name, sourceRow) {
+  requireThat(ROLE_NAMES.includes(name), 'copied_role_metadata_invalid');
+  const diagnostic = roleMetadataDiagnostic(name, branchId, [row], [row], row, sourceRow);
+  if (!Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches').every(([, field]) => field.matches))
+    throw new RestoreFailure('copied_role_metadata_invalid', 'BLOCKED', { version: 1, role: diagnostic });
+  if (sourceRow && !diagnostic.fields.sourceInheritanceMatches.matches)
+    throw new RestoreFailure('copied_role_authority_changed', 'BLOCKED', { version: 1, role: diagnostic });
+}
+
+export function copiedRoleReadiness(rows, branchId, sourceRoles) {
+  requireThat(Array.isArray(rows), 'copied_role_inventory_invalid');
+  const shapeValid = rows.every(row => object(row) && safeId(row.id)
+    && typeof row.base_username === 'string' && row.base_username.length > 0
+    && row.username === `${row.base_username}.${branchId}` && typeof row.ready === 'boolean'
+    && row.branch?.id === branchId && row.branch.name === RESTORE.target && row.branch.deleted_at === null);
+  if (!shapeValid) throw new RestoreFailure('copied_role_metadata_invalid', 'BLOCKED',
+    { version: 1, inventory: { rowCount: rows.length, identityShapeValid: false } });
+  requireThat(new Set(rows.map(row => row.id)).size === rows.length, 'copied_role_inventory_invalid');
+  const roles = inspectRoles(rows, branchId, sourceRoles, true);
+  const missing = ROLE_NAMES.filter(name => !roles.has(name));
+  const pending = ROLE_NAMES.filter(name => roles.get(name)?.ready === false);
+  return { roles, missing, pending, ready: missing.length === 0 && pending.length === 0 };
 }
 
 export function assertRestoreRoleSqlBaseline(roles, members) {
@@ -361,7 +407,7 @@ export class RestoreApi {
     this.tokenId = this.authorization.split(':')[0]; this.fetchImpl = fetchImpl;
     this.#cleanupOnly = capability === cleanupCapability;
   }
-  async request(path, { method = 'GET', body, absent = false } = {}) {
+  async request(path, { method = 'GET', body, absent = false, signal } = {}) {
     const target = `/branches/${RESTORE.target}`, backup = `/branches/main/backups/${RESTORE.backupId}`;
     const grantsPage = /^\/\.\.\/service-tokens\/self\/grants\?page=([1-5])&per_page=100$/.exec(path);
     const getAllowed = ['', '/branches/main', target, backup, '/../service-tokens/self'].includes(path)
@@ -380,7 +426,8 @@ export class RestoreApi {
     try {
       response = await this.fetchImpl(url, { method, redirect: 'error', cache: 'no-store',
         headers: { authorization: this.authorization, accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) },
-        ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(15000) });
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000) });
     } catch { throw new RestoreFailure('provider_transport_failed', method === 'GET' ? 'BLOCKED' : 'UNKNOWN_MUTATION_OUTCOME'); }
     requireThat(response.redirected !== true && (!response.url || response.url === url), 'provider_redirect_rejected',
       method === 'GET' ? 'BLOCKED' : 'UNKNOWN_MUTATION_OUTCOME');
@@ -403,10 +450,10 @@ export class RestoreApi {
       return value;
     } catch { throw new RestoreFailure('provider_response_invalid', method === 'GET' ? 'BLOCKED' : 'UNKNOWN_MUTATION_OUTCOME'); }
   }
-  async list(path) {
+  async list(path, { signal } = {}) {
     const rows = []; let total;
     for (let page = 1; page <= 5; page++) {
-      const value = await this.request(`${path}?page=${page}&per_page=100`);
+      const value = await this.request(`${path}?page=${page}&per_page=100`, { signal });
       requireThat(Array.isArray(value.data) && value.current_page === page && value.data.length <= 100
         && Number.isSafeInteger(value.total_count) && value.total_count <= 500 && value.total_count >= 0, 'provider_inventory_invalid');
       total ??= value.total_count;
@@ -437,12 +484,22 @@ export class RestoreApi {
     }
     throw new RestoreFailure('token_grants_inventory_incomplete');
   }
-  async authority(onEvidence = () => {}, includeGrantDiagnostic = false) {
+  async authority(onEvidence = () => {}, includeGrantDiagnostic = false, requiredThrough) {
     const database = await this.request('');
     requireThat(database.id === RESTORE.databaseId && database.name === RESTORE.database && database.kind === 'postgresql', 'database_identity_changed');
     const token = await this.request('/../service-tokens/self');
     requireThat(token.id === this.tokenId && Array.isArray(token.service_token_accesses), 'existing_token_authority_unverifiable');
     const evidence = authorityDiagnostic(token); let grantDiagnosticFailure;
+    if (requiredThrough !== undefined) {
+      const expires = typeof token.expires_at === 'string' ? Date.parse(token.expires_at) : NaN;
+      const expiryKnown = token.expires_at === null || (Number.isFinite(expires)
+        && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(token.expires_at));
+      evidence.tokenLifetime = { fieldType: safeType(token.expires_at, Object.hasOwn(token, 'expires_at')),
+        expiresAt: Number.isFinite(expires) && expiryKnown ? new Date(expires).toISOString() : null,
+        requiredThrough: Number.isFinite(requiredThrough) ? new Date(requiredThrough).toISOString() : null,
+        coversRequiredWindow: Number.isFinite(requiredThrough) && expiryKnown
+          && (token.expires_at === null || expires > requiredThrough) };
+    }
     await onEvidence(structuredClone(evidence));
     if (includeGrantDiagnostic) {
       try {
@@ -467,6 +524,8 @@ export class RestoreApi {
     if (!this.#cleanupOnly) requireThat(accesses.has('restore_production_branch_backup') || accesses.has('restore_production_branch_backups'),
       'existing_token_missing_restore_production_branch_backup');
     if (grantDiagnosticFailure) throw grantDiagnosticFailure;
+    if (requiredThrough !== undefined) requireThat(evidence.tokenLifetime.coversRequiredWindow,
+      'existing_token_lifetime_insufficient_or_unverifiable');
   }
 }
 

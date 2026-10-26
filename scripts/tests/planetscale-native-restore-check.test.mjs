@@ -9,6 +9,7 @@ import { runNativeRestore, githubReadiness, assertPinnedManualCleanupProof } fro
 import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions, restoreCatalogDigest } from '../ci/planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
+import { checkSetupWindow, DEPENDENCY_SETUP_RESERVE_MS } from '../ci/planetscale-native-restore-admission.mjs';
 
 const instant = Date.parse('2026-10-25T04:00:00Z');
 const sha = 'a'.repeat(40), newId = 'newrestore123', password = 'synthetic-secret-never-output';
@@ -17,12 +18,16 @@ const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GI
   RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, backupId: RESTORE.backupId, target: RESTORE.target,
     maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
     reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: '2026-10-25T08:00:00Z',
+    cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
+      reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
+      priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: '2026-10-26T03:00:00Z' },
     actions: ACTIONS, roles: ROLE_NAMES, cleanupPermit: { workflowId: 42, runNumber: 1 },
     reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: '2026-10-25T03:00:00Z', availableUntil: '2026-10-25T08:00:00Z' },
     retention: { operator: 'owner', reference: 'finite-retention-approval', manualEndActionApprovalReference: 'manual-decision-approval',
       endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: '2026-10-26T03:00:00Z',
       decisionBy: '2026-10-25T05:00:00Z', estimatedUsd: 0.01 } }) });
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
+  access_host_url: 'aws.connect.psdb.cloud',
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
   dropped_at: null, expires_at: null, with_replication: name === RESTORE.setup, inherited_roles: ['pg_read_all_settings'],
   branch: { id, name: id === RESTORE.sourceId ? 'main' : RESTORE.target, deleted_at: null } }));
@@ -33,8 +38,15 @@ const target = () => ({ id: newId, name: RESTORE.target, created_at: '2026-10-25
 const backup = () => ({ id: RESTORE.backupId, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
   state: 'success', deleted_at: null, protected: true, completed_at: '2026-10-25T02:33:09.321Z',
   expires_at: '2026-10-27T02:25:02.838Z', pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
-const baseline = () => ({ catalogSha256: 'b'.repeat(64), schemaFingerprint: 'c'.repeat(64), relationCount: 108,
-  schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3 });
+const extensionSpecifications = () => ['pg_trgm','pgcrypto','unaccent'].map(extname => ({ extname, extversion: '1.0',
+  schema: 'public', owner: 'postgres', extrelocatable: true }));
+const extensionPlanRows = (missing = ['unaccent']) => extensionSpecifications().map(row => ({ ...row,
+  installed_version: missing.includes(row.extname) ? null : row.extversion, installed_schema: row.schema,
+  installed_owner: row.owner, installed_relocatable: true, available_version: row.extversion,
+  required_schema: null, relocatable: true, can_set_owner: true, can_create_database: true, can_create_schema: true, trusted: true }));
+const baseline = () => ({ catalogSha256: 'b'.repeat(64), schemaFingerprint: 'c'.repeat(64), relationCount: 103,
+  schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3,
+  extensionSpecifications: extensionSpecifications() });
 
 function fixture(mode = '') {
   const calls = [], checkpoints = [], b = backup(); let created = false, resets = 0, branchInventories = 0, clock = instant;
@@ -344,6 +356,55 @@ test('plan mode performs no SQL, reset, protection, creation or cleanup', async 
   assert.equal(report.status, 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED');
   assert.ok(!f.calls.some(value => /^(SQL|POST|PATCH|DELETE)/.test(value)));
 });
+
+test('copied roles converge read-only and all five must pass together before any reset', async () => {
+  const f = fixture(), list = f.options.api.list; let reads = 0, clock = instant;
+  f.options.api.list = async path => {
+    const rows = await list(path);
+    if (!path.endsWith(`${RESTORE.target}/roles`)) return rows;
+    reads++;
+    assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
+    if (reads === 1) return rows.slice(1);
+    if (reads === 2) { rows[0].ready = false; return rows; }
+    return rows;
+  };
+  f.options.sleep = async milliseconds => { clock += milliseconds; f.setNow(clock); };
+  const report = await runNativeRestore({ ...f.options, api: { ...f.options.api,
+    list: async path => reads >= 3 ? list(path) : f.options.api.list(path) } });
+  assert.equal(report.qualificationOutcome, 'PASSED'); assert.equal(report.credentialActions.length, 5);
+  assert.deepEqual(report.roleInventoryObservations.map(row => [row.missing.length, row.pending.length, row.outcome]),
+    [[1,0,'PENDING'], [0,1,'PENDING'], [0,0,'PASSED']]);
+  assert.doesNotMatch(JSON.stringify(report.roleInventoryObservations), /synthetic-secret|connectionString|access_host_url/);
+});
+
+for (const mode of ['absent', 'pending', 'expired', 'malformed', 'identity_drift', 'authority_drift', 'denied', 'budget']) {
+  test(`role readiness blocks without reset: ${mode}`, async () => {
+    const f = fixture(), list = f.options.api.list; let reads = 0, clock = instant;
+    f.options.api.list = async path => {
+      const rows = await list(path);
+      if (!path.endsWith(`${RESTORE.target}/roles`)) return rows;
+      reads++;
+      if (mode === 'denied') throw new RestoreFailure('provider_access_denied', 'DENIED');
+      if (mode === 'malformed') { delete rows[0].base_username; return rows; }
+      if (mode === 'expired') { rows[0].expires_at = '2026-10-25T03:00:00Z'; rows[0].expired = true; return rows; }
+      if (mode === 'authority_drift') { rows[0].inherited_roles = []; return rows; }
+      if (mode === 'identity_drift' && reads > 1) rows[1].id = 'replacementrole';
+      if (mode === 'budget') f.setNow(instant + RESTORE.qualificationStopMs);
+      if (mode === 'pending') rows[0].ready = false;
+      else rows.shift();
+      return rows;
+    };
+    f.options.sleep = async milliseconds => { clock += milliseconds; f.setNow(clock); };
+    const report = await runNativeRestore(f.options);
+    assert.equal(report.qualificationOutcome, 'FAILED'); assert.equal(report.credentialActions.length, 0);
+    assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
+    assert.equal(report.cleanup, 'TARGET_RETAINED_PENDING_REVIEW');
+    assert.ok(reads <= 12);
+    if (['malformed','expired','authority_drift','denied','budget'].includes(mode)) assert.equal(reads, 1);
+    if (mode === 'identity_drift') assert.equal(reads, 2);
+    if (['absent','pending'].includes(mode)) assert.equal(reads, 12);
+  });
+}
 test('qualification rejects missing or malformed dedicated credentials without falling back to shared access', async t => {
   const request = t.mock.method(globalThis, 'fetch', async () => { throw new Error('unexpected provider request'); });
   for (const execute of [false, true]) for (const token of [undefined, '', 'id-only', ':secret', 'id:', 'id:secret:extra', 'id:secret\n']) {
@@ -379,6 +440,113 @@ test('consumed cleanup reservation blocks qualification before spending', async 
   const f = fixture(); f.options.reserveCleanup = async () => ({ workflowId: 42, runNumber: 2 });
   const report = await runNativeRestore(f.options);
   assert.ok(report.blockers.includes('cleanup_reservation_not_approved')); assert.equal(f.calls.length, 1);
+});
+
+test('cleanup reservation scope is exact and independent of JSON property order', async () => {
+  const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  record.cleanupPermit = { runNumber: 1, workflowId: 42 };
+  f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  assert.equal((await runNativeRestore(f.options)).qualificationOutcome, 'PASSED');
+  for (const cleanupPermit of [{ workflowId: 42, runNumber: 1, extra: true },
+    { runNumber: 1 }, { workflowId: '42', runNumber: 1 }, { workflowId: 42, runNumber: 0 }]) {
+    const blocked = fixture();
+    const approval = JSON.parse(blocked.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+    approval.cleanupPermit = cleanupPermit;
+    blocked.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(approval);
+    const report = await runNativeRestore(blocked.options);
+    assert.deepEqual(report.blockers, ['one_use_cleanup_reservation_required']);
+    assert.deepEqual(blocked.calls, []);
+  }
+});
+
+test('dependency admission checks actual remaining time plus the configured setup reserve without provider access', () => {
+  const env = environment(), record = JSON.parse(env.RESTORE_CHECK_APPROVAL_JSON);
+  assert.equal(checkSetupWindow(env, instant).mutationAuthorized, false);
+  assert.equal(checkSetupWindow(env, instant).cumulativeBudgetVerified, false);
+  record.expiresAt = new Date(instant + RESTORE.maximumMs + DEPENDENCY_SETUP_RESERVE_MS - 1).toISOString();
+  env.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  assert.throws(() => checkSetupWindow(env, instant), /approval_expired_or_unbounded/);
+  const late = environment(), lateRecord = JSON.parse(late.RESTORE_CHECK_APPROVAL_JSON);
+  const lateNow = Date.parse(RESTORE.backupCompletedAt) + 22 * 3600000 - DEPENDENCY_SETUP_RESERVE_MS + 1;
+  lateRecord.expiresAt = new Date(lateNow + 3 * 3600000).toISOString();
+  lateRecord.reviewWindow.availableUntil = lateRecord.expiresAt;
+  lateRecord.retention.endsAt = new Date(lateNow + 23 * 3600000).toISOString();
+  lateRecord.retention.decisionBy = new Date(lateNow + 3600000).toISOString();
+  lateRecord.cumulativeBudget.priorRetentionEndsAt = lateRecord.retention.endsAt;
+  late.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(lateRecord);
+  assert.throws(() => checkSetupWindow(late, lateNow), /pinned_backup_window_exhausted_before_setup/);
+  const workflow = fs.readFileSync('.github/workflows/planetscale-native-restore-check.yml', 'utf8');
+  assert.ok(workflow.indexOf('planetscale-native-restore-admission.mjs') < workflow.indexOf('npm ci'));
+  assert.equal(DEPENDENCY_SETUP_RESERVE_MS, (1 + 4) * 60000);
+});
+
+for (const [label, change, code] of [
+  ['missing prior liabilities', budget => { delete budget.priorSpendUpperBoundUsd; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['zero prior paid spend', budget => { budget.priorSpendUpperBoundUsd = 0; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['negative retention liability', budget => { budget.priorRetentionUpperBoundUsd = -1; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['missing evidence digest', budget => { delete budget.evidenceSha256; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['wrong attesting operator', budget => { budget.operator = 'other'; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['unbounded prior retention', budget => { budget.priorRetentionEndsAt = '2126-10-25T00:00:00Z'; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['exceeded cumulative ceiling', budget => { budget.priorSpendUpperBoundUsd = 4; }, 'cumulative_exercise_budget_exceeded'],
+]) test(`cumulative budget admission blocks ${label} before any provider call`, async () => {
+  const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  change(record.cumulativeBudget); f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, [code]); assert.deepEqual(f.calls, []); assert.deepEqual(report.providerMutations, []);
+});
+
+test('a final GitHub read rejection is blocked admission, never an unknown submitted create', async () => {
+  const f = fixture(); let checks = 0;
+  f.options.assertMain = async () => { if (++checks === 3) throw new TypeError('synthetic-private-error'); };
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, ['github_precondition_read_failed']);
+  assert.equal(report.status, 'BLOCKED'); assert.equal(report.qualificationOutcome, 'FAILED');
+  assert.equal(report.providerMutations[0].outcome, 'BLOCKED'); assert.equal(report.cleanup, 'NOT_NEEDED');
+  assert.equal(f.calls.filter(call => call.startsWith('POST ')).length, 0);
+  assert.doesNotMatch(JSON.stringify(report), /synthetic-private-error/);
+});
+
+test('role-readiness cancellation reaches the bound GET and starts no subsequent backup read or reset', async () => {
+  const f = fixture(), request = f.options.api.request; let canceled = false, laterBackupReads = 0;
+  f.options.phaseBudgetMs = 30;
+  f.options.api.request = async (path, options = {}) => {
+    if (options.signal && path === `/branches/${RESTORE.target}`) return new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => { canceled = true; reject(options.signal.reason); }, { once: true });
+    });
+    if (options.signal && path.includes('/backups/')) laterBackupReads++;
+    return request(path, options);
+  };
+  const report = await runNativeRestore(f.options);
+  assert.equal(canceled, true); assert.equal(laterBackupReads, 0);
+  assert.ok(report.blockers.includes('qualification_copied_roles_timeout'));
+  assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
+});
+
+test('pending-role sleep observes phase cancellation instead of waiting a full poll interval', async () => {
+  const f = fixture(), list = f.options.api.list;
+  f.options.phaseBudgetMs = 30; delete f.options.sleep;
+  f.options.api.list = async path => {
+    const rows = await list(path);
+    if (path.endsWith(`${RESTORE.target}/roles`)) rows[0].ready = false;
+    return rows;
+  };
+  const began = Date.now(), report = await runNativeRestore(f.options);
+  assert.ok(Date.now() - began < 2000);
+  assert.ok(report.blockers.includes('qualification_copied_roles_timeout'));
+  assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
+});
+
+test('a changed API role ID in final reset admission blocks before that reset is submitted', async () => {
+  const f = fixture(), list = f.options.api.list; let roleReads = 0;
+  f.options.api.list = async path => {
+    const rows = await list(path);
+    if (path.endsWith(`${RESTORE.target}/roles`) && ++roleReads === 3) rows[0].id = 'replacementrole';
+    return rows;
+  };
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('copied_role_identity_changed_before_reset'));
+  assert.equal(report.providerMutations.at(-1).outcome, 'BLOCKED');
+  assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
 });
 test('only proven missing named extensions are installed', async () => {
   const f = fixture('missing_extensions'); assert.equal((await runNativeRestore(f.options)).status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
@@ -545,6 +713,33 @@ test('authority diagnostic preserves missing, null, organization and exact datab
   assert.equal(evidence.rows[9].resourceMissing, true); assert.equal(evidence.rows[9].resourceIdMissing, true);
   assert.equal(evidence.rows[10].resourceMissing, false); assert.equal(evidence.rows[10].resourceIdMissing, false);
   assert.equal(evidence.rows[11].resourceTypeIsOrganization, true); assert.equal(evidence.rows[11].deletedAtMissing, true);
+});
+
+test('provider token expiry must cover the original cleanup window and is retained without secret fields', async () => {
+  for (const expiry of [undefined, null, 'bad-synthetic-date', '2026-10-25T05:59:59Z', '2026-10-25T06:00:00Z', '2026-10-25T06:00:01Z']) {
+    let evidence;
+    const api = new RestoreApi('syntheticid:synthetic-value', async url => Response.json(url === apiBase
+      ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
+      : { id: 'syntheticid', ...(expiry === undefined ? {} : { expires_at: expiry }), token: password,
+        service_token_accesses: ['read_database','read_branch','delete_branch','delete_production_branch','read_backups',
+          'create_branch','connect_branch','connect_production_branch','restore_production_branch_backup'].map(access => ({ access,
+            resource_id: RESTORE.databaseId, resource_type: 'Database',
+            resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } })) }));
+    const work = () => api.authority(row => { evidence = row; }, false, instant + RESTORE.maximumMs);
+    if (expiry === null || expiry === '2026-10-25T06:00:01Z') await work();
+    else await assert.rejects(work, /existing_token_lifetime_insufficient_or_unverifiable/);
+    assert.equal(evidence.tokenLifetime.coversRequiredWindow, expiry === null || expiry === '2026-10-25T06:00:01Z');
+    assert.doesNotMatch(JSON.stringify(evidence), /synthetic-value|bad-synthetic-date|synthetic-secret/);
+  }
+});
+
+test('source catalog drift discovered at admission blocks before paid creation', async () => {
+  const f = fixture(), read = f.options.readSession; let reads = 0;
+  f.options.readSession = async (...args) => ({ ...await read(...args), ...(++reads === 2 ? { catalogSha256: 'd'.repeat(64) } : {}) });
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, ['source_metadata_changed_before_restore']);
+  assert.equal(report.createdTargetId, null);
+  assert.equal(f.calls.filter(call => call.startsWith('POST ')).length, 0);
 });
 test('authority diagnostic retains unknown and unrelated rows as bounded enums without exporting their values', async () => {
   let evidence;
@@ -848,6 +1043,31 @@ test('credential projection rejects main, mismatched role, host and password; ne
   assert.throws(() => checkBranch({ ...target(), name: 'main' }, newId));
   assert.throws(() => checkBackup({ ...backup(), pvc_size: RESTORE.bytes + 1 }, instant));
 });
+test('all five nonsecret connection metadata records must decode before the first reset', async () => {
+  const f = fixture(), original = f.options.api.list;
+  f.options.api.list = async path => {
+    const rows = await original(path);
+    if (path === `/branches/${RESTORE.target}/roles`) rows[4].access_host_url = 'aws.connect.psdb.cloud:5432';
+    return rows;
+  };
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('restored_credential_identity_invalid'));
+  assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
+});
+for (const [field, value] of [['ready', false], ['expired', true], ['deleted_at', '2026-10-25T04:00:00Z'],
+  ['with_replication', false], ['inherited_roles', ['unexpected-authority']]]) {
+  test(`post-reset ${field} drift fails closed without repeating the reset`, async () => {
+    const f = fixture(), original = f.options.api.request;
+    f.options.api.request = async (path, options) => {
+      const result = await original(path, options);
+      return path.endsWith('/reset') ? { ...result, [field]: value } : result;
+    };
+    const report = await runNativeRestore(f.options);
+    assert.equal(report.qualificationOutcome, 'FAILED'); assert.equal(report.credentialActions.length, 0);
+    assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 1);
+    assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED');
+  });
+}
 test('role-class checks accept only the exact observed setup baseline and strict application-role baseline', () => {
   const sourceRows = roleRows(RESTORE.sourceId);
   const source = new Map(sourceRows.map(row => [row.base_username, row]));
@@ -892,6 +1112,68 @@ test('role-class checks accept only the exact observed setup baseline and strict
   const changedInheritance = roleRows(); changedInheritance[0].inherited_roles.push('unexpected_role');
   assert.throws(() => checkedRoles(changedInheritance, newId, source), error => error.code === 'copied_role_authority_changed');
 });
+
+test('raw REST role discovery preserves documented identities across pages and reissued API IDs', async t => {
+  // Synthetic REST fixtures, not provider observations: https://planetscale.com/docs/api/reference/list_roles
+  const sourceRows = roleRows(RESTORE.sourceId).map((row, index) => ({ ...row,
+    id: `sourceapi${index}`, name: 'synthetic display label', default: index === 0 }));
+  const targetRows = roleRows().map((row, index) => ({ ...row,
+    id: `copiedapi${index}`, name: 'different synthetic display label', default: index === 0 }));
+  const cases = [
+    ['reissued IDs', rows => rows, null],
+    ['empty inventory', () => [], 'copied_role_metadata_invalid', 0],
+    ['missing base username', rows => { delete rows[0].base_username; return rows; }, 'copied_role_metadata_invalid', 0],
+    ['null base username', rows => { rows[0].base_username = null; return rows; }, 'copied_role_metadata_invalid', 0],
+    ['routed base username', rows => { rows[0].base_username += `.${newId}`; return rows; }, 'copied_role_metadata_invalid', 0],
+    ['wrong routing suffix', rows => { rows[0].username = `${RESTORE.setup}.${RESTORE.sourceId}`; return rows; }, 'copied_role_metadata_invalid', 1],
+    ['double routing suffix', rows => { rows[0].username += `.${newId}`; return rows; }, 'copied_role_metadata_invalid', 1],
+    ['wrong branch', rows => { rows[0].branch.id = RESTORE.sourceId; return rows; }, 'copied_role_metadata_invalid', 1],
+    ['role pending', rows => { rows[0].ready = false; return rows; }, 'copied_role_metadata_invalid', 1],
+    ['duplicate base identity', rows => [...rows, { ...rows[0], id: 'duplicateapi' }], 'copied_role_metadata_invalid', 2],
+    ['inheritance drift', rows => { rows[0].inherited_roles = []; return rows; }, 'copied_role_authority_changed', 1],
+    ['duplicate API ID', rows => { rows[1].id = rows[0].id; return rows; }, 'provider_inventory_incomplete'],
+  ];
+  for (const [label, change, expectedCode, candidateCount] of cases) await t.test(label, async () => {
+    const rows = change(structuredClone(targetRows)), calls = [];
+    const api = new RestoreApi('syntheticid:synthetic-value', async (rawUrl, options) => {
+      const url = new URL(rawUrl), page = Number(url.searchParams.get('page'));
+      calls.push(rawUrl); assert.equal(options.method, 'GET');
+      assert.equal(url.searchParams.get('per_page'), '100');
+      assert.equal(url.searchParams.has('q'), false); assert.equal(url.searchParams.has('status'), false);
+      const source = url.pathname.endsWith('/main/roles');
+      assert.ok(source || url.pathname.endsWith(`/branches/${RESTORE.target}/roles`));
+      const data = source ? sourceRows : rows;
+      const next = page === 1 && data.length > 3 ? 2 : null;
+      return Response.json({ type: 'list', current_page: page, per_page: 100, total_count: data.length,
+        total_pages: data.length > 3 ? 2 : 1, next_page: next,
+        next_page_url: next ? 'https://untrusted.invalid/ignored' : null,
+        data: data.slice((page - 1) * 3, page * 3) });
+    });
+    const source = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId);
+    const run = async () => checkedRoles(await api.list(`/branches/${RESTORE.target}/roles`), newId, source);
+    if (expectedCode) await assert.rejects(run, error => {
+      assert.equal(error.code, expectedCode);
+      if (candidateCount !== undefined) assert.equal(error.safeDiagnostic.role.candidateCount, candidateCount);
+      if (label === 'empty inventory') assert.equal(error.safeDiagnostic.role.inventory.rowCount, 0);
+      if (label === 'missing base username') {
+        assert.equal(error.safeDiagnostic.role.inventory.rowCount, ROLE_NAMES.length);
+        assert.equal(error.safeDiagnostic.role.inventory.recognizedRoutedUsernameCounts[RESTORE.setup], 1);
+      }
+      assert.doesNotMatch(JSON.stringify(error.safeDiagnostic ?? {}), /synthetic-value|synthetic display label/);
+      return true;
+    });
+    else {
+      const discovered = await run();
+      assert.equal(discovered.get(RESTORE.setup).id, 'copiedapi0');
+      assert.notEqual(discovered.get(RESTORE.setup).id, source.get(RESTORE.setup).id);
+      assert.equal(discovered.get(RESTORE.setup).base_username, RESTORE.setup);
+      assert.equal(discovered.get(RESTORE.setup).username, `${RESTORE.setup}.${newId}`);
+      assert.equal(calls.length, 4);
+    }
+    assert.ok(calls.every(url => url.startsWith(apiBase)));
+  });
+});
+
 test('restored SQL role contract pins observed setup flags and memberships while keeping app flags strict', () => {
   const roles = ROLE_NAMES.map(rolname => ({ rolname, ...ROLE_SQL_SECURITY_BASELINE[rolname], rolinherit: true, rolcanlogin: true }));
   const members = ROLE_SQL_MEMBERSHIP_BASELINE.map(({ role, member }) => ({ role, member, grantor: 'postgres',
@@ -1138,38 +1420,41 @@ test('SQL sessions prove identity and roll back; authority failure never reaches
   const factory = () => ({ connect: async () => {}, end: async () => {}, query: async sql => {
     calls.push(sql);
     if (sql.includes('current_setting')) return { rows: [{ database: 'postgres', username: RESTORE.setup, session: RESTORE.setup, read_only: 'on', version: '170005' }] };
-    if (sql.includes('pg_available_extensions')) return { rows: ['pgcrypto','pg_trgm','unaccent'].map(name => ({ name, installed_version: null,
-      can_create_database: false, can_create_schema: false, trusted: true })) };
+    if (sql.includes('pg_available_extension_versions')) return { rows: extensionPlanRows().map(row => ({ ...row, can_set_owner: false })) };
     return { rows: [], command: sql };
   } });
-  await assert.rejects(() => inspectExtensionAuthority(raw, newId, factory), /missing_extension_install_authority_unproven/);
+  await assert.rejects(() => inspectExtensionAuthority(raw, newId, factory, undefined, extensionSpecifications()), /missing_extension_install_authority_unproven/);
   assert.equal(calls.at(-1), 'ROLLBACK'); assert.ok(!calls.some(sql => sql.startsWith('CREATE')));
   await assert.rejects(() => readOnly(raw, RESTORE.sourceId, RESTORE.setup, () => {}, factory));
   await assert.rejects(() => installMissingExtensions(raw, newId, ['postgis'], factory));
 });
 test('lost extension COMMIT acknowledgment never retries or attempts a committed rollback', async () => {
-  const calls = [], raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup);
+  const calls = [], raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup); let installed = false;
   const factory = () => ({ connect: async () => {}, end: async () => {}, query: async sql => {
     calls.push(sql); if (sql === 'COMMIT') throw new Error(password);
+    if (sql.startsWith('CREATE EXTENSION')) installed = true;
+    if (sql.includes('pg_available_extension_versions')) return { rows: extensionPlanRows(installed ? [] : ['unaccent']) };
     return { rows: [{ database: 'postgres', username: RESTORE.setup }] };
   } });
-  await assert.rejects(() => installMissingExtensions(raw, newId, ['unaccent'], factory), error => error.extensionOutcomeUnknown === true && !error.message.includes(password));
-  assert.equal(calls.filter(sql => sql === 'CREATE EXTENSION "unaccent"').length, 1); assert.ok(!calls.includes('ROLLBACK'));
+  await assert.rejects(() => installMissingExtensions(raw, newId, ['unaccent'], factory, undefined, extensionSpecifications()), error => error.extensionOutcomeUnknown === true && !error.message.includes(password));
+  assert.equal(calls.filter(sql => sql === 'CREATE EXTENSION "unaccent" WITH SCHEMA "public" VERSION \'1.0\'').length, 1); assert.ok(!calls.includes('ROLLBACK'));
 });
 test('SQL phase cancellation closes the active connection before returning and never retries a possibly committed extension', async () => {
   const raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup);
   for (const ddl of [false, true]) {
-    const controller = new AbortController(), calls = []; let rejectPending, closed = false;
+    const controller = new AbortController(), calls = []; let rejectPending, closed = false, installed = false;
     const factory = () => ({ connect: async () => {}, end: async () => { calls.push('END'); closed = true; rejectPending?.(controller.signal.reason); },
       query: async sql => {
         calls.push(sql);
+        if (sql.startsWith('CREATE EXTENSION')) installed = true;
+        if (sql.includes('pg_available_extension_versions')) return { rows: extensionPlanRows(installed ? [] : ['unaccent']) };
         if (sql.includes('current_setting')) return { rows: [{ database: 'postgres', username: RESTORE.setup, session: RESTORE.setup, read_only: 'on', version: '170005' }] };
         if (sql === 'COMMIT' || sql === 'SYNTHETIC_SLOW_READ') {
           return new Promise((resolve, reject) => { rejectPending = reject; controller.abort(new Error('synthetic-deadline')); });
         }
         return { rows: [{ database: 'postgres', username: RESTORE.setup }], command: sql };
       } });
-    const work = ddl ? installMissingExtensions(raw, newId, ['unaccent'], factory, controller.signal)
+    const work = ddl ? installMissingExtensions(raw, newId, ['unaccent'], factory, controller.signal, extensionSpecifications())
       : readOnly(raw, newId, RESTORE.setup, client => client.query('SYNTHETIC_SLOW_READ'), factory, controller.signal);
     await assert.rejects(() => work, error => ddl ? error.extensionOutcomeUnknown === true : error.message === 'synthetic-deadline');
     assert.equal(closed, true); assert.equal(calls.filter(sql => sql === 'END').length, 1);
