@@ -11,6 +11,7 @@ import { createSupportService } from '../src/support-feedback.ts';
 import { parseSupportServicePolicy } from '../src/support-feedback-policy.ts';
 import { exportSupportForPrivacy, purgeSupportForPrivacy, retainSupportBatch } from '../src/support-feedback-privacy.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
+import { registerMonthlySuggestionEvidenceCases } from './monthly-suggestion-evidence.postgres.mjs';
 
 const supplied=process.env.SUPPORT_LOCAL_PG_URL;
 if(!supplied)throw new Error('support_canonical_tests_require_disposable_local_pg17');
@@ -101,6 +102,7 @@ async function fixture(t,custom=policy()) {
   return {member,other,owner,admin,subject,adminSubject,ids,service,memberRequest,ownerRequest,submit,privacyRequest,reconcile,policy:custom};
 }
 const rejected=(work,code)=>assert.rejects(work,e=>e.message===code);
+registerMonthlySuggestionEvidenceCases({test,assert,fixture,policy,suggestion,control:()=>control,transaction,uuidv7});
 async function pendingSupport(subject) {
   return transaction('lythaus_privacy')(async c=>(await c.query(`SELECT count(*)::integer AS pending
     FROM privacy.subject_data_locations WHERE subject_id=$1 AND store_type='planetscale' AND deletion_state='present'
