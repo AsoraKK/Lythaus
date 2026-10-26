@@ -56,7 +56,8 @@ test('Cloudflare inventory cannot pass as empty when provider evidence is incomp
 test('PlanetScale contract audit is read-only and delegates exact post-0021 verification', () => {
   assert.match(planetscaleContractAudit, /verify-planetscale-production-schema\.mjs/);
   assert.match(planetscaleContractAudit, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'/);
-  assert.match(planetscaleContractAudit, /\[releaseRequirementKey\]: true/);
+  assert.match(planetscaleContractAudit, /\[releaseRequirementKey\]: false/);
+  assert.match(planetscaleContractAudit, /report\[releaseRequirementKey\] = report\.verifierPassed/);
   assert.match(planetscaleContractAudit, /releaseLabel/);
   assert.match(planetscaleContractAudit, /BEGIN READ ONLY/);
   assert.match(planetscaleContractAudit, /SHOW transaction_read_only/);
@@ -87,9 +88,8 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
   assert.doesNotMatch(planetscaleAccountAudit, /Bearer.*token/);
   assert.match(planetscaleWorkflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL/);
   assert.match(planetscaleWorkflow, /PSCALE_ROLE_IDENTIFIERS/);
-  assert.match(planetscaleWorkflow, /Load committed schema audit expectation/);
-  assert.match(planetscaleWorkflow, /canonicalReleaseSchemaContract\(\{ committedOnly: true \}\)/);
-  assert.doesNotMatch(planetscaleWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT|vars\.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
+  assert.match(planetscaleWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
+  assert.match(planetscaleWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
   assert.match(planetscaleWorkflow, /audit-production-contract\.mjs/);
   assert.match(planetscaleWorkflow, /post0021Required/);
   assert.match(planetscaleWorkflow, /\.post0021Required == true/);
@@ -97,76 +97,126 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
   assert.doesNotMatch(planetscaleWorkflow, /--request\s+(?:POST|PUT|PATCH|DELETE)/i);
 });
 
-test('account audit reaches read-only schema inspection with committed identity and still rejects pre-0021 state', (t) => {
-  const directory = mkdtempSync(join(os.tmpdir(), 'lythaus-account-audit-schema-'));
+test('actual audit wrapper preserves strict certification while emitting sanitized baseline and failure evidence', (t) => {
+  const directory = mkdtempSync(join(os.tmpdir(), 'lythaus-account-audit-baseline-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
-  const environmentPath = join(directory, 'github-env');
-  const calls = join(directory, 'calls.jsonl');
   const canonical = canonicalReleaseSchemaContract({ root, committedOnly: true });
-  const oldFingerprint = 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0';
-  const step = planetscaleWorkflow.match(/      - name: Load committed schema audit expectation\n        shell: bash\n        run: \|\n((?:          .*\n)+)/);
-  assert.ok(step, 'the test must execute the actual workflow expectation step');
-  const script = step[1].split('\n').map((line) => line.startsWith('          ') ? line.slice(10) : line).join('\n');
-  const prepared = spawnSync('bash', ['-euo', 'pipefail', '-c', script], {
-    cwd: root,
-    encoding: 'utf8',
-    env: auditTestEnvironment({
-      GITHUB_ENV: environmentPath,
-      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: oldFingerprint,
-      EXPECTED_DATABASE_RELATION_COUNT: '103',
-    }),
-  });
-  assert.equal(prepared.status, 0, prepared.stderr);
-  const expected = Object.fromEntries(readFileSync(environmentPath, 'utf8').trim().split('\n').map((line) => line.split('=')));
-  assert.deepEqual(expected, {
-    EXPECTED_DATABASE_SCHEMA_FINGERPRINT: canonical.fingerprint,
-    EXPECTED_DATABASE_RELATION_COUNT: String(canonical.relationCount),
-  });
-  assert.notEqual(expected.EXPECTED_DATABASE_SCHEMA_FINGERPRINT, oldFingerprint);
-
   const pgModule = createRequire(import.meta.url).resolve('pg');
-  const registry = canonical.migrations.slice(0, -1);
+  const calls = join(directory, 'calls.jsonl');
+  const output = join(directory, 'contract.json');
+  const fixturePath = join(directory, 'fixture.mjs');
+  const verifierLog = join(directory, 'verifier.log');
   const fixture = [
     "import fs from 'node:fs';",
     "import assert from 'node:assert/strict';",
+    "import cp from 'node:child_process';",
+    "import { syncBuiltinESMExports } from 'node:module';",
     "import { mock } from 'node:test';",
     'const calls = ' + JSON.stringify(calls) + ';',
+    'const complete = process.env.AUDIT_FIXTURE_COMPLETE === "true";',
+    'const registry = ' + JSON.stringify(canonical.migrations) + ';',
+    'if (!complete) registry.pop();',
+    'const relations = ' + JSON.stringify(canonical.relations) + ';',
+    'const spawn = cp.spawnSync;',
+    'cp.spawnSync = (command, args, options) => { const result = spawn(command, ["--experimental-test-module-mocks", "--import", ' + JSON.stringify(fixturePath) + ', ...args], options); fs.writeFileSync(' + JSON.stringify(verifierLog) + ', String(result.stderr ?? "")); return result; };',
+    'syncBuiltinESMExports();',
+    "const record = (operation) => fs.appendFileSync(calls, JSON.stringify({ program: process.argv[1], operation }) + '\\n');",
     'mock.module(' + JSON.stringify(pgModule) + ', { defaultExport: { Client: class {',
-    "  async connect() { fs.appendFileSync(calls, JSON.stringify('connect') + '\\n'); }",
+    "  async connect() { record('connect'); if (process.env.AUDIT_FIXTURE_CONNECT_FAIL === 'true') throw Object.assign(new Error('fixture-private-marker'), { code: '28P01' }); }",
     '  async end() {}',
     '  async query(sql) {',
-    "    fs.appendFileSync(calls, JSON.stringify(sql) + '\\n');",
-    "    assert.ok(/^(BEGIN READ ONLY|SELECT version, checksum FROM system.schema_migrations ORDER BY version|ROLLBACK)$/.test(sql));",
-    "    return { rows: sql.startsWith('SELECT') ? " + JSON.stringify(registry) + ' : [] };',
+    '    record(sql);',
+    "    const statement = sql.replace(/^\\s*\\/\\*[\\s\\S]*?\\*\\/\\s*/, '');",
+    "    assert.ok(/^(BEGIN READ ONLY|SHOW|SELECT|WITH|ROLLBACK)/.test(statement));",
+    "    if (sql === 'SHOW transaction_read_only') return { rows: [{ transaction_read_only: 'on' }] };",
+    "    if (sql === 'SHOW server_version') return { rows: [{ server_version: '17.6' }] };",
+    "    if (sql === 'SELECT version, checksum FROM system.schema_migrations ORDER BY version') {",
+    "      if (process.env.AUDIT_FIXTURE_QUERY_FAIL === 'true') throw Object.assign(new Error('fixture-private-marker'), { code: '42501' });",
+    '      return { rows: registry, rowCount: registry.length };',
+    '    }',
+    "    if (sql.includes('SELECT table_type, table_schema, table_name FROM information_schema.tables')) return { rows: relations, rowCount: relations.length };",
+    "    if (sql.includes('SELECT table_type, table_schema, table_name\\n')) return { rows: relations, rowCount: relations.length };",
+    "    if (sql.includes('COUNT(DISTINCT grantee)')) return { rows: [{ role_count: 4 }] };",
+    "    if (sql.includes('FROM information_schema.role_table_grants')) return { rows: [{ privilege_type: 'SELECT', grant_count: 1 }] };",
+    "    if (sql.includes('migration-artifact:') || /\\bAS present\\b/.test(sql) || sql.includes('SELECT EXISTS') || sql.includes(\"to_regclass('marketing.waitlist_signups')\") || sql.includes('has_schema_privilege($1')) {",
+    "      const row = Object.fromEntries([...sql.matchAll(/\\bAS\\s+([a-z_][a-z0-9_]*)/g)].map(match => [match[1], true]));",
+    "      if ('index_build_is_active' in row) row.index_build_is_active = false;",
+    "      for (const name of ['runtime_admin_memberships_insert','runtime_user_entitlements_insert','runtime_select','admin_select_hmac','admin_update_ciphertext','admin_verification_token_hash_select','admin_reset_token_hash_select','admin_acceptance_context_select','privacy_select_ciphertext','jobs_verification_hash_select','jobs_reset_hash_select']) if (name in row) row[name] = false;",
+    '      return { rows: [row] };',
+    '    }',
+    '    return { rows: [] };',
     '  }',
     '} } });',
   ].join('\n');
-  const run = (identity) => spawnSync(process.execPath, [
-    '--experimental-test-module-mocks', '--import', 'data:text/javascript,' + encodeURIComponent(fixture),
-    'scripts/ci/verify-planetscale-production-schema.mjs',
-  ], {
-    cwd: root,
-    encoding: 'utf8',
-    timeout: 10000,
-    env: auditTestEnvironment({
-      PLANETSCALE_SCHEMA_READ_DATABASE_URL: 'postgresql://schema@fixture.invalid/postgres?sslmode=verify-full',
-      PSCALE_BRANCH_NAME: 'main',
-      REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true',
-      ...identity,
-    }),
-  });
-  const stale = run({ EXPECTED_DATABASE_SCHEMA_FINGERPRINT: oldFingerprint, EXPECTED_DATABASE_RELATION_COUNT: '103' });
-  assert.notEqual(stale.status, 0);
-  assert.match(stale.stderr, /release schema identity does not match the approved migration contract/);
-  assert.equal(existsSync(calls), false, 'stale configured identity must fail before connecting');
-
-  const observed = run(expected);
-  assert.notEqual(observed.status, 0);
-  assert.match(observed.stderr, /production migration registry contains 21 entries; expected 22/);
-  assert.doesNotMatch(observed.stderr, /release schema identity does not match/);
-  assert.deepEqual(readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse), [
-    'connect', 'BEGIN READ ONLY', 'SELECT version, checksum FROM system.schema_migrations ORDER BY version', 'ROLLBACK',
-  ]);
+  writeFileSync(fixturePath, fixture);
+  const staleFingerprint = 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0';
+  const cases = [
+    { fingerprint: staleFingerprint },
+    { fingerprint: canonical.fingerprint },
+    { fingerprint: staleFingerprint, connectionFails: true },
+    { fingerprint: canonical.fingerprint, complete: true },
+    { fingerprint: staleFingerprint, complete: true },
+    { fingerprint: staleFingerprint, queryFails: true },
+  ];
+  for (const scenario of cases) {
+    const { fingerprint, connectionFails = false, complete = false, queryFails = false } = scenario;
+    writeFileSync(calls, '');
+    const result = spawnSync(process.execPath, [
+      '--experimental-test-module-mocks', '--import', fixturePath, 'scripts/planetscale/audit-production-contract.mjs',
+    ], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 10000,
+      env: auditTestEnvironment({
+        PLANETSCALE_SCHEMA_READ_DATABASE_URL: 'postgresql://schema@fixture.invalid/postgres?sslmode=verify-full',
+        PLANETSCALE_CONTRACT_AUDIT_OUTPUT: output,
+        EXPECTED_DATABASE_SCHEMA_FINGERPRINT: fingerprint,
+        EXPECTED_DATABASE_RELATION_COUNT: '103',
+        PSCALE_ROLE_IDENTIFIERS: JSON.stringify({ lythaus_runtime: 'pscale_api_fixturepublic', lythaus_admin: 'pscale_api_fixtureadmin', lythaus_privacy: 'pscale_api_fixtureprivacy', lythaus_jobs: 'pscale_api_fixturejobs' }),
+        AUDIT_FIXTURE_CONNECT_FAIL: String(connectionFails),
+        AUDIT_FIXTURE_COMPLETE: String(complete),
+        AUDIT_FIXTURE_QUERY_FAIL: String(queryFails),
+      }),
+    });
+    const passed = fingerprint === canonical.fingerprint && complete && !connectionFails && !queryFails;
+    assert.equal(result.status, passed ? 0 : 1, JSON.stringify(scenario) + '\n' + result.stderr + '\n' + readFileSync(verifierLog, 'utf8'));
+    const report = JSON.parse(readFileSync(output, 'utf8'));
+    assert.equal(report.verifierPassed, passed);
+    assert.equal(report.post0021Required, passed);
+    assert.equal(report.evidenceClass, passed ? 'RELEASE_CONTRACT' : 'BASELINE_ONLY_NOT_RELEASE_EVIDENCE');
+    assert.equal(report.releaseIdentity.configured.fingerprint, fingerprint);
+    assert.equal(report.releaseIdentity.required.fingerprint, canonical.fingerprint);
+    assert.equal(report.releaseIdentity.configuredMatchesRequired, fingerprint === canonical.fingerprint);
+    assert.equal(report.verifierDiagnostic.reason, fingerprint === staleFingerprint
+      ? 'configured_release_identity_mismatch' : passed ? null : 'production_schema_verifier_failed');
+    const operations = readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse);
+    if (fingerprint === staleFingerprint) {
+      assert.ok(operations.every(row => row.program.endsWith('audit-production-contract.mjs')),
+        'stale identity must reject before the verifier connects; only the separate baseline connects');
+    }
+    if (connectionFails || queryFails) {
+      assert.deepEqual(report.baselineFailure, { phase: connectionFails ? 'connect' : 'catalog', code: connectionFails ? '28P01' : '42501' });
+      assert.equal(report.baselineStatus, 'UNKNOWN/BLOCKED');
+      assert.equal(report.transactionReadOnly, !connectionFails);
+      assert.equal(report.migrationLedger, undefined);
+    } else {
+      assert.equal(report.baselineStatus, 'CAPTURED');
+      assert.equal(report.transactionReadOnly, true);
+      assert.equal(report.migrationLedger.count, complete ? 22 : 21);
+      assert.equal(report.migrationLedger.expectedReleaseCount, 22);
+      assert.equal(report.migrationLedger.last, complete ? '0021_media_quarantine_cleanup.sql' : '0020_auth_recovery_delivery.sql');
+      assert.equal(report.observedSchema.fingerprint, complete ? canonical.fingerprint : staleFingerprint);
+      assert.equal(report.observedSchema.matchesRequiredIdentity, complete);
+      assert.ok(operations.some(row => row.operation === 'BEGIN READ ONLY'));
+      assert.ok(operations.some(row => row.operation === 'ROLLBACK'));
+    }
+    if (passed) assert.ok(report.verifierOutput.some(line => line.includes('Observed post-0021 schema fingerprint: ' + canonical.fingerprint)));
+    else assert.deepEqual(report.verifierOutput, []);
+    for (const text of [readFileSync(output, 'utf8'), result.stdout, result.stderr]) {
+      assert.ok(!text.includes('fixture-private-marker'));
+      assert.ok(!text.includes('postgresql://'));
+    }
+  }
 });
 
 test('PlanetScale account audit sends the service-token pair without a scheme or logging it', (t) => {
