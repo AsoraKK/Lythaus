@@ -158,13 +158,13 @@ export async function observeOwnedTarget(api, context, now, allowDeleted = false
 
 export async function deleteReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, pendingBytes, downloadedPending,
   read = suffix => githubRead(env, suffix), assertMain, api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN),
-  now = Date.now, checkpoint = () => {}, sleep = milliseconds => delay(milliseconds) }) {
+  now = Date.now, checkpoint = () => {}, sleep = milliseconds => delay(milliseconds), proveContext = proveCleanupContext }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'cleanup', state: 'NOT_ATTEMPTED',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
     providerMutations: false, deletionVerified: false, recoveryCertified: false, blockers: [] };
   let attempted = false, context;
   try {
-    context = await proveCleanupContext({ env, evidence, evidenceHead, now: now(), read, assertMain });
+    context = await proveContext({ env, evidence, evidenceHead, now: now(), read, assertMain });
     assertDownloadedQualification(evidence, downloadedQualification);
     receipt.pendingSha256 = await provePendingUpload({ env, context, pendingBytes, downloadedBytes: downloadedPending, read });
     receipt.targetId = context.creation.id; receipt.qualificationSha = context.report.sourceMainSha;
@@ -173,6 +173,7 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
     requireThat(now() < context.deadline - 60000, 'cleanup_phase_deadline_expired');
     receipt.state = 'DELETE_PENDING'; await checkpoint(structuredClone(receipt));
     if (assertMain) await assertMain(); else await githubReadiness(env);
+    if (context.assertEvidenceUnchanged) await context.assertEvidenceUnchanged();
     const finalTarget = await api.request(targetPath);
     checkOwnedBranch(finalTarget, context.creation.id);
     requireThat(finalTarget.created_at === context.creation.createdAt, 'owned_target_creation_timestamp_changed');
@@ -206,12 +207,12 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
 }
 
 export async function reconcileReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, read = suffix => githubRead(env, suffix), assertMain,
-  api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN), now = Date.now }) {
+  api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN), now = Date.now, proveContext = proveCleanupContext }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'read-only-reconciliation',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
     providerMutations: false, deletionVerified: false, recoveryCertified: false, blockers: [] };
   try {
-    const context = await proveCleanupContext({ env, evidence, evidenceHead, now: now(), reconcile: true, read, assertMain });
+    const context = await proveContext({ env, evidence, evidenceHead, now: now(), reconcile: true, read, assertMain });
     assertDownloadedQualification(evidence, downloadedQualification);
     const observation = await observeOwnedTarget(api, context, now(), true, true);
     receipt.state = observation.present ? 'TARGET_PRESENT_READ_ONLY' : 'ABSENCE_OBSERVED_READ_ONLY'; receipt.targetId = observation.targetId;
