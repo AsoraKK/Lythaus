@@ -106,6 +106,17 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
   const output = join(directory, 'contract.json');
   const fixturePath = join(directory, 'fixture.mjs');
   const verifierLog = join(directory, 'verifier.log');
+  const invalidRows = {
+    unknown: { version: '9999_fixture-private-marker.sql', checksum: 'fixture-private-marker' },
+    null: null,
+    string: 'fixture-private-marker',
+    number: 42,
+    array: ['fixture-private-marker'],
+    types: { version: { value: 'fixture-private-marker' }, checksum: false },
+    null_fields: { version: null, checksum: null },
+    missing: {},
+    checksum: { version: canonical.migrations[0].version, checksum: 'fixture-private-marker' },
+  };
   const fixture = [
     "import fs from 'node:fs';",
     "import assert from 'node:assert/strict';",
@@ -116,6 +127,9 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
     'const complete = process.env.AUDIT_FIXTURE_COMPLETE === "true";',
     'const registry = ' + JSON.stringify(canonical.migrations) + ';',
     'if (!complete) registry.pop();',
+    'const invalidRows = ' + JSON.stringify(invalidRows) + ';',
+    'const malformed = process.env.AUDIT_FIXTURE_MALFORMED ?? "";',
+    'if (Object.hasOwn(invalidRows, malformed)) registry.push(invalidRows[malformed]);',
     'const relations = ' + JSON.stringify(canonical.relations) + ';',
     'const spawn = cp.spawnSync;',
     'cp.spawnSync = (command, args, options) => { const result = spawn(command, ["--experimental-test-module-mocks", "--import", ' + JSON.stringify(fixturePath) + ', ...args], options); fs.writeFileSync(' + JSON.stringify(verifierLog) + ', String(result.stderr ?? "")); return result; };',
@@ -132,7 +146,9 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
     "    if (sql === 'SHOW server_version') return { rows: [{ server_version: '17.6' }] };",
     "    if (sql === 'SELECT version, checksum FROM system.schema_migrations ORDER BY version') {",
     "      if (process.env.AUDIT_FIXTURE_QUERY_FAIL === 'true') throw Object.assign(new Error('fixture-private-marker'), { code: '42501' });",
-    '      return { rows: registry, rowCount: registry.length };',
+    '      if (malformed === "rows_null") return { rows: null, rowCount: 1 };',
+    '      if (malformed === "rows_object") return { rows: { value: "fixture-private-marker" }, rowCount: 1 };',
+    '      return { rows: registry, rowCount: malformed === "reported_count" ? "fixture-private-marker" : registry.length };',
     '    }',
     "    if (sql.includes('SELECT table_type, table_schema, table_name FROM information_schema.tables')) return { rows: relations, rowCount: relations.length };",
     "    if (sql.includes('SELECT table_type, table_schema, table_name\\n')) return { rows: relations, rowCount: relations.length };",
@@ -157,9 +173,12 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
     { fingerprint: canonical.fingerprint, complete: true },
     { fingerprint: staleFingerprint, complete: true },
     { fingerprint: staleFingerprint, queryFails: true },
+    ...Object.keys(invalidRows).map(malformed => ({ fingerprint: staleFingerprint, malformed })),
+    ...['rows_null', 'rows_object', 'reported_count'].map(malformed => ({ fingerprint: staleFingerprint, malformed })),
+    { fingerprint: canonical.fingerprint, complete: true, malformed: 'checksum' },
   ];
   for (const scenario of cases) {
-    const { fingerprint, connectionFails = false, complete = false, queryFails = false } = scenario;
+    const { fingerprint, connectionFails = false, complete = false, queryFails = false, malformed = '' } = scenario;
     writeFileSync(calls, '');
     const result = spawnSync(process.execPath, [
       '--experimental-test-module-mocks', '--import', fixturePath, 'scripts/planetscale/audit-production-contract.mjs',
@@ -176,9 +195,10 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
         AUDIT_FIXTURE_CONNECT_FAIL: String(connectionFails),
         AUDIT_FIXTURE_COMPLETE: String(complete),
         AUDIT_FIXTURE_QUERY_FAIL: String(queryFails),
+        AUDIT_FIXTURE_MALFORMED: malformed,
       }),
     });
-    const passed = fingerprint === canonical.fingerprint && complete && !connectionFails && !queryFails;
+    const passed = fingerprint === canonical.fingerprint && complete && !connectionFails && !queryFails && !malformed;
     assert.equal(result.status, passed ? 0 : 1, JSON.stringify(scenario) + '\n' + result.stderr + '\n' + readFileSync(verifierLog, 'utf8'));
     const report = JSON.parse(readFileSync(output, 'utf8'));
     assert.equal(report.verifierPassed, passed);
@@ -194,19 +214,43 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
       assert.ok(operations.every(row => row.program.endsWith('audit-production-contract.mjs')),
         'stale identity must reject before the verifier connects; only the separate baseline connects');
     }
-    if (connectionFails || queryFails) {
-      assert.deepEqual(report.baselineFailure, { phase: connectionFails ? 'connect' : 'catalog', code: connectionFails ? '28P01' : '42501' });
+    if (connectionFails || queryFails || malformed === 'rows_null' || malformed === 'rows_object') {
+      assert.deepEqual(report.baselineFailure, { phase: connectionFails ? 'connect' : 'catalog',
+        code: connectionFails ? '28P01' : queryFails ? '42501' : 'AUDIT_REGISTRY_ROWS_INVALID' });
       assert.equal(report.baselineStatus, 'UNKNOWN/BLOCKED');
       assert.equal(report.transactionReadOnly, !connectionFails);
       assert.equal(report.migrationLedger, undefined);
     } else {
-      assert.equal(report.baselineStatus, 'CAPTURED');
+      assert.equal(report.baselineStatus, malformed ? 'CAPTURED_WITH_INVALID_REGISTRY' : 'CAPTURED');
       assert.equal(report.transactionReadOnly, true);
-      assert.equal(report.migrationLedger.count, complete ? 22 : 21);
+      const invalidEntry = Object.hasOwn(invalidRows, malformed);
+      assert.equal(report.migrationLedger.count, (complete ? 22 : 21) + Number(invalidEntry));
       assert.equal(report.migrationLedger.expectedReleaseCount, 22);
-      assert.equal(report.migrationLedger.last, complete ? '0021_media_quarantine_cleanup.sql' : '0020_auth_recovery_delivery.sql');
-      assert.equal(report.observedSchema.fingerprint, complete ? canonical.fingerprint : staleFingerprint);
-      assert.equal(report.observedSchema.matchesRequiredIdentity, complete);
+      assert.equal(report.migrationLedger.last, invalidEntry ? malformed === 'checksum' ? canonical.migrations[0].version : null
+        : complete ? '0021_media_quarantine_cleanup.sql' : '0020_auth_recovery_delivery.sql');
+      assert.equal(report.migrationLedger.invalidEntryCount, Number(invalidEntry));
+      assert.equal(report.migrationLedger.allEntriesApproved, !invalidEntry);
+      assert.equal(report.migrationLedger.rowsComplete, malformed !== 'reported_count');
+      assert.equal(report.migrationLedger.matchesRequiredReleaseRegistry, complete && !malformed);
+      assert.equal(report.observedSchema.fingerprint, malformed ? null : complete ? canonical.fingerprint : staleFingerprint);
+      assert.equal(report.observedSchema.matchesRequiredIdentity, complete && !malformed);
+      if (malformed) assert.equal(report.migrationLedger.ledgerSha256, null);
+      if (invalidEntry) {
+        assert.deepEqual(report.migrationLedger.entries.at(-1), {
+          version: malformed === 'checksum' ? canonical.migrations[0].version : null, checksum: null,
+        });
+        const diagnostic = report.migrationLedger.entryDiagnostics.at(-1);
+        assert.equal(diagnostic.versionRecognized, malformed === 'checksum');
+        assert.equal(diagnostic.checksumMatchesApproved, false);
+        const kinds = {
+          unknown: ['OBJECT', 'STRING', 'STRING'], null: ['NULL', 'MISSING', 'MISSING'],
+          string: ['STRING', 'MISSING', 'MISSING'], number: ['NUMBER', 'MISSING', 'MISSING'],
+          array: ['ARRAY', 'MISSING', 'MISSING'], types: ['OBJECT', 'OBJECT', 'BOOLEAN'],
+          null_fields: ['OBJECT', 'NULL', 'NULL'], missing: ['OBJECT', 'MISSING', 'MISSING'],
+          checksum: ['OBJECT', 'STRING', 'STRING'],
+        };
+        assert.deepEqual([diagnostic.rowKind, diagnostic.versionKind, diagnostic.checksumKind], kinds[malformed]);
+      }
       assert.ok(operations.some(row => row.operation === 'BEGIN READ ONLY'));
       assert.ok(operations.some(row => row.operation === 'ROLLBACK'));
     }

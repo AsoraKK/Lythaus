@@ -83,6 +83,9 @@ try {
   const versionResult = await client.query('SHOW server_version');
   const extensionsResult = await client.query('SELECT extname, extversion FROM pg_extension ORDER BY extname');
   const migrationsResult = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
+  if (!Array.isArray(migrationsResult.rows)) {
+    throw Object.assign(new Error('audit_registry_rows_invalid'), { code: 'AUDIT_REGISTRY_ROWS_INVALID' });
+  }
   const relationsResult = await client.query('SELECT table_type, table_schema, table_name FROM information_schema.tables WHERE table_schema = ANY($1::text[]) ORDER BY table_type, table_schema, table_name', [APPLICATION_SCHEMAS]);
   const grantsResult = await client.query('SELECT privilege_type, COUNT(*)::int AS grant_count FROM information_schema.role_table_grants WHERE table_schema NOT IN (\'pg_catalog\', \'information_schema\') GROUP BY privilege_type ORDER BY privilege_type');
   const roleCountResult = await client.query('SELECT COUNT(DISTINCT grantee)::int AS role_count FROM information_schema.role_table_grants WHERE table_schema NOT IN (\'pg_catalog\', \'information_schema\')');
@@ -90,22 +93,57 @@ try {
   await client.query('ROLLBACK');
   transactionStarted = false;
 
-  const migrationsPayload = migrationsResult.rows.map(({ version, checksum }) => version + ':' + checksum).join('\n');
+  const valueKind = (value, present = true) => !present ? 'MISSING'
+    : value === null ? 'NULL' : Array.isArray(value) ? 'ARRAY' : typeof value === 'object' ? 'OBJECT' : typeof value === 'string' ? 'STRING'
+      : typeof value === 'number' ? 'NUMBER' : typeof value === 'boolean' ? 'BOOLEAN' : 'OTHER';
+  const approvedByVersion = new Map(canonical.migrations.map(entry => [entry.version, entry]));
+  const entryDiagnostics = migrationsResult.rows.map((entry, index) => {
+    const record = entry !== null && typeof entry === 'object' && !Array.isArray(entry);
+    const versionPresent = record && Object.hasOwn(entry, 'version');
+    const checksumPresent = record && Object.hasOwn(entry, 'checksum');
+    const approved = versionPresent && typeof entry.version === 'string' ? approvedByVersion.get(entry.version) : null;
+    return {
+      index,
+      rowKind: valueKind(entry),
+      versionKind: valueKind(versionPresent ? entry.version : undefined, versionPresent),
+      checksumKind: valueKind(checksumPresent ? entry.checksum : undefined, checksumPresent),
+      versionRecognized: Boolean(approved),
+      checksumMatchesApproved: Boolean(approved && checksumPresent && entry.checksum === approved.checksum),
+    };
+  });
+  const safeMigrations = migrationsResult.rows.map((entry, index) => ({
+    version: entryDiagnostics[index].versionRecognized ? approvedByVersion.get(entry.version).version : null,
+    checksum: entryDiagnostics[index].checksumMatchesApproved ? approvedByVersion.get(entry.version).checksum : null,
+  }));
+  const invalidEntryCount = entryDiagnostics.filter(entry => !entry.checksumMatchesApproved).length;
+  const reportedRowCount = Number.isInteger(migrationsResult.rowCount) && migrationsResult.rowCount >= 0 ? migrationsResult.rowCount : null;
+  const rowsComplete = reportedRowCount === safeMigrations.length;
+  const allEntriesApproved = invalidEntryCount === 0;
+  const matchesRequiredReleaseRegistry = rowsComplete && allEntriesApproved && safeMigrations.length === canonical.migrations.length
+    && safeMigrations.every((entry, index) => entry.version === canonical.migrations[index].version && entry.checksum === canonical.migrations[index].checksum);
+  const migrationsPayload = safeMigrations.map(({ version, checksum }) => version + ':' + checksum).join('\n');
   report.postgresVersion = versionResult.rows[0]?.server_version ?? null;
   report.extensions = extensionsResult.rows;
   report.migrationLedger = {
-    count: migrationsResult.rowCount ?? migrationsResult.rows.length,
+    count: safeMigrations.length,
+    reportedRowCount,
+    reportedRowCountKind: valueKind(migrationsResult.rowCount, Object.hasOwn(migrationsResult, 'rowCount')),
+    rowsComplete,
     expectedReleaseCount: canonical.migrations.length,
-    first: migrationsResult.rows[0]?.version ?? null,
-    last: migrationsResult.rows.at(-1)?.version ?? null,
-    entries: migrationsResult.rows,
-    ledgerSha256: createHash('sha256').update(migrationsPayload).digest('hex'),
+    first: safeMigrations[0]?.version ?? null,
+    last: safeMigrations.at(-1)?.version ?? null,
+    entries: safeMigrations,
+    invalidEntryCount,
+    allEntriesApproved,
+    matchesRequiredReleaseRegistry,
+    entryDiagnostics,
+    ledgerSha256: rowsComplete && allEntriesApproved ? createHash('sha256').update(migrationsPayload).digest('hex') : null,
   };
-  const fingerprint = runtimeSchemaFingerprint(relationsResult.rows, migrationsResult.rows);
+  const fingerprint = rowsComplete && allEntriesApproved ? runtimeSchemaFingerprint(relationsResult.rows, safeMigrations) : null;
   report.observedSchema = {
     fingerprint,
-    relationCount: relationsResult.rowCount ?? relationsResult.rows.length,
-    matchesRequiredIdentity: fingerprint === canonical.fingerprint && relationsResult.rows.length === canonical.relationCount,
+    relationCount: relationsResult.rows.length,
+    matchesRequiredIdentity: matchesRequiredReleaseRegistry && fingerprint === canonical.fingerprint && relationsResult.rows.length === canonical.relationCount,
     note: 'Baseline relation and registry identity only; full catalog, extensions and effective privileges require the release verifier.',
   };
   report.visibleGrantMetadata = {
@@ -113,7 +151,7 @@ try {
     byPrivilege: grantsResult.rows.map(({ privilege_type, grant_count }) => ({ privilege: privilege_type, count: grant_count })),
     note: 'Visible grant counts are not effective least-privilege acceptance.',
   };
-  report.baselineStatus = 'CAPTURED';
+  report.baselineStatus = rowsComplete && allEntriesApproved ? 'CAPTURED' : 'CAPTURED_WITH_INVALID_REGISTRY';
 } catch (error) {
   report.baselineFailure = {
     phase,
@@ -125,7 +163,7 @@ try {
 }
 
 report.verifierPassed = verifier.status === 0 && configuredMatchesRequired && report.baselineStatus === 'CAPTURED'
-  && report.observedSchema.matchesRequiredIdentity;
+  && report.migrationLedger.matchesRequiredReleaseRegistry && report.observedSchema.matchesRequiredIdentity;
 report[releaseRequirementKey] = report.verifierPassed;
 if (report.verifierPassed) {
   report.evidenceClass = 'RELEASE_CONTRACT';
