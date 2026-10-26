@@ -42,21 +42,27 @@ the target. These pinned reconciliations never permit retry after any other
 runner or step sequence, or after an uncertain provider mutation.
 
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
-`zw0so7f5jbpu` (provisional until a fresh API read confirms its metadata).
-The only target is `lythaus-0021-native-restore-check-20261022`: PS-5 ARM,
+`tfqwht9d9bt4` (provisional until a fresh API read confirms its exact metadata).
+The only target is `lythaus-0021-native-restore-check-20261026-01`: PS-5 ARM,
 Frankfurt, zero replicas, minimum and maximum 21474836480 bytes. Any preexisting
 target is refused. The runner creates no database, role, GitHub secret,
 Hyperdrive, binding, traffic route or application deployment. Source passwords
-are never reset. Migration 0021 is never applied.
+are never reset. Migration 0021 is never applied. These source pins do not approve
+backup selection, protection or a restore. Run #9 remains bound independently to
+its original backup `zw0so7f5jbpu` and target
+`lythaus-0021-native-restore-check-20261022`; its evidence is unchanged.
 
 This qualification restores the exact backup snapshot by sending its
 `backup_id`; it does not request PITR. PlanetScale documents `backup_id` as
 restoring that backup's schema and data. `restore_point` is a separate optional
 PostgreSQL PITR request and is omitted from the fixed create body. The backup's
 completion time is validated from API `completed_at` metadata; it is distinct
-from the dashboard's snapshot label. The candidate's last displayed “Backup
-time” was `2026-10-25T02:33:09.321Z`, while its snapshot label was
-`2026-10-25T02:25:02.838Z`; re-read API `completed_at` before qualification.
+from the dashboard's snapshot label. The read-only inventory reports normalized
+`completedAt` as `2026-10-26T02:27:04.589Z`. Its collector normalizes timestamps
+to millisecond ISO strings and omits `restored_branches`; this is provisional pin
+preparation. Before execution, the dedicated read-only plan must confirm exact
+raw API `completed_at` equality, complete restore history and fresh target
+absence. Any difference blocks execution and requires a reviewed pin correction.
 Provider completion plus independent SQL checks must establish what was
 restored; all 17 previously approved privileges are tested directly. Neither
 backup timestamps nor the provider checklist certify restored grants.
@@ -64,14 +70,15 @@ References: [backup GET](https://planetscale.com/docs/api/reference/get_backup),
 [branch creation](https://planetscale.com/docs/api/reference/create_branch).
 
 The whole two-hour window must fit before the backup reaches 24 hours old and
-before expiry. From the last observed completion, start before
-`2026-10-26T00:33:09.321Z` and finish before
-`2026-10-26T02:33:09.321Z`; the displayed expiry was
-`2026-10-27T02:25:02.838Z`. Recompute these limits from a fresh API read.
+before expiry. From the provisional completion, start before
+`2026-10-27T00:27:04.589Z` and finish before
+`2026-10-27T02:27:04.589Z`; the inventory reports expiry
+`2026-10-28T02:25:02.938Z`. Allow queue and setup time before that runner start;
+recompute these limits from a fresh API read.
 Freshness and expiry are different gates. No replacement is silently chosen.
 The backup must already be protected under a separately approved, finite
 retention and end-action plan before qualification. Neither phase changes
-protection or deletes a backup. The 08:37 UTC dashboard read had this candidate
+protection or deletes a backup. The read-only inventory reported this candidate
 **unprotected**; source integration does not close that prerequisite or extend
 these dates.
 
@@ -268,8 +275,8 @@ deadline (or explicitly be null). This does not renew a token or authorize its u
 ```json
 {
   "releaseSha": "EXACT_REVIEWED_MERGED_SHA",
-  "backupId": "zw0so7f5jbpu",
-  "target": "lythaus-0021-native-restore-check-20261022",
+  "backupId": "tfqwht9d9bt4",
+  "target": "lythaus-0021-native-restore-check-20261026-01",
   "maximumUsd": 5,
   "estimatedSubtotalUsd": 0.05,
   "taxAndFeeAllowanceUsd": 1,
@@ -412,9 +419,10 @@ After qualification completes, use this operator-controlled sequence:
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `zw0so7f5jbpu.json` record in a same-repository
-   evidence-only PR descended from the exact qualification source SHA. Keep
-   protected main at that qualified SHA through cleanup; reserve exclusive
+   Commit it with the canonical `tfqwht9d9bt4.json` record in a same-repository
+   evidence-only PR descended from the exact qualification source SHA. Preserve
+   the original `zw0so7f5jbpu.json` and run-9 qualification/manual-cleanup files
+   unchanged. Keep protected main at that qualified SHA through cleanup; reserve exclusive
    ownership of the fixed target. The PR must remain open and unmerged at its
    reviewed head. Both files must be tracked regular files, unchanged in the
    checkout, and the comparison must contain exactly those two data files. The record
