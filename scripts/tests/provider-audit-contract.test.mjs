@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { test } from 'node:test';
 import { join, resolve } from 'node:path';
+import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const read = (file) => readFileSync(resolve(root, file), 'utf8');
@@ -75,6 +76,8 @@ test('canonical production release requires the exact post-0021 schema identity'
   assert.match(productionReleaseWorkflow, /Observed post-0021 relation count:/);
   assert.match(productionReleaseWorkflow, /EXPECTED_DATABASE_SCHEMA_FINGERPRINT/);
   assert.match(productionReleaseWorkflow, /EXPECTED_DATABASE_RELATION_COUNT/);
+  assert.match(productionReleaseWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
+  assert.match(productionReleaseWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
   assert.doesNotMatch(productionReleaseWorkflow, /post0016Required|Observed post-0016/);
 });
 
@@ -84,13 +87,86 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
   assert.doesNotMatch(planetscaleAccountAudit, /Bearer.*token/);
   assert.match(planetscaleWorkflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL/);
   assert.match(planetscaleWorkflow, /PSCALE_ROLE_IDENTIFIERS/);
-  assert.match(planetscaleWorkflow, /PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
-  assert.match(planetscaleWorkflow, /PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
+  assert.match(planetscaleWorkflow, /Load committed schema audit expectation/);
+  assert.match(planetscaleWorkflow, /canonicalReleaseSchemaContract\(\{ committedOnly: true \}\)/);
+  assert.doesNotMatch(planetscaleWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT|vars\.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
   assert.match(planetscaleWorkflow, /audit-production-contract\.mjs/);
   assert.match(planetscaleWorkflow, /post0021Required/);
   assert.match(planetscaleWorkflow, /\.post0021Required == true/);
   assert.match(planetscaleWorkflow, /No provider mutation or DDL is performed/);
   assert.doesNotMatch(planetscaleWorkflow, /--request\s+(?:POST|PUT|PATCH|DELETE)/i);
+});
+
+test('account audit reaches read-only schema inspection with committed identity and still rejects pre-0021 state', (t) => {
+  const directory = mkdtempSync(join(os.tmpdir(), 'lythaus-account-audit-schema-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const environmentPath = join(directory, 'github-env');
+  const calls = join(directory, 'calls.jsonl');
+  const canonical = canonicalReleaseSchemaContract({ root, committedOnly: true });
+  const oldFingerprint = 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0';
+  const step = planetscaleWorkflow.match(/      - name: Load committed schema audit expectation\n        shell: bash\n        run: \|\n((?:          .*\n)+)/);
+  assert.ok(step, 'the test must execute the actual workflow expectation step');
+  const script = step[1].split('\n').map((line) => line.startsWith('          ') ? line.slice(10) : line).join('\n');
+  const prepared = spawnSync('bash', ['-euo', 'pipefail', '-c', script], {
+    cwd: root,
+    encoding: 'utf8',
+    env: auditTestEnvironment({
+      GITHUB_ENV: environmentPath,
+      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: oldFingerprint,
+      EXPECTED_DATABASE_RELATION_COUNT: '103',
+    }),
+  });
+  assert.equal(prepared.status, 0, prepared.stderr);
+  const expected = Object.fromEntries(readFileSync(environmentPath, 'utf8').trim().split('\n').map((line) => line.split('=')));
+  assert.deepEqual(expected, {
+    EXPECTED_DATABASE_SCHEMA_FINGERPRINT: canonical.fingerprint,
+    EXPECTED_DATABASE_RELATION_COUNT: String(canonical.relationCount),
+  });
+  assert.notEqual(expected.EXPECTED_DATABASE_SCHEMA_FINGERPRINT, oldFingerprint);
+
+  const pgModule = createRequire(import.meta.url).resolve('pg');
+  const registry = canonical.migrations.slice(0, -1);
+  const fixture = [
+    "import fs from 'node:fs';",
+    "import assert from 'node:assert/strict';",
+    "import { mock } from 'node:test';",
+    'const calls = ' + JSON.stringify(calls) + ';',
+    'mock.module(' + JSON.stringify(pgModule) + ', { defaultExport: { Client: class {',
+    "  async connect() { fs.appendFileSync(calls, JSON.stringify('connect') + '\\n'); }",
+    '  async end() {}',
+    '  async query(sql) {',
+    "    fs.appendFileSync(calls, JSON.stringify(sql) + '\\n');",
+    "    assert.ok(/^(BEGIN READ ONLY|SELECT version, checksum FROM system.schema_migrations ORDER BY version|ROLLBACK)$/.test(sql));",
+    "    return { rows: sql.startsWith('SELECT') ? " + JSON.stringify(registry) + ' : [] };',
+    '  }',
+    '} } });',
+  ].join('\n');
+  const run = (identity) => spawnSync(process.execPath, [
+    '--experimental-test-module-mocks', '--import', 'data:text/javascript,' + encodeURIComponent(fixture),
+    'scripts/ci/verify-planetscale-production-schema.mjs',
+  ], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 10000,
+    env: auditTestEnvironment({
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: 'postgresql://schema@fixture.invalid/postgres?sslmode=verify-full',
+      PSCALE_BRANCH_NAME: 'main',
+      REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true',
+      ...identity,
+    }),
+  });
+  const stale = run({ EXPECTED_DATABASE_SCHEMA_FINGERPRINT: oldFingerprint, EXPECTED_DATABASE_RELATION_COUNT: '103' });
+  assert.notEqual(stale.status, 0);
+  assert.match(stale.stderr, /release schema identity does not match the approved migration contract/);
+  assert.equal(existsSync(calls), false, 'stale configured identity must fail before connecting');
+
+  const observed = run(expected);
+  assert.notEqual(observed.status, 0);
+  assert.match(observed.stderr, /production migration registry contains 21 entries; expected 22/);
+  assert.doesNotMatch(observed.stderr, /release schema identity does not match/);
+  assert.deepEqual(readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse), [
+    'connect', 'BEGIN READ ONLY', 'SELECT version, checksum FROM system.schema_migrations ORDER BY version', 'ROLLBACK',
+  ]);
 });
 
 test('PlanetScale account audit sends the service-token pair without a scheme or logging it', (t) => {

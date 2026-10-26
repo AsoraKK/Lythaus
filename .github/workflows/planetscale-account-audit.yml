@@ -34,8 +34,6 @@ jobs:
       PLANETSCALE_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale.json
       PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
       PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
-      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-      EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
       PLANETSCALE_CONTRACT_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale-production-contract.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -44,6 +42,15 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Load committed schema audit expectation
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_ENV"
+          import { canonicalReleaseSchemaContract } from './scripts/ci/product-integrity-schema-contract.mjs';
+          const { fingerprint, relationCount } = canonicalReleaseSchemaContract({ committedOnly: true });
+          console.log('EXPECTED_DATABASE_SCHEMA_FINGERPRINT=' + fingerprint);
+          console.log('EXPECTED_DATABASE_RELATION_COUNT=' + relationCount);
+          NODE
       - name: Capture read-only database and branch inventory
         run: node scripts/planetscale/audit-account.mjs
       - name: Enforce canonical production branch
