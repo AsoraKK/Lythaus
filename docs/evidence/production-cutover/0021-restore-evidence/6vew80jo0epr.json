@@ -26,16 +26,30 @@
     "schema_extensions_indexes",
     "canonical_registry",
     "effective_runtime_privileges",
-    "application_smoke"
+    "application_smoke",
+    "rpo_rto_acceptance"
   ],
   "unresolvedGates": [
-    "rpo_rto_acceptance",
     "independent_recovery_destination"
   ],
+  "rpoRtoAcceptance": {
+    "ownerTestingOnly": true,
+    "acceptedAt": "2026-10-27T09:05:19Z",
+    "acceptedBy": "AsoraKK",
+    "reference": "Sentinel_daad3e59c8f48191a441860d179447ef",
+    "snapshotAgeBasis": "backup_created_at_metadata",
+    "backupCreatedAt": "2026-10-27T02:25:03.632Z",
+    "maximumSnapshotAgeSeconds": 36000,
+    "snapshotAgeLimitEndsAt": "2026-10-27T12:25:03.632Z",
+    "maximumIsolatedDatabaseTestSeconds": 600,
+    "observedIsolatedDatabaseTestSeconds": 230.328,
+    "actualTransactionLossMeasured": false,
+    "fullProductionFailoverRtoMeasured": false
+  },
   "review": {
-    "reviewedAt": "2026-10-27T08:27:25Z",
+    "reviewedAt": "2026-10-27T09:05:19Z",
     "reviewedBy": "AsoraKK",
-    "reference": "https://github.com/AsoraKK/Lythaus/pull/1122#pullrequestreview-5664060528"
+    "reference": "Sentinel_daad3e59c8f48191a441860d179447ef"
   },
   "nativeRestoreCleanup": {
     "schemaVersion": "native-restore-cleanup-intent-v1",
@@ -50,5 +64,5 @@
     "artifactArchiveSha256": "7e66ea427d9804594946aa71bb9321c6d4f25a906dfd59eef17d6b43e2c6583f",
     "evidenceOutcome": "PASSED"
   },
-  "recordSha256": "c8af5a2658260bfd1999db2c692da4ab26571c774b8f18a75374214b196b1ca1"
+  "recordSha256": "8658fad0d90b44b94ac7c2def552f3cbae10e7c05fb6420f2b5fb6fd2ea2bcda"
 }
