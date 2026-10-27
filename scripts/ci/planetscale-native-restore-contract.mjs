@@ -4,7 +4,7 @@ import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/servi
 export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lythaus-core', databaseId: 'hzhe0cbn6rxi',
   source: 'main', sourceId: 'vqa2g2xc9wsl', backupId: 'tfqwht9d9bt4',
   backupCompletedAt: '2026-10-26T02:27:04.589Z',
-  target: 'lythaus-0021-native-restore-check-20261026-01', cluster: 'PS_5_AWS_ARM', region: 'eu-central',
+  target: 'lythaus-0021-native-restore-check-20261026-01', targetProduction: true, cluster: 'PS_5_AWS_ARM', region: 'eu-central',
   bytes: 21474836480, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
   qualificationStopMs: 20 * 60000, escalationMs: 45 * 60000, reviewMs: 60 * 60000, cleanupStartMs: 105 * 60000,
   setup: 'pscale_api_47syed2xlt6p', runtime: 'pscale_api_ysl604shosjg', admin: 'pscale_api_3vzps7bu44vo',
@@ -121,11 +121,20 @@ export function checkOwnedBranch(branch, id) {
 }
 export function checkBranch(branch, id, ready = false) {
   checkOwnedBranch(branch, id);
+  requireThat(branch.production === RESTORE.targetProduction, 'created_target_classification_changed');
   requireThat(branch.cluster_name === RESTORE.cluster && branch.cluster_architecture === 'aarch64'
     && branch.region?.slug === RESTORE.region && branch.replicas === 0
     && branch.minimum_storage_bytes === RESTORE.bytes && branch.maximum_storage_bytes === RESTORE.bytes,
   'created_target_identity_or_configuration_changed');
   if (ready) requireThat(branch.ready === true && branch.state === 'ready' && branch.frozen === false, 'target_not_ready');
+}
+
+export function requireResetPermissions(accesses, production) {
+  requireThat(typeof production === 'boolean', 'target_classification_unverifiable');
+  const required = production ? ['connect_production_branch', 'delete_production_branch_password']
+    : ['connect_branch', 'delete_branch_password'];
+  for (const access of required) requireThat(accesses.has(access), `existing_token_missing_${access}`);
+  return required;
 }
 
 function safeType(value, present = true) {
@@ -280,6 +289,7 @@ export function assertRestoreRoleSqlBaseline(roles, members) {
 
 const diagnosticPermissions = new Set(['read_database', 'read_databases', 'read_service_tokens', 'read_branch', 'read_backups',
   'delete_branch', 'delete_production_branch', 'create_branch', 'connect_branch', 'connect_production_branch',
+  'delete_branch_password', 'delete_production_branch_password',
   'restore_backup', 'restore_production_branch_backup', 'restore_production_branch_backups',
   'read_organization', 'read_invoices', 'read_audit_logs', 'create_databases', 'delete_databases',
   'read_oauth_applications', 'read_oauth_tokens', 'write_oauth_tokens', 'delete_oauth_tokens',
@@ -399,6 +409,37 @@ function grantsDiagnostic(rows, pages) {
     rowsTruncated: rows.length > diagnosticLimit, rows: projected };
 }
 
+const providerErrorCodes = new Set(['access_denied', 'permission_denied', 'insufficient_permissions', 'forbidden',
+  'unauthorized', 'not_found', 'bad_request', 'invalid_request', 'unprocessable_entity', 'internal_server_error']);
+async function providerFailureDiagnostic(response, method) {
+  const requestIds = ['x-request-id', 'x-planetscale-request-id', 'x-pscale-request-id']
+    .map(name => response.headers?.get?.(name)).filter(value => value !== null && value !== undefined);
+  const requestId = requestIds.length > 0 && requestIds.every(value => value === requestIds[0])
+    && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestIds[0]) ? requestIds[0] : null;
+  const diagnostic = { version: 1, method, httpStatus: response.status, requestId,
+    error: { bodyFormat: 'UNAVAILABLE', code: null } };
+  const reader = response.body?.getReader?.();
+  if (!reader) return diagnostic;
+  const chunks = []; let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 8192) { diagnostic.error.bodyFormat = 'OVERSIZED'; await reader.cancel(); return diagnostic; }
+      chunks.push(value);
+    }
+    const body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
+    diagnostic.error.bodyFormat = object(body) ? 'JSON_OBJECT' : 'JSON_OTHER';
+    if (object(body)) {
+      const code = object(body.error) ? body.error.code : body.code;
+      diagnostic.error.code = code === undefined ? null : providerErrorCodes.has(code) ? code : 'REDACTED';
+    }
+  } catch { diagnostic.error.bodyFormat = 'UNREADABLE_OR_NON_JSON'; }
+  finally { reader.releaseLock(); }
+  return diagnostic;
+}
+
 export class RestoreApi {
   #cleanupOnly;
   constructor(token, fetchImpl = fetch, capability) {
@@ -435,7 +476,8 @@ export class RestoreApi {
     if (!(response.status >= 200 && response.status < 300)) {
       const error = new RestoreFailure([401, 403].includes(response.status) ? 'provider_access_denied' : 'provider_request_failed',
         method === 'GET' || [400, 401, 403, 404, 409, 422].includes(response.status) ? 'DENIED' : 'UNKNOWN_MUTATION_OUTCOME');
-      if (method === 'GET' && Number.isInteger(response.status) && response.status >= 100 && response.status <= 599) error.httpStatus = response.status;
+      if (Number.isInteger(response.status) && response.status >= 100 && response.status <= 599) error.httpStatus = response.status;
+      error.providerDiagnostic = await providerFailureDiagnostic(response, method);
       throw error;
     }
     if (response.status === 204) {
@@ -523,6 +565,17 @@ export class RestoreApi {
     }
     if (!this.#cleanupOnly) requireThat(accesses.has('restore_production_branch_backup') || accesses.has('restore_production_branch_backups'),
       'existing_token_missing_restore_production_branch_backup');
+    if (!this.#cleanupOnly) {
+      const targetProduction = RESTORE.targetProduction;
+      const required = typeof targetProduction === 'boolean' ? targetProduction
+        ? ['connect_production_branch', 'delete_production_branch_password'] : ['connect_branch', 'delete_branch_password'] : [];
+      evidence.resetPermissionAdmission = { targetProduction: typeof targetProduction === 'boolean' ? targetProduction : null,
+        required, missing: required.filter(access => !accesses.has(access)), verified: false };
+      await onEvidence(structuredClone(evidence));
+      requireResetPermissions(accesses, targetProduction);
+      evidence.resetPermissionAdmission.verified = true;
+      await onEvidence(structuredClone(evidence));
+    }
     if (grantDiagnosticFailure) throw grantDiagnosticFailure;
     if (requiredThrough !== undefined) requireThat(evidence.tokenLifetime.coversRequiredWindow,
       'existing_token_lifetime_insufficient_or_unverifiable');

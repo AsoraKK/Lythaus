@@ -274,7 +274,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     runId: /^[1-9]\d*$/.test(environment.GITHUB_RUN_ID ?? '') ? environment.GITHUB_RUN_ID : null,
     phase: 'qualification', mode: execute ? 'execute' : 'read-only-plan', status: 'BLOCKED', state: 'NO_TARGET_CREATED',
     qualificationOutcome: 'FAILED', startedAt: new Date(started).toISOString(),
-    sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target, createdTargetId: null,
+    sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target,
+    expectedTargetProduction: RESTORE.targetProduction, createdTargetId: null,
     providerMutations: [], credentialActions: [], phases: [], productRowsRead: false, cleanup: 'NOT_NEEDED', blockers: [],
     recoveryAcceptance: 'NOT_CERTIFIED', independentRecovery: 'DEFERRED_BY_OWNER_EXCEPTION', deploymentAuthorized: false,
     verifiedScope: [], cleanupDeadlineAt: new Date(started + RESTORE.maximumMs).toISOString(),
@@ -347,7 +348,11 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     try {
       const value = await operation(); report.providerMutations.at(-1).outcome = 'ACKNOWLEDGED'; await save(); return value;
     }
-    catch (error) { report.providerMutations.at(-1).outcome = error instanceof RestoreFailure ? error.outcome : 'UNKNOWN_MUTATION_OUTCOME'; await save(); throw error; }
+    catch (error) {
+      report.providerMutations.at(-1).outcome = error instanceof RestoreFailure ? error.outcome : 'UNKNOWN_MUTATION_OUTCOME';
+      if (error instanceof RestoreFailure && object(error.providerDiagnostic)) report.providerMutations.at(-1).providerDiagnostic = error.providerDiagnostic;
+      await save(); throw error;
+    }
   };
   const boundTarget = async (configuration = true, signal) => {
     signal?.throwIfAborted();
@@ -361,6 +366,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
         && row.name === RESTORE.target), 'backup_to_new_target_binding_unproven');
     return branch;
   };
+  const verifyAuthority = () => api.authority(async evidence => { report.authorityDiagnostic = evidence; await save(); }, false,
+    execute ? Date.parse(report.cleanupDeadlineAt) : undefined);
   try {
     requireThat(['true', 'false', undefined].includes(environment.RESTORE_CHECK_EXECUTE), 'execution_mode_invalid');
     if (execute) {
@@ -373,8 +380,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     if (execute) requireThat(report.cleanupPermit.workflowId === approval.cleanupPermit.workflowId
       && report.cleanupPermit.runNumber === approval.cleanupPermit.runNumber, 'cleanup_reservation_not_approved');
     api ??= new RestoreApi(environment.PLANETSCALE_RESTORE_API_TOKEN);
-    await api.authority(async evidence => { report.authorityDiagnostic = evidence; await save(); }, false,
-      execute ? Date.parse(report.cleanupDeadlineAt) : undefined);
+    await verifyAuthority();
     const source = await api.request('/branches/main');
     requireThat(source.id === RESTORE.sourceId && source.name === 'main' && source.kind === 'postgresql'
       && source.default === true && source.deleted_at === null && source.ready === true, 'source_branch_identity_changed');
@@ -406,14 +412,14 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     checkedExtensionSpecifications(baseline.extensionSpecifications);
     report.sourceBaseline = baseline;
     scripts = await phase('build', signal => prepareSmoke(signal));
-    const created = await mutate('create_fixed_restore', () => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }));
+    const created = await mutate('create_fixed_restore', () => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }), verifyAuthority);
     report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
     requireThat(safeId(created.id) && created.id !== RESTORE.sourceId && created.name === RESTORE.target
       && Date.parse(created.created_at) >= started - 60000 && Date.parse(created.created_at) <= now(), 'create_ack_identity_invalid', 'UNKNOWN_MUTATION_OUTCOME');
     report.createdTargetId = created.id;
     checkOwnedBranch(created, created.id); owned = true;
     report.creation = { acknowledged: true, id: created.id, name: created.name, createdAt: created.created_at,
-      sourceBranchId: created.restored_from_branch.id, kind: created.kind, default: created.default };
+      sourceBranchId: created.restored_from_branch.id, kind: created.kind, default: created.default, production: created.production };
     report.state = 'TARGET_RETAINED_PENDING_REVIEW'; report.cleanup = 'TARGET_RETAINED_PENDING_REVIEW'; await save();
     checkBranch(created, created.id);
     let branch;
@@ -468,6 +474,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
           inventory.find(row => row.base_username === role), created.id, role, sourceRoles.get(role));
         requireThat(ROLE_NAMES.every(role => currentRoles.get(role).id === roles.get(role).id),
           'copied_role_identity_changed_before_reset');
+        await verifyAuthority();
+        await boundTarget();
       });
       requireThat(row.id === roles.get(name).id, 'reset_role_id_changed');
       const connection = restoredConnection(row, created.id, name, sourceRoles.get(name));
@@ -496,6 +504,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     report.verifiedScope = ['backup_binding','restore_completion','schema_extensions_indexes','canonical_registry','effective_runtime_privileges','application_smoke'];
   } catch (error) {
     report.blockers.push(failureCode(error));
+    if (error instanceof RestoreFailure && object(error.providerDiagnostic)) report.providerFailure = error.providerDiagnostic;
     if (error instanceof RestoreFailure && object(error.safeDiagnostic)) report.roleMetadataDiagnostic = error.safeDiagnostic;
     report.status = error instanceof RestoreFailure ? error.outcome : error?.extensionOutcomeUnknown ? 'UNKNOWN_MUTATION_OUTCOME' : 'FAILED';
     report.qualificationOutcome = report.status.includes('UNKNOWN') ? 'UNKNOWN' : 'FAILED';

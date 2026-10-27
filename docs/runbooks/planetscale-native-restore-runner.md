@@ -91,7 +91,7 @@ variable is needed. Missing or malformed dedicated access fails closed, even if
 the shared `PLANETSCALE_API_TOKEN` is available; there is no fallback. Other
 workflows retain their existing shared credential. Token creation, explicit
 database grants and protected-secret setup require separate owner approval;
-these workflows perform none of that setup. The dedicated token needs the nine
+these workflows perform none of that setup. The dedicated token needs the ten
 database actions checked below and organization `read_service_tokens` for its
 self-read. Secret presence alone does not prove those grants or authorize a
 restore, copied-role reset, migration or deletion.
@@ -107,6 +107,27 @@ branch's production classification, the conservative preflight requires the
 existing connection/deletion permissions for both classifications. If these
 are absent, report the exact missing existing permission; do not expand the
 token or create a branch to discover whether cleanup will work.
+
+Copied-role reset requires both the target classification's connect permission
+and its password-delete permission. The fixed PS-5 restore target is admitted
+as production: `connect_production_branch` AND
+`delete_production_branch_password`. A development target would require
+`connect_branch` AND `delete_branch_password`; source-main classification does
+not select these permissions. The runner checks the production scope before
+creation, repeats authority admission immediately before creation and each
+reset, and requires the actual target's `production` flag to match the pin.
+Unknown or changed classification stops without resetting credentials.
+These checks do not grant permissions or authorize their use. Password-delete
+authority is a separate credential capability requiring owner approval.
+
+This conservative conjunction follows provider-confirmed reset behavior. The
+public [reset-role reference](https://planetscale.com/docs/api/reference/reset_role)
+has described the listed scopes as alternatives; that discrepancy is retained,
+not treated as evidence that connect permission alone is sufficient. API
+failure evidence retains numeric HTTP status, a UUID-shaped request ID from
+recognized correlation headers, and an allowlisted error code from at most
+8 KiB of response JSON. Messages, arbitrary codes, headers and response bodies
+are redacted; unavailable correlation fields remain null. No mutation is retried.
 
 Read-only plans preserve an `authorityDiagnostic` checkpoint before rejecting
 missing database-specific permissions. Version 3 projects every access row up
