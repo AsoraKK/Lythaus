@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { RUN12, assertRun12Payloads, verifyRun12ReviewedCleanup } from '../ci/planetscale-native-restore-run12-reconciliation.mjs';
+import { RESTORE } from '../ci/planetscale-native-restore-contract.mjs';
 import { syntheticRun12Metadata } from './planetscale-native-restore-run12-fixture.mjs';
 
 test('synthetic metadata admits only the pinned failed qualification and consumed successful cleanup', async () => {
@@ -59,4 +60,13 @@ test('private original payloads cannot be replaced by synthetic or missing evide
   for (const values of [[undefined, undefined, undefined], [Buffer.from('{}'), Buffer.from('{}'), Buffer.from('{}')]]) {
     assert.throws(() => assertRun12Payloads(...values), /prior_reviewed_cleanup_payload_hash_mismatch/);
   }
+});
+
+test('new attempt pins do not reinterpret the original run-12 backup or target', async () => {
+  assert.equal(RESTORE.backupId, '6vew80jo0epr');
+  assert.equal(RESTORE.target, 'lythaus-0021-native-restore-check-20261027-01');
+  const f = syntheticRun12Metadata();
+  const proof = await verifyRun12ReviewedCleanup(f.run, f.read, { GITHUB_REPOSITORY: f.repository });
+  assert.notEqual(proof.backupId, RESTORE.backupId); assert.notEqual(proof.targetName, RESTORE.target);
+  assert.equal(proof.backupId, 'tfqwht9d9bt4'); assert.equal(proof.targetName, 'lythaus-0021-native-restore-check-20261026-01');
 });
