@@ -33,9 +33,9 @@
     "independent_recovery_destination"
   ],
   "review": {
-    "reviewedAt": null,
-    "reviewedBy": null,
-    "reference": null
+    "reviewedAt": "2026-10-27T08:27:25Z",
+    "reviewedBy": "AsoraKK",
+    "reference": "https://github.com/AsoraKK/Lythaus/pull/1122#pullrequestreview-5664060528"
   },
   "nativeRestoreCleanup": {
     "schemaVersion": "native-restore-cleanup-intent-v1",
@@ -50,5 +50,5 @@
     "artifactArchiveSha256": "7e66ea427d9804594946aa71bb9321c6d4f25a906dfd59eef17d6b43e2c6583f",
     "evidenceOutcome": "PASSED"
   },
-  "recordSha256": "f9bd302fc1a1377a369f00445f1efa19e7c5edb0cf9e7852331bbccc2e210a25"
+  "recordSha256": "c8af5a2658260bfd1999db2c692da4ab26571c774b8f18a75374214b196b1ca1"
 }
