@@ -605,6 +605,28 @@ Build cancellation uses esbuild's documented
 SQL and Worker cancellation adapters are verified with synthetic failure tests.
 These contracts do not prove the existing token has those rights.
 
+### Exact run-12 reconciliation candidate
+
+The additional historical binding admits only qualification run 40360605402,
+attempt 1, and its separately approved cleanup run 40371017566, attempt 1,
+cleanup permit 394840164/2. Its backup and target identities are immutable
+historical constants, independent of the next attempt's pins. The original
+qualification remains FAILED and NOT_CERTIFIED; successful containment does not
+certify recovery or authorize another attempt.
+
+Review the original qualification, durable pending intent and cleanup receipt
+using `assertRun12Payloads`, and verify their enclosing archive digests before
+approving these historical source pins. No private receipt is added to the
+repository. Admission reads the exact GitHub run/job/approval identities,
+artifact IDs and digests, attested PR head and unedited human comment. Its
+reported evidence basis explicitly identifies the pinned archive digests and
+offline payload hashes; it does not claim a fresh download of private payloads.
+Expired or changed artifacts, moved evidence, an additional execution, or
+missing/changed review evidence still block. Current branch inventory must also
+exclude the original target ID, including if it reappears under a new name.
+This consumes no new cleanup permit and changes no live approval, release
+certification, migration or source-freeze requirements.
+
 Focused tests use mocks for denial, stale/budget failures, partial resets,
 identity/binding mismatch, lost acknowledgments, no retries, and failed cleanup.
 The registered disposable PG17 test applies only synthetic local fixtures,
