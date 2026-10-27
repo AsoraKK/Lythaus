@@ -46,8 +46,8 @@ test('web and admin mappings use approved fingerprints, aliases, and icon purpos
   assert.equal(web.start_url, '.');
   assert.equal(web.display, 'standalone');
   assert.equal(web.orientation, 'portrait-primary');
-  assert.equal(web.background_color, manifest.colors.ink);
-  assert.equal(web.theme_color, manifest.colors.ink);
+  assert.equal(web.background_color, '#242321');
+  assert.equal(web.theme_color, '#242321');
   assert.deepEqual(web.icons.map(icon => icon.purpose), ['any', 'any', 'maskable', 'maskable']);
   for (const icon of web.icons) {
     assert.equal(pngSize(read('web/' + icon.src)).join('x'), icon.sizes);

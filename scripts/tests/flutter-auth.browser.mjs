@@ -136,6 +136,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     assert.ok(recoveryBox&&recoveryBox.x>=0&&recoveryBox.x+recoveryBox.width<=width,
       'Recovery semantics must remain inside the actual viewport, including WebKit');
     assert.equal(await page.title(),'Lythaus');
+    await page.locator('#lythaus-startup').waitFor({state:'hidden'});
     if(process.env.AUTH_QA_DIR){await mkdir(process.env.AUTH_QA_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AUTH_QA_DIR,`flutter-${name}-${width}-entry.png`)});}
     await page.getByRole('button',{name:'Forgot password?',exact:true}).click();
     await page.waitForURL('https://lythaus.co/forgot-password');

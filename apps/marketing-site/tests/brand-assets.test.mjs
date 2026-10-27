@@ -8,6 +8,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const publicFile = (url) => path.join(root, 'public', url.replace(/^\//u, ''));
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const assets = [
+  { url: '/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg', sha256: '8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436', mime: 'image/svg+xml' },
   { url: '/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg', sha256: 'e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750', mime: 'image/svg+xml' },
   { url: '/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg', sha256: '5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7', mime: 'image/svg+xml' },
   { url: '/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png', sha256: '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab', mime: 'image/png' },
@@ -74,16 +75,15 @@ test('both marketing layouts use versioned icons and social metadata', () => {
 });
 
 test('accessible wordmarks remain standalone, theme-aware, and responsive', () => {
-  assert.equal((baseLayout.match(/class="brand-wordmark-slot"/gu) ?? []).length, 2);
-  assert.equal((baseLayout.match(/class="brand-wordmark"/gu) ?? []).length, 2);
-  assert.equal((secondaryLayout.match(/class="secondary-brand-wordmark"/gu) ?? []).length, 2);
-  assert.match(baseLayout, /class="brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-wordmark-slot"[\s\S]*?class="brand-wordmark"[^>]*alt=""/u);
-  assert.match(secondaryLayout, /class="secondary-brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="secondary-brand-wordmark" aria-hidden="true"/u);
+  assert.equal((baseLayout.match(/class="brand-wordmark-slot approved-brand"/gu) ?? []).length, 1);
+  assert.equal((baseLayout.match(/class="brand-wordmark"/gu) ?? []).length, 1);
+  assert.equal((secondaryLayout.match(/class="secondary-brand-wordmark approved-brand"/gu) ?? []).length, 1);
+  assert.match(baseLayout, /class="brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-symbol-slot approved-brand"[\s\S]*?class="brand-symbol"[^>]*alt=""/u);
+  assert.match(secondaryLayout, /class="secondary-brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-symbol-slot approved-brand" aria-hidden="true"/u);
   assert.doesNotMatch(`${baseLayout}\n${secondaryLayout}\n${secondaryStyles}`, /lythaus-lockup|brand-lockup|<span>Lythaus<\/span>/u);
-  assert.ok(secondaryStyles.includes('/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg'));
-  assert.ok(secondaryStyles.includes('/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg'));
-  assert.match(secondaryStyles, /data-appearance="dark"[^\n]*secondary-brand-wordmark/u);
-  assert.match(secondaryStyles, /prefers-color-scheme:\s*dark/u);
+  assert.match(brandStyles, /mask-mode: alpha/);
+  assert.match(brandStyles, /lythaus-symbol-white\.8e20f9650ccb\.svg/);
+  assert.doesNotMatch(secondaryLayout, /secondary-appearance/);
   assert.match(secondaryStyles, /secondary-brand-wordmark[^\n]*aspect-ratio/u);
   assert.match(brandStyles, /brand-wordmark-slot[\s\S]*?aspect-ratio:\s*627\.24944891 \/ 130\.68666880/u);
   assert.match(brandStyles, /width:\s*min\(154px,\s*42vw\)/u);
@@ -101,8 +101,8 @@ test('web manifest preserves identity and maps any and maskable icons separately
   assert.equal(manifest.start_url, '/');
   assert.equal(manifest.scope, '/');
   assert.equal(manifest.display, 'standalone');
-  assert.equal(manifest.background_color, '#070706');
-  assert.equal(manifest.theme_color, '#070706');
+  assert.equal(manifest.background_color, '#242321');
+  assert.equal(manifest.theme_color, '#242321');
   assert.deepEqual(manifest.icons, [
     { src: '/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: '/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

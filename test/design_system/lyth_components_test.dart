@@ -10,24 +10,28 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('LythWordmarkStatic preserves approved outlines and colors', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: LythausTheme.light(),
-        // Use LythWordmarkStatic to avoid timer issues in tests
-        home: const Scaffold(body: Center(child: LythWordmarkStatic())),
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'LythWordmarkStatic preserves approved outlines with the text tint',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: LythausTheme.light(),
+          // Use LythWordmarkStatic to avoid timer issues in tests
+          home: const Scaffold(body: Center(child: LythWordmarkStatic())),
+        ),
+      );
+      await tester.pump();
 
-    await tester.pumpAndSettle();
-    final image = tester.widget<SvgPicture>(find.byType(SvgPicture));
-    expect(image.colorFilter, isNull);
-    expect(image.semanticsLabel, 'Lythaus');
-    expect(find.text('Lyt haus'), findsNothing);
-  });
+      await tester.pumpAndSettle();
+      final image = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      expect(
+        image.colorFilter,
+        const ColorFilter.mode(LythSemanticColors.text, BlendMode.srcIn),
+      );
+      expect(image.semanticsLabel, 'Lythaus');
+      expect(find.text('Lyt haus'), findsNothing);
+    },
+  );
 
   testWidgets('LythButton primary uses colorScheme.primary', (tester) async {
     await tester.pumpWidget(

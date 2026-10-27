@@ -41,7 +41,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         final brand = tester.widget<LythBrand>(find.byType(LythBrand));
-        expect(brand.variant, LythBrandVariant.wordmark);
+        expect(brand.variant, LythBrandVariant.symbol);
         expect(brand.height, 36);
         expect(find.bySemanticsLabel('Lythaus'), findsOneWidget);
         expect(find.text('Discover'), findsNothing);

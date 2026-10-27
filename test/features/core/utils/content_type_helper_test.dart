@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/features/core/utils/content_type_helper.dart';
 
 void main() {
@@ -65,29 +66,77 @@ void main() {
 
     group('getColor Tests', () {
       test('should return correct colors for known content types', () {
-        expect(ContentTypeHelper.getColor('post'), equals(Colors.blue));
-        expect(ContentTypeHelper.getColor('comment'), equals(Colors.green));
-        expect(ContentTypeHelper.getColor('image'), equals(Colors.purple));
-        expect(ContentTypeHelper.getColor('video'), equals(Colors.red));
-        expect(ContentTypeHelper.getColor('audio'), equals(Colors.orange));
-        expect(ContentTypeHelper.getColor('link'), equals(Colors.teal));
-        expect(ContentTypeHelper.getColor('poll'), equals(Colors.indigo));
-        expect(ContentTypeHelper.getColor('event'), equals(Colors.amber));
-        expect(ContentTypeHelper.getColor('group'), equals(Colors.cyan));
-        expect(ContentTypeHelper.getColor('message'), equals(Colors.pink));
+        expect(
+          ContentTypeHelper.getColor('post'),
+          equals(LythSemanticColors.info),
+        );
+        expect(
+          ContentTypeHelper.getColor('comment'),
+          equals(LythSemanticColors.success),
+        );
+        expect(
+          ContentTypeHelper.getColor('image'),
+          equals(LythSemanticColors.accent),
+        );
+        expect(
+          ContentTypeHelper.getColor('video'),
+          equals(LythSemanticColors.danger),
+        );
+        expect(
+          ContentTypeHelper.getColor('audio'),
+          equals(LythSemanticColors.warning),
+        );
+        expect(
+          ContentTypeHelper.getColor('link'),
+          equals(LythSemanticColors.accent),
+        );
+        expect(
+          ContentTypeHelper.getColor('poll'),
+          equals(LythSemanticColors.accent),
+        );
+        expect(
+          ContentTypeHelper.getColor('event'),
+          equals(LythSemanticColors.warning),
+        );
+        expect(
+          ContentTypeHelper.getColor('group'),
+          equals(LythSemanticColors.accent),
+        );
+        expect(
+          ContentTypeHelper.getColor('message'),
+          equals(LythSemanticColors.accent),
+        );
       });
 
       test('should return grey color for unknown content types', () {
-        expect(ContentTypeHelper.getColor('unknown'), equals(Colors.grey));
-        expect(ContentTypeHelper.getColor(''), equals(Colors.grey));
-        expect(ContentTypeHelper.getColor('xyz'), equals(Colors.grey));
+        expect(
+          ContentTypeHelper.getColor('unknown'),
+          equals(LythSemanticColors.text),
+        );
+        expect(ContentTypeHelper.getColor(''), equals(LythSemanticColors.text));
+        expect(
+          ContentTypeHelper.getColor('xyz'),
+          equals(LythSemanticColors.text),
+        );
       });
 
       test('should handle case insensitive content types', () {
-        expect(ContentTypeHelper.getColor('POST'), equals(Colors.blue));
-        expect(ContentTypeHelper.getColor('Comment'), equals(Colors.green));
-        expect(ContentTypeHelper.getColor('IMAGE'), equals(Colors.purple));
-        expect(ContentTypeHelper.getColor('Video'), equals(Colors.red));
+        expect(
+          ContentTypeHelper.getColor('POST'),
+          equals(LythSemanticColors.info),
+        );
+        expect(
+          ContentTypeHelper.getColor('Comment'),
+          equals(LythSemanticColors.success),
+        );
+        expect(
+          ContentTypeHelper.getColor('IMAGE'),
+          equals(LythSemanticColors.accent),
+        );
+        expect(
+          ContentTypeHelper.getColor('Video'),
+          equals(LythSemanticColors.danger),
+        );
       });
     });
 
@@ -177,7 +226,7 @@ void main() {
           // Each type should have a color (not default grey)
           final color = ContentTypeHelper.getColor(type);
           expect(color, isNotNull);
-          expect(color, isNot(equals(Colors.grey)));
+          expect(color, isNot(equals(LythSemanticColors.text)));
 
           // supportsPreview should return a boolean
           final supportsPreview = ContentTypeHelper.supportsPreview(type);
@@ -201,7 +250,10 @@ void main() {
             equals(Icons.help_outline),
           );
           expect(ContentTypeHelper.getLabel(edgeCase), equals('Content'));
-          expect(ContentTypeHelper.getColor(edgeCase), equals(Colors.grey));
+          expect(
+            ContentTypeHelper.getColor(edgeCase),
+            equals(LythSemanticColors.text),
+          );
           expect(ContentTypeHelper.supportsPreview(edgeCase), isFalse);
         }
       });

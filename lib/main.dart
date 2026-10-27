@@ -176,9 +176,9 @@ class _LythausAppState extends ConsumerState<LythausApp> {
     return ForegroundActivityObserver(
       child: MaterialApp.router(
         title: 'Lythaus',
-        theme: LythausTheme.light(),
+        theme: LythausTheme.dark(),
         darkTheme: LythausTheme.dark(),
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.dark,
         routerConfig: router,
       ),
     );

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 class LythColorSchemes {
-  static ColorScheme light() => _scheme(Brightness.light);
+  static ColorScheme light() => dark();
 
   static ColorScheme dark() => _scheme(Brightness.dark);
 
@@ -47,8 +47,9 @@ class LythColorSchemes {
       inverseSurface: inverse['surface'],
       onInverseSurface: inverse['text'],
       inversePrimary: inverse['accent'],
-      surfaceTint: Colors.transparent,
-      scrim: Colors.black,
+      surfaceTint: LythSemanticColors.clear,
+      scrim: LythSemanticColors.canvas,
+      shadow: LythSemanticColors.canvas,
     );
   }
 

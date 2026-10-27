@@ -2,23 +2,24 @@
 import '../styles/home-opening.css';
 ---
 <h1 class="pitch-wordmark" id="pitch-wordmark" aria-label="Lythaus">
+  <span class="wordmark-fallback approved-brand" aria-hidden="true"><img src="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" alt="" width="470" height="131" /></span>
   <svg class="wordmark-scene" viewBox="0 0 1000 166" aria-hidden="true" focusable="false">
     <defs>
       <image id="wordmark-material" href="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" x="0" y="0" width="1000" height="166" preserveAspectRatio="xMidYMid meet" />
       <mask id="wordmark-contours" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="166" style="mask-type: alpha"><use href="#wordmark-material" /></mask>
       <clipPath id="wordmark-space"><rect x="-600" y="-500" width="2300" height="1150" /></clipPath>
       <linearGradient id="wordmark-exposure-edge">
-        <stop offset="0" stop-color="white" />
-        <stop offset="1" stop-color="black" />
+        <stop offset="0" stop-color="var(--ds-text)" />
+        <stop offset="1" stop-color="var(--ds-text)" stop-opacity="0" />
       </linearGradient>
       <radialGradient id="wordmark-reflection">
-        <stop stop-color="#fff" />
+        <stop stop-color="var(--ds-text)" />
         <stop offset=".16" stop-color="var(--light-ivory)" stop-opacity=".98" />
         <stop class="wordmark-reflection-shoulder" offset=".48" stop-color="var(--light-ivory)" stop-opacity=".5" />
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
       </radialGradient>
       <radialGradient id="wordmark-bloom">
-        <stop stop-color="#fff" stop-opacity=".96" />
+        <stop stop-color="var(--ds-text)" stop-opacity=".96" />
         <stop offset=".12" stop-color="var(--light-ivory)" stop-opacity=".7" />
         <stop offset=".36" stop-color="var(--light-gold)" stop-opacity=".22" />
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
@@ -30,8 +31,8 @@ import '../styles/home-opening.css';
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
       </radialGradient>
       <radialGradient id="wordmark-core">
-        <stop offset="0" stop-color="#fff" />
-        <stop offset=".3" stop-color="#fff" />
+        <stop offset="0" stop-color="var(--ds-text)" />
+        <stop offset=".3" stop-color="var(--ds-text)" />
         <stop offset="1" stop-color="var(--light-ivory)" stop-opacity="0" />
       </radialGradient>
       <linearGradient id="wordmark-projection" x1="0" y1="0" x2="0" y2="1">
@@ -41,16 +42,16 @@ import '../styles/home-opening.css';
         <stop offset=".65" stop-color="var(--light-gold)" stop-opacity=".06" />
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
       </linearGradient>
-      <mask id="wordmark-exposure" maskUnits="userSpaceOnUse" x="-110" y="-140" width="1220" height="450" style="mask-type: luminance">
+      <mask id="wordmark-exposure" maskUnits="userSpaceOnUse" x="-110" y="-140" width="1220" height="450" style="mask-type: alpha">
         <g data-light-position>
-          <rect x="-1300" y="-20" width="1288" height="210" fill="white" />
+          <rect x="-1300" y="-20" width="1288" height="210" fill="var(--ds-text)" />
           <rect x="-12" y="-20" width="12" height="210" fill="url(#wordmark-exposure-edge)" />
         </g>
       </mask>
     </defs>
     <g clip-path="url(#wordmark-space)">
       <rect class="wordmark-dark" x="0" y="0" width="1000" height="166" mask="url(#wordmark-contours)" />
-      <use class="wordmark-settled" href="#wordmark-material" />
+      <rect class="wordmark-settled" x="0" y="0" width="1000" height="166" mask="url(#wordmark-contours)" />
       <g class="wordmark-optics" visibility="hidden">
         <g data-light-energy>
           <path data-light-projection d="M0 0 Q.45 -12 1 -100 V100 Q.45 12 0 0Z" fill="url(#wordmark-projection)" />

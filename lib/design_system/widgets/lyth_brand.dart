@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/design_system/widgets/approved_brand_paths.g.dart';
 
-/// Approved artwork treatments; the supplied outlines are never recolored.
+/// Approved outlines with the shared monochrome treatment.
 enum LythBrandVariant {
   /// Square compact LH symbol.
   symbol,
@@ -33,20 +34,13 @@ class LythBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final aspectRatio = switch (variant) {
       LythBrandVariant.symbol => 1.0,
       LythBrandVariant.wordmark => 470.28944891 / 130.6866688,
     };
     final file = switch (variant) {
-      LythBrandVariant.symbol =>
-        dark
-            ? 'lythaus-symbol-square-warm.fb697a91817f.svg'
-            : 'lythaus-symbol-square-black.6a1b6d025e69.svg',
-      LythBrandVariant.wordmark =>
-        dark
-            ? 'lythaus-wordmark-white.5ba0451347e2.svg'
-            : 'lythaus-wordmark-black.e450176663e0.svg',
+      LythBrandVariant.symbol => 'lythaus-symbol-square-warm.fb697a91817f.svg',
+      LythBrandVariant.wordmark => 'lythaus-wordmark-white.5ba0451347e2.svg',
     };
     if (kIsWeb) {
       return Semantics(
@@ -56,7 +50,13 @@ class LythBrand extends StatelessWidget {
         child: SizedBox(
           height: height,
           width: height * aspectRatio,
-          child: CustomPaint(painter: ApprovedBrandPainter(file)),
+          child: ColorFiltered(
+            colorFilter: const ColorFilter.mode(
+              LythSemanticColors.text,
+              BlendMode.srcIn,
+            ),
+            child: CustomPaint(painter: ApprovedBrandPainter(file)),
+          ),
         ),
       );
     }
@@ -65,6 +65,10 @@ class LythBrand extends StatelessWidget {
       height: height,
       width: height * aspectRatio,
       fit: BoxFit.contain,
+      colorFilter: const ColorFilter.mode(
+        LythSemanticColors.text,
+        BlendMode.srcIn,
+      ),
       semanticsLabel: decorative ? null : 'Lythaus',
       excludeFromSemantics: decorative,
     );

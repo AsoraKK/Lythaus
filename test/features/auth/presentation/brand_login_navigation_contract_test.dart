@@ -96,10 +96,7 @@ void main() {
           final container = ProviderScope.containerOf(screen);
           expect(MediaQuery.textScalerOf(screen).scale(14) / 14, scale);
           expect(MediaQuery.sizeOf(screen).width, width);
-          expect(
-            Theme.of(screen).brightness,
-            dark ? Brightness.dark : Brightness.light,
-          );
+          expect(Theme.of(screen).brightness, Brightness.dark);
           await tester.ensureVisible(find.text('Continue as guest'));
           await tester.tap(find.text('Continue as guest'));
           await tester.pump(const Duration(milliseconds: 250));

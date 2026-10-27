@@ -47,7 +47,7 @@ class UrgencyIndicator extends StatelessWidget {
     if (urgency >= 80) return scheme.error;
     if (urgency >= 60) return scheme.primary;
     if (urgency >= 40) return scheme.tertiary;
-    return scheme.onSurface.withValues(alpha: 0.6);
+    return scheme.onSurface;
   }
 
   String _getUrgencyLabel(int urgency) {

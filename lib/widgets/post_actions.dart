@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -46,7 +47,7 @@ class PostActions extends ConsumerWidget {
         _ActionButton(
           icon: isLiked ? Icons.favorite : Icons.favorite_border,
           label: _formatCount(likeCount),
-          color: isLiked ? Colors.red : null,
+          color: isLiked ? LythSemanticColors.danger : null,
           onPressed: onLike,
         ),
 
@@ -150,7 +151,7 @@ class _FlagButton extends ConsumerWidget {
         builder: (context, setState) => AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.flag, color: Colors.orange),
+              Icon(Icons.flag, color: LythSemanticColors.warning),
               SizedBox(width: 8),
               Text('Report Content'),
             ],
@@ -248,8 +249,8 @@ class _FlagButton extends ConsumerWidget {
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                backgroundColor: LythSemanticColors.warning,
+                foregroundColor: LythSemanticColors.onAccent,
               ),
               child: const Text('Submit Report'),
             ),
@@ -300,12 +301,12 @@ class _FlagButton extends ConsumerWidget {
             const SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.error, color: Colors.white),
+                  Icon(Icons.error, color: LythSemanticColors.text),
                   SizedBox(width: 16),
                   Expanded(child: Text('User not authenticated')),
                 ],
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: LythSemanticColors.surface,
               duration: Duration(seconds: 4),
             ),
           );
@@ -328,14 +329,14 @@ class _FlagButton extends ConsumerWidget {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.white),
+                const Icon(Icons.check_circle, color: LythSemanticColors.text),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(message ?? 'Report submitted successfully'),
                 ),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: LythSemanticColors.surface,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -374,16 +375,16 @@ class _FlagButton extends ConsumerWidget {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error, color: Colors.white),
+                const Icon(Icons.error, color: LythSemanticColors.text),
                 const SizedBox(width: 16),
                 Expanded(child: Text(errorMessage)),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: LythSemanticColors.surface,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Retry',
-              textColor: Colors.white,
+              textColor: LythSemanticColors.text,
               onPressed: () =>
                   _submitFlag(context, ref, reason, additionalDetails),
             ),

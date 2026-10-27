@@ -47,10 +47,10 @@ test('homepage public copy matches the living internet pitch and stays launch sa
     'For the living internet.',
     'Human ideas. Conversations worth having.',
     'We’re building a social platform',
-    '01 / PERSPECTIVE',
-    '02 / CONVERSATION',
-    '03 / RECOGNITION &amp; REWARDS',
-    '04 / TRUST',
+    'PERSPECTIVE',
+    'CONVERSATION',
+    'RECOGNITION &amp; REWARDS',
+    'TRUST',
     'Share your perspective.',
     'Find conversations worth joining.',
     'Build reputation through contribution.',
@@ -68,20 +68,20 @@ test('homepage public copy matches the living internet pitch and stays launch sa
   const retiredUserFacingNames = [String.fromCharCode(65, 115, 111, 114, 97), String.fromCharCode(65, 122, 117, 114, 101)];
   assert.doesNotMatch(visibleCopy, new RegExp(retiredUserFacingNames.join('|'), 'i'));
   assert.equal((homepage.match(/For the living internet\./g) ?? []).length, 2);
-  assert.match(styles, /--accent: #f2c98d/i);
+  assert.match(styles, /--accent: var\(--ds-accent\)/);
 });
 
 test('homepage story sections use the approved narrative labels and anchors', () => {
   for (const label of [
-    '01 / PERSPECTIVE',
-    '02 / CONVERSATION',
-    '03 / RECOGNITION &amp; REWARDS',
-    '04 / TRUST',
+    'PERSPECTIVE',
+    'CONVERSATION',
+    'RECOGNITION &amp; REWARDS',
+    'TRUST',
   ]) assert.match(homepage, new RegExp(label));
   for (const anchor of ['problem', 'human-first', 'platform', 'authorship', 'discovery', 'reputation', 'accountability', 'public-interest', 'editorial', 'why-lythaus', 'waitlist']) {
     assert.match(homepage, new RegExp(`id="${anchor}"`));
   }
-  assert.match(homepage, /class="pitch-section-meta">01 \/ PERSPECTIVE<\/div>/);
+  assert.match(homepage, /class="pitch-section-meta">PERSPECTIVE<\/div>/);
   assert.equal((homepage.match(/class="pitch-section /g) ?? []).length, 4);
   assert.doesNotMatch(homepage, /story-section|story-section--tint/);
 });
@@ -184,8 +184,8 @@ test('shared layout declares Lythaus browser and home-screen assets', () => {
   assert.equal(appManifest.start_url, '/');
   assert.equal(appManifest.scope, '/');
   assert.equal(appManifest.display, 'standalone');
-  assert.equal(appManifest.theme_color, '#070706');
-  assert.equal(appManifest.background_color, '#070706');
+  assert.equal(appManifest.theme_color, '#242321');
+  assert.equal(appManifest.background_color, '#242321');
   assert.deepEqual(appManifest.icons, [
     { src: '/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: '/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

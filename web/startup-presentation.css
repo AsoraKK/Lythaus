@@ -1,3 +1,4 @@
+:root { color-scheme: dark; --startup-canvas: #242321; --startup-surface: #302E2B; --startup-text: #F5F3EE; --startup-accent: #EFC58D; }
 #lythaus-startup {
   position: fixed;
   inset: 0;
@@ -8,8 +9,8 @@
   justify-content: center;
   gap: 24px;
   padding: 24px;
-  background: #F7F4EC;
-  color: #070706;
+  background: var(--startup-canvas);
+  color: var(--startup-text);
   font: 16px/1.5 system-ui, sans-serif;
   text-align: center;
 }
@@ -27,6 +28,7 @@
   cursor: pointer;
 }
 #lythaus-startup button:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
-@media (prefers-color-scheme: dark) {
-  #lythaus-startup { background: #070706; color: #F7F4EC; }
+@supports (mask-image: url('brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg')) {
+  #lythaus-startup picture { background: var(--startup-text); mask: url('brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg') center / contain no-repeat; }
+  #lythaus-startup img { opacity: 0; }
 }

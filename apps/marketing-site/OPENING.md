@@ -1,71 +1,41 @@
 # Homepage opening
 
-Lythaus's opening represents one encounter with a rotating light. The material exists before illumination. A compact white point stays at the centre of the word while its beam, reflected light and warm outer spill travel left to right, leaving the approved white wordmark. The source stays fixed; the beam turns. No reference-video measurements are claimed.
+The opening keeps the approved Lythaus wordmark readable while a restrained warm reflection passes once across it. Navigation, copy and controls are visible from first paint. The header uses the approved LH symbol; descriptive section labels retain their anchors without decorative numbers.
 
-## Structure and tuning
+## Artwork and palette
 
-- `OpeningWordmark.astro` contains one vector word shape, a dark material layer, accumulated exposure, local reflection and an independent light source. Decorative geometry is hidden from assistive technology; the heading is named Lythaus.
-- The shape is the approved `/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg`, referenced directly as an SVG image. `preserveAspectRatio="xMidYMid meet"` contains its exact letter shapes and spacing inside the unchanged 1000-by-166 scene. The SVG bytes and white fill remain unchanged; no font recreation, stretching or recoloring is applied. An alpha mask from the same artwork replaces the old path clip for the existing dark material and reflection. The narrower approved aspect ratio is centered within the existing hero box without changing surrounding layout.
-- `home-opening.css` owns core geometry and timing. `home-polish.css` owns the final production optical gain, warmer ivory/gold palette, disciplined homepage type scale and the unboxed waitlist treatment. Geometry uses SVG scene units; timing values are milliseconds. Mobile adjustments keep the same concept at 390 px.
-- The supplied visual reference informs the existing warm-white light and gold falloff. The active optical layers intentionally run much hotter than the earlier restrained version: the white core remains display white while local bloom, masked reflection and warm spill use layered brightness and small bounded drop shadows to create the perception of an ultra-bright source without a full-screen flash. Only the artwork and its contour mask are replaced; these effects are unchanged.
-- `home-opening.js` projects one angular coordinate across the material response and moving beam. A faint tapered projection connects the stationary central point to the moving footprint, narrowing as it faces the viewer and opening toward the right. The point's halo and white core never translate. Native animations are constructed once, then given the same start time after setup. One requestAnimationFrame schedules initialization; there is no JavaScript frame loop.
-- The homepage preloads the existing DM Sans and Manrope Latin font files directly. Other routes retain their existing font loading. The SVG word and its vertical anchor do not depend on font delivery.
-- The scene remains SVG/CSS/WAAPI only. There is no canvas, WebGL, raster sequence or animation library.
+`OpeningWordmark.astro` references the exact approved `lythaus-wordmark-white.5ba0451347e2.svg` bytes. Its original outlines and proportions are contained within the existing 1000-by-166 scene. An alpha mask applies the shared off-white text token; optical layers combine only off-white and amber. The original SVG file and generated outline data are unchanged.
 
-## Timeline
+`palette.css` shares the four-colour contract with Flutter and `design/tokens.json`: canvas `#242321`, surface `#302E2B`, reading text `#F5F3EE`, accent `#EFC58D`. There are no brightness/saturation filters creating additional source colours. The original static artwork is tinted using an independent SVG flood filter when masks are unavailable. If both filters and masks are unsupported, the required original white artwork remains visible; this asset-preservation limitation is documented in `docs/design-system/four-colour-contract.md`.
 
-All times are relative to the shared animation start, after setup. Pending font layout gets at most 300 ms before that start; interruption remains immediate during this bounded preparation.
+`home-opening.css` owns optical geometry and timing. `home-polish.css` retains the existing type scale, spacing and waitlist layout. The scene uses SVG, CSS and native Web Animations without an animation dependency.
 
-| Time | Event |
+## Timing and interruption
+
+After bounded font readiness (at most 300 ms), all animations receive a shared start time:
+
+| Time | Behaviour |
 | --- | --- |
-| 0–120 ms | Dark material; stillness |
-| 120–1200 ms | One spatial passage from -70 to 1070 in the 1000-unit scene |
-| ~174–1092 ms | Stationary central core remains at full intensity before fading |
-| ~584–725 ms | Primary light energy reaches and holds its peak |
-| 1200–1320 ms | Environmental spill decays beyond the final letter |
-| 1320–1420 ms | Stillness |
-| 1420–1600 ms | Tagline enters |
-| 1510–1690 ms | Supporting sentence enters |
-| 1585–1765 ms | CTA and header enter |
-| After ~1780 ms | Animations cancelled; unmasked approved white artwork and static controls |
+| 0–120 ms | Complete static wordmark, copy and navigation |
+| 120–1200 ms | One left-to-right light passage; the compact source stays central |
+| 1200–1320 ms | Warm spill decays beyond the final letter |
+| After completion | Animation objects and listeners are removed; static artwork remains |
 
-The reflection trail spans approximately 120 ms at the mean traversal velocity. Opacity entrances last 180 ms, with no more than 5 px of vertical travel. Header position never animates.
+The scene box and content positions remain fixed. There are no copy entrances or hidden navigation. Pointer, key, touch, scroll, focus, resize, history restoration, page visibility and reduced-motion changes resolve immediately without preventing the interaction. Resolution is idempotent. The 2500 ms bootstrap watchdog handles missing initialization.
 
-## Refresh and progressive enhancement
-
-The default document is the complete readable page. The early homepage-only bootstrap arms the animation on every eligible full page load, including a normal browser refresh. It is intentionally not session-gated.
-
-The opening still resolves immediately instead of playing when any of these conditions apply:
-
-- `prefers-reduced-motion: reduce`
-- the document is hidden
-- the URL arrives with a fragment identifier
-- the browser restores a back/forward history entry
-- the Web Animations API is unavailable
-- initialization fails
-
-Any pointer, key, touch, scroll or focus input resolves immediately without preventing the input. Resize, hiding/leaving the page, history restoration and changes to reduced motion also resolve. Resolution is idempotent, removes listeners, clears the watchdog, cancels animations and removes all optical masking. A 2500 ms bootstrap watchdog handles missing initialization.
-
-The narrative does not depend on scroll-triggered reveals. Approved copy, anchors and waitlist submission behaviour are unchanged.
-
-## Typography and bottom-of-page cleanup
-
-The homepage uses one editorial section-heading scale instead of enlarging individual chapters to fill space. Hero support, section headings, ledes, body copy, emphasis lines and principle rows now follow a small consistent hierarchy across desktop and mobile.
-
-The private-beta area is explicitly forced back into the page flow as a transparent editorial section. Legacy homepage card styling cannot give it a floating background, side border, radius, shadow or transform. This prevents the obsolete boxed treatment from appearing as a stray block near the bottom of the page while preserving the waitlist and Turnstile behaviour.
+The complete static fallback works with no JavaScript, reduced motion, unavailable Web Animations or SVG masks, failed initialization, hidden documents and fragment/history navigation. An eligible full refresh may play once again. The wordmark does not depend on font delivery, and there is no replay during scrolling or normal interaction.
 
 ## Validation
 
-Run from the repository root after dependency installation:
+Run from the repository root with the pinned dependencies and available browsers:
 
 ```sh
 npm run marketing:test
 npm run build --prefix apps/marketing-site
 npm run marketing:validate
-npx playwright install --with-deps chromium firefox webkit
 npm run marketing:test:browser
 ```
 
-The browser suite serves the production build on an ephemeral loopback port. It validates stable completion at desktop, laptop, tablet and 390 px mobile widths, interruption behaviour, reduced motion, no-JavaScript fallback, fixed central source geometry, the beam exit beyond the final letter, refresh replay, static history restoration and absence of horizontal overflow.
+The browser suite serves the local production build and checks desktop, tablet and mobile completion, static fallbacks, always-visible copy, interruptions, central-source geometry, beam exit, history/refresh behaviour, mobile keyboard navigation, supporting pages, form states and overflow. Report unavailable engines explicitly; do not treat Chromium results as native Safari or Samsung Internet validation.
 
-Review recordings and screenshots belong outside the repository. Do not ship the reference, QA recordings, captured frames, font-source download or runtime experiments as site assets.
+Keep review screenshots and runtime experiments outside the repository. No deployment or release permission follows from these presentation changes.

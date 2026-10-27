@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -129,7 +130,7 @@ class _InsightsPanelContent extends StatelessWidget {
             Text(
               'Decided: ${_formatDateTime(insights.decidedAt)}',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: LythSemanticColors.text,
               ),
             ),
           ],
@@ -144,7 +145,7 @@ class _InsightsPanelContent extends StatelessWidget {
         'Config v${insights.configVersion}',
         style: Theme.of(context).textTheme.bodySmall,
       ),
-      backgroundColor: Colors.grey[200],
+      backgroundColor: LythSemanticColors.surface,
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
     );
@@ -168,7 +169,7 @@ class _InsightsPanelContent extends StatelessWidget {
             '(${_formatDateTime(insights.appeal.updatedAt!)})',
             style: Theme.of(
               context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+            ).textTheme.bodySmall?.copyWith(color: LythSemanticColors.text),
           ),
         ],
       ],
@@ -191,13 +192,13 @@ class _InsightsPanelContent extends StatelessWidget {
   Color _getAppealColor(InsightAppealStatus status) {
     switch (status) {
       case InsightAppealStatus.none:
-        return Colors.grey;
+        return LythSemanticColors.text;
       case InsightAppealStatus.pending:
-        return Colors.orange;
+        return LythSemanticColors.warning;
       case InsightAppealStatus.overturned:
-        return Colors.green;
+        return LythSemanticColors.success;
       case InsightAppealStatus.upheld:
-        return Colors.red;
+        return LythSemanticColors.danger;
     }
   }
 

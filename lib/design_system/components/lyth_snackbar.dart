@@ -139,7 +139,7 @@ class LythSnackbar {
                 label: action.label,
                 onPressed: action.onPressed,
                 textColor: textColor,
-                disabledTextColor: textColor.withValues(alpha: 0.6),
+                disabledTextColor: textColor,
               ),
       ),
     );

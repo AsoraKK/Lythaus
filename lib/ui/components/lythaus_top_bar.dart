@@ -52,7 +52,7 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
             const Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: LythBrand(height: 36),
+                child: LythBrand(variant: LythBrandVariant.symbol, height: 36),
               ),
             ),
             if (onLogoTap != null)

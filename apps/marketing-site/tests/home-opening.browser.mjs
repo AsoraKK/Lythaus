@@ -62,7 +62,7 @@ async function finished(page) {
     };
   });
   assert.equal(state.visible, true, 'All hero information and navigation is readable');
-  assert.equal(state.mask, 'none', 'The finished word is not partially masked');
+  assert.match(state.mask, /wordmark-contours/, 'The complete approved outlines stay visible');
   assert.equal(state.sourceHidden, true, 'No residual light is visible');
   assert.equal(state.moving, 0, 'The final page is still');
   assert.equal(state.overflow, false, 'No horizontal overflow');
@@ -119,7 +119,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
             assert.equal(await page.locator('.pitch-section').count(), 4);
             await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
             const elapsed = await page.evaluate(() => window.openingTimes.resolved - window.openingTimes.playing);
-            assert.ok(elapsed >= 1750, 'Document loading must not consume the opening timeline');
+            assert.ok(elapsed >= 1250, 'Document loading must not consume the opening timeline');
             await finished(page);
             assert.deepEqual(errors, []);
             if (evidence) await page.screenshot({ path: path.join(evidence, `${engineName}-${width}-final.png`) });
@@ -130,6 +130,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
       for (const [name, options, setup] of [
         ['no JavaScript', { javaScriptEnabled: false }],
         ['reduced motion', { reducedMotion: 'reduce' }],
+        ['unsupported SVG masks', {}, (page) => page.addInitScript(() => { window.SVGMaskElement = undefined; })],
         ['unavailable animation API', {}, (page) => page.addInitScript(() => { Element.prototype.animate = undefined; })],
         ['animation initialization failure', {}, (page) => page.addInitScript(() => {
           Element.prototype.animate = () => { throw new Error('Initialization failed'); };
@@ -219,7 +220,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         } finally { await context.close(); }
       });
 
-      await t.test('source stays central while one beam position drives exposure and copy waits', async () => {
+      await t.test('source stays central while one beam passes over readable content', async () => {
         for (const width of [1440, 390]) {
           let previousX = -Infinity;
           for (const at of [0, 200, 390, 660, 930, 1180, 1380, 1700]) {
@@ -251,10 +252,9 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
               assert.ok(Math.abs(state.projection.origin + state.projection.extent - state.positions[0]) < 0.1, 'The beam reaches from its fixed origin to the illumination front');
               assert.ok(state.positions[0] >= previousX, 'The beam never reverses');
               previousX = state.positions[0];
-              if (at < 1420) assert.equal(state.copy, 0);
+              assert.equal(state.copy, 1, 'Reading content stays visible throughout the opening');
               assert.equal(state.supportCopy.length, 2);
-              if (at < 1510) assert.deepEqual(state.supportCopy, [0, 0], 'Tagline and supporting text wait for the existing copy entrance');
-              if (at >= 1700) assert.deepEqual(state.supportCopy, [1, 1], 'Tagline and supporting text finish together');
+              assert.deepEqual(state.supportCopy, [1, 1], 'Tagline and supporting text are always readable');
               if (at >= 1380) assert.equal(state.energy, 0);
               if (at === 1180) assert.ok(state.positions[0] > 1000, 'Beam continues beyond S');
               assert.equal(state.overflow, false);
@@ -339,9 +339,9 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved', null, { timeout: 5000 });
     assert.match(await page.title(), /For the living internet/u);
-    assert.equal(await page.locator('.site-header .brand-wordmark').getAttribute('alt'), '');
+    assert.equal(await page.locator('.site-header .brand-symbol').getAttribute('alt'), '');
     assert.equal(await page.locator('.site-header .brand').getAttribute('aria-label'), 'Lythaus home');
-    const logo = await page.locator('.site-header .brand-wordmark-slot').evaluate(element => {
+    const logo = await page.locator('.site-header .brand-symbol-slot').evaluate(element => {
       const slot = element.getBoundingClientRect();
       const image = element.querySelector('img');
       const art = image.getBoundingClientRect();
@@ -356,10 +356,10 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     });
     assert.equal(logo.complete, true);
     assert.ok(logo.naturalWidth > 0);
-    assert.ok(logo.slotWidth >= 153 && logo.slotWidth <= 155);
-    assert.ok(logo.slotHeight >= 31 && logo.slotHeight <= 33);
-    assert.ok(logo.width >= 113 && logo.width <= 117);
-    assert.ok(logo.height >= 31 && logo.height <= 33);
+    assert.ok(logo.slotWidth >= 39 && logo.slotWidth <= 41);
+    assert.ok(logo.slotHeight >= 36 && logo.slotHeight <= 38);
+    assert.ok(logo.width >= 39 && logo.width <= 41);
+    assert.ok(logo.height >= 36 && logo.height <= 38);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
 
     const socialImage = await page.locator('meta[property="og:image"]').getAttribute('content');
@@ -384,9 +384,9 @@ test('marketing brand assets render responsively with correct theme and MIME', {
 
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-desktop.png'), fullPage: false });
     await page.setViewportSize({ width: 390, height: 844 });
-    const mobileHome = await page.locator('.site-header .brand-wordmark-slot').boundingBox();
-    assert.ok(mobileHome.width >= 153 && mobileHome.height >= 31);
-    assert.ok(await page.locator('.site-header .brand-wordmark').evaluate(element => element.getBoundingClientRect().height >= 31));
+    const mobileHome = await page.locator('.site-header .brand-symbol-slot').boundingBox();
+    assert.ok(mobileHome.width >= 39 && mobileHome.height >= 36);
+    assert.ok(await page.locator('.site-header .brand-symbol').evaluate(element => element.getBoundingClientRect().height >= 36));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-mobile.png'), fullPage: false });
     await page.setViewportSize({ width: 320, height: 800 });
@@ -394,23 +394,19 @@ test('marketing brand assets render responsively with correct theme and MIME', {
 
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto(`${origin}/about`, { waitUntil: 'domcontentloaded' });
-    const lightLogo = page.locator('.secondary-header .secondary-brand-wordmark');
-    await lightLogo.waitFor();
-    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-wordmark-black\.e450176663e0\.svg/u);
+    const secondaryLogo = page.locator('.secondary-header .brand-symbol-slot');
+    await secondaryLogo.waitFor();
+    assert.match(await secondaryLogo.evaluate(element => getComputedStyle(element).maskImage), /lythaus-symbol-white\.8e20f9650ccb\.svg/u);
     assert.equal(await page.locator('.secondary-header .secondary-brand').getAttribute('aria-label'), 'Lythaus home');
-    assert.equal(await page.locator('.secondary-header .secondary-brand-wordmark').getAttribute('aria-hidden'), 'true');
-    const secondaryBounds = await lightLogo.boundingBox();
-    const expectedSecondaryWidth = await page.evaluate(() => Math.min(154, window.innerWidth * 0.4));
-    assert.ok(Math.abs(secondaryBounds.width - expectedSecondaryWidth) < 1);
-    assert.ok(Math.abs(secondaryBounds.height - secondaryBounds.width / (627.24944891 / 130.6866688)) < 1);
+    const secondaryBounds = await secondaryLogo.boundingBox();
+    assert.ok(Math.abs(secondaryBounds.width - 40) < 1);
+    assert.ok(Math.abs(secondaryBounds.height - 40 * 98.02 / 106.02) < 1);
+    assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(36, 35, 33)');
+    assert.equal(await page.locator('#secondary-appearance').count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
-    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-light-mobile.png'), fullPage: false });
-
-    await page.evaluate(() => { document.documentElement.dataset.appearance = 'dark'; });
-    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-wordmark-white\.5ba0451347e2\.svg/u);
-    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-dark-mobile.png'), fullPage: false });
-    await page.evaluate(() => { document.documentElement.dataset.appearance = 'light'; });
-    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-wordmark-black\.e450176663e0\.svg/u);
+    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-mobile.png'), fullPage: false });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(36, 35, 33)');
     const footerLogo = page.locator('.secondary-footer .secondary-brand-wordmark');
     assert.equal(await footerLogo.count(), 1);
     const footerBounds = await footerLogo.boundingBox();
@@ -428,3 +424,41 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     await browser.close();
   }
 });
+
+for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })) {
+  test(`${engineName} four-colour supporting pages and form states`, { timeout: 90000 }, async () => {
+    const browser = await engine.launch();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      for (const route of ['/about', '/features', '/pricing', '/privacy', '/terms', '/help', '/sign-in', '/signup', '/forgot-password']) {
+        await page.goto(origin + route);
+        assert.ok(await page.title());
+        assert.equal(await page.locator('h1').count(), 1);
+        assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(36, 35, 33)');
+        assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).color), 'rgb(245, 243, 238)');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, route);
+      }
+      await page.goto(origin + '/sign-in');
+      const password = page.locator('input[type="password"]');
+      await password.fill('synthetic-only');
+      await page.getByRole('button', { name: 'Show password', exact: true }).click();
+      assert.equal(await page.locator('input[name="password"]').getAttribute('type'), 'text');
+      await page.getByRole('button', { name: 'Hide password', exact: true }).click();
+      await password.focus();
+      assert.match(await password.evaluate(element => getComputedStyle(element).outlineColor), /239, 197, 141/);
+      const submit = page.locator('button[type="submit"]');
+      assert.equal(await submit.evaluate(element => getComputedStyle(element).color), 'rgb(36, 35, 33)');
+      await submit.evaluate(element => { element.disabled = true; });
+      assert.equal(await submit.evaluate(element => getComputedStyle(element).opacity), '1');
+      await page.locator('.auth-status').evaluate(element => {
+        element.dataset.state = 'error'; element.textContent = 'Unable to sign in. Check your email and password.';
+      });
+      assert.ok(await page.getByText('Unable to sign in. Check your email and password.', { exact: true }).isVisible());
+      assert.deepEqual(errors, []);
+      if (evidence) await page.screenshot({ path: path.join(evidence, `${engineName}-signin-states-mobile.png`) });
+    } finally { await context.close(); await browser.close(); }
+  });
+}

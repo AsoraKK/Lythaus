@@ -12,6 +12,9 @@ const pageTitle = absoluteTitle ? title : title ? `${title} | Lythaus` : 'Lythau
 const siteUrl = Astro.site?.origin ?? 'https://lythaus.co';
 const canonicalUrl = `${siteUrl}${canonicalPath}`;
 const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png`;
+import tokens from '../../../../design/tokens.json';
+import BrandInkFilter from '../components/BrandInkFilter.astro';
+import '../styles/palette.css';
 import '../styles/global.css';
 import homeOpening from '../scripts/home-opening.js?raw';
 import '../styles/brand.css';
@@ -25,7 +28,7 @@ import '../styles/brand.css';
     <meta name="description" content={description} />
     {noReferrer && <meta name="referrer" content="no-referrer" />}
     {noIndex && <meta name="robots" content="noindex, nofollow, noarchive" />}
-    <meta name="theme-color" content={homePage ? '#070706' : '#090a0b'} />
+    <meta name="theme-color" content={tokens.color.dark.canvas} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/icons/lythaus-v1/favicon.116ff3e020c6.svg" />
@@ -68,9 +71,10 @@ import '../styles/brand.css';
     )}
   </head>
   <body class:list={{ 'home-page': homePage }}>
+    <BrandInkFilter />
     <header class="site-header">
       <a class="brand" href="/" aria-label="Lythaus home">
-        <span class="brand-wordmark-slot"><img class="brand-wordmark" src="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" alt="" width="470" height="131" /></span>
+        <span class="brand-symbol-slot approved-brand"><img class="brand-symbol" src="/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg" alt="" width="106.02" height="98.02" /></span>
       </a>
       <nav class="site-nav" aria-label="Main navigation">
         {homePage ? (
@@ -134,7 +138,7 @@ import '../styles/brand.css';
     ) : (
       <footer class="site-footer">
         <a class="brand footer-brand" href="/" aria-label="Lythaus home">
-          <span class="brand-wordmark-slot"><img class="brand-wordmark" src="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" alt="" width="470" height="131" /></span>
+          <span class="brand-wordmark-slot approved-brand"><img class="brand-wordmark" src="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" alt="" width="470" height="131" /></span>
         </a>
         <p>A calmer place for human ideas.</p>
         <div class="footer-links">

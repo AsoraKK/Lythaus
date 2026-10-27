@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -499,7 +500,7 @@ class _SortingOptionTile extends StatelessWidget {
     return Material(
       color: selected
           ? Theme.of(context).colorScheme.primaryContainer
-          : Colors.transparent,
+          : LythSemanticColors.clear,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,

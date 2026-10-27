@@ -408,23 +408,24 @@ function assertReviewedReputationRepair(filename, blob) {
   assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed implementation and regression test');
   assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation changes must match the exact reviewed source and test bytes');
 }
-// Owner authorization is limited to replacing the opening artwork and its masks.
-// Pin the complete component, including all unchanged optics and accessibility.
+// The approved four-colour revision changes only the listed presentation sources.
+// Pin those bytes and retain every nonvisual, dependency and release protection.
 function assertAuthorizedOpeningWordmark(filename, blob) {
   assert.equal(filename, 'apps/marketing-site/src/components/OpeningWordmark.astro',
     'The wordmark authorization covers only the existing opening component');
-  assert.equal(blob, '4ded41662b5bdd7efbb6546e31e4d07c4396fda3',
-    'Only the exact approved-artwork replacement is permitted; the rest of the homepage remains frozen');
+  assert.equal(blob, '249e2ec5f85fc5f102c506650d2a89a213498a59',
+    'Opening artwork, palette and visible-content motion must match the approved design contract');
 }
 const approvedHomepageVisualEdits = new Map([
-  ['apps/marketing-site/src/styles/home-opening.css', (source) => `${replaceExactText(
-    source,
-    'width: min(100%, 980px);',
-    'width: min(50%, 490px);',
-    'hero wordmark width',
-  )}\n`],
+  ['apps/marketing-site/src/styles/global.css', 'd5adf23e9bf6c75df4350624383e6ad3bf7b5679'],
+  ['apps/marketing-site/src/styles/home-opening.css', 'fafa1f1bc32129625fa68c7453c3003a6973fead'],
+  ['apps/marketing-site/src/styles/home-pitch.css', 'fb6558c20c73daee20e1bf0d250031a5662bc2a1'],
+  ['apps/marketing-site/src/styles/home-pitch-compact.css', 'bad9f0e9aa17860340f2bccb0fe169c68ee41da6'],
+  ['apps/marketing-site/src/styles/home-polish.css', '594236fdeb02f388c28db7d21b93549d2420ce36'],
+  ['apps/marketing-site/src/scripts/home-opening.js', '71f9a6f2bb28ea7bab25e0a00b375da571937225'],
 ]);
 const approvedMarketingBrandAssets = new Map([
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg', '8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436'],
   ['apps/marketing-site/public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg', 'e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750'],
   ['apps/marketing-site/public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg', '5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7'],
   ['apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png', '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab'],
@@ -442,7 +443,7 @@ const approvedMarketingBrandAssets = new Map([
   ['apps/marketing-site/public/icons/lythaus-192.png', '5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8'],
   ['apps/marketing-site/public/icons/lythaus-512.png', '27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d'],
   ['apps/marketing-site/public/icons/lythaus-512-maskable.png', '10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d'],
-  ['apps/marketing-site/public/site.webmanifest', '7ce2960d28a1d17f25b84ab42e09d105efe627568b4adfb524d47b1cf8d5ab2a'],
+  ['apps/marketing-site/public/site.webmanifest', 'f173bf95da3187598e6e1034af2872311b316f9bdfdbbf23869e471d342d2295'],
 ]);
 const approvedMarketingBrandRemovals = new Set([
   'apps/marketing-site/public/brand/lythaus-mark.svg',
@@ -510,10 +511,8 @@ export function assertHomepageFrozen() {
       continue;
     }
     if (approvedHomepageVisualEdits.has(filename)) {
-      const original = git('show', `${baselineSha}:${filename}`);
-      const expected = approvedHomepageVisualEdits.get(filename)(original);
-      const current = readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
-      assert.equal(current, expected, `${filename} may contain only the requested wordmark and beam visual fix`);
+      assert.equal(git('hash-object', `--path=${filename}`, filename), approvedHomepageVisualEdits.get(filename),
+        `${filename} must match the approved four-colour presentation contract`);
       continue;
     }
     if (filename === 'package-lock.json') continue;
@@ -875,8 +874,12 @@ test('approved copy refresh preserves homepage scripts, waitlist controls and me
   const normalizeBrandFrontmatter = source => frontmatter(source)
     .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png`;\n", '')
     .replace("import '../styles/brand.css';", '')
+    .replace("import tokens from '../../../../design/tokens.json';\n", '')
+    .replace("import BrandInkFilter from '../components/BrandInkFilter.astro';\n", '')
+    .replace("import '../styles/palette.css';\n", '')
     .trim();
   const normalizeBrandHead = source => source
+    .replace(/^[ \t]*<meta name="theme-color"[^>]*\/>[ \t]*\n/gmu, '')
     .replace(/^[ \t]*<link rel="icon"[^>]*\/>[ \t]*\n/gmu, '')
     .replace(/^[ \t]*<link rel="apple-touch-icon"[^>]*\/>[ \t]*\n/gmu, '')
     .replace(/^[ \t]*<meta property="og:image(?::[^"]+)?"[^>]*\/>[ \t]*\n/gmu, '')

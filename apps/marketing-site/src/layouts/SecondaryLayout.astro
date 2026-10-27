@@ -1,7 +1,10 @@
 ---
 import tokens from '../../../../design/tokens.json';
+import BrandInkFilter from '../components/BrandInkFilter.astro';
 import regularFont from '../../../../assets/fonts/Manrope-Regular.ttf?url';
 import semiboldFont from '../../../../assets/fonts/Manrope-SemiBold.ttf?url';
+import '../styles/palette.css';
+import '../styles/brand.css';
 import '../styles/secondary.css';
 
 const {
@@ -23,26 +26,18 @@ const navigation = [
   { href: '/help', label: 'Help' },
 ];
 const helpArticle = ['/privacy', '/terms', '/guidelines', '/ai-moderation', '/contact'].includes(canonicalPath);
-const cssName = (key: string) => key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-const themeCss = Object.entries(tokens.color).map(([mode, colors]) => {
-  const declarations = Object.entries(colors).map(([key, value]) => `--ds-${cssName(key)}:${value}`).join(';');
-  const explicit = `html[data-secondary][data-appearance="${mode}"]{color-scheme:${mode};${declarations}}`;
-  const automatic = `html[data-secondary]:not([data-appearance]){color-scheme:${mode};${declarations}}`;
-  return explicit + (mode === 'light' ? automatic : `@media(prefers-color-scheme:dark){${automatic}}`);
-}).join('');
 const foundationCss = `html[data-secondary]{--ds-radius-control:${tokens.radius.control}px;--ds-radius-surface:${tokens.radius.surface}px;--ds-target:${tokens.layout.webTarget}px;--ds-article-width:${tokens.layout.articleWidth}px;--ds-motion:${tokens.motion.control}ms;--ds-brand-surface:${tokens.color.dark.canvas}}`;
 const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFont}") format("truetype");font-weight:400;font-style:normal;font-display:swap}@font-face{font-family:"Lythaus Interface";src:url("${semiboldFont}") format("truetype");font-weight:600 800;font-style:normal;font-display:swap}`;
 ---
 <!doctype html>
-<html lang="en" data-secondary>
+<html lang="en" data-secondary data-appearance="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     {noReferrer && <meta name="referrer" content="no-referrer" />}
     {noIndex && <meta name="robots" content="noindex, nofollow, noarchive" />}
-    <meta name="theme-color" content={tokens.color.light.canvas} media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content={tokens.color.dark.canvas} media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={tokens.color.dark.canvas} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/icons/lythaus-v1/favicon.116ff3e020c6.svg" />
@@ -66,21 +61,14 @@ const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFo
     <meta name="twitter:image" content={socialImageUrl} />
     <meta name="twitter:image:alt" content="Lythaus wordmark" />
     <link rel="preload" as="font" type="font/ttf" href={regularFont} crossorigin />
-    <style is:inline set:html={fontCss + themeCss + foundationCss} />
-    <script is:inline>
-      (() => {
-        try {
-          const saved = localStorage.getItem('lythaus-secondary-appearance');
-          if (saved === 'light' || saved === 'dark') document.documentElement.dataset.appearance = saved;
-        } catch {}
-      })();
-    </script>
+    <style is:inline set:html={fontCss + foundationCss} />
   </head>
   <body class="secondary-page">
+    <BrandInkFilter />
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="secondary-header">
       <a class="secondary-brand" href="/" aria-label="Lythaus home">
-        <span class="secondary-brand-wordmark" aria-hidden="true"></span>
+        <span class="brand-symbol-slot approved-brand" aria-hidden="true"><img src="/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg" alt="" width="106.02" height="98.02" /></span>
       </a>
       <nav class="secondary-nav" aria-label="Main navigation">
         {navigation.map(({ href, label }) => <a href={href} aria-current={canonicalPath === href ? 'page' : undefined}>{label}</a>)}
@@ -108,31 +96,14 @@ const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFo
       <slot />
     </main>
     <footer class="secondary-footer">
-      <div class="footer-intro"><a class="secondary-brand" href="/" aria-label="Lythaus home"><span class="secondary-brand-wordmark" aria-hidden="true"></span></a><p>A calmer place for human ideas.</p></div>
+      <div class="footer-intro"><a class="secondary-brand" href="/" aria-label="Lythaus home"><span class="secondary-brand-wordmark approved-brand" aria-hidden="true"><img src="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" alt="" width="470" height="131" /></span></a><p>A calmer place for human ideas.</p></div>
       <nav aria-label="Footer navigation">
         <a href="/help">Help</a><a href="/contact">Contact</a><a href="/guidelines">Guidelines</a>
         <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/invite">Redeem invite</a>
       </nav>
-      <div class="appearance-control" hidden>
-        <label for="secondary-appearance">Appearance</label>
-        <select id="secondary-appearance"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
-      </div>
     </footer>
     <script is:inline>
       (() => {
-        const appearance = document.getElementById('secondary-appearance');
-        if (appearance instanceof HTMLSelectElement) {
-          appearance.value = document.documentElement.dataset.appearance || 'system';
-          appearance.closest('.appearance-control').hidden = false;
-          appearance.addEventListener('change', () => {
-            if (appearance.value === 'system') delete document.documentElement.dataset.appearance;
-            else document.documentElement.dataset.appearance = appearance.value;
-            try {
-              if (appearance.value === 'system') localStorage.removeItem('lythaus-secondary-appearance');
-              else localStorage.setItem('lythaus-secondary-appearance', appearance.value);
-            } catch {}
-          });
-        }
         document.querySelectorAll('.auth-form input[type="password"]').forEach((input) => {
           if (!(input instanceof HTMLInputElement)) return;
           const field = document.createElement('div');

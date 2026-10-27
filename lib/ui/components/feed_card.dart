@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -104,13 +105,13 @@ class _FeedCardState extends State<FeedCard> {
           ),
           const SizedBox(height: 10),
           Material(
-            color: Colors.transparent,
+            color: LythSemanticColors.clear,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(
                 color: _focused
                     ? theme.colorScheme.primary
-                    : Colors.transparent,
+                    : LythSemanticColors.clear,
                 width: 2,
               ),
             ),

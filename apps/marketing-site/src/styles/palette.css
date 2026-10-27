@@ -1,0 +1,33 @@
+:root {
+  color-scheme: dark;
+  --palette-canvas: #242321;
+  --palette-surface: #302E2B;
+  --palette-text: #F5F3EE;
+  --palette-accent: #EFC58D;
+  --ds-canvas: var(--palette-canvas);
+  --ds-surface: var(--palette-surface);
+  --ds-surface-raised: var(--palette-surface);
+  --ds-text: var(--palette-text);
+  --ds-secondary: var(--palette-text);
+  --ds-muted: var(--palette-text);
+  --ds-accent: var(--palette-accent);
+  --ds-on-accent: var(--palette-canvas);
+  --ds-selection: var(--palette-surface);
+  --ds-on-selection: var(--palette-accent);
+  --ds-border: var(--palette-surface);
+  --ds-control: var(--palette-text);
+  --ds-focus: var(--palette-accent);
+  --ds-danger: var(--palette-accent);
+  --ds-on-danger: var(--palette-canvas);
+  --ds-danger-surface: var(--palette-surface);
+  --ds-success: var(--palette-accent);
+  --ds-success-surface: var(--palette-surface);
+  --ds-warning: var(--palette-accent);
+  --ds-warning-surface: var(--palette-surface);
+  --ds-info: var(--palette-accent);
+  --ds-info-surface: var(--palette-surface);
+}
+::selection { color: var(--ds-on-accent); background: var(--ds-accent); }
+:where(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 4px; }
+:where(input, select, textarea) { accent-color: var(--ds-accent); caret-color: var(--ds-accent); }
+:where(button, input, select, textarea):disabled { opacity: 1; cursor: not-allowed; }

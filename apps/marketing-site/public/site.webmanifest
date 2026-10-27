@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#070706",
-  "theme_color": "#070706",
+  "background_color": "#242321",
+  "theme_color": "#242321",
   "icons": [
     {
       "src": "/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",

@@ -23,7 +23,8 @@
     const navigation = performance.getEntriesByType('navigation')[0];
     // Deliberately not gated by sessionStorage: a normal full refresh should replay the opening.
     if (reducedMotion.matches || document.hidden || location.hash ||
-        navigation?.type === 'back_forward' || !Element.prototype.animate) return;
+        navigation?.type === 'back_forward' || !Element.prototype.animate ||
+        !window.SVGMaskElement || !CSS.supports('mask-image', 'url("/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg")')) return;
 
     root.dataset.opening = 'armed';
     watchdog = window.setTimeout(resolve, 2500);
@@ -50,14 +51,13 @@
         const parameter = (name) => Number.parseFloat(style.getPropertyValue(name));
         const delay = parameter('--reveal-delay');
         const duration = parameter('--reveal-duration');
-        const copyDelay = parameter('--copy-delay');
         const intensity = parameter('--light-intensity');
         const settleDuration = parameter('--settle-duration');
         const afterlight = scene.querySelector('.wordmark-afterlight');
         const settlingDistance = 1140 * settleDuration / duration;
         afterlight.setAttribute('rx', String(settlingDistance / 2));
         afterlight.setAttribute('cx', String(-settlingDistance / 2));
-        const finishAt = copyDelay + 360;
+        const finishAt = delay + duration + settleDuration;
         const animate = (element, frames, timing) => {
           if (!element) throw new Error('Missing opening element');
           const animation = element.animate(frames, { fill: 'both', ...timing });
@@ -95,14 +95,6 @@
           { offset: 1, opacity: 0 },
         ], { duration, delay, easing: 'linear' });
 
-        const enter = (selector, at, travel = true) => animate(document.querySelector(selector), [
-          { opacity: 0, ...(travel ? { transform: 'translateY(5px)' } : {}) },
-          { opacity: 1, ...(travel ? { transform: 'translateY(0)' } : {}) },
-        ], { delay: at, duration: 180, easing: 'cubic-bezier(.2,.7,.3,1)' });
-        enter('.pitch-intro-statement', copyDelay);
-        enter('.pitch-intro-support .pitch-lede', copyDelay + 90);
-        enter('.pitch-intro-support .button', copyDelay + 165);
-        enter('.home-page .site-header', copyDelay + 165, false);
         const timelineStart = performance.now();
         animations.forEach((animation) => { animation.startTime = timelineStart; });
         root.dataset.opening = 'playing';

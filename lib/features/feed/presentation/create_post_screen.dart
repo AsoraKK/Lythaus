@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
@@ -706,7 +707,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         barrierColor:
             DialogTheme.of(context).barrierColor ??
             Theme.of(context).dialogTheme.barrierColor ??
-            Colors.black54,
+            LythSemanticColors.canvas.withValues(alpha: 0.54),
         barrierDismissible: true,
         barrierLabel: MaterialLocalizations.of(
           context,

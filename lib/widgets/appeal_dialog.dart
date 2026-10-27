@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 import 'package:lythaus/features/moderation/domain/appeal.dart';
 
@@ -84,27 +85,27 @@ class _StatusNotice extends StatelessWidget {
     final (text, color, icon) = switch (status) {
       ModerationStatus.flagged => (
         'This content has been reported and remains visible.',
-        Colors.orange,
+        LythSemanticColors.warning,
         Icons.flag_outlined,
       ),
       ModerationStatus.hidden => (
         'This content is currently blocked by moderation.',
-        Colors.red,
+        LythSemanticColors.danger,
         Icons.visibility_off,
       ),
       ModerationStatus.appealUpheld => (
         'This appeal was resolved and the content remains blocked.',
-        Colors.red,
+        LythSemanticColors.danger,
         Icons.cancel_outlined,
       ),
       ModerationStatus.appealRestored => (
         'This appeal was resolved and the content was restored.',
-        Colors.green,
+        LythSemanticColors.success,
         Icons.check_circle_outline,
       ),
       ModerationStatus.clean => (
         'This content is not currently blocked by moderation.',
-        Colors.blue,
+        LythSemanticColors.info,
         Icons.info_outline,
       ),
     };

@@ -3,6 +3,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/design_system/components/lyth_avatar.dart';
@@ -701,7 +702,7 @@ class _OwnerPostCardState extends State<_OwnerPostCard> {
                   (states) => BorderSide(
                     color: states.contains(WidgetState.focused)
                         ? theme.colorScheme.primary
-                        : Colors.transparent,
+                        : LythSemanticColors.clear,
                     width: 2,
                   ),
                 ),
