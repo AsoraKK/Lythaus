@@ -443,7 +443,7 @@ After qualification completes, use this operator-controlled sequence:
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `tfqwht9d9bt4.json` record in a same-repository
+   Commit it with the canonical `6vew80jo0epr.json` record in a same-repository
    evidence-only PR descended from the exact qualification source SHA. Preserve
    the original `zw0so7f5jbpu.json` and run-9 qualification/manual-cleanup files
    unchanged. Keep protected main at that qualified SHA through cleanup; reserve exclusive
