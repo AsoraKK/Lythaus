@@ -233,10 +233,9 @@ void main() {
       expect(json['geoScope'], 'none');
     });
 
-    test('toJson excludes deferred media', () {
+    test('toJson rejects deferred media', () {
       const r = CreatePostRequest(text: 'x', mediaUrl: 'http://img');
-      final json = r.toJson();
-      expect(json.containsKey('mediaUrls'), isFalse);
+      expect(r.toJson, throwsArgumentError);
     });
 
     test('toJson excludes null mediaUrl', () {

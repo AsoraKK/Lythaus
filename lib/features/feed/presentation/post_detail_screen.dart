@@ -9,6 +9,7 @@ import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/reactions/presentation/reaction_bar.dart';
+import 'package:lythaus/features/reactions/domain/reaction.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
@@ -394,6 +395,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     ReactionBar(
                       contentId: post.id,
                       authorUserId: post.authorId,
+                      initialSummary: ReactionSummary(
+                        myReactionType: post.viewerReaction,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TrustStripRow(
@@ -433,7 +437,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               Icons.chat_bubble_outline,
                               size: 18,
                             ),
-                            label: Text('Comments (${post.commentCount})'),
+                            label: const Text('Comments'),
                           ),
                           if (post.hasAppeal)
                             const Chip(

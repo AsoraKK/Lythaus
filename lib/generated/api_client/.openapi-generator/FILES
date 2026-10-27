@@ -96,6 +96,7 @@ doc/Comment.md
 doc/CommentCreateRequest.md
 doc/CommentDeleteResponse.md
 doc/CommentPage.md
+doc/CommentPageAllOfCapabilities.md
 doc/CommentSubmission.md
 doc/CommentUpdateRequest.md
 doc/CommentUpdateResponse.md
@@ -161,6 +162,9 @@ doc/MediaUploadBytesResponse.md
 doc/MediaUploadFinaliseResponse.md
 doc/MediaUploadSessionCreateRequest.md
 doc/MediaUploadSessionCreated.md
+doc/MediaUploadStatus.md
+doc/MediaUploadStatusPublication.md
+doc/MediaUploadStatusSafety.md
 doc/MemberDetail.md
 doc/MemberMutationResult.md
 doc/MemberProblemRequest.md
@@ -223,6 +227,7 @@ doc/Post.md
 doc/PostRevision.md
 doc/PostRevisionResponse.md
 doc/PostsApi.md
+doc/PostsCommentsList503Response.md
 doc/PostsDelete200Response.md
 doc/PostsGet200Response.md
 doc/PostsOwnerView200Response.md
@@ -434,6 +439,7 @@ lib/src/model/comment.dart
 lib/src/model/comment_create_request.dart
 lib/src/model/comment_delete_response.dart
 lib/src/model/comment_page.dart
+lib/src/model/comment_page_all_of_capabilities.dart
 lib/src/model/comment_submission.dart
 lib/src/model/comment_update_request.dart
 lib/src/model/comment_update_response.dart
@@ -495,6 +501,9 @@ lib/src/model/media_upload_bytes_response.dart
 lib/src/model/media_upload_finalise_response.dart
 lib/src/model/media_upload_session_create_request.dart
 lib/src/model/media_upload_session_created.dart
+lib/src/model/media_upload_status.dart
+lib/src/model/media_upload_status_publication.dart
+lib/src/model/media_upload_status_safety.dart
 lib/src/model/member_detail.dart
 lib/src/model/member_mutation_result.dart
 lib/src/model/member_problem_request.dart
@@ -554,6 +563,7 @@ lib/src/model/personal_feed_page.dart
 lib/src/model/post.dart
 lib/src/model/post_revision.dart
 lib/src/model/post_revision_response.dart
+lib/src/model/posts_comments_list503_response.dart
 lib/src/model/posts_delete200_response.dart
 lib/src/model/posts_get200_response.dart
 lib/src/model/posts_owner_view200_response.dart
@@ -733,6 +743,7 @@ test/bookmark_list_items_inner_test.dart
 test/bookmark_list_test.dart
 test/comment_create_request_test.dart
 test/comment_delete_response_test.dart
+test/comment_page_all_of_capabilities_test.dart
 test/comment_page_test.dart
 test/comment_submission_test.dart
 test/comment_test.dart
@@ -800,6 +811,9 @@ test/media_upload_bytes_response_test.dart
 test/media_upload_finalise_response_test.dart
 test/media_upload_session_create_request_test.dart
 test/media_upload_session_created_test.dart
+test/media_upload_status_publication_test.dart
+test/media_upload_status_safety_test.dart
+test/media_upload_status_test.dart
 test/member_detail_test.dart
 test/member_mutation_result_test.dart
 test/member_problem_request_test.dart
@@ -862,6 +876,7 @@ test/post_revision_response_test.dart
 test/post_revision_test.dart
 test/post_test.dart
 test/posts_api_test.dart
+test/posts_comments_list503_response_test.dart
 test/posts_delete200_response_test.dart
 test/posts_get200_response_test.dart
 test/posts_owner_view200_response_test.dart

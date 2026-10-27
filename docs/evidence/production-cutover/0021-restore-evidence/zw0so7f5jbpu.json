@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "lythaus-0021-restore-evidence-v1",
+  "sourceBranch": {
+    "id": "vqa2g2xc9wsl",
+    "name": "main"
+  },
+  "selectedBackupId": "zw0so7f5jbpu",
+  "selectedBackupUiTimestamp": "2026-10-25T02:33:09.321Z",
+  "restoredBranch": {
+    "id": "gnbnmpsu7r5k",
+    "name": "lythaus-0021-native-restore-check-20261022",
+    "state": "retained",
+    "createdAt": "2026-10-25T16:37:31.931Z"
+  },
+  "verificationWindow": {
+    "startedAt": "2026-10-25T16:37:15.586Z",
+    "completedAt": "2026-10-25T16:39:27.891Z"
+  },
+  "verifiedAt": "2026-10-25T16:39:27.891Z",
+  "artifactPath": "docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-40212030891.json",
+  "artifactStatus": "VERIFIED_FAILED_QUALIFICATION",
+  "evidenceSha256": "4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618",
+  "verifiedScope": [],
+  "unresolvedGates": [
+    "backup_binding",
+    "restore_completion",
+    "schema_extensions_indexes",
+    "canonical_registry",
+    "effective_runtime_privileges",
+    "application_smoke",
+    "rpo_rto_acceptance",
+    "independent_recovery_destination"
+  ],
+  "review": {
+    "reviewedAt": null,
+    "reviewedBy": null,
+    "reference": null
+  },
+  "nativeRestoreCleanup": {
+    "schemaVersion": "native-restore-cleanup-intent-v1",
+    "state": "DELETE_PENDING",
+    "qualificationSha": "9447561658c139f1e9e48cedad66b2f035661fb9",
+    "qualificationRunId": "40212030891",
+    "qualificationWorkflowId": 394786946,
+    "targetId": "gnbnmpsu7r5k",
+    "workflowId": 394840164,
+    "runNumber": 2,
+    "artifactId": 12606067757,
+    "artifactArchiveSha256": "50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a",
+    "evidenceOutcome": "FAILED"
+  },
+  "recordSha256": "01bb7bd2c39d17edcdbf12d04a3660bdbcd75782769805cac2b4c6c39b4cbf5e"
+}

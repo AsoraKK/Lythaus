@@ -1,0 +1,765 @@
+{
+  "version": 1,
+  "sourceMainSha": "8dd80c4734ac5dad57c4e7338660b4e629c58da1",
+  "runId": "40470687953",
+  "phase": "qualification",
+  "mode": "execute",
+  "status": "TARGET_CHECKS_PASSED_REVIEW_REQUIRED",
+  "state": "TARGET_RETAINED_PENDING_REVIEW",
+  "qualificationOutcome": "PASSED",
+  "startedAt": "2026-10-27T08:03:53.242Z",
+  "sourceBranchId": "vqa2g2xc9wsl",
+  "backupId": "6vew80jo0epr",
+  "targetName": "lythaus-0021-native-restore-check-20261027-01",
+  "expectedTargetProduction": true,
+  "createdTargetId": "p5953kdp72ac",
+  "providerMutations": [
+    {
+      "action": "create_fixed_restore",
+      "outcome": "ACKNOWLEDGED"
+    },
+    {
+      "action": "reset_copied_pscale_api_47syed2xlt6p",
+      "outcome": "ACKNOWLEDGED"
+    },
+    {
+      "action": "reset_copied_pscale_api_ysl604shosjg",
+      "outcome": "ACKNOWLEDGED"
+    },
+    {
+      "action": "reset_copied_pscale_api_3vzps7bu44vo",
+      "outcome": "ACKNOWLEDGED"
+    },
+    {
+      "action": "reset_copied_pscale_api_9jfbtij9y4b2",
+      "outcome": "ACKNOWLEDGED"
+    },
+    {
+      "action": "reset_copied_pscale_api_wv7rzyuejknl",
+      "outcome": "ACKNOWLEDGED"
+    }
+  ],
+  "credentialActions": [
+    {
+      "role": "pscale_api_47syed2xlt6p",
+      "targetBranchId": "p5953kdp72ac",
+      "outcome": "RESET_ACKNOWLEDGED_MEMORY_ONLY"
+    },
+    {
+      "role": "pscale_api_ysl604shosjg",
+      "targetBranchId": "p5953kdp72ac",
+      "outcome": "RESET_ACKNOWLEDGED_MEMORY_ONLY"
+    },
+    {
+      "role": "pscale_api_3vzps7bu44vo",
+      "targetBranchId": "p5953kdp72ac",
+      "outcome": "RESET_ACKNOWLEDGED_MEMORY_ONLY"
+    },
+    {
+      "role": "pscale_api_9jfbtij9y4b2",
+      "targetBranchId": "p5953kdp72ac",
+      "outcome": "RESET_ACKNOWLEDGED_MEMORY_ONLY"
+    },
+    {
+      "role": "pscale_api_wv7rzyuejknl",
+      "targetBranchId": "p5953kdp72ac",
+      "outcome": "RESET_ACKNOWLEDGED_MEMORY_ONLY"
+    }
+  ],
+  "phases": [
+    {
+      "name": "source_catalog",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:04:02.005Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:04:09.851Z"
+    },
+    {
+      "name": "build",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:04:09.852Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:04:09.998Z"
+    },
+    {
+      "name": "source_admission_catalog",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:04:17.365Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:04:24.993Z"
+    },
+    {
+      "name": "copied_roles",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:05:45.574Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:06:06.949Z"
+    },
+    {
+      "name": "extension_authority",
+      "budgetMs": 30000,
+      "startedAt": "2026-10-27T08:06:22.125Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:06:23.481Z"
+    },
+    {
+      "name": "restored_catalog",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:06:23.482Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:06:31.371Z"
+    },
+    {
+      "name": "smoke",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:07:29.114Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:07:35.516Z"
+    },
+    {
+      "name": "source_readback",
+      "budgetMs": 120000,
+      "startedAt": "2026-10-27T08:07:35.517Z",
+      "outcome": "PASSED",
+      "finishedAt": "2026-10-27T08:07:43.569Z"
+    }
+  ],
+  "productRowsRead": false,
+  "cleanup": "TARGET_RETAINED_PENDING_REVIEW",
+  "blockers": [],
+  "recoveryAcceptance": "NOT_CERTIFIED",
+  "independentRecovery": "DEFERRED_BY_OWNER_EXCEPTION",
+  "deploymentAuthorized": false,
+  "verifiedScope": [
+    "backup_binding",
+    "restore_completion",
+    "schema_extensions_indexes",
+    "canonical_registry",
+    "effective_runtime_privileges",
+    "application_smoke"
+  ],
+  "cleanupDeadlineAt": "2026-10-27T10:03:53.242Z",
+  "qualificationStopAt": "2026-10-27T08:23:53.242Z",
+  "escalationAt": "2026-10-27T08:48:53.242Z",
+  "reviewByAt": "2026-10-27T09:03:53.242Z",
+  "cleanupStartByAt": "2026-10-27T09:48:53.242Z",
+  "approvalSha256": "86b81095fdd312995dad9b5d6560d7a8a54d68777daccfea58d942662aa2ae99",
+  "approvalExpiresAt": "2026-10-27T11:45:00Z",
+  "reviewWindow": {
+    "reviewer": "AsoraKK",
+    "operator": "AsoraKK",
+    "reserved": true,
+    "availableFrom": "2026-10-27T08:00:00Z",
+    "availableUntil": "2026-10-27T11:45:00Z"
+  },
+  "retention": {
+    "operator": "AsoraKK",
+    "reference": "Sentinel_418aef654c7881918d9be59c454347ed",
+    "manualEndActionApprovalReference": "Sentinel_418aef654c7881918d9be59c454347ed:manual_decision_plan_only_separate_unprotect_or_delete_consent_required",
+    "endAction": "separately_approved_manual_decision_no_automatic_unprotect",
+    "endsAt": "2026-10-27T18:00:00Z",
+    "decisionBy": "2026-10-27T10:00:00Z",
+    "estimatedUsd": 0.05
+  },
+  "executionHistoryReconciliation": {
+    "status": "PINNED_PRIOR_EXECUTIONS_RECONCILED",
+    "workflowPath": ".github/workflows/planetscale-native-restore-check.yml",
+    "workflowId": 394786946,
+    "pinnedExecutions": [
+      {
+        "status": "PINNED_PRE_RUNNER_CANCELLATION_RECONCILED",
+        "workflowPath": ".github/workflows/planetscale-native-restore-check.yml",
+        "workflowId": 394786946,
+        "runId": "40184823787",
+        "runNumber": 7,
+        "runAttempt": 1,
+        "headSha": "43829abc3424a88a22826695bbfdc7be4a116e62",
+        "event": "workflow_dispatch",
+        "conclusion": "cancelled",
+        "jobId": 121143288424,
+        "runnerAssigned": false,
+        "stepCount": 0,
+        "approvalCount": 0,
+        "artifactCount": 0
+      },
+      {
+        "status": "PINNED_PRECREATE_FAILURE_RECONCILED",
+        "workflowPath": ".github/workflows/planetscale-native-restore-check.yml",
+        "workflowId": 394786946,
+        "runId": "40193991312",
+        "runNumber": 8,
+        "runAttempt": 1,
+        "headSha": "96ff66fa5c28c9780ce72ee23a40cd846372d6bd",
+        "event": "workflow_dispatch",
+        "conclusion": "failure",
+        "jobId": 121170799629,
+        "failedStepNumber": 6,
+        "blocker": "copied_role_metadata_invalid",
+        "artifactId": 12599287272,
+        "artifactDigest": "sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac",
+        "artifactProviderMutationCount": 0,
+        "artifactCredentialActionCount": 0,
+        "artifactTargetCreated": false,
+        "artifactState": "NO_TARGET_CREATED",
+        "artifactCount": 1
+      },
+      {
+        "status": "PINNED_MANUALLY_DELETED_FAILURE_RECONCILED",
+        "workflowPath": ".github/workflows/planetscale-native-restore-check.yml",
+        "workflowId": 394786946,
+        "runId": "40212030891",
+        "runNumber": 9,
+        "runAttempt": 1,
+        "headSha": "9447561658c139f1e9e48cedad66b2f035661fb9",
+        "event": "workflow_dispatch",
+        "conclusion": "failure",
+        "jobId": 121225106539,
+        "artifactId": 12606067757,
+        "artifactDigest": "sha256:50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a",
+        "targetId": "gnbnmpsu7r5k",
+        "qualificationSha256": "4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618",
+        "manualReceiptSha256": "eeb8e95eb43990739722bf65da07cb6b249f687828d281593529d12cc1a4bccf",
+        "cleanupMode": "MANUAL",
+        "cleanupOutcome": "TARGET_ABSENT_VERIFIED",
+        "recoveryAcceptance": "NOT_CERTIFIED",
+        "artifactProviderMutationCount": 1,
+        "artifactCredentialActionCount": 0,
+        "manualOperator": "AsoraKK"
+      },
+      {
+        "status": "PINNED_REVIEWED_CLEANUP_RECONCILED",
+        "runId": "40360605402",
+        "runNumber": 12,
+        "runAttempt": 1,
+        "headSha": "9e9759181069c3636af3ffefe1d8ec9a3de22f37",
+        "backupId": "tfqwht9d9bt4",
+        "targetName": "lythaus-0021-native-restore-check-20261026-01",
+        "targetId": "p0behfjbhkp1",
+        "qualificationOutcome": "FAILED",
+        "recoveryAcceptance": "NOT_CERTIFIED",
+        "cleanupRunId": "40371017566",
+        "cleanupWorkflowId": 394840164,
+        "consumedCleanupRunNumber": 2,
+        "cleanupOutcome": "DELETED_AND_READBACK_VERIFIED",
+        "evidenceBasis": "PINNED_ARCHIVE_DIGESTS_AND_REVIEWED_OFFLINE_PAYLOAD_HASHES",
+        "qualificationSha256": "9c04f2c72dd764d38fdf8dd0ad03ec174f4a88f1e460d4ee496e8145f373a46b",
+        "pendingSha256": "fd837b8d403feb8b45126ffc9a7954862a09a564fcf8a3be32938a0a6a705247",
+        "receiptSha256": "a181c6942c027c031c2ab10c46d1065688b93521f960ea0659bda52e955b9840"
+      }
+    ],
+    "targetReconciliation": {
+      "databaseId": "hzhe0cbn6rxi",
+      "sourceBranchId": "vqa2g2xc9wsl",
+      "backupId": "6vew80jo0epr",
+      "targetName": "lythaus-0021-native-restore-check-20261027-01",
+      "directGetReturnedNotFound": true,
+      "completeBranchInventoryExcludedTarget": true,
+      "backupRestoreHistoryExcludedTarget": true,
+      "checkedAt": "2026-10-27T08:04:17.365Z"
+    }
+  },
+  "cleanupPermit": {
+    "workflowId": 394840164,
+    "runNumber": 3
+  },
+  "authorityDiagnostic": {
+    "version": 3,
+    "databaseId": "hzhe0cbn6rxi",
+    "tokenMatchesCodeXToken": false,
+    "tokenMatchesOtherKnownToken": false,
+    "accessRowCount": 11,
+    "rowsTruncated": false,
+    "rows": [
+      {
+        "rowKind": "OBJECT",
+        "access": "connect_branch",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "connect_production_branch",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "create_branch",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "delete_branch",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "delete_production_branch",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "delete_production_branch_password",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "read_backups",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "read_branch",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "read_database",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "restore_production_branch_backup",
+        "resourceTypeKind": "DATABASE",
+        "nestedTypeKind": "DATABASE",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "DATABASE_NAME",
+        "nestedNameKind": "DATABASE_NAME",
+        "resourceIdMatchesDatabase": true,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": true,
+        "nestedNameMatchesDatabase": true,
+        "nestedNameMatchesOrganization": false,
+        "resourceNameMatchesDatabase": true,
+        "resourceNameMatchesOrganization": false,
+        "resourceTypeIsDatabase": true,
+        "resourceTypeIsOrganization": false,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      },
+      {
+        "rowKind": "OBJECT",
+        "access": "read_service_tokens",
+        "resourceTypeKind": "ORGANIZATION",
+        "nestedTypeKind": "ORGANIZATION",
+        "resourceIdKind": "STRING",
+        "nestedIdKind": "STRING",
+        "resourceNameKind": "ORGANIZATION_NAME",
+        "nestedNameKind": "ORGANIZATION_NAME",
+        "resourceIdMatchesDatabase": false,
+        "resourceIdMissing": false,
+        "resourceIdNull": false,
+        "nestedIdMatchesDatabase": false,
+        "nestedNameMatchesDatabase": false,
+        "nestedNameMatchesOrganization": true,
+        "resourceNameMatchesDatabase": false,
+        "resourceNameMatchesOrganization": true,
+        "resourceTypeIsDatabase": false,
+        "resourceTypeIsOrganization": true,
+        "resourceMissing": false,
+        "resourceNull": false,
+        "resourceKind": "OBJECT",
+        "deletedAtMissing": false,
+        "deletedAtNull": true
+      }
+    ],
+    "oauthAccessesByResource": {
+      "kind": "MISSING",
+      "groups": {
+        "organization": {
+          "kind": "MISSING",
+          "resources": {
+            "kind": "MISSING",
+            "count": null,
+            "truncated": false,
+            "rows": []
+          },
+          "accesses": {
+            "kind": "MISSING",
+            "count": null,
+            "truncated": false,
+            "rows": []
+          }
+        },
+        "database": {
+          "kind": "MISSING",
+          "resources": {
+            "kind": "MISSING",
+            "count": null,
+            "truncated": false,
+            "rows": []
+          },
+          "accesses": {
+            "kind": "MISSING",
+            "count": null,
+            "truncated": false,
+            "rows": []
+          }
+        },
+        "branch": {
+          "kind": "MISSING",
+          "resources": {
+            "kind": "MISSING",
+            "count": null,
+            "truncated": false,
+            "rows": []
+          },
+          "accesses": {
+            "kind": "MISSING",
+            "count": null,
+            "truncated": false,
+            "rows": []
+          }
+        }
+      },
+      "userKind": "MISSING",
+      "unknownGroupCount": 0
+    },
+    "grants": {
+      "status": "NOT_REQUESTED"
+    },
+    "tokenLifetime": {
+      "fieldType": "STRING",
+      "expiresAt": "2026-10-27T12:19:06.589Z",
+      "requiredThrough": "2026-10-27T10:03:53.242Z",
+      "coversRequiredWindow": true
+    },
+    "resetPermissionAdmission": {
+      "targetProduction": true,
+      "required": [
+        "connect_production_branch",
+        "delete_production_branch_password"
+      ],
+      "missing": [],
+      "verified": true
+    }
+  },
+  "backup": {
+    "id": "6vew80jo0epr",
+    "restoreMode": "SPECIFIED_BACKUP_SNAPSHOT",
+    "protected": true,
+    "completedAt": "2026-10-27T02:27:08.161Z",
+    "expiresAt": "2126-10-27T07:01:51.812Z",
+    "pvcBytes": 21474836480,
+    "logicalBytes": 53237516
+  },
+  "cost": {
+    "maximumUsd": 5,
+    "computeStorageBackupEstimateBeforeTaxUsd": 0.038604429,
+    "maximumExerciseSeconds": 7200,
+    "enforcedProviderHardCap": false,
+    "allInReviewedEstimateUsd": 3.5,
+    "cumulativeOwnerBound": {
+      "evidenceSha256": "597ed7ed6046222010a1b26d9cd98892337602bdf0d87f434759ff5a2bfd7165",
+      "priorSpendUpperBoundUsd": 0.5,
+      "priorRetentionUpperBoundUsd": 1,
+      "totalUpperBoundUsd": 5,
+      "basis": "EXPLICIT_OWNER_REVIEWED_UPPER_BOUND_NOT_PROVIDER_BILLING_VERIFICATION"
+    }
+  },
+  "sourceBaseline": {
+    "catalogSha256": "6a12666fa67f75d09dede737ac2c48b37e766df9dc44f5a3d8247210a993d9df",
+    "schemaFingerprint": "d60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0",
+    "relationCount": 103,
+    "schemaVersion": "0020_auth_recovery_delivery.sql",
+    "approvedPrivilegeChecks": 17,
+    "extensionCount": 3,
+    "extensionSpecifications": [
+      {
+        "extname": "pg_trgm",
+        "extversion": "1.6",
+        "schema": "public",
+        "owner": "postgres",
+        "extrelocatable": true
+      },
+      {
+        "extname": "pgcrypto",
+        "extversion": "1.3",
+        "schema": "public",
+        "owner": "postgres",
+        "extrelocatable": true
+      },
+      {
+        "extname": "unaccent",
+        "extversion": "1.1",
+        "schema": "public",
+        "owner": "postgres",
+        "extrelocatable": true
+      }
+    ]
+  },
+  "creation": {
+    "acknowledged": true,
+    "id": "p5953kdp72ac",
+    "name": "lythaus-0021-native-restore-check-20261027-01",
+    "createdAt": "2026-10-27T08:04:31.640Z",
+    "sourceBranchId": "vqa2g2xc9wsl",
+    "kind": "postgresql",
+    "default": false,
+    "production": true
+  },
+  "restoreReadyAt": "2026-10-27T08:05:45.574Z",
+  "roleInventoryObservations": [
+    {
+      "attempt": 1,
+      "observedAt": "2026-10-27T08:05:45.575Z",
+      "outcome": "PENDING",
+      "rowCount": 0,
+      "missing": [
+        "pscale_api_47syed2xlt6p",
+        "pscale_api_ysl604shosjg",
+        "pscale_api_3vzps7bu44vo",
+        "pscale_api_9jfbtij9y4b2",
+        "pscale_api_wv7rzyuejknl"
+      ],
+      "pending": []
+    },
+    {
+      "attempt": 2,
+      "observedAt": "2026-10-27T08:05:55.953Z",
+      "outcome": "PENDING",
+      "rowCount": 7,
+      "missing": [
+        "pscale_api_ysl604shosjg"
+      ],
+      "pending": []
+    },
+    {
+      "attempt": 3,
+      "observedAt": "2026-10-27T08:06:06.423Z",
+      "outcome": "PASSED",
+      "rowCount": 8,
+      "missing": [],
+      "pending": []
+    }
+  ],
+  "missingExtensions": [],
+  "restoredVerification": {
+    "catalogSha256": "6a12666fa67f75d09dede737ac2c48b37e766df9dc44f5a3d8247210a993d9df",
+    "schemaFingerprint": "d60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0",
+    "relationCount": 103,
+    "schemaVersion": "0020_auth_recovery_delivery.sql",
+    "approvedPrivilegeChecks": 17,
+    "extensionCount": 3,
+    "extensionSpecifications": [
+      {
+        "extname": "pg_trgm",
+        "extversion": "1.6",
+        "schema": "public",
+        "owner": "postgres",
+        "extrelocatable": true
+      },
+      {
+        "extname": "pgcrypto",
+        "extversion": "1.3",
+        "schema": "public",
+        "owner": "postgres",
+        "extrelocatable": true
+      },
+      {
+        "extname": "unaccent",
+        "extversion": "1.1",
+        "schema": "public",
+        "owner": "postgres",
+        "extrelocatable": true
+      }
+    ]
+  },
+  "applicationSmoke": {
+    "services": 3,
+    "databaseBindings": 5,
+    "distinctRoles": 4,
+    "readOnlyDatabaseIdentity": true,
+    "isolatedHyperdriveRuntimeGroups": 2,
+    "externalHttpRequests": 0,
+    "readyForProductionAuthentication": false
+  },
+  "verifiedAt": "2026-10-27T08:07:43.570Z",
+  "measuredRestoreSeconds": 113,
+  "credentialReferencesDiscarded": true,
+  "costEscalationRequired": false,
+  "finishedAt": "2026-10-27T08:07:43.570Z"
+}

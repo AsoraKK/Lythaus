@@ -126,7 +126,7 @@ void main() {
         expect(item.authorId, 'synthetic-owner');
         expect(item.author, 'Owner');
         expect(item.body, 'Unresolved synthetic appeal');
-        expect(item.title, 'Headline');
+        expect(item.title, '');
         expect(item.publishedAt, DateTime.utc(2026, 10, 2));
         expect(item.contentType, ContentType.image);
         expect(item.imageUrl, 'https://example.invalid/first.png');
@@ -155,7 +155,7 @@ void main() {
     });
   }
 
-  test('absent and empty media retain text and view-specific fallbacks', () {
+  test('absent and empty media retain text without fabricated titles', () {
     for (final media in [null, <String>[]]) {
       final input = domain.Post.fromJson({'id': 'minimal', 'mediaUrls': media});
       for (final fallback in ['Update', 'Result']) {
@@ -168,7 +168,7 @@ void main() {
         expect(item.imageUrl, isNull);
         expect(item.sourceName, isNull);
         expect(item.sourceUrl, isNull);
-        expect(item.title, fallback);
+        expect(item.title, '');
         expect(item.tags, isEmpty);
         expect(item.isNews, isFalse);
         expect(item.isPinned, isFalse);

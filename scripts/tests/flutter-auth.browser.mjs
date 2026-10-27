@@ -124,7 +124,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
       await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
       if(width<700){
         await page.getByLabel(/Reputation New, new, active/).waitFor();
-        await page.getByLabel(/^Monthly level pending/).waitFor();
+        await page.getByLabel(/^Monthly level unavailable/).waitFor();
       }
       await page.getByRole('button',{name:'Open settings',exact:true}).waitFor();
       await page.getByRole('button',{name:'Open settings',exact:true}).click();
@@ -140,6 +140,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     await page.getByRole('button',{name:'Forgot password?',exact:true}).click();
     await page.waitForURL('https://lythaus.co/forgot-password');
     await openApp();
+    await page.getByText('Verification & invites',{exact:true}).click();
     await page.getByRole('button',{name:'Resend verification email',exact:true}).click();
     await page.waitForURL('https://lythaus.co/resend-verification');
     await openApp();

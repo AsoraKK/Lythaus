@@ -11,13 +11,14 @@ import 'package:lythaus/ui/screens/profile/reputation_ledger_screen.dart';
 /// outcomes are shown in account activity, and a new appeal starts only from
 /// an eligible resolved moderation case.
 class AppealHistoryScreen extends StatelessWidget {
-  const AppealHistoryScreen({super.key});
+  const AppealHistoryScreen({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     return ReadingPane(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Appeals')),
+        appBar: embedded ? null : AppBar(title: const Text('Appeals')),
         body: Center(
           child: SingleChildScrollView(
             child: Padding(

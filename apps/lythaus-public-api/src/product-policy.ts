@@ -13,6 +13,13 @@ export interface CustomFeedRule {
   regionCode?: string;
 }
 
+export function assertTextOnlyPostInput(input: unknown): void {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('invalid_post');
+  if (Object.keys(input).some(key => !['body', 'declaredCreationMode', 'geoScope', 'placeId'].includes(key))) {
+    throw new Error('unsupported_content_type');
+  }
+}
+
 export function normalizeCustomFeedRules(input: unknown): readonly CustomFeedRule[] {
   if (!Array.isArray(input) || input.length > 20) throw new Error('invalid_custom_feed_rules');
   return input.map((item) => {

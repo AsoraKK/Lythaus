@@ -92,6 +92,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await field.press('ControlOrMeta+A'); await field.press('Backspace');
       await field.pressSequentially(value, { delay: 20 });
+      assert.equal(await field.inputValue(), value);
     }
     await open('/settings/privacy?section=data');
     await button('Continue as guest').click();
@@ -101,7 +102,9 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
     await button('Sign in with email').waitFor();
     assert.equal(new URL(page.url()).searchParams.get('returnTo'), '/settings/privacy?section=data');
     await enterText(page.getByRole('textbox', { name: 'Email', exact: true }), user.email);
-    const password = page.locator('input[type=password]'); await enterText(password, 'historical12'); await password.press('Enter');
+    const password = page.locator('input[type=password]'); await enterText(password, 'historical12');
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await password.press('Enter');
     await text('Export completed. Download while the secure export remains available.').waitFor();
     assert.ok(calls.filter(c => c.path.startsWith('/api/privacy')).every(c => c.authenticated));
     const downloaded = page.waitForEvent('download'); await button('Download export').click();

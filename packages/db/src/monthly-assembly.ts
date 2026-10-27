@@ -72,9 +72,9 @@ async function assembleCanonicalMonthlyReputation(client: Client, input: Assembl
   if (previous && (!previous.evidence_digest || previous.rules_version !== maintenance.rules.version
     || previous.weekly_rules_version !== weekly.rules.version)) throw new Error('monthly_assembly_previous_policy_requires_review');
   const periods = proposedClosingSundayWeeks(input.sourceMonth);
-  const peer = input.peerRulesVersion ? await requireMonthlyPeerIngestionDrained(client, { subjectUserId: input.subjectUserId,
+  const peer = await requireMonthlyPeerIngestionDrained(client, { subjectUserId: input.subjectUserId,
     peerRulesVersion: input.peerRulesVersion, weeklyRulesVersion: input.weeklyRulesVersion,
-    startsAt: periods[0].startsAt, endsAt: periods.at(-1)!.endsAt }) : null;
+    startsAt: periods[0].startsAt, endsAt: periods.at(-1)!.endsAt });
   const previousPeerVersion = previous?.report && typeof previous.report === 'object'
     ? (previous.report as { peerRulesVersion?: string | null }).peerRulesVersion ?? null : null;
   if (previous && previousPeerVersion !== (peer?.version ?? null)) throw new Error('monthly_assembly_previous_policy_requires_review');

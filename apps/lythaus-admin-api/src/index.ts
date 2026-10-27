@@ -666,6 +666,7 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
             authorId: moderationCase.subject_user_id,
             postId: moderationCase.post_id,
             parentId: moderationCase.parent_id,
+            ...(moderationCase.content_type === 'comment' ? { sourceEventId: moderationCase.source_event_id, decisionId } : {}),
             declaredCreationMode: moderationCase.declared_creation_mode,
             reasonCode: input.reasonCode,
           })],

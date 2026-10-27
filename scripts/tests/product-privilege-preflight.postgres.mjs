@@ -51,6 +51,10 @@ test('PG17 catalog probes distinguish exact column, inherited, schema and RLS ri
     assert.ok(snapshot.missingPrivileges.some(item => item.object === 'editorial' && item.privilege === 'USAGE'));
     assert.ok(snapshot.missingPrivileges.some(item => item.object === 'trust.reward_redemptions' && item.privilege === 'INSERT'));
     assert.ok(snapshot.missingPrivileges.every(item => item.scope === 'proposed_additional'));
+    const initialPublications = snapshot.objects.find(item => item.object === 'editorial.publications').aclSnapshot;
+    assert.ok(initialPublications.every(item => item.aclIsNull && item.entries.length === 0));
+    assert.ok(initialPublications.every(item => item.owner === identity && Number.isInteger(item.ownerOid)));
+    assert.equal(snapshot.objects.filter(item => item.aclSnapshot).length, 2);
     const retention = (await client.query(`SELECT
       has_column_privilege($1, 'trust.user_activity_events', 'retention_until', 'SELECT') AS readable,
       has_column_privilege($1, 'trust.user_activity_events', 'retention_until', 'INSERT') AS insertable`, [runtimeRole])).rows[0];
@@ -60,6 +64,13 @@ test('PG17 catalog probes distinguish exact column, inherited, schema and RLS ri
     await client.query(`GRANT SELECT (id,user_id,reward_id,reward_level,reward_title,redeemed_at,status) ON trust.reward_redemptions TO ${quote(inheritedRole)}`);
     await client.query(`GRANT ${quote(inheritedRole)} TO ${quote(runtimeRole)}`);
     await client.query(`GRANT INSERT (id,user_id,reward_id,reward_level,reward_title) ON trust.reward_redemptions TO ${quote(runtimeRole)}`);
+    await client.query(`GRANT SELECT (id) ON trust.reward_redemptions TO ${quote(inheritedRole)} WITH GRANT OPTION`);
+    await client.query(`GRANT USAGE ON SCHEMA trust TO ${quote(inheritedRole)}`);
+    await client.query(`SET ROLE ${quote(inheritedRole)}`);
+    try { await client.query(`GRANT SELECT (id) ON trust.reward_redemptions TO ${quote(runtimeRole)}`); }
+    finally { await client.query('RESET ROLE'); }
+    await client.query(`REVOKE ALL ON editorial.publications FROM ${quote(identity)}`);
+    await client.query('GRANT REFERENCES (id) ON editorial.publications TO PUBLIC');
     await client.query(`GRANT SELECT (id,title,post_id,published_at) ON editorial.publications TO ${quote(runtimeRole)}`);
     snapshot = await inspect();
     assert.deepEqual(snapshot.missingPrivileges, []);
@@ -70,6 +81,22 @@ test('PG17 catalog probes distinguish exact column, inherited, schema and RLS ri
     assert.equal(rewards.tablePrivileges.UPDATE, false);
     assert.equal(rewards.tablePrivileges.DELETE, false);
     assert.ok(rewards.columns.every(item => item.permitted));
+    const rewardIdAcl = rewards.aclSnapshot.find(item => item.column === 'id');
+    assert.ok(rewardIdAcl.entries.some(entry => entry.grantor === identity && entry.grantee === inheritedRole
+      && entry.privilege === 'SELECT' && entry.isGrantable));
+    assert.ok(rewardIdAcl.entries.some(entry => entry.grantor === inheritedRole && entry.grantee === runtimeRole
+      && entry.privilege === 'SELECT' && !entry.isGrantable));
+    const publicationAcl = snapshot.objects.find(item => item.object === 'editorial.publications').aclSnapshot;
+    assert.ok(publicationAcl.find(item => item.kind === 'schema').entries.some(entry => entry.grantee === runtimeRole
+      && entry.grantor === identity && entry.privilege === 'USAGE' && !entry.isGrantable));
+    assert.deepEqual(publicationAcl.find(item => item.kind === 'table').entries, []);
+    assert.equal(publicationAcl.find(item => item.kind === 'table').aclIsNull, false);
+    assert.ok(publicationAcl.find(item => item.column === 'id').entries.some(entry => entry.granteeOid === 0
+      && entry.grantee === 'PUBLIC' && entry.grantor === identity && entry.privilege === 'REFERENCES' && !entry.isGrantable));
+    assert.equal(publicationAcl.find(item => item.column === 'id').objectOid,
+      publicationAcl.find(item => item.kind === 'table').objectOid);
+    assert.ok(publicationAcl.filter(item => item.kind === 'column').every(item => Number.isInteger(item.attributeNumber)));
+    assert.ok(snapshot.objects.filter(item => item.scope === 'existing_prerequisite').every(item => !('aclSnapshot' in item)));
     assert.equal(snapshot.functions[0].permitted, true);
     await client.query('ALTER TABLE trust.reward_redemptions ENABLE ROW LEVEL SECURITY');
     snapshot = await inspect();

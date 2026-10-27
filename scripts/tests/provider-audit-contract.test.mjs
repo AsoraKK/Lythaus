@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { test } from 'node:test';
 import { join, resolve } from 'node:path';
+import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const read = (file) => readFileSync(resolve(root, file), 'utf8');
@@ -55,7 +56,8 @@ test('Cloudflare inventory cannot pass as empty when provider evidence is incomp
 test('PlanetScale contract audit is read-only and delegates exact post-0021 verification', () => {
   assert.match(planetscaleContractAudit, /verify-planetscale-production-schema\.mjs/);
   assert.match(planetscaleContractAudit, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'/);
-  assert.match(planetscaleContractAudit, /\[releaseRequirementKey\]: true/);
+  assert.match(planetscaleContractAudit, /\[releaseRequirementKey\]: false/);
+  assert.match(planetscaleContractAudit, /report\[releaseRequirementKey\] = report\.verifierPassed/);
   assert.match(planetscaleContractAudit, /releaseLabel/);
   assert.match(planetscaleContractAudit, /BEGIN READ ONLY/);
   assert.match(planetscaleContractAudit, /SHOW transaction_read_only/);
@@ -75,6 +77,8 @@ test('canonical production release requires the exact post-0021 schema identity'
   assert.match(productionReleaseWorkflow, /Observed post-0021 relation count:/);
   assert.match(productionReleaseWorkflow, /EXPECTED_DATABASE_SCHEMA_FINGERPRINT/);
   assert.match(productionReleaseWorkflow, /EXPECTED_DATABASE_RELATION_COUNT/);
+  assert.match(productionReleaseWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
+  assert.match(productionReleaseWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
   assert.doesNotMatch(productionReleaseWorkflow, /post0016Required|Observed post-0016/);
 });
 
@@ -84,13 +88,179 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
   assert.doesNotMatch(planetscaleAccountAudit, /Bearer.*token/);
   assert.match(planetscaleWorkflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL/);
   assert.match(planetscaleWorkflow, /PSCALE_ROLE_IDENTIFIERS/);
-  assert.match(planetscaleWorkflow, /PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
-  assert.match(planetscaleWorkflow, /PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
+  assert.match(planetscaleWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
+  assert.match(planetscaleWorkflow, /vars\.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
   assert.match(planetscaleWorkflow, /audit-production-contract\.mjs/);
   assert.match(planetscaleWorkflow, /post0021Required/);
   assert.match(planetscaleWorkflow, /\.post0021Required == true/);
   assert.match(planetscaleWorkflow, /No provider mutation or DDL is performed/);
   assert.doesNotMatch(planetscaleWorkflow, /--request\s+(?:POST|PUT|PATCH|DELETE)/i);
+});
+
+test('actual audit wrapper preserves strict certification while emitting sanitized baseline and failure evidence', (t) => {
+  const directory = mkdtempSync(join(os.tmpdir(), 'lythaus-account-audit-baseline-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const canonical = canonicalReleaseSchemaContract({ root, committedOnly: true });
+  const pgModule = createRequire(import.meta.url).resolve('pg');
+  const calls = join(directory, 'calls.jsonl');
+  const output = join(directory, 'contract.json');
+  const fixturePath = join(directory, 'fixture.mjs');
+  const verifierLog = join(directory, 'verifier.log');
+  const invalidRows = {
+    unknown: { version: '9999_fixture-private-marker.sql', checksum: 'fixture-private-marker' },
+    null: null,
+    string: 'fixture-private-marker',
+    number: 42,
+    array: ['fixture-private-marker'],
+    types: { version: { value: 'fixture-private-marker' }, checksum: false },
+    null_fields: { version: null, checksum: null },
+    missing: {},
+    checksum: { version: canonical.migrations[0].version, checksum: 'fixture-private-marker' },
+  };
+  const fixture = [
+    "import fs from 'node:fs';",
+    "import assert from 'node:assert/strict';",
+    "import cp from 'node:child_process';",
+    "import { syncBuiltinESMExports } from 'node:module';",
+    "import { mock } from 'node:test';",
+    'const calls = ' + JSON.stringify(calls) + ';',
+    'const complete = process.env.AUDIT_FIXTURE_COMPLETE === "true";',
+    'const registry = ' + JSON.stringify(canonical.migrations) + ';',
+    'if (!complete) registry.pop();',
+    'const invalidRows = ' + JSON.stringify(invalidRows) + ';',
+    'const malformed = process.env.AUDIT_FIXTURE_MALFORMED ?? "";',
+    'if (Object.hasOwn(invalidRows, malformed)) registry.push(invalidRows[malformed]);',
+    'const relations = ' + JSON.stringify(canonical.relations) + ';',
+    'const spawn = cp.spawnSync;',
+    'cp.spawnSync = (command, args, options) => { const result = spawn(command, ["--experimental-test-module-mocks", "--import", ' + JSON.stringify(fixturePath) + ', ...args], options); fs.writeFileSync(' + JSON.stringify(verifierLog) + ', String(result.stderr ?? "")); return result; };',
+    'syncBuiltinESMExports();',
+    "const record = (operation) => fs.appendFileSync(calls, JSON.stringify({ program: process.argv[1], operation }) + '\\n');",
+    'mock.module(' + JSON.stringify(pgModule) + ', { defaultExport: { Client: class {',
+    "  async connect() { record('connect'); if (process.env.AUDIT_FIXTURE_CONNECT_FAIL === 'true') throw Object.assign(new Error('fixture-private-marker'), { code: '28P01' }); }",
+    '  async end() {}',
+    '  async query(sql) {',
+    '    record(sql);',
+    "    const statement = sql.replace(/^\\s*\\/\\*[\\s\\S]*?\\*\\/\\s*/, '');",
+    "    assert.ok(/^(BEGIN READ ONLY|SHOW|SELECT|WITH|ROLLBACK)/.test(statement));",
+    "    if (sql === 'SHOW transaction_read_only') return { rows: [{ transaction_read_only: 'on' }] };",
+    "    if (sql === 'SHOW server_version') return { rows: [{ server_version: '17.6' }] };",
+    "    if (sql === 'SELECT version, checksum FROM system.schema_migrations ORDER BY version') {",
+    "      if (process.env.AUDIT_FIXTURE_QUERY_FAIL === 'true') throw Object.assign(new Error('fixture-private-marker'), { code: '42501' });",
+    '      if (malformed === "rows_null") return { rows: null, rowCount: 1 };',
+    '      if (malformed === "rows_object") return { rows: { value: "fixture-private-marker" }, rowCount: 1 };',
+    '      return { rows: registry, rowCount: malformed === "reported_count" ? "fixture-private-marker" : registry.length };',
+    '    }',
+    "    if (sql.includes('SELECT table_type, table_schema, table_name FROM information_schema.tables')) return { rows: relations, rowCount: relations.length };",
+    "    if (sql.includes('SELECT table_type, table_schema, table_name\\n')) return { rows: relations, rowCount: relations.length };",
+    "    if (sql.includes('COUNT(DISTINCT grantee)')) return { rows: [{ role_count: 4 }] };",
+    "    if (sql.includes('FROM information_schema.role_table_grants')) return { rows: [{ privilege_type: 'SELECT', grant_count: 1 }] };",
+    "    if (sql.includes('migration-artifact:') || /\\bAS present\\b/.test(sql) || sql.includes('SELECT EXISTS') || sql.includes(\"to_regclass('marketing.waitlist_signups')\") || sql.includes('has_schema_privilege($1')) {",
+    "      const row = Object.fromEntries([...sql.matchAll(/\\bAS\\s+([a-z_][a-z0-9_]*)/g)].map(match => [match[1], true]));",
+    "      if ('index_build_is_active' in row) row.index_build_is_active = false;",
+    "      for (const name of ['runtime_admin_memberships_insert','runtime_user_entitlements_insert','runtime_select','admin_select_hmac','admin_update_ciphertext','admin_verification_token_hash_select','admin_reset_token_hash_select','admin_acceptance_context_select','privacy_select_ciphertext','jobs_verification_hash_select','jobs_reset_hash_select']) if (name in row) row[name] = false;",
+    '      return { rows: [row] };',
+    '    }',
+    '    return { rows: [] };',
+    '  }',
+    '} } });',
+  ].join('\n');
+  writeFileSync(fixturePath, fixture);
+  const staleFingerprint = 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0';
+  const cases = [
+    { fingerprint: staleFingerprint },
+    { fingerprint: canonical.fingerprint },
+    { fingerprint: staleFingerprint, connectionFails: true },
+    { fingerprint: canonical.fingerprint, complete: true },
+    { fingerprint: staleFingerprint, complete: true },
+    { fingerprint: staleFingerprint, queryFails: true },
+    ...Object.keys(invalidRows).map(malformed => ({ fingerprint: staleFingerprint, malformed })),
+    ...['rows_null', 'rows_object', 'reported_count'].map(malformed => ({ fingerprint: staleFingerprint, malformed })),
+    { fingerprint: canonical.fingerprint, complete: true, malformed: 'checksum' },
+  ];
+  for (const scenario of cases) {
+    const { fingerprint, connectionFails = false, complete = false, queryFails = false, malformed = '' } = scenario;
+    writeFileSync(calls, '');
+    const result = spawnSync(process.execPath, [
+      '--experimental-test-module-mocks', '--import', fixturePath, 'scripts/planetscale/audit-production-contract.mjs',
+    ], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 10000,
+      env: auditTestEnvironment({
+        PLANETSCALE_SCHEMA_READ_DATABASE_URL: 'postgresql://schema@fixture.invalid/postgres?sslmode=verify-full',
+        PLANETSCALE_CONTRACT_AUDIT_OUTPUT: output,
+        EXPECTED_DATABASE_SCHEMA_FINGERPRINT: fingerprint,
+        EXPECTED_DATABASE_RELATION_COUNT: '103',
+        PSCALE_ROLE_IDENTIFIERS: JSON.stringify({ lythaus_runtime: 'pscale_api_fixturepublic', lythaus_admin: 'pscale_api_fixtureadmin', lythaus_privacy: 'pscale_api_fixtureprivacy', lythaus_jobs: 'pscale_api_fixturejobs' }),
+        AUDIT_FIXTURE_CONNECT_FAIL: String(connectionFails),
+        AUDIT_FIXTURE_COMPLETE: String(complete),
+        AUDIT_FIXTURE_QUERY_FAIL: String(queryFails),
+        AUDIT_FIXTURE_MALFORMED: malformed,
+      }),
+    });
+    const passed = fingerprint === canonical.fingerprint && complete && !connectionFails && !queryFails && !malformed;
+    assert.equal(result.status, passed ? 0 : 1, JSON.stringify(scenario) + '\n' + result.stderr + '\n' + readFileSync(verifierLog, 'utf8'));
+    const report = JSON.parse(readFileSync(output, 'utf8'));
+    assert.equal(report.verifierPassed, passed);
+    assert.equal(report.post0021Required, passed);
+    assert.equal(report.evidenceClass, passed ? 'RELEASE_CONTRACT' : 'BASELINE_ONLY_NOT_RELEASE_EVIDENCE');
+    assert.equal(report.releaseIdentity.configured.fingerprint, fingerprint);
+    assert.equal(report.releaseIdentity.required.fingerprint, canonical.fingerprint);
+    assert.equal(report.releaseIdentity.configuredMatchesRequired, fingerprint === canonical.fingerprint);
+    assert.equal(report.verifierDiagnostic.reason, fingerprint === staleFingerprint
+      ? 'configured_release_identity_mismatch' : passed ? null : 'production_schema_verifier_failed');
+    const operations = readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse);
+    if (fingerprint === staleFingerprint) {
+      assert.ok(operations.every(row => row.program.endsWith('audit-production-contract.mjs')),
+        'stale identity must reject before the verifier connects; only the separate baseline connects');
+    }
+    if (connectionFails || queryFails || malformed === 'rows_null' || malformed === 'rows_object') {
+      assert.deepEqual(report.baselineFailure, { phase: connectionFails ? 'connect' : 'catalog',
+        code: connectionFails ? '28P01' : queryFails ? '42501' : 'AUDIT_REGISTRY_ROWS_INVALID' });
+      assert.equal(report.baselineStatus, 'UNKNOWN/BLOCKED');
+      assert.equal(report.transactionReadOnly, !connectionFails);
+      assert.equal(report.migrationLedger, undefined);
+    } else {
+      assert.equal(report.baselineStatus, malformed ? 'CAPTURED_WITH_INVALID_REGISTRY' : 'CAPTURED');
+      assert.equal(report.transactionReadOnly, true);
+      const invalidEntry = Object.hasOwn(invalidRows, malformed);
+      assert.equal(report.migrationLedger.count, (complete ? 22 : 21) + Number(invalidEntry));
+      assert.equal(report.migrationLedger.expectedReleaseCount, 22);
+      assert.equal(report.migrationLedger.last, invalidEntry ? malformed === 'checksum' ? canonical.migrations[0].version : null
+        : complete ? '0021_media_quarantine_cleanup.sql' : '0020_auth_recovery_delivery.sql');
+      assert.equal(report.migrationLedger.invalidEntryCount, Number(invalidEntry));
+      assert.equal(report.migrationLedger.allEntriesApproved, !invalidEntry);
+      assert.equal(report.migrationLedger.rowsComplete, malformed !== 'reported_count');
+      assert.equal(report.migrationLedger.matchesRequiredReleaseRegistry, complete && !malformed);
+      assert.equal(report.observedSchema.fingerprint, malformed ? null : complete ? canonical.fingerprint : staleFingerprint);
+      assert.equal(report.observedSchema.matchesRequiredIdentity, complete && !malformed);
+      if (malformed) assert.equal(report.migrationLedger.ledgerSha256, null);
+      if (invalidEntry) {
+        assert.deepEqual(report.migrationLedger.entries.at(-1), {
+          version: malformed === 'checksum' ? canonical.migrations[0].version : null, checksum: null,
+        });
+        const diagnostic = report.migrationLedger.entryDiagnostics.at(-1);
+        assert.equal(diagnostic.versionRecognized, malformed === 'checksum');
+        assert.equal(diagnostic.checksumMatchesApproved, false);
+        const kinds = {
+          unknown: ['OBJECT', 'STRING', 'STRING'], null: ['NULL', 'MISSING', 'MISSING'],
+          string: ['STRING', 'MISSING', 'MISSING'], number: ['NUMBER', 'MISSING', 'MISSING'],
+          array: ['ARRAY', 'MISSING', 'MISSING'], types: ['OBJECT', 'OBJECT', 'BOOLEAN'],
+          null_fields: ['OBJECT', 'NULL', 'NULL'], missing: ['OBJECT', 'MISSING', 'MISSING'],
+          checksum: ['OBJECT', 'STRING', 'STRING'],
+        };
+        assert.deepEqual([diagnostic.rowKind, diagnostic.versionKind, diagnostic.checksumKind], kinds[malformed]);
+      }
+      assert.ok(operations.some(row => row.operation === 'BEGIN READ ONLY'));
+      assert.ok(operations.some(row => row.operation === 'ROLLBACK'));
+    }
+    if (passed) assert.ok(report.verifierOutput.some(line => line.includes('Observed post-0021 schema fingerprint: ' + canonical.fingerprint)));
+    else assert.deepEqual(report.verifierOutput, []);
+    for (const text of [readFileSync(output, 'utf8'), result.stdout, result.stderr]) {
+      assert.ok(!text.includes('fixture-private-marker'));
+      assert.ok(!text.includes('postgresql://'));
+    }
+  }
 });
 
 test('PlanetScale account audit sends the service-token pair without a scheme or logging it', (t) => {

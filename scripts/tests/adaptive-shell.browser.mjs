@@ -65,6 +65,7 @@ try {
           (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) &&
           editor.isConnected && !editor.disabled && !editor.readOnly;
       });
+      await waitForTwoFrames(page);
       await page.keyboard.insertText('Synthetic unfinished draft');
       await page.waitForFunction(() => JSON.parse(window.lythausNavigationSnapshot()).text === 'Synthetic unfinished draft');
       for (const key of ['ControlOrMeta+Home', 'ArrowRight', 'ArrowRight', ...Array(7).fill('Shift+ArrowRight')]) {

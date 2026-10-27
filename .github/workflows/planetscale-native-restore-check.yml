@@ -1,0 +1,105 @@
+name: Fixed native restore qualification
+run-name: Native restore ${{ inputs.execute && 'execute' || 'plan' }} ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed current protected main commit
+        required: true
+        type: string
+      execute:
+        description: Restore and target-only qualification; retains target for separate reviewed cleanup
+        required: true
+        default: false
+        type: boolean
+      approval_json:
+        description: Exact owner approval packet from the restore runner runbook; no secrets
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lythaus-fixed-native-restore-qualification
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    name: Qualify isolated native restore without cleanup
+    runs-on: ubuntu-latest
+    timeout-minutes: 36
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      RESTORE_CHECK_EXECUTE: ${{ inputs.execute }}
+      RESTORE_CHECK_APPROVAL_JSON: ${{ inputs.approval_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        timeout-minutes: 1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Require exact protected main before loading dependencies or credentials
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$GITHUB_REPOSITORY_ID" = 1010752912
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          printf 'EVIDENCE_DIR=%s/native-restore-check\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        timeout-minutes: 1
+        with:
+          node-version: 22
+          cache: npm
+      - name: Require complete approval and pinned backup window before dependency setup
+        if: inputs.execute
+        timeout-minutes: 1
+        run: node scripts/ci/planetscale-native-restore-admission.mjs
+      - run: npm ci --ignore-scripts --no-audit
+        timeout-minutes: 4
+      - name: Run fixed-target runner using only existing protected access
+        timeout-minutes: 22
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLANETSCALE_RESTORE_API_TOKEN: ${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+        run: node scripts/ci/planetscale-native-restore-check.mjs
+      - name: Finalize immutable qualification evidence without provider access
+        if: always()
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          if [[ -s "$EVIDENCE_DIR/checkpoint.json" ]]; then
+            node scripts/ci/planetscale-native-restore-check.mjs --finalize-only
+          fi
+      - name: Summarize retained target and review deadlines
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          report="$EVIDENCE_DIR/qualification.json"
+          if [[ -s "$report" ]]; then
+            jq '{sourceMainSha,status,state,qualificationOutcome,blockers,backupId,targetName,createdTargetId,cleanup,qualificationStopAt,escalationAt,reviewByAt,cleanupStartByAt,cleanupDeadlineAt,costEscalationRequired,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload immutable qualification evidence
+        id: qualification_artifact
+        if: always()
+        timeout-minutes: 2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-restore-qualification-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-restore-check/qualification.json
+          retention-days: 7
+          if-no-files-found: error

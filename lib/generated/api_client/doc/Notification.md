@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **id** | **String** |  |
 **notificationType** | **String** |  |
 **entityId** | **String** |  | [optional]
+**deeplink** | **String** | Current first-party post/comment destination for a visible comment notification. | [optional]
 **title** | **String** |  |
 **readAt** | [**DateTime**](DateTime.md) |  | [optional]
 **createdAt** | [**DateTime**](DateTime.md) |  |

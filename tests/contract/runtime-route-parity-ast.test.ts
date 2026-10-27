@@ -369,10 +369,11 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 129, admin: 65 });
+    expect(routeCounts).toEqual({ public: 130, admin: 65 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'PUT /media/uploads/{param}/bytes',
+      'GET /media/uploads/{param}',
       'GET /users/me/posts',
       'GET /users/me/comments',
       'GET /analytics/activity-consent',

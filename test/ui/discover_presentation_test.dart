@@ -280,8 +280,16 @@ void main() {
         onLoadMore: () => loads++,
       ),
     );
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    final loadMore = find.text('Load more posts');
+    await tester.ensureVisible(loadMore);
+    for (
+      var i = 0;
+      i < 20 && !Focus.of(tester.element(loadMore)).hasFocus;
+      i++
+    ) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(loads, 1);

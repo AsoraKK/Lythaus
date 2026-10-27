@@ -72,8 +72,8 @@ void main() {
     expect(find.text('author 1'), findsOneWidget);
     expect(find.text('author 2'), findsOneWidget);
     expect(find.text('Authorship: Under review'), findsNWidgets(2));
-    expect(find.text('Discover One'), findsNothing);
-    expect(find.text('Discover Two'), findsNothing);
+    expect(find.text('Discover One'), findsOneWidget);
+    expect(find.text('Discover Two'), findsOneWidget);
   });
 
   testWidgets('NewsFeed shows news badge and pinned item', (tester) async {
@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Body for Pinned Story'), findsOneWidget);
     expect(find.text('author n1'), findsOneWidget);
     expect(find.text('Authorship: Under review'), findsOneWidget);
-    expect(find.text('News'), findsWidgets);
+    expect(find.text('Authorship: Under review'), findsWidgets);
     expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
   });
 }

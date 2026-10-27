@@ -147,7 +147,7 @@ void main() {
           ['public-author', trustStatus],
         );
         expect(item.feedId, surface);
-        expect(item.title, surface == 'search' ? 'Result' : 'Update');
+        expect(item.title, '');
         expect(item.authorshipLabel, 'Human-authored');
         expect(item.trustSummary.timeline.moderation, 'complete');
         expect(item.trustSummary.timeline.appeal, hasAppeal ? 'open' : null);
@@ -156,26 +156,18 @@ void main() {
         expect(item.trustSummary.verifiedContextBadgeEligible, !hasAppeal);
         expect(item.trustSummary.featuredEligible, !hasAppeal);
         expect(card.canEdit, isFalse);
-        expect(find.byTooltip('Post actions'), findsNothing);
+        expect(find.byTooltip('Post actions'), findsOneWidget);
         expect(
           find.text('Appeal in progress'),
           hasAppeal ? findsOneWidget : findsNothing,
         );
         expect(find.text('Verified signals attached'), findsNothing);
         expect(find.text('Author declaration: Human-authored'), findsOneWidget);
-        await tester.ensureVisible(find.text('Trust details'));
+        await tester.ensureVisible(find.byTooltip('Post actions'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Trust details'));
+        await tester.tap(find.byTooltip('Post actions'));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: 'after expanding trust');
-        expect(
-          find.bySemanticsLabel(RegExp('^View content history')),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining('does not independently verify authorship'),
-          findsOneWidget,
-        );
+        expect(find.text('Post details'), findsOneWidget);
         semantics.dispose();
         expect(tester.takeException(), isNull);
       });

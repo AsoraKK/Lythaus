@@ -281,6 +281,7 @@ class AuthService {
       }
       return user;
     } on AuthFailure catch (error) {
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       if (!error.invalidSession) rethrow;
       if (await refreshSession()) {
         if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
@@ -301,8 +302,12 @@ class AuthService {
             }
             return user;
           } on AuthFailure catch (error) {
+            if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
             if (!error.invalidSession) rethrow;
             // Fall through to local sign-out.
+          } catch (_) {
+            if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
+            rethrow;
           }
         }
       }
@@ -310,6 +315,7 @@ class AuthService {
       await logout();
       return null;
     } catch (_) {
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       throw AuthFailure.networkError(
         'Unable to check your session. Check your connection and try again.',
       );
@@ -532,12 +538,16 @@ class AuthService {
   }
 
   Future<bool> validateAndRefreshToken() async {
+    final epoch = _sessionEpoch;
+    final ownerRevision = _sessionOwnerRevision;
     final token = await getJwtToken();
+    if (!_ownsCurrentSession(epoch, ownerRevision)) return false;
     if (token == null) return _useWebSession ? refreshSession() : false;
     try {
       await _fetchCurrentUser(token);
-      return true;
+      return _ownsCurrentSession(epoch, ownerRevision);
     } on AuthFailure catch (error) {
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return false;
       if (!error.invalidSession) rethrow;
       return refreshSession();
     } catch (_) {

@@ -102,6 +102,7 @@ import 'package:lythaus_api_client/src/model/comment.dart';
 import 'package:lythaus_api_client/src/model/comment_create_request.dart';
 import 'package:lythaus_api_client/src/model/comment_delete_response.dart';
 import 'package:lythaus_api_client/src/model/comment_page.dart';
+import 'package:lythaus_api_client/src/model/comment_page_all_of_capabilities.dart';
 import 'package:lythaus_api_client/src/model/comment_submission.dart';
 import 'package:lythaus_api_client/src/model/comment_update_request.dart';
 import 'package:lythaus_api_client/src/model/comment_update_response.dart';
@@ -162,6 +163,9 @@ import 'package:lythaus_api_client/src/model/media_upload_bytes_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
+import 'package:lythaus_api_client/src/model/media_upload_status.dart';
+import 'package:lythaus_api_client/src/model/media_upload_status_publication.dart';
+import 'package:lythaus_api_client/src/model/media_upload_status_safety.dart';
 import 'package:lythaus_api_client/src/model/member_detail.dart';
 import 'package:lythaus_api_client/src/model/member_mutation_result.dart';
 import 'package:lythaus_api_client/src/model/member_problem_request.dart';
@@ -221,6 +225,7 @@ import 'package:lythaus_api_client/src/model/personal_feed_page.dart';
 import 'package:lythaus_api_client/src/model/post.dart';
 import 'package:lythaus_api_client/src/model/post_revision.dart';
 import 'package:lythaus_api_client/src/model/post_revision_response.dart';
+import 'package:lythaus_api_client/src/model/posts_comments_list503_response.dart';
 import 'package:lythaus_api_client/src/model/posts_delete200_response.dart';
 import 'package:lythaus_api_client/src/model/posts_get200_response.dart';
 import 'package:lythaus_api_client/src/model/posts_owner_view200_response.dart';
@@ -397,6 +402,7 @@ part 'serializers.g.dart';
   CommentCreateRequest,
   CommentDeleteResponse,
   CommentPage,
+  CommentPageAllOfCapabilities,
   CommentSubmission,
   CommentUpdateRequest,
   CommentUpdateResponse,
@@ -457,6 +463,9 @@ part 'serializers.g.dart';
   MediaUploadFinaliseResponse,
   MediaUploadSessionCreateRequest,
   MediaUploadSessionCreated,
+  MediaUploadStatus,
+  MediaUploadStatusPublication,
+  MediaUploadStatusSafety,
   MemberDetail,
   MemberMutationResult,
   MemberProblemRequest,
@@ -516,6 +525,7 @@ part 'serializers.g.dart';
   Post,
   PostRevision,
   PostRevisionResponse,
+  PostsCommentsList503Response,
   PostsDelete200Response,
   PostsGet200Response,
   PostsOwnerView200Response,

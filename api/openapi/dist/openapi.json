@@ -3009,6 +3009,65 @@
         }
       }
     },
+    "/media/uploads/{uploadSessionId}": {
+      "get": {
+        "operationId": "mediaUploadsGetStatus",
+        "summary": "Read private upload processing status",
+        "description": "Owner-only, no-store status. Completed integrity processing remains private review; safety and authenticity have not run and publication is not allowed.",
+        "tags": [
+          "Media"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uploadSessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private processing status; never a publication grant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Uploads disabled, session absent or session unavailable to this owner.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/media/uploads/{uploadSessionId}/bytes": {
       "put": {
         "operationId": "mediaUploadsPutBytes",
@@ -6624,7 +6683,7 @@
       "get": {
         "operationId": "postsCommentsList",
         "summary": "List publicly visible comments",
-        "description": "Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.",
+        "description": "Only allowed comments with currently eligible posts and ancestors are returned.\nAnonymous callers may read public posts; members receive relationship filtering.\nThe conversations view pages top-level comments, newest by default. A conversationId\npages its replies chronologically, preserving immediate parentId links at every level\nwhile visual depth stays capped at one. Deleted allowed ancestors remain tombstones;\nhidden or blocked ancestors withhold their descendants. Cursors bind the post, sort,\nview, conversation and microsecond snapshot. Refresh starts a new root snapshot;\nrefresh=true with a reply tail cursor explicitly checks for newer replies.\nMost relevant is unavailable until trusted comment usefulness signals are validated.\n",
         "tags": [
           "Posts"
         ],
@@ -6649,6 +6708,72 @@
           },
           {
             "$ref": "#/components/parameters/limit100"
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "conversations"
+              ]
+            },
+            "description": "Omit for the legacy flat chronological list."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "most_relevant"
+              ]
+            },
+            "description": "Sort top-level conversations. Replies remain chronological. Most relevant returns 503."
+          },
+          {
+            "name": "conversationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor."
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId."
+          },
+          {
+            "name": "revalidateIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 3699
+            },
+            "description": "Comma-separated cached root/reply UUIDs, at most 100 per request. Requires conversationId. Include the canonical root ID to revalidate its current body/tombstone and visible reply count independently of the tail cursor."
+          },
+          {
+            "name": "revalidationOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId."
           }
         ],
         "responses": {
@@ -6664,12 +6789,36 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "The parent post or requested conversation is unavailable. Missing and inaccessible parents share this response."
+          },
+          "503": {
+            "description": "The requested relevance sort is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "comment_sort_unavailable"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
       "post": {
         "operationId": "postsCommentsCreate",
-        "summary": "Submit a comment or one-level reply",
+        "summary": "Submit a comment or linked reply",
         "description": "A submission is recorded as under review; it is not immediately published to public comment listings.",
         "tags": [
           "Posts"
@@ -15701,6 +15850,96 @@
           }
         }
       },
+      "MediaUploadStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uploadSessionId",
+          "status",
+          "expiresAt",
+          "processingComplete",
+          "safety",
+          "authenticity",
+          "publication",
+          "private"
+        ],
+        "properties": {
+          "uploadSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "review",
+              "rejected",
+              "expired",
+              "cancelled"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "processingComplete": {
+            "type": "boolean",
+            "description": "Integrity processing only; never a safety or authenticity decision."
+          },
+          "safety": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "not_run"
+                ]
+              }
+            }
+          },
+          "authenticity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "not_run"
+                ]
+              }
+            }
+          },
+          "publication": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "allowed"
+            ],
+            "properties": {
+              "allowed": {
+                "type": "boolean",
+                "enum": [
+                  false
+                ]
+              }
+            }
+          },
+          "private": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
       "MediaUploadBytesResponse": {
         "type": "object",
         "required": [
@@ -16817,6 +17056,11 @@
             "format": "uuid",
             "nullable": true
           },
+          "deeplink": {
+            "type": "string",
+            "nullable": true,
+            "description": "Current first-party post/comment destination for a visible comment notification."
+          },
           "title": {
             "type": "string"
           },
@@ -17208,6 +17452,10 @@
             "format": "uuid",
             "nullable": true
           },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "depth": {
             "type": "integer",
             "enum": [
@@ -17297,6 +17545,24 @@
             "format": "uuid",
             "nullable": true
           },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Canonical top-level comment for this conversation."
+          },
+          "replyCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Visible non-deleted descendant replies for a root conversation at the page snapshot. Includes nested replies; excludes hidden and pending contributions. Reply rows report zero."
+          },
+          "replyToAuthorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "replyToDeleted": {
+            "type": "boolean"
+          },
           "body": {
             "type": "string",
             "nullable": true
@@ -17338,6 +17604,48 @@
               "items"
             ],
             "properties": {
+              "refreshCursor": {
+                "type": "string",
+                "nullable": true,
+                "description": "Reply tail cursor for an explicit check for new replies."
+              },
+              "revalidatedItems": {
+                "type": "array",
+                "description": "Authoritative current rows for the requested cached root/reply IDs. Missing IDs are unavailable; tombstones have no body. Canonical roots include their current visible reply count. Only the signed-in author's eligible pending body may be returned privately.",
+                "items": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "conversations": {
+                    "type": "boolean"
+                  },
+                  "nestedReplies": {
+                    "type": "boolean"
+                  },
+                  "sorts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "newest",
+                        "oldest"
+                      ]
+                    }
+                  },
+                  "mostRelevantAvailable": {
+                    "type": "boolean",
+                    "enum": [
+                      false
+                    ]
+                  },
+                  "mostRelevantUnavailableReason": {
+                    "type": "string"
+                  }
+                }
+              },
               "items": {
                 "type": "array",
                 "items": {

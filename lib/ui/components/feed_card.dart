@@ -1,17 +1,13 @@
 // ignore_for_file: public_member_api_docs
-
 import 'package:flutter/material.dart';
-import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:intl/intl.dart';
-
-import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:lythaus/state/models/feed_models.dart';
-import 'package:lythaus/ui/components/trust_strip_row.dart';
-import 'package:lythaus/ui/components/receipt_drawer.dart';
-import 'package:lythaus/ui/components/authorship_disclosure.dart';
 import 'package:lythaus/ui/components/author_profile_link.dart';
+import 'package:lythaus/ui/components/authorship_disclosure.dart';
+import 'package:lythaus/ui/components/receipt_drawer.dart';
 
-class FeedCard extends StatelessWidget {
+class FeedCard extends StatefulWidget {
   const FeedCard({
     super.key,
     required this.item,
@@ -19,303 +15,264 @@ class FeedCard extends StatelessWidget {
     this.showSource = true,
     this.canEdit = false,
     this.onEdit,
+    this.saveAction,
+    this.actions,
   });
-
   final FeedItem item;
   final VoidCallback? onTap;
   final bool showSource;
   final bool canEdit;
   final VoidCallback? onEdit;
+  final Widget? saveAction;
+  final Widget? actions;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final spacing = context.spacing;
-    final authorLabel = publicAuthorLabel(item.author, authorId: item.authorId);
-    final sourceLabel = publicAuthorLabel(
-      item.sourceName,
-      authorId: item.authorId,
-    );
-    final headline = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w700,
-    );
-    final body = theme.textTheme.bodyLarge;
-
-    final author = item.authorId?.trim().isNotEmpty == true
-        ? AuthorProfileLink(
-            userId: item.authorId!,
-            label: authorLabel,
-            textStyle: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          )
-        : Text(authorLabel, style: theme.textTheme.titleSmall);
-    final date = Tooltip(
-      message: DateFormat.yMMMd().add_jm().format(item.publishedAt.toLocal()),
-      child: Text(
-        DateFormat.yMMMd().format(item.publishedAt.toLocal()),
-        style: theme.textTheme.bodySmall,
-      ),
-    );
-
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: spacing.md,
-        vertical: spacing.xs,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _FeedEntrySurface(
-            onTap: onTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (item.isPinned)
-                      Padding(
-                        padding: EdgeInsets.only(right: spacing.xs),
-                        child: Icon(
-                          Icons.push_pin_outlined,
-                          size: 16,
-                          color: theme.colorScheme.secondary,
-                        ),
-                      ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final stacked =
-                                  MediaQuery.textScalerOf(context).scale(14) >
-                                      18 ||
-                                  constraints.maxWidth < 260;
-                              if (stacked) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [author, date],
-                                );
-                              }
-                              return Row(
-                                children: [
-                                  Expanded(child: author),
-                                  SizedBox(width: spacing.sm),
-                                  date,
-                                ],
-                              );
-                            },
-                          ),
-                          if (showSource &&
-                              sourceLabel != authorLabel &&
-                              sourceLabel != 'Lythaus member')
-                            Wrap(
-                              spacing: spacing.xs,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(
-                                  'Source: $sourceLabel',
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                                if (item.sourceUrl?.isNotEmpty ?? false)
-                                  Icon(
-                                    Icons.link,
-                                    size: 16,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (canEdit && onEdit != null)
-                      PopupMenuButton<String>(
-                        tooltip: 'Post actions',
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            onEdit!.call();
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Text('Edit post'),
-                          ),
-                        ],
-                        icon: const Icon(Icons.more_vert, size: 18),
-                      ),
-                  ],
-                ),
-                if (item.isNews && item.title.isNotEmpty) ...[
-                  SizedBox(height: spacing.sm),
-                  Text(item.title, style: headline),
-                ],
-                if (item.imageUrl != null || item.videoThumbnailUrl != null)
-                  Padding(
-                    padding: EdgeInsets.only(top: spacing.sm),
-                    child: _MediaPreview(
-                      imageUrl: item.imageUrl ?? item.videoThumbnailUrl!,
-                      isVideo: item.videoThumbnailUrl != null,
-                    ),
-                  ),
-                if (item.body.isNotEmpty) ...[
-                  SizedBox(height: spacing.sm),
-                  Text(item.body, style: body),
-                ],
-                SizedBox(height: spacing.sm),
-                TrustStripRow(
-                  key: ValueKey('trust-${item.id}'),
-                  summary: item.trustSummary,
-                  onTap: () => ReceiptDrawer.show(context, item.id),
-                  compact: true,
-                  leading: AuthorshipDisclosure(
-                    label: item.authorshipLabel,
-                    classificationSource: item.classificationSource,
-                    classificationState: item.classificationState,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<FeedCard> createState() => _FeedCardState();
 }
 
-class _FeedEntrySurface extends StatefulWidget {
-  const _FeedEntrySurface({required this.child, required this.onTap});
-
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  State<_FeedEntrySurface> createState() => _FeedEntrySurfaceState();
-}
-
-class _FeedEntrySurfaceState extends State<_FeedEntrySurface> {
-  final _focusNode = FocusNode();
+class _FeedCardState extends State<FeedCard> {
+  bool _expanded = false;
   bool _focused = false;
 
   @override
-  void initState() {
-    super.initState();
-    _focusNode.addListener(_updateFocus);
-  }
-
-  void _updateFocus() {
-    final focused = _focusNode.hasPrimaryFocus;
-    if (_focused != focused) setState(() => _focused = focused);
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
+  void didUpdateWidget(FeedCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.id != widget.item.id) _expanded = false;
   }
 
   @override
   Widget build(BuildContext context) {
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(context.radius.md),
-      side: BorderSide(
-        color: _focused
-            ? context.colorScheme.primary
-            : context.colorScheme.outlineVariant,
-        width: _focused ? 2 : 1,
-      ),
-    );
-
-    return Material(
-      color: context.colorScheme.surfaceContainerLow,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: widget.onTap,
-        focusNode: _focusNode,
-        customBorder: shape,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.spacing.md,
-            vertical: context.spacing.md,
+    final item = widget.item;
+    final theme = Theme.of(context);
+    final label = publicAuthorLabel(item.author, authorId: item.authorId);
+    final media = item.imageUrl ?? item.videoThumbnailUrl;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ExcludeSemantics(
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  foregroundColor: theme.colorScheme.onSurfaceVariant,
+                  child: const Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: item.authorId?.trim().isNotEmpty == true
+                    ? AuthorProfileLink(
+                        userId: item.authorId!,
+                        label: label,
+                        textStyle: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    : Text(
+                        label,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+              if (item.isPinned)
+                const Tooltip(
+                  message: 'Pinned post',
+                  child: Icon(Icons.push_pin_outlined, size: 18),
+                ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Tooltip(
+                  message: DateFormat.yMMMd().add_jm().format(
+                    item.publishedAt.toLocal(),
+                  ),
+                  child: Text(
+                    DateFormat.MMMd().add_jm().format(
+                      item.publishedAt.toLocal(),
+                    ),
+                    textAlign: TextAlign.end,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              if (widget.saveAction != null) widget.saveAction!,
+            ],
           ),
-          child: widget.child,
-        ),
+          const SizedBox(height: 10),
+          Material(
+            color: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: _focused
+                    ? theme.colorScheme.primary
+                    : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: InkWell(
+              onTap: widget.onTap,
+              onFocusChange: (focused) => setState(() => _focused = focused),
+              borderRadius: BorderRadius.circular(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (media != null && media.isNotEmpty) ...[
+                    _MediaPreview(
+                      imageUrl: media,
+                      isVideo: item.videoThumbnailUrl != null,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (item.title.trim().isNotEmpty) ...[
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        item.title,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (item.body.isNotEmpty)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final style = theme.textTheme.bodyLarge?.copyWith(
+                          height: 1.5,
+                        );
+                        final painter = TextPainter(
+                          text: TextSpan(text: item.body, style: style),
+                          maxLines: 3,
+                          textDirection: Directionality.of(context),
+                          textScaler: MediaQuery.textScalerOf(context),
+                        )..layout(maxWidth: constraints.maxWidth);
+                        final expandable = painter.didExceedMaxLines;
+                        painter.dispose();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.body,
+                              style: style,
+                              maxLines: _expanded ? null : 3,
+                              overflow: _expanded
+                                  ? null
+                                  : TextOverflow.ellipsis,
+                            ),
+                            if (expandable)
+                              TextButton(
+                                onPressed: () =>
+                                    setState(() => _expanded = !_expanded),
+                                child: Text(
+                                  _expanded ? 'Show less' : 'See more',
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          AuthorshipDisclosure(
+            label: item.authorshipLabel,
+            classificationSource: item.classificationSource,
+            classificationState: item.classificationState,
+          ),
+          if (item.trustSummary.trustStatus == 'under_appeal')
+            Text('Appeal in progress', style: theme.textTheme.bodySmall),
+          if (item.trustSummary.trustStatus == 'actioned')
+            Text('Content restricted', style: theme.textTheme.bodySmall),
+          if (item.trustSummary.timeline.moderation == 'pending_review')
+            Text('Review pending', style: theme.textTheme.bodySmall),
+          const SizedBox(height: 4),
+          widget.actions ??
+              Align(
+                alignment: Alignment.centerRight,
+                child: PopupMenuButton<String>(
+                  tooltip: 'Post actions',
+                  onSelected: (action) {
+                    if (action == 'details') {
+                      ReceiptDrawer.show(context, item.id);
+                    }
+                    if (action == 'edit') widget.onEdit?.call();
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'details',
+                      child: Text('Post details'),
+                    ),
+                    if (widget.showSource &&
+                        item.sourceName?.isNotEmpty == true)
+                      PopupMenuItem(
+                        enabled: false,
+                        child: Text('Source: ${item.sourceName}'),
+                      ),
+                    if (widget.canEdit && widget.onEdit != null)
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit post'),
+                      ),
+                  ],
+                  icon: const Icon(Icons.more_horiz),
+                ),
+              ),
+          const SizedBox(height: 8),
+          Divider(color: theme.colorScheme.outlineVariant),
+        ],
       ),
     );
   }
 }
 
 class _MediaPreview extends StatelessWidget {
-  const _MediaPreview({required this.imageUrl, this.isVideo = false});
-
+  const _MediaPreview({required this.imageUrl, required this.isVideo});
   final String imageUrl;
   final bool isVideo;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final spacing = context.spacing;
-    final scheme = context.colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(context.radius.lg),
-      child: Stack(
-        children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.4,
-                ),
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.broken_image_outlined,
-                      color: scheme.onSurfaceVariant,
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(20),
+    child: Stack(
+      children: [
+        AspectRatio(
+          aspectRatio: 4 / 3,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            semanticLabel: isVideo ? 'Post video preview' : 'Post image',
+            loadingBuilder: (context, child, progress) => progress == null
+                ? child
+                : const Center(
+                    child: CircularProgressIndicator(
+                      semanticsLabel: 'Loading post image',
                     ),
-                    const SizedBox(height: 8),
-                    const Text('Media unavailable'),
-                  ],
-                ),
-              ),
+                  ),
+            errorBuilder: (_, __, ___) => ColoredBox(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Center(child: Text('Media unavailable')),
             ),
           ),
-          if (isVideo)
-            Positioned(
-              right: spacing.sm,
-              bottom: spacing.sm,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: spacing.sm,
-                  vertical: spacing.xs / 2,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.onSurface.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(context.radius.pill),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.play_arrow, size: 16, color: scheme.surface),
-                    SizedBox(width: spacing.xs),
-                    Text(
-                      'Preview',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: scheme.surface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+        ),
+        if (isVideo)
+          const Positioned(
+            right: 12,
+            bottom: 12,
+            child: Chip(
+              avatar: Icon(Icons.videocam_outlined, size: 18),
+              label: Text('Preview'),
             ),
-        ],
-      ),
-    );
-  }
+          ),
+      ],
+    ),
+  );
 }

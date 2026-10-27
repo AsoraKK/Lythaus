@@ -1,9 +1,11 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/features/feed/application/feed_actions_service.dart';
+import 'package:lythaus/features/feed/application/feed_read_session.dart';
 
-import 'package:lythaus/features/reactions/application/reaction_providers.dart';
 import 'package:lythaus/features/reactions/domain/reaction.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +69,17 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
   // ── actions ────────────────────────────────────────────────────────────────
 
   Future<void> _handleReaction(ReactionType type) async {
-    if (_submitting) return;
+    if (_submitting ||
+        ref.read(pendingFeedActionsProvider).containsKey(widget.contentId)) {
+      return;
+    }
+    final session = ref.read(feedReadSessionProvider);
+    if (!session.isAuthenticated) return;
+    final useful = ref.read(confirmedUsefulProvider.notifier);
+    final pending = ref.read(pendingFeedActionsProvider.notifier);
+    final postId = widget.contentId;
+    final service = ref.read(feedActionsServiceProvider);
+    pending.state = {...pending.state, postId: 'useful:busy'};
     setState(() => _submitting = true);
 
     // Optimistic update
@@ -87,18 +99,32 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
     });
 
     try {
-      final request = previous == type.apiValue
-          ? ref.read(deleteReactionProvider(widget.contentId).future)
-          : ref.read(
-              submitReactionProvider(
-                SubmitReactionRequest(
-                  postId: widget.contentId,
-                  reactionType: type.apiValue,
-                ),
-              ).future,
-            );
-      await request.timeout(const Duration(seconds: 10));
-    } catch (_) {
+      final token = await session.readToken();
+      session.requireCurrent();
+      await service.reaction(
+        postId,
+        previous == type.apiValue ? null : type.apiValue,
+        token!,
+      );
+      if (session.isCurrent) {
+        useful.state = {
+          ...useful.state,
+          postId: previous != type.apiValue && type.apiValue == 'insightful',
+        };
+        pending.state = {...pending.state}..remove(postId);
+      }
+    } catch (error) {
+      if (session.isCurrent) {
+        final status = error is DioException
+            ? error.response?.statusCode
+            : null;
+        final denied =
+            status != null && status >= 400 && status < 500 && status != 409;
+        pending.state = denied
+            ? ({...pending.state}..remove(postId))
+            : {...pending.state, postId: 'useful'};
+      }
+      if (!mounted) return;
       // Revert optimistic update on error
       setState(() {
         if (previous == type.apiValue) {
@@ -129,6 +155,10 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
     final colorScheme = Theme.of(context).colorScheme;
     final selectedColor = colorScheme.primary;
     final defaultColor = colorScheme.onSurfaceVariant;
+    final blocked = ref
+        .watch(pendingFeedActionsProvider)
+        .containsKey(widget.contentId);
+    final signedIn = ref.watch(feedReadSessionProvider).isAuthenticated;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,13 +175,22 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
                 selected: _isSelected(type),
                 selectedColor: selectedColor,
                 defaultColor: defaultColor,
-                onTap: _submitting ? null : () => _handleReaction(type),
+                onTap: _submitting || blocked || !signedIn
+                    ? null
+                    : () => _handleReaction(type),
               ),
             ),
           ],
         ),
 
-        // ── Negative reactions row (collapsible) ──────────────────────────
+        if (!signedIn) const Text('Sign in to react to this contribution.'),
+        if (blocked)
+          Semantics(
+            liveRegion: true,
+            child: const Text(
+              'A change is pending or unconfirmed. Return to the feed to check its current state before reacting again.',
+            ),
+          ),
       ],
     );
   }

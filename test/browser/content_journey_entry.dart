@@ -17,6 +17,7 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
+import 'package:lythaus/features/feed/application/feed_actions_service.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
@@ -128,6 +129,9 @@ void main() {
           return actor == 'guest' ? null : 'synthetic-$actor';
         }),
         secureDioProvider.overrideWithValue(dio),
+        // This content/history fixture does not exercise private saved-post reads.
+        // The feed redesign fixture covers the canonical bookmark API separately.
+        feedBookmarksProvider.overrideWith((ref) async => <String>{}),
         postRepositoryProvider.overrideWithValue(PostRepositoryImpl(dio)),
         analyticsClientProvider.overrideWithValue(const NullAnalyticsClient()),
         settingsProvider.overrideWith((ref) => SettingsController()),

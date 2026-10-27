@@ -1,3 +1,6 @@
+import { readCommentThread, commentThreadErrorStatus } from './comment-thread-reader.ts';
+import { commentReplyTargetQuery, nestedReplyDepth } from '../../../packages/db/src/comment-visibility.ts';
+import { commentNotificationVisibilitySql } from '../../../packages/db/src/comment-notifications.ts';
 import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, validateTurnstileResponse, type ActivityCategory, type ActivityEventType, type CreatePostInput, type ReputationEffect, type UserTier } from '@lythaus/contracts';
@@ -22,7 +25,8 @@ import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation,
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireFeedPostId, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, requirePrivacyExportRequestId, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
-import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { assertTextOnlyPostInput, encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { readStandardMediaStatus } from './standard-media-status.ts';
 import {
   enforcePostTagLimit,
   normalizeTagSearchQuery,
@@ -1247,9 +1251,10 @@ async function idempotentMutation(
 }
 
 async function createPost(request: Request, env: Env, user: Principal): Promise<Response> {
-  await enforceDailyAction(env, user.userId, 'post');
   const input = await readJson<CreatePostInput>(request, 64 * 1024);
+  assertTextOnlyPostInput(input);
   const declaration = enforceContentDeclaration(input);
+  await enforceDailyAction(env, user.userId, 'post');
   const tagSearchMaintenanceEnabled = env.TAG_SEARCH_INDEX_MAINTENANCE_ENABLED === 'true';
   const maxDistinctTags = tagSearchMaintenanceEnabled
     ? TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST
@@ -1375,6 +1380,11 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     maxBytes: MAX_IMAGE_BYTES,
     checksumSha256,
   }, { status: 201 });
+}
+
+async function uploadSessionStatus(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
+  const status = await readStandardMediaStatus(env.DB_APP_FRESH, user.userId, sessionId);
+  return privateResponse(request, env, status ?? { error: 'not_found' }, { status: status ? 200 : 404 });
 }
 
 async function uploadSessionBytes(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
@@ -2047,22 +2057,8 @@ async function createComment(request: Request, env: Env, user: Principal, postId
   await transaction(env.DB_APP_FRESH, async (client) => {
     await visiblePostForInteraction(client, postId, user.userId);
     if (comment.isReply) {
-      const parent = await client.query<{ depth: number }>(
-        `SELECT parent.depth FROM content.comments parent
-          WHERE parent.id = $1 AND parent.post_id = $2
-            AND parent.deleted_at IS NULL AND parent.moderation_state = 'allowed'
-            AND NOT EXISTS (
-              SELECT 1 FROM social.blocks block
-               WHERE (block.blocker_id = $3 AND block.blocked_id = parent.author_id)
-                  OR (block.blocker_id = parent.author_id AND block.blocked_id = $3)
-            )
-            AND NOT EXISTS (
-              SELECT 1 FROM social.mutes mute
-               WHERE mute.muter_id = $3 AND mute.muted_id = parent.author_id
-            )`,
-        [comment.parentId, postId, user.userId],
-      );
-      depth = replyDepth(parent.rows[0]);
+      const parent = await client.query<{ depth: number }>(commentReplyTargetQuery, [comment.parentId, postId, user.userId]);
+      depth = nestedReplyDepth(parent.rows[0]);
     }
     await client.query(`INSERT INTO content.comments (id, post_id, author_id, parent_id, body, depth, declared_creation_mode, moderation_source_event_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [commentId, postId, user.userId, comment.parentId, declaration.body, depth, declaration.declaredCreationMode, sourceEventId]);
     await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'content.comment.created', 'comment', $2, $3, $4::jsonb)`, [sourceEventId, commentId, user.userId, JSON.stringify({ postId, commentId, parentId: comment.parentId, sourceEventId, declaredCreationMode: declaration.declaredCreationMode, bodyHash })]);
@@ -3036,6 +3032,10 @@ async function notifications(request: Request, env: Env, user: Principal): Promi
   const [result, unread] = await Promise.all([
     query<{ id: string; createdAt: string }>(env.DB_APP_FRESH,
       `SELECT id, notification_type AS "notificationType", entity_id AS "entityId",
+              CASE WHEN notification_type IN ('reply', 'content.reply_received', 'content.comment_received')
+                THEN (SELECT '/post/' || comment.post_id::text || '?commentId=' || comment.id::text
+                        FROM content.comments comment WHERE comment.id = feed.notifications.entity_id)
+              END AS deeplink,
               CASE notification_type
                 WHEN 'reply' THEN 'New reply'
                 WHEN 'content.reply_received' THEN 'New reply'
@@ -3060,13 +3060,13 @@ async function notifications(request: Request, env: Env, user: Principal): Promi
               END AS title,
               read_at AS "readAt", created_at AS "createdAt"
          FROM feed.notifications
-        WHERE recipient_id = $1 AND dismissed_at IS NULL
+        WHERE recipient_id = $1 AND dismissed_at IS NULL AND ${commentNotificationVisibilitySql}
           AND ($2::timestamptz IS NULL OR (created_at, id) < ($2::timestamptz, $3::uuid))
         ORDER BY created_at DESC, id DESC LIMIT $4`,
       [user.userId, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]),
     query<{ count: string }>(env.DB_APP_FRESH,
       `SELECT count(*)::text AS count FROM feed.notifications
-        WHERE recipient_id = $1 AND read_at IS NULL AND dismissed_at IS NULL`, [user.userId]),
+        WHERE recipient_id = $1 AND read_at IS NULL AND dismissed_at IS NULL AND ${commentNotificationVisibilitySql}`, [user.userId]),
   ]);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);
@@ -3432,45 +3432,15 @@ async function getPost(request: Request, env: Env, postId: string, viewer?: Prin
 }
 
 async function getComments(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
-  postId = requireFeedPostId(postId);
-  const page = pageRequest(new URL(request.url), 100);
-  const result = await query<Omit<CommentFeedResponseCandidate, 'publicLabel'> & { id: string; createdAt: string; declaredCreationMode: unknown }>(env.DB_APP_FRESH,
-    `SELECT comment.id, comment.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, comment.parent_id AS "parentId",
-            CASE WHEN comment.deleted_at IS NULL THEN comment.body ELSE NULL END AS body,
-            comment.depth, comment.declared_creation_mode AS "declaredCreationMode",
-            comment.moderation_state AS "moderationState",
-            (comment.deleted_at IS NOT NULL) AS deleted, comment.created_at AS "createdAt", comment.updated_at AS "updatedAt",
-            post.visibility AS "feedPostVisibility", post.moderation_state AS "feedPostModerationState", (post.deleted_at IS NOT NULL) AS "feedPostDeleted",
-            (post.author_id = $2) AS "feedViewerIsPostAuthor",
-            EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = post.author_id) AS "feedFollowsPostAuthor",
-            EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = comment.author_id) OR (b.blocker_id = comment.author_id AND b.blocked_id = $2)) AS "feedBlockedCommentAuthor",
-            EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id) AS "feedMutedCommentAuthor"
-       FROM content.comments comment
-       JOIN content.posts post ON post.id = comment.post_id
-       JOIN identity.users post_author ON post_author.id = post.author_id AND post_author.status = 'active'
-       JOIN content.content_declarations post_declaration ON post_declaration.post_id = post.id
-       JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active'
-       ${FEED_AUTHOR_JOINS}
-      WHERE comment.post_id = $1 AND comment.moderation_state = 'allowed'
-        AND post.deleted_at IS NULL AND post.moderation_state = 'allowed'
-        AND post_declaration.public_label IN ('Human-authored', 'AI-assisted')
-        AND (post.visibility = 'public' OR post.author_id = $2 OR (post.visibility = 'followers' AND EXISTS (
-          SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = post.author_id
-        )))
-        AND ($2::uuid IS NULL OR (
-          NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = post.author_id) OR (b.blocker_id = post.author_id AND b.blocked_id = $2))
-          AND NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = comment.author_id) OR (b.blocker_id = comment.author_id AND b.blocked_id = $2))
-          AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id)
-        ))
-        AND ($3::timestamptz IS NULL OR (comment.created_at, comment.id) > ($3::timestamptz, $4::uuid))
-      ORDER BY comment.created_at ASC, comment.id ASC LIMIT $5`,
-    [postId, viewer?.userId ?? null, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
-  const candidates = result.rows.map((item) => ({ ...item, publicLabel: commentPublicLabel(item.declaredCreationMode) }));
-  assertCommentFeedResponseCandidates(candidates, viewer);
-  const hasMore = candidates.length > page.limit;
-  const items = candidates.slice(0, page.limit);
-  const tail = items.at(-1);
-  return feedResponse(request, env, { items: presentCommentFeedItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.createdAt, id: tail.id }) : null }, 'comments', Boolean(viewer));
+  try {
+    const body = await readCommentThread({ request, postId, viewerId: viewer?.userId ?? null,
+      query: (sql, values) => query(env.DB_APP_FRESH, sql, [...values]) });
+    return privateResponse(request, env, body);
+  } catch (error) {
+    const status = commentThreadErrorStatus(error);
+    if (status) return privateResponse(request, env, { error: (error as Error).message }, { status });
+    throw error;
+  }
 }
 
 async function dispatchBeta(request: Request, env: Env): Promise<Response> {
@@ -3785,7 +3755,7 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/notifications/unread-count') {
         const user = await principal(request, env);
         const result = await query<{ count: string }>(env.DB_APP_FRESH,
-          `SELECT count(*)::text AS count FROM feed.notifications WHERE recipient_id = $1 AND read_at IS NULL AND dismissed_at IS NULL`, [user.userId]);
+          `SELECT count(*)::text AS count FROM feed.notifications WHERE recipient_id = $1 AND read_at IS NULL AND dismissed_at IS NULL AND ${commentNotificationVisibilitySql}`, [user.userId]);
         const unreadCount = Number(result.rows[0]?.count ?? 0);
         return privateResponse(request, env, { count: unreadCount, unreadCount });
       }
@@ -3867,6 +3837,12 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'media.upload.create', () => createUploadSession(request, env, user));
+      }
+      const uploadStatus = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)$/);
+      if (request.method === 'GET' && uploadStatus && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
+      if (request.method === 'GET' && uploadStatus) {
+        const user = await principal(request, env);
+        return await uploadSessionStatus(request, env, user, uploadStatus[1]);
       }
       const uploadBytes = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/bytes$/);
       if (request.method === 'PUT' && uploadBytes && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });

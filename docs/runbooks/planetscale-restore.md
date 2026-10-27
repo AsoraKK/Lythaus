@@ -1,5 +1,11 @@
 # PlanetScale restore runbook
 
+The [fixed-target runner](planetscale-native-restore-runner.md) prepares the
+bounded October restore qualification. It defaults to metadata-only planning;
+execution still requires the separate exact owner packet, protected review,
+existing access and current recovery gates. It does not certify a live restore
+from mocked or local synthetic tests.
+
 This is a recovery procedure requiring a named recovery target, selected
 protected backup/PITR point, approved RPO/RTO, retention and data handling,
 additional-cost ceiling, and explicit permission for each consequential action.
@@ -7,6 +13,24 @@ The normal validation target is disposable local PostgreSQL 17 with synthetic
 data. There is only one approved hosted branch, `main`; this runbook alone
 authorizes no temporary hosted branch, restore, credential reset, export,
 configuration change or deletion.
+
+The manual `planetscale-cutover-identity-preflight.yml` workflow has a separate
+`inspection=restore-inventory` mode. After exact-source review and normal
+production approval, it uses the existing API secrets to list backups of the
+fixed source `lythaus/lythaus-core/main` and resolve the four canonical
+application role names from their existing Hyperdrive configurations. It opens
+no SQL connection, creates no credentials and changes no provider state. The
+default `identity` mode retains the existing SQL identity inspection.
+
+Inventory evidence is sanitized and retained for seven days. Pagination is
+bounded and must be complete; denied, malformed or inconsistent responses
+block collection without retry or partial success. Numeric size fields need
+unit/billing interpretation before costing. Start/completion comparisons with
+grant run `39917326612` do not prove an exact recovery point or restored grants.
+The inventory does not select/protect a backup or qualify a restore; copied
+verifier/administrator roles and actual grants still need restored-target
+verification. Keep access, extensions, spending and irreversible cleanup in
+the separate, exact-target owner approval packet before billable creation.
 
 For a failed additive 0021 migration, first classify the exact registry and
 catalog state using the [tested roll-forward contingency](planetscale-0021-cutover-preparation.md).
@@ -67,6 +91,19 @@ extensions/indexes, the canonical migration registry, effective runtime
 privileges, approved application smoke, RPO/RTO acceptance, and the independent
 recovery destination. Full-data parity is not a required scope. An unresolved
 gate keeps the plan blocked.
+
+The fixed native runner separates qualification from destructive cleanup; see
+[its evidence boundary](planetscale-native-restore-runner.md#evidence-boundary-and-separate-cleanup).
+Qualification retains the acknowledged target and immutable artifact on every
+path. A separate explicitly approved cleanup requires the canonical tracked
+record/artifact and exact human review first, even for failed qualification.
+Qualification SHA and later evidence/cleanup SHAs are bound separately; a
+data-only evidence commit may advance main without invalidating original
+ownership. Reviewed failure evidence authorizes only scoped resource cleanup,
+never recovery acceptance. This does not weaken the planner's tracked evidence,
+freshness, complete scope or normal integration gates. Backup protection needs
+a separate finite retention/end-action cost plan; no indefinite retention or
+automatic unprotect is approved by the bounded restore exercise.
 
 The 2026-10-21 owner decision permits only the
 [one-release owner-testing independent-recovery exception](planetscale-production-migrations.md#one-release-owner-testing-recovery-exception).

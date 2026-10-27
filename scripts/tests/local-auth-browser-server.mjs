@@ -22,9 +22,9 @@ export async function localAuthBrowserServer(handle) {
       if(req.aborted && error?.code === 'ECONNRESET') return;
       throw error;
     }
-    const body=Buffer.concat(chunks).toString();
+    const bodyBuffer=Buffer.concat(chunks),body=bodyBuffer.toString();
     const request={url:()=>`https://${req.headers.host}${req.url}`,method:()=>req.method,
-      allHeaders:async()=>req.headers,postData:()=>body,postDataJSON:()=>JSON.parse(body)};
+      allHeaders:async()=>req.headers,postData:()=>body,postDataBuffer:()=>Buffer.from(bodyBuffer),postDataJSON:()=>JSON.parse(body)};
     try {
       await handle({request:()=>request,abort:async()=>res.destroy(),fulfill:async({status=200,headers={},contentType,body=''})=>{
         res.writeHead(status,{...headers,...(contentType?{'content-type':contentType}:{})});res.end(body);

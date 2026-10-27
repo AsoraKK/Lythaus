@@ -1,0 +1,31 @@
+Foundation integration CI diagnosis, 2026-10-23
+Source: adbbd62f5180d55ca52ebe8fda37e33e64c96493 (merge of reviewed foundation and main868be4ee)
+CI run39953628902 attempt1; Flutter job120413945241.
+Full job-log connector endpoint supplied the complete log; initial CLI output was incomplete.
+Artifact guest-tag-search-browser-evidence12503091042 download was denied HTTP403 and not retried.
+
+0: native member notifications, guest isolation, preferences, devices and expiry
+2026-10-23T12:54:08.7763046Z not ok 62 - webkit 390: native member notifications, guest isolation, preferences, devices and expiry
+2026-10-23T12:54:08.7763851Z   ---
+2026-10-23T12:54:08.7764141Z   duration_ms: 20379.098307
+2026-10-23T12:54:08.7764445Z   type: 'test'
+2026-10-23T12:54:08.7765040Z   location: '/home/runner/work/Lythaus/Lythaus/scripts/tests/native-notifications.browser.mjs:15:3'
+2026-10-23T12:54:08.7765728Z   failureType: 'testCodeFailure'
+2026-10-23T12:54:08.7766071Z   error: |-
+2026-10-23T12:54:08.7766477Z     locator.waitFor: Timeout 15000ms exceeded.
+2026-10-23T12:54:08.7766820Z     Call log:
+2026-10-23T12:54:08.7767495Z       - waiting for getByRole('group', { name: /Privacy request completed/ }) to be visible
+2026-10-23T12:54:08.7768011Z
+2026-10-23T12:54:08.7768299Z   code: 'ERR_TEST_FAILURE'
+2026-10-23T12:54:08.7768643Z   name: 'TimeoutError'
+2026-10-23T12:54:08.7768938Z   stack: |-
+2026-10-23T12:54:08.7769604Z     TestContext.<anonymous> (/home/runner/work/Lythaus/Lythaus/scripts/tests/native-notifications.browser.mjs:105:24)
+
+
+Grouped browser step:70 tests,69 passed,1 failed.
+Failing fixture's diagnostic calls contained only unauthenticated refresh/logout, no login POST.
+The dependency audits passed; aggregate summary failed because Flutter failed.
+No same-head CI retry requested. No ready transition retry while required CI is failed.
+
+Test-only correction: assert typed field value, then allow two animation frames before existing Enter.
+This matches current-main privacy fixture synchronization; no assertions or timeouts removed/relaxed.

@@ -35,9 +35,10 @@ const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session
 const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
-  ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Exact reviewed media retry/quota and rewards receipt integration; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', '811a317d8117a87b98ca3e041e19cd348e75bcd5'],
+  // Exact comment hooks independently reviewed at 211f0e064b501ec6ed680c891ee36bd3e38d8a41.
+  ['apps/lythaus-jobs/src/index.ts', '9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12'],
+  // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', 'aacfbb522f8387a72db133fa8c5384dcf9d4e2f2'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -258,10 +259,23 @@ function assertExactImageAndQuotingPatches(current, original, filename) {
   assert.equal(digest, reviewedImageAndQuotingPatchHashes[filename], 'Image and quoting packages must use exact reviewed security patch metadata');
   for (const packagePath of paths) current.packages[packagePath] = original.packages[packagePath];
 }
+function assertUndiciOverrides(manifest) {
+  assert.equal(manifest.overrides.undici, '7.30.1', 'Undici must retain the exact patched root override');
+  assert.equal(manifest.overrides.miniflare.undici, '7.30.1', 'Miniflare must retain the exact patched Undici override');
+}
 function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
   assertExactImageAndQuotingPatches(current, original, 'package-lock.json');
-  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
+  assert.deepEqual(current.packages['node_modules/undici'], {
+    version: '7.30.1',
+    resolved: 'https://registry.npmjs.org/undici/-/undici-7.30.1.tgz',
+    integrity: 'sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==',
+    dev: true,
+    license: 'MIT',
+    engines: { node: '>=20.18.1' },
+  }, 'Undici must use the exact reviewed security patch metadata');
+  current.packages['node_modules/undici'] = original.packages['node_modules/undici'];
+  for (const [name, version] of [['brace-expansion', '5.0.12'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
     assert.equal(patched?.version, version, `${name} must use the reviewed patched version`);
@@ -294,6 +308,21 @@ function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSy
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
   assertExactImageAndQuotingPatches(current, original, filename);
+  assert.deepEqual(current.packages['node_modules/zod'], {
+    ...original.packages['node_modules/zod'],
+    version: '4.6.6',
+    resolved: 'https://registry.npmjs.org/zod/-/zod-4.6.6.tgz',
+    integrity: 'sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==',
+  }, 'Zod must use the exact reviewed security patch metadata');
+  current.packages['node_modules/zod'] = original.packages['node_modules/zod'];
+  assert.deepEqual(current.packages['node_modules/undici'], {
+    version: '8.12.2',
+    resolved: 'https://registry.npmjs.org/undici/-/undici-8.12.2.tgz',
+    integrity: 'sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==',
+    license: 'MIT',
+    engines: { node: '>=22.19.0' },
+  }, 'Marketing Undici must use the exact reviewed security patch metadata');
+  current.packages['node_modules/undici'] = original.packages['node_modules/undici'];
   assert.deepEqual(current.packages['node_modules/vite'], {
     ...original.packages['node_modules/vite'],
     version: '8.1.6',
@@ -366,6 +395,15 @@ const reviewedReputationRepairFiles = new Map([
   ['packages/db/src/reputation.ts', '1e58faf3a4d8859de4d659615984025d3d24d2bd'],
   ['packages/db/tests/reputation-persistence.test.mjs', '09168383904d4a62319aae6345b820ed29946f13'],
 ]);
+const reviewedImageRecoveryFiles = new Map([
+  ['apps/lythaus-public-api/src/product-policy.ts', '19a483dde1862c72685cd95b846f0e0517c20879'],
+  ['apps/lythaus-public-api/tests/critical-product-policy.test.mjs', 'e4b8d86ef63b476243e186188619b64fa7269c95'],
+  ['apps/lythaus-public-api/src/authenticity-beta.ts', '4e0eeb56bff042ff80e22bc9cfd9a8ea71cee9b0'],
+]);
+function assertReviewedImageRecoveryFile(filename, blob) {
+  assert.ok(reviewedImageRecoveryFiles.has(filename), 'Image recovery covers only its three independently reviewed dependencies');
+  assert.equal(blob, reviewedImageRecoveryFiles.get(filename), 'Image recovery must match exact independently reviewed source and test bytes');
+}
 function assertReviewedReputationRepair(filename, blob) {
   assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed implementation and regression test');
   assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation changes must match the exact reviewed source and test bytes');
@@ -446,6 +484,10 @@ export function assertHomepageFrozen() {
     }
     if (reviewedReputationRepairFiles.has(filename)) {
       assertReviewedReputationRepair(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
+    if (reviewedImageRecoveryFiles.has(filename)) {
+      assertReviewedImageRecoveryFile(filename, git('hash-object', `--path=${filename}`, filename));
       continue;
     }
     if (reviewedPrivacyStatusFiles.has(filename)) {
@@ -702,6 +744,110 @@ test('image and quoting security exceptions reject vulnerable versions, altered 
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /exact reviewed security patch metadata/);
 });
 
+test('Undici security pins reject altered metadata, stale overrides and unrelated dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '7.29.1'], ['version', '7.30.0'], ['version', '7.30.2'],
+    ['resolved', 'https://example.invalid/undici-7.30.1.tgz'],
+    ['integrity', 'sha512-invalid'], ['dev', false],
+    ['engines', { node: '>=24' }], ['dependencies', { unreviewed: '1.0.0' }],
+  ]) {
+    const changed = readLock(); changed.packages['node_modules/undici'][field] = value;
+    assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Undici must use the exact reviewed security patch metadata/);
+  }
+  const missing = readLock(); delete missing.packages['node_modules/undici'];
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(missing), /Undici must use the exact reviewed security patch metadata/);
+  const unrelated = readLock(); unrelated.packages['node_modules/miniflare'].version = '0.0.0';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(unrelated), /Root tooling lock may change only for the reviewed security patches/);
+  for (const target of ['root', 'miniflare']) {
+    const manifest = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const overrides = target === 'root' ? manifest.overrides : manifest.overrides.miniflare;
+    overrides.undici = '7.29.1';
+    assert.throws(() => assertUndiciOverrides(manifest), /exact patched/);
+    delete overrides.undici;
+    assert.throws(() => assertUndiciOverrides(manifest), /exact patched/);
+  }
+});
+
+test('Marketing Undici security pin rejects altered metadata and unrelated dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '8.10.2'], ['version', '8.12.1'], ['version', '8.12.3'],
+    ['resolved', 'https://example.invalid/undici-8.12.2.tgz'],
+    ['integrity', 'sha512-invalid'], ['dev', true],
+    ['engines', { node: '>=24' }], ['dependencies', { unreviewed: '1.0.0' }],
+  ]) {
+    const changed = readLock(); changed.packages['node_modules/undici'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing Undici must use the exact reviewed security patch metadata/);
+  }
+  const missing = readLock(); delete missing.packages['node_modules/undici'];
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(missing), /Marketing Undici must use the exact reviewed security patch metadata/);
+  const unrelated = readLock(); unrelated.packages['node_modules/unifont'].version = '0.0.0';
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(unrelated), /Marketing lock may change only for the exact reviewed security repairs/);
+});
+
+function assertUndiciMalformedResponseRecovery(cwd) {
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { createServer } from 'node:net';
+    import { once } from 'node:events';
+    import { Agent, fetch } from 'undici';
+    const server = createServer(socket => socket.once('data', request => {
+      if (request.toString().includes('/healthy')) {
+        socket.end('HTTP/1.1 200 OK\\r\\nContent-Length: 2\\r\\nConnection: close\\r\\n\\r\\nok');
+      } else {
+        socket.end('HTTP/1.1 200 OK\\r\\nContent-Encoding: gzip, gzip, gzip, gzip, gzip, gzip\\r\\nContent-Length: 1\\r\\nConnection: close\\r\\n\\r\\n');
+      }
+    }));
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const dispatcher = new Agent();
+    const origin = 'http://127.0.0.1:' + server.address().port;
+    try {
+      await assert.rejects(fetch(origin, { dispatcher }), error => /content-encoding/.test(error.cause?.message));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const response = await fetch(origin + '/healthy', { dispatcher });
+      assert.equal(await response.text(), 'ok');
+    } finally {
+      await dispatcher.destroy();
+      await new Promise(resolve => server.close(resolve));
+    }
+  `], { cwd, encoding: 'utf8', timeout: 10000 });
+  assert.equal(child.error, undefined);
+  assert.equal(child.signal, null);
+  assert.equal(child.status, 0, child.stderr);
+}
+for (const cwd of [root, path.join(root, 'apps/marketing-site')]) {
+  test(`Undici rejects excessive encodings and early close without terminating its caller (${path.relative(root, cwd) || 'root'})`, () => {
+    assertUndiciMalformedResponseRecovery(cwd);
+  });
+}
+
+test('Zod security patch rejects vulnerable or unreviewed metadata and unrelated dependency changes', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '4.5.4'],
+    ['version', '4.6.5'],
+    ['version', '4.6.7'],
+    ['resolved', 'https://example.invalid/zod.tgz'],
+    ['integrity', 'sha512-invalid'],
+    ['dependencies', { unexpected: '1.0.0' }],
+  ]) {
+    const changed = readLock(); changed.packages['node_modules/zod'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Zod must use the exact reviewed security patch metadata/);
+  }
+  const missing = readLock(); delete missing.packages['node_modules/zod'];
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(missing), /Zod must use the exact reviewed security patch metadata/);
+  for (const change of [
+    lock => { lock.packages['node_modules/astro'].version = '7.3.2'; },
+    lock => { lock.packages[''].dependencies.zod = '4.6.6'; },
+    lock => { lock.packages['node_modules/unreviewed'] = { version: '1.0.0' }; },
+  ]) {
+    const changed = readLock(); change(changed);
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing lock may change only for the exact reviewed security repairs/);
+  }
+});
+
 test('Spectral security replacement rejects changed targets, metadata or resurrected vulnerable dependencies', () => {
   const readLock = () => JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   for (const [packagePath, field, value] of [
@@ -837,14 +983,13 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
         before.scripts[name] = scripts.reviewed;
       }
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
-      assert.equal(after.overrides.undici, '7.29.1');
-      assert.equal(after.overrides.miniflare.undici, '7.29.1');
+      assertUndiciOverrides(after);
       assert.deepEqual(after.overrides['get-uri@8.0.1'], { 'basic-ftp': '6.2.1' });
       assert.equal(after.overrides['fast-uri'], '3.1.8');
       assert.equal(after.overrides['ip-address'], '10.7.1');
       before.overrides['brace-expansion'] = '5.0.12';
-      before.overrides.undici = '7.29.1';
-      before.overrides.miniflare.undici = '7.29.1';
+      before.overrides.undici = '7.30.1';
+      before.overrides.miniflare.undici = '7.30.1';
       before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
       before.overrides['fast-uri'] = '3.1.8';
       before.overrides['ip-address'] = '10.7.1';
@@ -986,13 +1131,68 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
 });
 
+test('comment entrypoint allocations reject predecessor blobs and unauthorized visibility or revision mutations', () => {
+  const cases = [
+    ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b', [
+      ['return privateResponse(request, env, body);', 'return response(request, env, body);', 'getComments'],
+      ['AND ${commentNotificationVisibilitySql}', ''],
+      ['depth = nestedReplyDepth(parent.rows[0]);', 'depth = 1;'],
+    ]],
+    ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9', [
+      ['await client.query(commentNotificationRevisionLockQuery, [eventId]);', ''],
+      ['notificationType: recipient.rows[0].notification_type,', "notificationType: 'content.comment_received',"],
+    ]],
+  ];
+  for (const [filename, previous, mutations] of cases) {
+    const source = readFileSync(path.join(root, filename), 'utf8');
+    const current = git('hash-object', `--path=${filename}`, filename);
+    assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, current));
+    assert.notEqual(previous, current);
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previous), assert.AssertionError);
+    for (const [before, after, scope] of mutations) {
+      const start = scope ? source.indexOf(`async function ${scope}(`) : 0;
+      const end = scope ? source.indexOf('\nasync function ', start + 1) : source.length;
+      assert.ok(start >= 0 && end > start, 'The mutation scope must identify an existing complete function');
+      const target = source.slice(start, end);
+      assert.ok(target.includes(before), 'The synthetic mutation must alter an actual reviewed comment hook');
+      const changedTarget = target.replace(before, after);
+      const changedSource = source.slice(0, start) + changedTarget + source.slice(end);
+      if (scope) {
+        assert.equal(target.split(before).length, 2, 'The intended function must contain exactly one mutation target');
+        assert.ok(changedTarget.includes(after) && !changedTarget.includes(before));
+        assert.equal(changedSource.slice(0, start), source.slice(0, start));
+        assert.equal(changedSource.slice(start + changedTarget.length), source.slice(end));
+      }
+      const altered = execFileSync('git', ['hash-object', '--stdin'], {
+        cwd: root, encoding: 'utf8', input: changedSource,
+      }).trim();
+      assert.notEqual(altered, current);
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, altered), assert.AssertionError);
+    }
+  }
+});
+
+test('image recovery allocation rejects previous and unrelated dependency bytes', () => {
+  for (const [filename, expected] of reviewedImageRecoveryFiles) {
+    assert.doesNotThrow(() => assertReviewedImageRecoveryFile(filename, git('hash-object', `--path=${filename}`, filename)));
+    const previous = git('rev-parse', `d9d50807dd36664cda61b137a25aba8f31017b6f:${filename}`);
+    assert.notEqual(previous, expected);
+    assert.throws(() => assertReviewedImageRecoveryFile(filename, previous), assert.AssertionError);
+    assert.throws(() => assertReviewedImageRecoveryFile(filename, '0'.repeat(40)), assert.AssertionError);
+  }
+  assert.throws(() => assertReviewedImageRecoveryFile('apps/marketing-site/src/pages/index.astro',
+    reviewedImageRecoveryFiles.values().next().value), assert.AssertionError);
+  assert.throws(() => assertReviewedImageRecoveryFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
+    reviewedImageRecoveryFiles.values().next().value), assert.AssertionError);
+});
+
 test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
   // Exact blob IDs from 489aef297ff0b1a40744504594122c9ebc43930d (both Workers)
   // and fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8 (Jobs); the guard compares IDs,
   // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
     ['apps/lythaus-jobs/src/index.ts', ['da112b2d2c869251ed48941d31d4ac854bb93fa1', '8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
-    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1', '4640957fba06cbecbf8c87640f3d1a52052d1fe4', '6d89caa73ab83ea682a2a9796388d8f2f2ed4833']],
+    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1', '4640957fba06cbecbf8c87640f3d1a52052d1fe4', '6d89caa73ab83ea682a2a9796388d8f2f2ed4833', '811a317d8117a87b98ca3e041e19cd348e75bcd5']],
   ]);
   for (const [filename, superseded] of supersededWorkerBlobs) {
     const current = git('hash-object', `--path=${filename}`, filename);

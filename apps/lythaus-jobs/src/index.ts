@@ -1,3 +1,4 @@
+import { commentNotificationRecipientQuery, commentNotificationRevisionLockQuery } from '../../../packages/db/src/comment-notifications.ts';
 import { applyApprovedSupportCompletionLimits, databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacyIsReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
@@ -521,35 +522,12 @@ async function processNotificationSource(message: QueueMessage, env: Env, eventI
     const source = await canonicalOutboxEvent(client, eventId, eventType);
     const payload = source.payload;
     if (eventType === 'content.comment.published') {
-      const authorId = stringValue(payload.authorId);
-      const commentId = stringValue(payload.contentId);
-      const postId = stringValue(payload.postId);
-      const parentId = stringValue(payload.parentId);
-      if (!authorId || !commentId || !postId) throw new Error('comment_notification_event_invalid');
-      const recipient = await client.query<{ recipient_id: string }>(
-        parentId
-          ? `SELECT parent.author_id AS recipient_id
-               FROM content.comments parent
-              WHERE parent.id = $1 AND parent.author_id <> $2
-                AND NOT EXISTS (
-                  SELECT 1 FROM social.blocks block
-                   WHERE (block.blocker_id = parent.author_id AND block.blocked_id = $2)
-                      OR (block.blocker_id = $2 AND block.blocked_id = parent.author_id)
-                )`
-          : `SELECT post.author_id AS recipient_id
-               FROM content.posts post
-              WHERE post.id = $1 AND post.author_id <> $2
-                AND NOT EXISTS (
-                  SELECT 1 FROM social.blocks block
-                   WHERE (block.blocker_id = post.author_id AND block.blocked_id = $2)
-                      OR (block.blocker_id = $2 AND block.blocked_id = post.author_id)
-                )`,
-        [parentId ?? postId, authorId],
-      );
+      await client.query(commentNotificationRevisionLockQuery, [eventId]);
+      const recipient = await client.query<{ recipient_id: string; notification_type: string; comment_id: string }>(commentNotificationRecipientQuery, [eventId]);
       if (recipient.rows[0]) await insertPreferenceAwareNotification(client, {
         recipientId: recipient.rows[0].recipient_id,
-        notificationType: parentId ? 'content.reply_received' : 'content.comment_received',
-        entityId: commentId,
+        notificationType: recipient.rows[0].notification_type,
+        entityId: recipient.rows[0].comment_id,
         sourceEventId: eventId,
         policyVersion: ACTIVITY_POLICY_VERSION,
         preferenceClass: 'replies',

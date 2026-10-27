@@ -11,32 +11,35 @@ import 'package:lythaus/features/notifications/presentation/notifications_settin
 /// Parses deep-link URIs and navigates to appropriate screens
 class DeeplinkRouter {
   /// Whether this link identifies an existing supported first-party screen.
-  static bool canNavigate(String deeplink) {
-    final uri = Uri.tryParse(deeplink);
-    if (uri == null) return false;
-    if (uri.hasScheme &&
-        uri.scheme != 'lythaus' &&
-        !(uri.scheme == 'https' && uri.host == 'app.lythaus.co')) {
-      return false;
+  static bool canNavigate(String deeplink) => _supportedLink(deeplink) != null;
+
+  static _NormalizedDeepLink? _supportedLink(String deeplink) {
+    try {
+      final uri = Uri.tryParse(deeplink);
+      if (uri == null) return null;
+      if (uri.hasScheme &&
+          uri.scheme != 'lythaus' &&
+          !(uri.scheme == 'https' && uri.host == 'app.lythaus.co')) {
+        return null;
+      }
+      if (!uri.hasScheme && (uri.hasAuthority || !uri.path.startsWith('/'))) {
+        return null;
+      }
+      final parsed = _normalize(uri);
+      if (parsed == null) return null;
+      final hasId = parsed.id != null && parsed.id!.isNotEmpty;
+      final supported = switch (parsed.type) {
+        'post' || 'user' => hasId,
+        'comment' => hasId && _commentPostId(parsed) != null,
+        'settings' => parsed.id == 'notifications',
+        'moderation' => parsed.id == null || parsed.id == 'appeal',
+        'invite' => hasId || (parsed.query['code'] ?? '').isNotEmpty,
+        _ => false,
+      };
+      return supported ? parsed : null;
+    } on FormatException {
+      return null;
     }
-    if (!uri.hasScheme && (uri.hasAuthority || !uri.path.startsWith('/'))) {
-      return false;
-    }
-    final parsed = _normalize(uri);
-    if (parsed == null) return false;
-    final hasId = parsed.id != null && parsed.id!.isNotEmpty;
-    return switch (parsed.type) {
-      'post' || 'user' => hasId,
-      'comment' =>
-        hasId &&
-            ((parsed.query['postId'] ?? parsed.query['post'] ?? '')
-                    .isNotEmpty ||
-                parsed.remainingPathSegments.isNotEmpty),
-      'settings' => parsed.id == 'notifications',
-      'moderation' => parsed.id == null || parsed.id == 'appeal',
-      'invite' => hasId || (parsed.query['code'] ?? '').isNotEmpty,
-      _ => false,
-    };
   }
 
   /// Parse and navigate to deep-linked content
@@ -46,14 +49,9 @@ class DeeplinkRouter {
   /// - https://app.lythaus.co/invite/{code} - Navigate to invite redemption
   /// - lythaus://post/{postId} - Native-scheme compatibility
   static Future<void> navigate(BuildContext context, String deeplink) async {
-    final uri = Uri.tryParse(deeplink);
-    if (uri == null) {
-      debugPrint('[DeepLink] Invalid deeplink: $deeplink');
-      return;
-    }
-    final parsed = _normalize(uri);
+    final parsed = _supportedLink(deeplink);
     if (parsed == null) {
-      debugPrint('[DeepLink] Invalid deeplink: $deeplink');
+      debugPrint('[DeepLink] Unavailable destination');
       return;
     }
 
@@ -123,12 +121,7 @@ class DeeplinkRouter {
     String commentId,
     _NormalizedDeepLink parsed,
   ) async {
-    final postId =
-        parsed.query['postId'] ??
-        parsed.query['post'] ??
-        (parsed.remainingPathSegments.isNotEmpty
-            ? parsed.remainingPathSegments.first
-            : null);
+    final postId = _commentPostId(parsed);
     if (postId == null || postId.isEmpty) {
       debugPrint(
         '[DeepLink] Missing postId for comment deep-link: comment=$commentId',
@@ -136,6 +129,17 @@ class DeeplinkRouter {
       return;
     }
     await _navigateToPost(context, postId, initialCommentId: commentId);
+  }
+
+  static String? _commentPostId(_NormalizedDeepLink parsed) {
+    for (final candidate in [
+      parsed.query['postId'],
+      parsed.query['post'],
+      ...parsed.remainingPathSegments.take(1),
+    ]) {
+      if (candidate != null && candidate.isNotEmpty) return candidate;
+    }
+    return null;
   }
 
   static Future<void> _navigateToModeration(
@@ -183,8 +187,8 @@ class DeeplinkRouter {
     BuildContext context,
     Map<String, dynamic> data,
   ) async {
-    final deeplink = data['deeplink'] as String?;
-    if (deeplink != null) {
+    final deeplink = data['deeplink'];
+    if (deeplink is String) {
       await navigate(context, deeplink);
     }
   }

@@ -516,6 +516,11 @@ const peerWeek = async userId => (await sql(`SELECT calculation FROM trust.month
 
 test('APP-13/REL-03: peer earning needs its own approved configuration; unavailable setup leaves monthly assembly inert', async () => {
   assert.equal(await processMonthlyPeerParticipation(peerEnv, uuidv7()), null, 'An absent flag must stay inert before installing the peer proposal');
+  statements.length = 0;
+  assert.equal(await tx(client => requireMonthlyPeerIngestionDrained(client, { subjectUserId: voters[0].id,
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, startsAt: '2026-07-27T00:00:00.000Z',
+    endsAt: '2026-08-31T00:00:00.000Z' }), 'lythaus_jobs'), null);
+  assert.equal(statements.some(text => text.includes('trust.monthly_peer_participation_')), false);
   for (const proposal of ['monthly_reputation_shadow', 'monthly_reputation_maintenance', 'monthly_reputation_peer_participation']) {
     await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`, import.meta.url), 'utf8'));
   }
@@ -729,6 +734,47 @@ test('CAL-05/06/APP-14: late closure earns only the final revision in its origin
   }
   assert.equal(earning.find(row => row.source_id === ballotIds[0]).input.sourceRevisionId, finalRevision);
   await assert.rejects(processMonthlyPeerParticipation(peerEnv, await peerEvent(appeal.appealId)), /previous_policy_requires_review/);
+});
+
+test('CAL-19/REL-03: first assembly cannot omit final peer evidence through missing, unavailable or later-start configuration', async () => {
+  const participants = [];
+  for (let n = 0; n < 5; n++) participants.push(await person());
+  await sql("UPDATE identity.users SET created_at = '2026-08-01T00:00:00Z' WHERE id = ANY($1::uuid[])", [participants.map(actor => actor.id)]);
+  const appeal = await opened();
+  await sql("UPDATE moderation.community_appeal_sessions SET opens_at = '2026-08-30T12:00:00Z', closes_at = '2026-09-01T12:00:00Z' WHERE appeal_id = $1", [appeal.appealId]);
+  for (const actor of participants) {
+    const ballot = uuidv7();
+    await sql('INSERT INTO moderation.community_appeal_ballots (id, appeal_id, voter_user_id) VALUES ($1, $2, $3)', [ballot, appeal.appealId, actor.id]);
+    await sql(`INSERT INTO moderation.community_appeal_ballot_revisions
+      (id, ballot_id, revision, weight, choice, reason_code, context_acknowledged, idempotency_key, cast_at)
+      VALUES ($1, $2, 1, 1, 'retain', 'rule_applies', true, $3, '2026-08-30T20:00:00Z')`, [uuidv7(), ballot, uuidv7()]);
+  }
+  assert.equal((await close(appeal.appealId)).result.status, 'resolved_retain');
+  const version = peerVersion + '-boundary', subject = participants[0].id;
+  const assemble = peerRulesVersion => tx(client => assembleMonthlyReputation(client, { subjectUserId: subject,
+    sourceMonth: '2026-08', weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version,
+    maintenanceRulesVersion: PROPOSED_MONTHLY_MAINTENANCE_RULES.version, peerRulesVersion,
+    evaluatedAt: new Date().toISOString() }), 'lythaus_jobs');
+  await assert.rejects(assemble(), /peer_policy_requires_review/);
+  await assert.rejects(assemble('synthetic-unavailable-peer'), /peer_policy_requires_review/);
+  await assert.rejects(assemble(peerVersion), /peer_policy_requires_review/);
+  await assert.rejects(assemble(version), /peer_ingestion_pending/);
+  await sql("UPDATE system.feature_flags SET enabled = false WHERE flag_key = 'trust.monthly_peer_participation'");
+  try {
+    await assert.rejects(assemble(), /peer_policy_requires_review/);
+    await assert.rejects(assemble(version), /participation_paused/);
+  } finally { await sql("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_peer_participation'"); }
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [subject])).rowCount, 0);
+  const eventId = await peerEvent(appeal.appealId);
+  assert.equal((await processMonthlyPeerParticipation({ ...peerEnv, MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES: version }, eventId)).participants, 5);
+  const source = await assemble(version);
+  assert.equal(source.created, true); assert.equal(source.report.peerRulesVersion, version);
+  assert.equal((await sql('SELECT input FROM trust.monthly_reputation_sources WHERE id = $1', [source.sourceId])).rows[0].input.weeks[0].points, 250);
+  await assert.rejects(assemble(), /peer_policy_requires_review/);
+  await assert.rejects(assemble(peerVersion), /peer_policy_requires_review/);
+  const retry = await assemble(version);
+  assert.equal(retry.created, false); assert.equal(retry.sourceId, source.sourceId);
+  assert.deepEqual((await sql('SELECT report FROM trust.monthly_reputation_assemblies WHERE source_id = $1', [source.sourceId])).rows[0].report, source.report);
 });
 
 test('APP-07/12: actual staff routes verify Access JWT, membership, Origin, private evidence and triage', async () => {

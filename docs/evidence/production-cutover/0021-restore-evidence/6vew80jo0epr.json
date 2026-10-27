@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "lythaus-0021-restore-evidence-v1",
+  "sourceBranch": {
+    "id": "vqa2g2xc9wsl",
+    "name": "main"
+  },
+  "selectedBackupId": "6vew80jo0epr",
+  "selectedBackupUiTimestamp": "2026-10-27T02:27:08.161Z",
+  "restoredBranch": {
+    "id": "p5953kdp72ac",
+    "name": "lythaus-0021-native-restore-check-20261027-01",
+    "state": "ready",
+    "createdAt": "2026-10-27T08:04:31.640Z"
+  },
+  "verificationWindow": {
+    "startedAt": "2026-10-27T08:03:53.242Z",
+    "completedAt": "2026-10-27T08:07:43.570Z"
+  },
+  "verifiedAt": "2026-10-27T08:07:43.570Z",
+  "artifactPath": "docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-40470687953.json",
+  "artifactStatus": "VERIFIED_NATIVE_QUALIFICATION_ONLY",
+  "evidenceSha256": "741b984dc35cf651156bdb99a9abedb9c4fef04b27a0f0ccc7413e82e343f354",
+  "verifiedScope": [
+    "backup_binding",
+    "restore_completion",
+    "schema_extensions_indexes",
+    "canonical_registry",
+    "effective_runtime_privileges",
+    "application_smoke",
+    "rpo_rto_acceptance"
+  ],
+  "unresolvedGates": [
+    "independent_recovery_destination"
+  ],
+  "rpoRtoAcceptance": {
+    "ownerTestingOnly": true,
+    "acceptedAt": "2026-10-27T09:05:19Z",
+    "acceptedBy": "AsoraKK",
+    "reference": "Sentinel_daad3e59c8f48191a441860d179447ef",
+    "snapshotAgeBasis": "backup_created_at_metadata",
+    "backupCreatedAt": "2026-10-27T02:25:03.632Z",
+    "maximumSnapshotAgeSeconds": 36000,
+    "snapshotAgeLimitEndsAt": "2026-10-27T12:25:03.632Z",
+    "maximumIsolatedDatabaseTestSeconds": 600,
+    "observedIsolatedDatabaseTestSeconds": 230.328,
+    "actualTransactionLossMeasured": false,
+    "fullProductionFailoverRtoMeasured": false
+  },
+  "review": {
+    "reviewedAt": "2026-10-27T09:05:19Z",
+    "reviewedBy": "AsoraKK",
+    "reference": "Sentinel_daad3e59c8f48191a441860d179447ef"
+  },
+  "nativeRestoreCleanup": {
+    "schemaVersion": "native-restore-cleanup-intent-v1",
+    "state": "DELETE_PENDING",
+    "qualificationSha": "8dd80c4734ac5dad57c4e7338660b4e629c58da1",
+    "qualificationRunId": "40470687953",
+    "qualificationWorkflowId": 394786946,
+    "targetId": "p5953kdp72ac",
+    "workflowId": 394840164,
+    "runNumber": 3,
+    "artifactId": 12718234369,
+    "artifactArchiveSha256": "7e66ea427d9804594946aa71bb9321c6d4f25a906dfd59eef17d6b43e2c6583f",
+    "evidenceOutcome": "PASSED"
+  },
+  "recordSha256": "8658fad0d90b44b94ac7c2def552f3cbae10e7c05fb6420f2b5fb6fd2ea2bcda"
+}

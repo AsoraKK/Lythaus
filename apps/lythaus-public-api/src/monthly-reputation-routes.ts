@@ -6,6 +6,7 @@ import { readOwnMonthlyRewardSnapshot } from '../../../packages/db/src/monthly-r
 import { readOwnMonthlyRewardSelections } from '../../../packages/db/src/monthly-reward-selections.ts';
 import { requireSourceMonth } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { serializeMonthlyReputationReportCsv, serializeMonthlyReputationReportJson } from './monthly-reputation-report-export.ts';
+import { projectMonthlyRewards } from './monthly-reputation-projection.ts';
 
 export interface MonthlyReputationRouteDependencies {
   authenticate: (request: Request) => Promise<{ userId: string }>;
@@ -102,17 +103,8 @@ export async function handleMonthlyReputationRead(request: Request,
       });
       return { snapshot, selection };
     });
-    const ready = monthly.snapshot.state === 'confirmed' && monthly.selection.state === 'ready';
-    return privateResponse(dependencies, {
-      state: ready ? 'ready' : 'pending',
-      reasonCode: ready ? null : monthly.selection.reasonCode ?? monthly.snapshot.reasonCode ?? 'approval_unavailable',
-      effectiveMonth: monthly.snapshot.effectiveMonth ?? monthly.selection.effectiveMonth ?? null,
-      currentLevel: monthly.snapshot.level ?? null,
-      sourceMonth: monthly.snapshot.sourceMonth ?? null,
-      sourceScore: monthly.snapshot.sourceScore ?? null,
-      snapshot: monthly.snapshot,
-      selection: monthly.selection,
-    }, 200, { 'content-type': 'application/json; charset=utf-8' });
+    return privateResponse(dependencies, projectMonthlyRewards(monthly.snapshot, monthly.selection),
+      200, { 'content-type': 'application/json; charset=utf-8' });
   } catch (error) {
     if (error instanceof Error && error.message === 'monthly_report_format_invalid') {
       return privateResponse(dependencies, { error: error.message }, 400);

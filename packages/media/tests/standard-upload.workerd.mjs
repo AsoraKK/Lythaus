@@ -44,6 +44,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     }
     if (sql.startsWith('SELECT') && sql.includes('FROM media.upload_sessions')) {
       if (!state.session) return result([]);
+      if (sql.startsWith('SELECT s.id, s.status') && (state.account.status !== 'active' || state.account.deleted_at !== null)) return result([]);
       if (sql.startsWith('SELECT id, user_id FROM media.upload_sessions')) {
         const terminal = ['approved', 'rejected', 'expired', 'cancelled'].includes(state.session.status);
         const due = state.session.cleanupDue === true;
@@ -161,7 +162,60 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       });
       assert.equal(guestPut.status, 401);
       assert.equal((await guestPut.json()).error, 'authentication_required');
+      const statusUrl = `https://local.test/api/media/uploads/${randomUUID()}`;
+      const disabledStatus = await fixture.runtime.dispatchFetch(statusUrl);
+      assert.equal(disabledStatus.status, 404);
+      assert.equal((await disabledStatus.json()).error, 'feature_disabled');
+      const guestStatus = await fixture.runtime.dispatchFetch(statusUrl, { headers: { 'x-fixture-enabled': 'true' } });
+      assert.equal(guestStatus.status, 401);
+      assert.equal((await guestStatus.json()).error, 'authentication_required');
       assert.ok(!fixture.statements.some(x => /media\./.test(x.text ?? '')));
+    });
+    await t.test('private status never turns integrity completion into detector or publication approval', async () => {
+      for (const [stored, expected] of [['pending', 'pending'], ['queued', 'queued'], ['approved', 'review'],
+        ['rejected', 'rejected'], ['expired', 'expired'], ['cancelled', 'cancelled']]) {
+        const input = await seed(stored);
+        const response = await fixture.request('/fixture/status', input);
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get('cache-control'), /no-store/);
+        assert.deepEqual(await response.json(), { uploadSessionId: input.sessionId, status: expected,
+          expiresAt: state.session.expires_at, processingComplete: stored === 'approved', safety: { status: 'not_run' },
+          authenticity: { status: 'not_run' }, publication: { allowed: false }, private: true });
+        assert.equal(state.outbox.length, 0);
+        assert.equal(state.ledgerWrites, 0);
+      }
+      const input = await seed('queued', { unexpired: false });
+      assert.equal((await (await fixture.request('/fixture/status', input)).json()).status, 'expired');
+      state.session.status = 'future_success';
+      assert.equal((await fixture.request('/fixture/status', input)).status, 404);
+    });
+    await t.test('status conceals missing, nonstandard, inactive and other-owner sessions', async () => {
+      const input = await seed('approved');
+      for (const patch of [{ userId: randomUUID() }, { sessionId: randomUUID() }, { sessionId: 'invalid' }]) {
+        assert.equal((await fixture.request('/fixture/status', { ...input, ...patch })).status, 404);
+      }
+      for (const status of ['suspended', 'deleting']) {
+        state.account.status = status;
+        assert.equal((await fixture.request('/fixture/status', input)).status, 404);
+      }
+      state.account.status = 'active'; state.account.deleted_at = '2026-10-22T00:00:00Z';
+      assert.equal((await fixture.request('/fixture/status', input)).status, 404);
+      state.account.deleted_at = null; state.session.purpose = 'beta';
+      assert.equal((await fixture.request('/fixture/status', input)).status, 404);
+    });
+    await t.test('unsupported image-bearing post bodies cannot write posts or outbox events', async () => {
+      const input = await seed('approved');
+      for (const attachment of [{ mediaUrl: 'https://example.invalid/private.png' }, { contentType: 'image' },
+        { mediaIds: [input.sessionId] }, { attachments: [{ uploadSessionId: input.sessionId }] },
+        { image: {} }, { mediaUrl: null }, { attachments: [] }]) {
+        fixture.statements.length = 0;
+        const response = await fixture.request('/fixture/post', { userId: input.userId,
+          post: { body: 'Synthetic caption', declaredCreationMode: 'human', geoScope: 'none', ...attachment } });
+        assert.equal(response.status, 415);
+        assert.equal((await response.json()).error, 'unsupported_content_type');
+        assert.equal(fixture.statements.length, 0);
+        assert.equal(state.outbox.length, 0);
+      }
     });
     await t.test('upload URL is a session-checked Worker route with no reusable R2 signature', async () => {
       await seed('pending', { withObject: false });

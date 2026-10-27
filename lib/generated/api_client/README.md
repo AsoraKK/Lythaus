@@ -192,6 +192,7 @@ Class | Method | HTTP request | Description
 [*HealthApi*](doc/HealthApi.md) | [**ready**](doc/HealthApi.md#ready) | **GET** /ready | Readiness probe
 [*MediaApi*](doc/MediaApi.md) | [**mediaUploadsCreate**](doc/MediaApi.md#mediauploadscreate) | **POST** /media/uploads | Create a quarantined media upload session
 [*MediaApi*](doc/MediaApi.md) | [**mediaUploadsFinalise**](doc/MediaApi.md#mediauploadsfinalise) | **POST** /media/uploads/{uploadSessionId}/finalise | Finalise a quarantined media upload
+[*MediaApi*](doc/MediaApi.md) | [**mediaUploadsGetStatus**](doc/MediaApi.md#mediauploadsgetstatus) | **GET** /media/uploads/{uploadSessionId} | Read private upload processing status
 [*MediaApi*](doc/MediaApi.md) | [**mediaUploadsPutBytes**](doc/MediaApi.md#mediauploadsputbytes) | **PUT** /media/uploads/{uploadSessionId}/bytes | Upload bytes to a private session
 [*ModerationApi*](doc/ModerationApi.md) | [**contentFlagsCreate**](doc/ModerationApi.md#contentflagscreate) | **POST** /content/flags | Submit a moderation flag
 [*ModerationApi*](doc/ModerationApi.md) | [**flagsCreate**](doc/ModerationApi.md#flagscreate) | **POST** /flags | Submit a moderation flag
@@ -208,7 +209,7 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**commentsDelete**](doc/PostsApi.md#commentsdelete) | **DELETE** /comments/{commentId} | Delete my comment
 [*PostsApi*](doc/PostsApi.md) | [**commentsReplace**](doc/PostsApi.md#commentsreplace) | **PUT** /comments/{commentId} | Replace my comment body
 [*PostsApi*](doc/PostsApi.md) | [**commentsUpdate**](doc/PostsApi.md#commentsupdate) | **PATCH** /comments/{commentId} | Partially update my comment body
-[*PostsApi*](doc/PostsApi.md) | [**postsCommentsCreate**](doc/PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or one-level reply
+[*PostsApi*](doc/PostsApi.md) | [**postsCommentsCreate**](doc/PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or linked reply
 [*PostsApi*](doc/PostsApi.md) | [**postsCommentsList**](doc/PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List publicly visible comments
 [*PostsApi*](doc/PostsApi.md) | [**postsCreate**](doc/PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**postsDelete**](doc/PostsApi.md#postsdelete) | **DELETE** /posts/{id} | Soft-delete a post owned by the authenticated user
@@ -362,6 +363,7 @@ Class | Method | HTTP request | Description
  - [CommentCreateRequest](doc/CommentCreateRequest.md)
  - [CommentDeleteResponse](doc/CommentDeleteResponse.md)
  - [CommentPage](doc/CommentPage.md)
+ - [CommentPageAllOfCapabilities](doc/CommentPageAllOfCapabilities.md)
  - [CommentSubmission](doc/CommentSubmission.md)
  - [CommentUpdateRequest](doc/CommentUpdateRequest.md)
  - [CommentUpdateResponse](doc/CommentUpdateResponse.md)
@@ -422,6 +424,9 @@ Class | Method | HTTP request | Description
  - [MediaUploadFinaliseResponse](doc/MediaUploadFinaliseResponse.md)
  - [MediaUploadSessionCreateRequest](doc/MediaUploadSessionCreateRequest.md)
  - [MediaUploadSessionCreated](doc/MediaUploadSessionCreated.md)
+ - [MediaUploadStatus](doc/MediaUploadStatus.md)
+ - [MediaUploadStatusPublication](doc/MediaUploadStatusPublication.md)
+ - [MediaUploadStatusSafety](doc/MediaUploadStatusSafety.md)
  - [MemberDetail](doc/MemberDetail.md)
  - [MemberMutationResult](doc/MemberMutationResult.md)
  - [MemberProblemRequest](doc/MemberProblemRequest.md)
@@ -481,6 +486,7 @@ Class | Method | HTTP request | Description
  - [Post](doc/Post.md)
  - [PostRevision](doc/PostRevision.md)
  - [PostRevisionResponse](doc/PostRevisionResponse.md)
+ - [PostsCommentsList503Response](doc/PostsCommentsList503Response.md)
  - [PostsDelete200Response](doc/PostsDelete200Response.md)
  - [PostsGet200Response](doc/PostsGet200Response.md)
  - [PostsOwnerView200Response](doc/PostsOwnerView200Response.md)

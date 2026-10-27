@@ -1,0 +1,549 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
+import { RESTORE, ROLE_NAMES, EXTENSIONS, CREATE_TARGET_BODY, RestoreApi, RestoreFailure, requireThat, failureCode, hash,
+  approvalRecord, checkBackup, checkBranch, checkOwnedBranch, checkedRoles, copiedRoleReadiness, safeId, object } from './planetscale-native-restore-contract.mjs';
+import { sourceConnection, restoredConnection, restoredConnectionMetadata, readOnly, collectRestoreCatalog, inspectExtensionAuthority,
+  installMissingExtensions, checkedExtensionSpecifications } from './planetscale-native-restore-verifier.mjs';
+import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
+import { inspectCleanupReservation, finalizeQualificationEvidence, sha256 } from './planetscale-native-restore-evidence.mjs';
+import { RUN12, verifyRun12ReviewedCleanup } from './planetscale-native-restore-run12-reconciliation.mjs';
+
+const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
+const targetPath = `/branches/${RESTORE.target}`;
+const backupPath = `/branches/main/backups/${RESTORE.backupId}`;
+const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
+const workflowId = 394786946;
+const pinnedCancelledExecution = Object.freeze({ runId: '40184823787', runNumber: 7, runAttempt: 1,
+  headSha: '43829abc3424a88a22826695bbfdc7be4a116e62', jobId: 121143288424 });
+const pinnedPrecreateFailure = Object.freeze({ runId: '40193991312', runNumber: 8, runAttempt: 1,
+  headSha: '96ff66fa5c28c9780ce72ee23a40cd846372d6bd', jobId: 121170799629,
+  artifactId: 12599287272,
+  artifactName: 'native-restore-qualification-96ff66fa5c28c9780ce72ee23a40cd846372d6bd-40193991312',
+  artifactSize: 1925, artifactDigest: 'sha256:16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac' });
+const pinnedManuallyDeletedFailure = Object.freeze({ runId: '40212030891', runNumber: 9, runAttempt: 1,
+  headSha: '9447561658c139f1e9e48cedad66b2f035661fb9', jobId: 121225106539, targetId: 'gnbnmpsu7r5k',
+  backupId: 'zw0so7f5jbpu', targetName: 'lythaus-0021-native-restore-check-20261022',
+  artifactId: 12606067757, artifactSize: 3199,
+  artifactDigest: 'sha256:50b3e7d7a2354c0d5d190872a5d77cec7d2fd7f3d2ea1cec404d731cb0655e7a',
+  qualificationSha256: '4046d7fe58325fdfbf8c150b4c96260559391318dc16ed6eefa8831328d9e618',
+  manualReceiptSha256: 'eeb8e95eb43990739722bf65da07cb6b249f687828d281593529d12cc1a4bccf' });
+const pinnedPrecreateSteps = Object.freeze([
+  ['Set up job', 'success'],
+  ['Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'success'],
+  ['Require exact protected main before loading dependencies or credentials', 'success'],
+  ['Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020', 'success'],
+  ['Run npm ci --ignore-scripts --no-audit', 'success'],
+  ['Run fixed-target runner using only existing protected access', 'failure'],
+  ['Finalize immutable qualification evidence without provider access', 'success'],
+  ['Summarize retained target and review deadlines', 'success'],
+  ['Upload immutable qualification evidence', 'success'],
+  ['Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020', 'skipped'],
+  ['Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'success'],
+  ['Complete job', 'success'],
+]);
+
+async function verifyPinnedCancelledExecution(run, read, env) {
+  const pinned = pinnedCancelledExecution;
+  requireThat(object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
+    && run.workflow_id === workflowId && run.path === workflowPath
+    && run.head_sha === pinned.headSha && run.head_branch === 'main' && run.event === 'workflow_dispatch'
+    && run.run_attempt === pinned.runAttempt && run.status === 'completed' && run.conclusion === 'cancelled'
+    && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`
+    && run.repository?.id === 1010752912 && run.repository?.full_name === env.GITHUB_REPOSITORY
+    && run.head_repository?.id === 1010752912 && run.head_repository?.full_name === env.GITHUB_REPOSITORY
+    && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
+  'prior_execution_provenance_mismatch');
+  const approvals = await read(`/actions/runs/${pinned.runId}/approvals`);
+  requireThat(Array.isArray(approvals) && approvals.length === 0, 'prior_execution_has_production_approval');
+  const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
+  requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
+    'prior_execution_job_inventory_incomplete');
+  const [job] = jobs.jobs;
+  requireThat(object(job) && job.id === pinned.jobId && String(job.run_id) === pinned.runId && job.run_attempt === pinned.runAttempt
+    && job.head_sha === pinned.headSha && job.name === 'Qualify isolated native restore without cleanup'
+    && job.status === 'completed' && job.conclusion === 'cancelled' && job.runner_id === 0
+    && job.runner_name === '' && job.runner_group_id === 0 && Array.isArray(job.steps) && job.steps.length === 0,
+  'prior_execution_runner_or_step_evidence_present');
+  const artifacts = await read(`/actions/runs/${pinned.runId}/artifacts?per_page=100`);
+  requireThat(object(artifacts) && artifacts.total_count === 0 && Array.isArray(artifacts.artifacts) && artifacts.artifacts.length === 0,
+    'prior_execution_artifact_evidence_present');
+  return { status: 'PINNED_PRE_RUNNER_CANCELLATION_RECONCILED', workflowPath, workflowId,
+    runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha, event: 'workflow_dispatch',
+    conclusion: 'cancelled', jobId: pinned.jobId, runnerAssigned: false, stepCount: 0, approvalCount: 0, artifactCount: 0 };
+}
+
+async function verifyPinnedPrecreateFailure(run, read, env) {
+  const pinned = pinnedPrecreateFailure;
+  requireThat(object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
+    && run.workflow_id === workflowId && run.path === workflowPath && run.head_sha === pinned.headSha
+    && run.head_branch === 'main' && run.event === 'workflow_dispatch' && run.run_attempt === pinned.runAttempt
+    && run.status === 'completed' && run.conclusion === 'failure'
+    && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`
+    && run.repository?.id === 1010752912 && run.repository?.full_name === env.GITHUB_REPOSITORY
+    && run.head_repository?.id === 1010752912 && run.head_repository?.full_name === env.GITHUB_REPOSITORY
+    && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
+  'prior_execution_provenance_mismatch');
+  const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
+  requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
+    'prior_execution_job_inventory_incomplete');
+  const [job] = jobs.jobs;
+  requireThat(object(job) && job.id === pinned.jobId && String(job.run_id) === pinned.runId && job.run_attempt === pinned.runAttempt
+    && job.head_sha === pinned.headSha && job.name === 'Qualify isolated native restore without cleanup'
+    && job.status === 'completed' && job.conclusion === 'failure' && Number.isSafeInteger(job.runner_id) && job.runner_id > 0
+    && typeof job.runner_name === 'string' && job.runner_name.length > 0 && Number.isSafeInteger(job.runner_group_id)
+    && Array.isArray(job.steps) && job.steps.length === pinnedPrecreateSteps.length
+    && pinnedPrecreateSteps.every(([name, conclusion], index) => job.steps[index]?.name === name
+      && job.steps[index].number === [1,2,3,4,5,6,7,8,9,17,18,19][index]
+      && job.steps[index].status === 'completed' && job.steps[index].conclusion === conclusion),
+  'prior_execution_precreate_step_evidence_mismatch');
+  const artifacts = await read(`/actions/runs/${pinned.runId}/artifacts?per_page=100`);
+  requireThat(object(artifacts) && artifacts.total_count === 1 && Array.isArray(artifacts.artifacts) && artifacts.artifacts.length === 1,
+    'prior_execution_artifact_inventory_incomplete');
+  const [artifact] = artifacts.artifacts;
+  requireThat(object(artifact) && artifact.id === pinned.artifactId && artifact.name === pinned.artifactName
+    && artifact.size_in_bytes === pinned.artifactSize && artifact.digest === pinned.artifactDigest && artifact.expired === false
+    && artifact.created_at === '2026-10-25T12:41:37Z' && artifact.expires_at === '2026-11-01T12:41:36Z'
+    && String(artifact.workflow_run?.id) === pinned.runId && artifact.workflow_run?.repository_id === 1010752912
+    && artifact.workflow_run?.head_sha === pinned.headSha,
+  'prior_execution_no_mutation_artifact_mismatch');
+  return { status: 'PINNED_PRECREATE_FAILURE_RECONCILED', workflowPath, workflowId,
+    runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha,
+    event: 'workflow_dispatch', conclusion: 'failure', jobId: pinned.jobId, failedStepNumber: 6,
+    blocker: 'copied_role_metadata_invalid', artifactId: pinned.artifactId, artifactDigest: pinned.artifactDigest,
+    artifactProviderMutationCount: 0, artifactCredentialActionCount: 0, artifactTargetCreated: false,
+    artifactState: 'NO_TARGET_CREATED', artifactCount: 1 };
+}
+
+function verifyPinnedHistoryEntry(run, pinned, conclusion) {
+  return object(run) && String(run.id) === pinned.runId && run.run_number === pinned.runNumber
+    && run.workflow_id === workflowId && run.path === workflowPath && run.head_sha === pinned.headSha
+    && run.head_branch === 'main' && run.event === 'workflow_dispatch' && run.run_attempt === pinned.runAttempt
+    && run.status === 'completed' && run.conclusion === conclusion
+    && run.display_title === `Native restore execute ${pinned.headSha}` && run.name === `Native restore execute ${pinned.headSha}`;
+}
+
+export function assertPinnedManualCleanupProof(qualificationBytes, receiptBytes) {
+  const pinned = pinnedManuallyDeletedFailure;
+  requireThat(ArrayBuffer.isView(qualificationBytes) && ArrayBuffer.isView(receiptBytes)
+    && sha256(qualificationBytes) === pinned.qualificationSha256 && sha256(receiptBytes) === pinned.manualReceiptSha256,
+  'prior_manual_cleanup_file_hash_mismatch');
+  let report, receipt;
+  try { report = JSON.parse(Buffer.from(qualificationBytes).toString('utf8')); receipt = JSON.parse(Buffer.from(receiptBytes).toString('utf8')); }
+  catch { throw new RestoreFailure('prior_manual_cleanup_files_invalid'); }
+  requireThat(report.runId === pinned.runId && report.sourceMainSha === pinned.headSha && report.mode === 'execute'
+    && report.phase === 'qualification' && report.qualificationOutcome === 'FAILED' && report.recoveryAcceptance === 'NOT_CERTIFIED'
+    && report.sourceBranchId === RESTORE.sourceId && report.backupId === pinned.backupId && report.targetName === pinned.targetName
+    && report.createdTargetId === pinned.targetId && report.creation?.acknowledged === true && report.creation.id === pinned.targetId
+    && report.creation.sourceBranchId === RESTORE.sourceId && report.creation.createdAt === '2026-10-25T16:37:31.931Z'
+    && report.providerMutations?.length === 1 && report.providerMutations[0].action === 'create_fixed_restore'
+    && report.providerMutations[0].outcome === 'ACKNOWLEDGED' && Array.isArray(report.credentialActions)
+    && report.credentialActions.length === 0 && /^[A-Za-z0-9-]{1,39}$/.test(report.reviewWindow?.operator ?? '')
+    && JSON.stringify(report.blockers) === '["copied_role_metadata_invalid"]',
+  'prior_manual_cleanup_qualification_mismatch');
+  requireThat(receipt.schemaVersion === 'lythaus-manual-native-restore-cleanup-v1'
+    && receipt.recordType === 'manual_cleanup_observation' && receipt.qualificationRunId === pinned.runId
+    && receipt.qualification?.artifactSha256 === pinned.qualificationSha256 && receipt.qualification.outcome === 'FAILED'
+    && receipt.qualification.recoveryAcceptance === 'NOT_CERTIFIED' && receipt.database?.id === RESTORE.databaseId
+    && receipt.targetBeforeDeletion?.id === pinned.targetId && receipt.targetBeforeDeletion.name === pinned.targetName
+    && receipt.manualCleanup?.outcome === 'TARGET_ABSENT_VERIFIED' && receipt.manualCleanup.submitCount === 1
+    && receipt.manualCleanup.exactTargetGetResult === 'not_found' && receipt.postCleanupInventory?.totalCount === 1
+    && receipt.postCleanupInventory.branches?.[0]?.id === RESTORE.sourceId
+    && receipt.automation?.cleanupWorkflowDispatched === false && receipt.automation.cleanupPermitRunNumber2Consumed === false
+    && receipt.automation.automatedCleanupPassClaimed === false,
+  'prior_manual_cleanup_receipt_mismatch');
+  return { targetId: pinned.targetId, qualificationSha256: pinned.qualificationSha256,
+    manualReceiptSha256: pinned.manualReceiptSha256, cleanupMode: 'MANUAL', cleanupOutcome: 'TARGET_ABSENT_VERIFIED',
+    recoveryAcceptance: 'NOT_CERTIFIED', artifactProviderMutationCount: 1, artifactCredentialActionCount: 0,
+    manualOperator: report.reviewWindow.operator };
+}
+
+async function verifyPinnedManuallyDeletedFailure(run, read, env) {
+  const pinned = pinnedManuallyDeletedFailure;
+  requireThat(verifyPinnedHistoryEntry(run, pinned, 'failure') && run.repository?.id === 1010752912
+    && run.repository.full_name === env.GITHUB_REPOSITORY && run.head_repository?.id === 1010752912
+    && run.head_repository.full_name === env.GITHUB_REPOSITORY && Array.isArray(run.pull_requests) && run.pull_requests.length === 0,
+  'prior_execution_provenance_mismatch');
+  const jobs = await read(`/actions/runs/${pinned.runId}/jobs?per_page=100`);
+  requireThat(object(jobs) && jobs.total_count === 1 && Array.isArray(jobs.jobs) && jobs.jobs.length === 1,
+    'prior_execution_job_inventory_incomplete');
+  const [job] = jobs.jobs;
+  requireThat(object(job) && job.id === pinned.jobId && String(job.run_id) === pinned.runId && job.run_attempt === 1
+    && job.head_sha === pinned.headSha && job.name === 'Qualify isolated native restore without cleanup'
+    && job.status === 'completed' && job.conclusion === 'failure' && Number.isSafeInteger(job.runner_id) && job.runner_id > 0
+    && typeof job.runner_name === 'string' && job.runner_name.length > 0 && Number.isSafeInteger(job.runner_group_id)
+    && Array.isArray(job.steps) && job.steps.length === pinnedPrecreateSteps.length
+    && pinnedPrecreateSteps.every(([name, conclusion], index) => job.steps[index]?.name === name
+      && job.steps[index].number === [1,2,3,4,5,6,7,8,9,17,18,19][index]
+      && job.steps[index].status === 'completed' && job.steps[index].conclusion === conclusion),
+  'prior_manual_cleanup_step_evidence_mismatch');
+  const artifacts = await read(`/actions/runs/${pinned.runId}/artifacts?per_page=100`);
+  requireThat(object(artifacts) && artifacts.total_count === 1 && Array.isArray(artifacts.artifacts) && artifacts.artifacts.length === 1,
+    'prior_execution_artifact_inventory_incomplete');
+  const [artifact] = artifacts.artifacts;
+  requireThat(artifact.id === pinned.artifactId && artifact.size_in_bytes === pinned.artifactSize
+    && artifact.name === `native-restore-qualification-${pinned.headSha}-${pinned.runId}`
+    && artifact.digest === pinned.artifactDigest && artifact.expired === false
+    && artifact.created_at === '2026-10-25T16:39:28Z' && artifact.expires_at === '2026-11-01T16:39:28Z'
+    && String(artifact.workflow_run?.id) === pinned.runId && artifact.workflow_run?.repository_id === 1010752912
+    && artifact.workflow_run?.head_sha === pinned.headSha, 'prior_manual_cleanup_artifact_mismatch');
+  const evidenceRoot = new URL('../../docs/evidence/production-cutover/0021-restore-evidence/', import.meta.url);
+  const files = [`artifacts/qualification-${pinned.runId}.json`, `manual-cleanup-${pinned.runId}.json`].map(relative => {
+    const file = new URL(relative, evidenceRoot);
+    requireThat(fs.lstatSync(file).isFile(), 'prior_manual_cleanup_file_not_regular');
+    return fs.readFileSync(file);
+  });
+  const proof = assertPinnedManualCleanupProof(...files);
+  const approvals = await read(`/actions/runs/${pinned.runId}/approvals`);
+  requireThat(Array.isArray(approvals) && approvals.length === 1 && approvals[0].state === 'approved'
+    && approvals[0].user?.type === 'User' && approvals[0].user.login === proof.manualOperator
+    && approvals[0].environments?.some(row => row.name === 'production'), 'prior_manual_cleanup_production_approval_mismatch');
+  return { status: 'PINNED_MANUALLY_DELETED_FAILURE_RECONCILED', workflowPath, workflowId,
+    runId: pinned.runId, runNumber: pinned.runNumber, runAttempt: pinned.runAttempt, headSha: pinned.headSha,
+    event: 'workflow_dispatch', conclusion: 'failure', jobId: pinned.jobId, artifactId: pinned.artifactId,
+    artifactDigest: pinned.artifactDigest, ...proof };
+}
+
+export async function githubReadiness(environment, fetchImpl = fetch, execute = false) {
+  const env = environment;
+  requireThat(/^[a-f0-9]{40}$/.test(env.RELEASE_SHA ?? '') && env.GITHUB_SHA === env.RELEASE_SHA
+    && env.GITHUB_REF === 'refs/heads/main' && env.REF_PROTECTED === 'true' && env.GITHUB_REPOSITORY_ID === '1010752912'
+    && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/Lythaus$/.test(env.GITHUB_REPOSITORY ?? '')
+    && env.GITHUB_RUN_ATTEMPT === '1' && /^[1-9]\d*$/.test(env.GITHUB_RUN_ID ?? '') && env.GH_TOKEN, 'invalid_protected_execution_context');
+  const base = `https://api.github.com/repos/${env.GITHUB_REPOSITORY}`;
+  const read = async suffix => {
+    const response = await fetchImpl(base + suffix, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(15000),
+      headers: { authorization: `Bearer ${env.GH_TOKEN}`, accept: 'application/vnd.github+json' } });
+    requireThat(response.status === 200 && !response.redirected && (!response.url || response.url === base + suffix), 'github_precondition_read_failed');
+    const text = await response.text(); requireThat(Buffer.byteLength(text) <= 1048576, 'github_precondition_response_too_large');
+    try { return JSON.parse(text); } catch { throw new RestoreFailure('github_precondition_response_invalid'); }
+  };
+  const repository = await read('');
+  requireThat(repository.id === 1010752912 && repository.full_name === env.GITHUB_REPOSITORY, 'repository_identity_changed');
+  const branch = await read('/branches/main');
+  requireThat(branch.protected === true && branch.commit?.sha === env.RELEASE_SHA, 'current_protected_main_changed');
+  if (execute) {
+    const approvals = await read(`/actions/runs/${env.GITHUB_RUN_ID}/approvals`);
+    const record = JSON.parse(env.RESTORE_CHECK_APPROVAL_JSON);
+    requireThat(Array.isArray(approvals) && approvals.some(row => row.state === 'approved' && row.user?.type === 'User'
+      && row.user.login === record.manualOperator && row.environments?.some(item => item.name === 'production')), 'named_human_production_approval_required');
+    const prior = await read(`/actions/workflows/${workflowPath.split('/').at(-1)}/runs?event=workflow_dispatch&per_page=100`);
+    requireThat(object(prior) && Number.isInteger(prior.total_count) && prior.total_count <= 100 && Array.isArray(prior.workflow_runs)
+      && prior.workflow_runs.length === prior.total_count
+      && prior.workflow_runs.every(run => Number.isSafeInteger(run.id) && run.id > 0
+        && run.workflow_id === workflowId && run.path === workflowPath && run.event === 'workflow_dispatch'
+        && run.head_branch === 'main' && /^[a-f0-9]{40}$/.test(run.head_sha ?? '')
+        && typeof run.display_title === 'string'), 'execution_history_incomplete');
+    requireThat(new Set(prior.workflow_runs.map(run => run.id)).size === prior.workflow_runs.length, 'execution_history_duplicate_run');
+    const previous = prior.workflow_runs.filter(run => String(run.id) !== env.GITHUB_RUN_ID);
+    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure, pinnedManuallyDeletedFailure, RUN12];
+    const pinnedRows = new Map(pinnedExecutions.map(pinned => [pinned.runId,
+      previous.filter(run => String(run.id) === pinned.runId)]));
+    const pinnedIds = new Set(pinnedExecutions.map(pinned => pinned.runId));
+    const unexpectedRows = previous.filter(run => !pinnedIds.has(String(run.id))
+      && run.display_title !== `Native restore plan ${run.head_sha}`);
+    requireThat([...pinnedRows.values()].every(rows => rows.length === 1) && unexpectedRows.length === 0,
+      'prior_execution_requires_manual_reconciliation');
+    requireThat(verifyPinnedHistoryEntry(pinnedRows.get(pinnedCancelledExecution.runId)[0], pinnedCancelledExecution, 'cancelled')
+      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedPrecreateFailure.runId)[0], pinnedPrecreateFailure, 'failure')
+      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedManuallyDeletedFailure.runId)[0], pinnedManuallyDeletedFailure, 'failure')
+      && verifyPinnedHistoryEntry(pinnedRows.get(RUN12.runId)[0], RUN12, 'failure'),
+    'prior_execution_history_entry_mismatch');
+    const cancelledRun = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
+    const cancelledProof = await verifyPinnedCancelledExecution(cancelledRun, read, env);
+    const precreateRun = await read(`/actions/runs/${pinnedPrecreateFailure.runId}`);
+    const precreateProof = await verifyPinnedPrecreateFailure(precreateRun, read, env);
+    const manuallyDeletedRun = await read(`/actions/runs/${pinnedManuallyDeletedFailure.runId}`);
+    const manuallyDeletedProof = await verifyPinnedManuallyDeletedFailure(manuallyDeletedRun, read, env);
+    const reviewedProof = await verifyRun12ReviewedCleanup(await read(`/actions/runs/${RUN12.runId}`), read, env);
+    return { executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED', workflowPath, workflowId,
+      pinnedExecutions: [cancelledProof, precreateProof, manuallyDeletedProof, reviewedProof] } };
+  }
+  return { executionHistoryReconciliation: null };
+}
+
+export async function runNativeRestore({ environment = process.env, api, now = Date.now,
+  sleep = (milliseconds, signal) => delay(milliseconds, undefined, { signal }),
+  assertMain = () => githubReadiness(environment, fetch, environment.RESTORE_CHECK_EXECUTE === 'true'),
+  checkpoint = () => {}, readCatalog = collectRestoreCatalog, readSession = readOnly,
+  extensionAuthority = inspectExtensionAuthority, installExtensions = installMissingExtensions,
+  prepareSmoke = buildRestoreSmoke, smoke = runRestoreSmoke,
+  phaseBudgetMs = 120000,
+  reserveCleanup = () => inspectCleanupReservation(environment),
+  reviewedOriginFingerprint = manifest.expectedMainOriginFingerprint } = {}) {
+  const started = now(), execute = environment.RESTORE_CHECK_EXECUTE === 'true';
+  const report = { version: 1, sourceMainSha: /^[a-f0-9]{40}$/.test(environment.RELEASE_SHA ?? '') ? environment.RELEASE_SHA : null,
+    runId: /^[1-9]\d*$/.test(environment.GITHUB_RUN_ID ?? '') ? environment.GITHUB_RUN_ID : null,
+    phase: 'qualification', mode: execute ? 'execute' : 'read-only-plan', status: 'BLOCKED', state: 'NO_TARGET_CREATED',
+    qualificationOutcome: 'FAILED', startedAt: new Date(started).toISOString(),
+    sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target,
+    expectedTargetProduction: RESTORE.targetProduction, createdTargetId: null,
+    providerMutations: [], credentialActions: [], phases: [], productRowsRead: false, cleanup: 'NOT_NEEDED', blockers: [],
+    recoveryAcceptance: 'NOT_CERTIFIED', independentRecovery: 'DEFERRED_BY_OWNER_EXCEPTION', deploymentAuthorized: false,
+    verifiedScope: [], cleanupDeadlineAt: new Date(started + RESTORE.maximumMs).toISOString(),
+    qualificationStopAt: new Date(started + RESTORE.qualificationStopMs).toISOString(),
+    escalationAt: new Date(started + RESTORE.escalationMs).toISOString(), reviewByAt: new Date(started + RESTORE.reviewMs).toISOString(),
+    cleanupStartByAt: new Date(started + RESTORE.cleanupStartMs).toISOString() };
+  let owned = false, approval, scripts, setup, sourceUrl;
+  const connections = {};
+  const save = async () => { await checkpoint(structuredClone(report)); };
+  const assertProtectedMain = async () => {
+    let readiness;
+    try { readiness = await assertMain(); }
+    catch (error) { if (error instanceof RestoreFailure) throw error; throw new RestoreFailure('github_precondition_read_failed'); }
+    if (readiness?.executionHistoryReconciliation) {
+      const targetReconciliation = report.executionHistoryReconciliation?.targetReconciliation;
+      report.executionHistoryReconciliation = readiness.executionHistoryReconciliation;
+      if (targetReconciliation) report.executionHistoryReconciliation.targetReconciliation = targetReconciliation;
+    }
+    return readiness;
+  };
+  const time = () => requireThat(now() < Date.parse(report.qualificationStopAt), 'qualification_phase_review_reserve_reached');
+  const phase = async (name, operation, maximumMs = 120000, mutation = false) => {
+    time();
+    const budgetMs = Math.min(maximumMs, phaseBudgetMs, Date.parse(report.qualificationStopAt) - now());
+    requireThat(Number.isSafeInteger(budgetMs) && budgetMs > 0, 'qualification_phase_budget_invalid');
+    const controller = new AbortController(), row = { name, budgetMs, startedAt: new Date(now()).toISOString(), outcome: 'PENDING' };
+    report.phases.push(row); await save();
+    const timer = setTimeout(() => controller.abort(new RestoreFailure(`qualification_${name}_timeout`)), budgetMs);
+    try {
+      const result = await operation(controller.signal); controller.signal.throwIfAborted(); time();
+      row.outcome = 'PASSED'; return result;
+    } catch (error) {
+      row.outcome = controller.signal.aborted ? 'TIMED_OUT' : 'FAILED';
+      if (controller.signal.aborted) throw new RestoreFailure(`qualification_${name}_timeout`, mutation ? 'UNKNOWN_MUTATION_OUTCOME' : 'BLOCKED');
+      throw error;
+    } finally { clearTimeout(timer); row.finishedAt = new Date(now()).toISOString(); await save(); }
+  };
+  const mutate = async (label, operation, beforeSubmit) => {
+    time(); await assertProtectedMain();
+    const reservation = await reserveCleanup();
+    requireThat(reservation.workflowId === report.cleanupPermit.workflowId && reservation.runNumber === report.cleanupPermit.runNumber,
+      'reserved_cleanup_run_number_consumed');
+    if (label === 'create_fixed_restore') {
+      checkBackup(await api.request(backupPath), now());
+      const directTarget = await api.request(targetPath, { absent: true });
+      requireThat(directTarget === null, 'preexisting_target_refused');
+      const branches = await api.list('/branches');
+      requireThat(!branches.some(row => row.name === RESTORE.target || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
+      const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
+      requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
+      requireThat(Array.isArray(protectedBackup.restored_branches)
+        && !protectedBackup.restored_branches.some(row => row.name === RESTORE.target), 'backup_target_history_unexpected');
+      if (report.executionHistoryReconciliation) {
+        report.executionHistoryReconciliation.targetReconciliation = { databaseId: RESTORE.databaseId,
+          sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target,
+          directGetReturnedNotFound: true, completeBranchInventoryExcludedTarget: true,
+          backupRestoreHistoryExcludedTarget: true, checkedAt: new Date(now()).toISOString() };
+      }
+      const currentSource = await phase('source_admission_catalog', signal => readSession(sourceUrl, RESTORE.sourceId,
+        'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
+      requireThat(hash(currentSource) === hash(report.sourceBaseline), 'source_metadata_changed_before_restore');
+    }
+    report.providerMutations.push({ action: label, outcome: 'PENDING_OR_UNKNOWN' }); await save();
+    try { await assertProtectedMain(); await beforeSubmit?.(); time(); }
+    catch (error) {
+      report.providerMutations.at(-1).outcome = 'BLOCKED'; await save();
+      if (error instanceof RestoreFailure) throw error;
+      throw new RestoreFailure('mutation_admission_read_failed');
+    }
+    try {
+      const value = await operation(); report.providerMutations.at(-1).outcome = 'ACKNOWLEDGED'; await save(); return value;
+    }
+    catch (error) {
+      report.providerMutations.at(-1).outcome = error instanceof RestoreFailure ? error.outcome : 'UNKNOWN_MUTATION_OUTCOME';
+      if (error instanceof RestoreFailure && object(error.providerDiagnostic)) report.providerMutations.at(-1).providerDiagnostic = error.providerDiagnostic;
+      await save(); throw error;
+    }
+  };
+  const boundTarget = async (configuration = true, signal) => {
+    signal?.throwIfAborted();
+    const branch = await api.request(targetPath, { signal });
+    signal?.throwIfAborted();
+    if (configuration) checkBranch(branch, report.createdTargetId); else checkOwnedBranch(branch, report.createdTargetId);
+    const backup = await api.request(backupPath, { signal });
+    signal?.throwIfAborted();
+    requireThat(backup.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
+      && Array.isArray(backup.restored_branches) && backup.restored_branches.some(row => row.id === report.createdTargetId
+        && row.name === RESTORE.target), 'backup_to_new_target_binding_unproven');
+    return branch;
+  };
+  const verifyAuthority = () => api.authority(async evidence => { report.authorityDiagnostic = evidence; await save(); }, false,
+    execute ? Date.parse(report.cleanupDeadlineAt) : undefined);
+  try {
+    requireThat(['true', 'false', undefined].includes(environment.RESTORE_CHECK_EXECUTE), 'execution_mode_invalid');
+    if (execute) {
+      approval = approvalRecord(environment.RESTORE_CHECK_APPROVAL_JSON, environment, started);
+      report.approvalSha256 = hash(approval); report.approvalExpiresAt = approval.expiresAt;
+      report.reviewWindow = approval.reviewWindow; report.retention = approval.retention;
+    }
+    await assertProtectedMain();
+    report.cleanupPermit = await reserveCleanup();
+    if (execute) requireThat(report.cleanupPermit.workflowId === approval.cleanupPermit.workflowId
+      && report.cleanupPermit.runNumber === approval.cleanupPermit.runNumber, 'cleanup_reservation_not_approved');
+    api ??= new RestoreApi(environment.PLANETSCALE_RESTORE_API_TOKEN);
+    await verifyAuthority();
+    const source = await api.request('/branches/main');
+    requireThat(source.id === RESTORE.sourceId && source.name === 'main' && source.kind === 'postgresql'
+      && source.default === true && source.deleted_at === null && source.ready === true, 'source_branch_identity_changed');
+    const backup = await api.request(backupPath); checkBackup(backup, now());
+    requireThat(backup.protected === true, 'protected_backup_with_finite_retention_plan_is_manual_prerequisite');
+    const branches = await api.list('/branches');
+    requireThat(!branches.some(row => row.name === RESTORE.target || row.id === report.createdTargetId
+      || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
+    requireThat(await api.request(targetPath, { absent: true }) === null, 'preexisting_target_refused');
+    requireThat(Array.isArray(backup.restored_branches)
+      && !backup.restored_branches.some(row => row.name === RESTORE.target), 'backup_target_history_unexpected');
+    const sourceRoles = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId);
+    report.backup = { id: backup.id, restoreMode: 'SPECIFIED_BACKUP_SNAPSHOT', protected: backup.protected,
+      completedAt: backup.completed_at, expiresAt: backup.expires_at,
+      pvcBytes: backup.pvc_size, logicalBytes: backup.uncompressed_size };
+    report.cost = { maximumUsd: 5, computeStorageBackupEstimateBeforeTaxUsd: 0.038604429, maximumExerciseSeconds: 7200,
+      enforcedProviderHardCap: false, allInReviewedEstimateUsd: approval ? approval.estimatedSubtotalUsd + approval.taxAndFeeAllowanceUsd : null,
+      cumulativeOwnerBound: approval ? { evidenceSha256: approval.cumulativeBudget.evidenceSha256,
+        priorSpendUpperBoundUsd: approval.cumulativeBudget.priorSpendUpperBoundUsd,
+        priorRetentionUpperBoundUsd: approval.cumulativeBudget.priorRetentionUpperBoundUsd,
+        totalUpperBoundUsd: approval.cumulativeBudget.priorSpendUpperBoundUsd + approval.cumulativeBudget.priorRetentionUpperBoundUsd
+          + approval.estimatedSubtotalUsd + approval.taxAndFeeAllowanceUsd,
+        basis: 'EXPLICIT_OWNER_REVIEWED_UPPER_BOUND_NOT_PROVIDER_BILLING_VERIFICATION' } : null };
+    await save();
+    if (!execute) { report.status = 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED'; return report; }
+    sourceUrl = sourceConnection(environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL, reviewedOriginFingerprint);
+    const baseline = await phase('source_catalog', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
+    requireThat(baseline.extensionCount === 3, 'source_required_extensions_incomplete');
+    checkedExtensionSpecifications(baseline.extensionSpecifications);
+    report.sourceBaseline = baseline;
+    scripts = await phase('build', signal => prepareSmoke(signal));
+    const created = await mutate('create_fixed_restore', () => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }), verifyAuthority);
+    report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
+    requireThat(safeId(created.id) && created.id !== RESTORE.sourceId && created.name === RESTORE.target
+      && Date.parse(created.created_at) >= started - 60000 && Date.parse(created.created_at) <= now(), 'create_ack_identity_invalid', 'UNKNOWN_MUTATION_OUTCOME');
+    report.createdTargetId = created.id;
+    checkOwnedBranch(created, created.id); owned = true;
+    report.creation = { acknowledged: true, id: created.id, name: created.name, createdAt: created.created_at,
+      sourceBranchId: created.restored_from_branch.id, kind: created.kind, default: created.default, production: created.production };
+    report.state = 'TARGET_RETAINED_PENDING_REVIEW'; report.cleanup = 'TARGET_RETAINED_PENDING_REVIEW'; await save();
+    checkBranch(created, created.id);
+    let branch;
+    for (let count = 0; count < 180; count++) {
+      time(); branch = await boundTarget();
+      if (branch.ready === true && branch.state === 'ready') break;
+      await sleep(10000);
+    }
+    checkBranch(branch, created.id, true); report.restoreReadyAt = new Date(now()).toISOString();
+    report.roleInventoryObservations = [];
+    const roles = await phase('copied_roles', async signal => {
+      const seen = new Map(), stopAt = Math.min(now() + Math.min(120000, phaseBudgetMs), Date.parse(report.qualificationStopAt));
+      for (let attempt = 1; attempt <= 12; attempt++) {
+        signal.throwIfAborted(); time();
+        requireThat(now() < stopAt, 'copied_role_readiness_timeout');
+        const observation = { attempt, observedAt: new Date(now()).toISOString(), outcome: 'PENDING' };
+        try {
+          await boundTarget(true, signal); signal.throwIfAborted();
+          const rows = await api.list(`${targetPath}/roles`, { signal });
+          observation.rowCount = Array.isArray(rows) ? rows.length : null;
+          const state = copiedRoleReadiness(rows, created.id, sourceRoles);
+          if (state.ready) for (const name of ROLE_NAMES) restoredConnectionMetadata(
+            rows.find(row => row.base_username === name), created.id, name, sourceRoles.get(name));
+          for (const [name, row] of state.roles) {
+            requireThat(!seen.has(name) || seen.get(name) === row.id, 'copied_role_identity_changed_during_readiness');
+            seen.set(name, row.id);
+          }
+          observation.missing = state.missing; observation.pending = state.pending;
+          observation.outcome = state.ready ? 'PASSED' : 'PENDING';
+          report.roleInventoryObservations.push(observation); await save();
+          signal.throwIfAborted(); time();
+          requireThat(now() < stopAt, 'copied_role_readiness_timeout');
+          if (state.ready) return checkedRoles(rows, created.id, sourceRoles);
+        } catch (error) {
+          if (!report.roleInventoryObservations.includes(observation)) report.roleInventoryObservations.push(observation);
+          observation.outcome = 'BLOCKED'; observation.errorCode = failureCode(error);
+          if (error instanceof RestoreFailure && object(error.safeDiagnostic)) observation.diagnostic = error.safeDiagnostic;
+          await save(); throw error;
+        }
+        if (attempt < 12) await sleep(Math.min(10000, Math.max(0, stopAt - now())), signal);
+      }
+      throw new RestoreFailure('copied_role_readiness_timeout');
+    });
+    const reset = async name => {
+      await boundTarget();
+      checkedRoles(await api.list(`${targetPath}/roles`), created.id, sourceRoles);
+      const row = await mutate(`reset_copied_${name}`,
+        () => api.request(`${targetPath}/roles/${roles.get(name).id}/reset`, { method: 'POST' }), async () => {
+        const inventory = await api.list(`${targetPath}/roles`);
+        const currentRoles = checkedRoles(inventory, created.id, sourceRoles);
+        for (const role of ROLE_NAMES) restoredConnectionMetadata(
+          inventory.find(row => row.base_username === role), created.id, role, sourceRoles.get(role));
+        requireThat(ROLE_NAMES.every(role => currentRoles.get(role).id === roles.get(role).id),
+          'copied_role_identity_changed_before_reset');
+        await verifyAuthority();
+        await boundTarget();
+      });
+      requireThat(row.id === roles.get(name).id, 'reset_role_id_changed');
+      const connection = restoredConnection(row, created.id, name, sourceRoles.get(name));
+      report.credentialActions.push({ role: name, targetBranchId: created.id, outcome: 'RESET_ACKNOWLEDGED_MEMORY_ONLY' }); await save();
+      return connection;
+    };
+    setup = await reset(RESTORE.setup);
+    const missing = await phase('extension_authority', signal => extensionAuthority(setup, created.id, undefined, signal, baseline.extensionSpecifications), 30000);
+    requireThat(Array.isArray(missing) && missing.every(name => EXTENSIONS.includes(name)), 'extension_probe_invalid');
+    report.missingExtensions = missing;
+    if (missing.length) await mutate('install_missing_named_extensions', () => phase('extensions', signal => installExtensions(setup, created.id, missing, undefined, signal, baseline.extensionSpecifications), 60000, true));
+    const restored = await phase('restored_catalog', signal => readSession(setup, created.id, RESTORE.setup, readCatalog, undefined, signal));
+    requireThat(hash(restored) === hash(baseline), 'restored_catalog_registry_acl_or_grants_mismatch');
+    report.restoredVerification = restored;
+    for (const name of ['runtime', 'admin', 'jobs', 'privacy']) connections[name] = await reset(RESTORE[name]);
+    time(); await boundTarget();
+    report.applicationSmoke = await phase('smoke', signal => smoke(connections, created.id, baseline, scripts, undefined, signal));
+    requireThat(report.applicationSmoke?.readOnlyDatabaseIdentity === true && report.applicationSmoke?.distinctRoles === 4,
+      'application_smoke_not_verified');
+    const sourceAfter = await phase('source_readback', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
+    requireThat(hash(sourceAfter) === hash(baseline), 'source_metadata_changed_during_restore');
+    time();
+    report.verifiedAt = new Date(now()).toISOString();
+    report.measuredRestoreSeconds = Math.ceil((Date.parse(report.restoreReadyAt) - started) / 1000);
+    report.status = 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED'; report.qualificationOutcome = 'PASSED';
+    report.verifiedScope = ['backup_binding','restore_completion','schema_extensions_indexes','canonical_registry','effective_runtime_privileges','application_smoke'];
+  } catch (error) {
+    report.blockers.push(failureCode(error));
+    if (error instanceof RestoreFailure && object(error.providerDiagnostic)) report.providerFailure = error.providerDiagnostic;
+    if (error instanceof RestoreFailure && object(error.safeDiagnostic)) report.roleMetadataDiagnostic = error.safeDiagnostic;
+    report.status = error instanceof RestoreFailure ? error.outcome : error?.extensionOutcomeUnknown ? 'UNKNOWN_MUTATION_OUTCOME' : 'FAILED';
+    report.qualificationOutcome = report.status.includes('UNKNOWN') ? 'UNKNOWN' : 'FAILED';
+  } finally {
+    setup = null; scripts = null;
+    for (const key of Object.keys(connections)) delete connections[key];
+    if (owned) {
+      report.state = 'TARGET_RETAINED_PENDING_REVIEW'; report.cleanup = 'TARGET_RETAINED_PENDING_REVIEW';
+    } else if (report.providerMutations.some(row => row.action === 'create_fixed_restore' && row.outcome === 'UNKNOWN_MUTATION_OUTCOME')) {
+      report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
+    }
+    report.credentialReferencesDiscarded = true;
+    report.costEscalationRequired = report.cleanup === 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED'
+      || (owned && (now() >= Date.parse(report.escalationAt) || report.qualificationOutcome !== 'PASSED'));
+    report.finishedAt = new Date(now()).toISOString();
+    try { await save(); } catch { report.blockers.push('final_evidence_checkpoint_failed'); report.status = 'EVIDENCE_PERSISTENCE_FAILED'; }
+  }
+  return report;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const directory = process.env.EVIDENCE_DIR;
+  requireThat(directory && path.isAbsolute(directory), 'evidence_directory_required');
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  if (process.argv.includes('--finalize-only')) {
+    finalizeQualificationEvidence(directory);
+    process.exit(0);
+  }
+  const checkpoint = report => {
+    const temporary = path.join(directory, 'checkpoint.pending.json');
+    fs.writeFileSync(temporary, JSON.stringify(report, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(temporary, path.join(directory, 'checkpoint.json'));
+  };
+  const report = await runNativeRestore({ checkpoint });
+  fs.writeFileSync(path.join(directory, 'qualification.json'), JSON.stringify(report, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+  process.stdout.write(JSON.stringify({ status: report.status, blockers: report.blockers, cleanup: report.cleanup,
+    createdTargetId: report.createdTargetId }) + '\n');
+  if (!['PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED', 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED'].includes(report.status)) process.exitCode = 1;
+}

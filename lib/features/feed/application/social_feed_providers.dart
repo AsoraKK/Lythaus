@@ -6,7 +6,9 @@
 /// 📱 Platform: Flutter with Riverpod + AsyncNotifier
 library social_feed_providers;
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
@@ -288,8 +290,31 @@ class FeedSearchNotifier
         ),
       );
       _visitedCursors.add(current.nextCursor!);
-    } catch (_) {
-      if (_ownsRequest(generation, cancellation)) rethrow;
+    } catch (error, stackTrace) {
+      if (_ownsRequest(generation, cancellation)) {
+        final original = error is SocialFeedException
+            ? error.originalError
+            : error;
+        final status = original is DioException
+            ? original.response?.statusCode
+            : null;
+        if (error is AuthRequiredException ||
+            status == 401 ||
+            status == 403 ||
+            status == 404) {
+          state = const AsyncData(
+            FeedResponse(
+              posts: [],
+              totalCount: 0,
+              hasMore: false,
+              page: 1,
+              pageSize: 25,
+            ),
+          );
+          state = AsyncError(error, stackTrace);
+        }
+        rethrow;
+      }
     } finally {
       if (_ownsRequest(generation, cancellation)) _loadingMore = false;
     }
