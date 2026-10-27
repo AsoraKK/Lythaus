@@ -72,22 +72,35 @@ class LythausTheme {
       useMaterial3: true,
       brightness: colors.brightness,
       colorScheme: colors,
+      primaryColor: colors.primary,
+      primaryColorLight: colors.primary,
+      primaryColorDark: colors.surface,
+      secondaryHeaderColor: colors.surfaceContainer,
+      shadowColor: colors.shadow,
+      unselectedWidgetColor: colors.onSurface,
+      splashColor: colors.primary.withValues(alpha: 0.12),
+      iconTheme: IconThemeData(color: colors.onSurface),
+      primaryIconTheme: IconThemeData(color: colors.onPrimary),
       fontFamily: 'Manrope',
       textTheme: text,
+      primaryTextTheme: text.apply(
+        bodyColor: colors.onPrimary,
+        displayColor: colors.onPrimary,
+      ),
       scaffoldBackgroundColor: colors.surface,
       canvasColor: colors.surfaceContainer,
-      disabledColor: semantic['muted']!.withValues(alpha: 0.6),
+      disabledColor: semantic['muted'],
       dividerColor: colors.outlineVariant,
       focusColor: colors.primary.withValues(alpha: 0.16),
       hoverColor: colors.onSurface.withValues(alpha: 0.06),
       highlightColor: colors.primary.withValues(alpha: 0.12),
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      extensions: [LythThemeExtension.light()],
+      extensions: [LythThemeExtension.dark()],
       appBarTheme: AppBarTheme(
         backgroundColor: colors.surface,
         foregroundColor: colors.onSurface,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: LythSemanticColors.clear,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
@@ -133,19 +146,23 @@ class LythausTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: button.merge(
-          TextButton.styleFrom(foregroundColor: colors.primary),
+          TextButton.styleFrom(
+            foregroundColor: colors.primary,
+            disabledForegroundColor: colors.onSurface,
+          ),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           minimumSize: const Size(48, 48),
           foregroundColor: colors.onSurfaceVariant,
+          disabledForegroundColor: colors.onSurface,
           shape: shape,
         ),
       ),
       cardTheme: CardThemeData(
         color: colors.surfaceContainer,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: LythSemanticColors.clear,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -196,7 +213,7 @@ class LythausTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colors.surfaceContainer,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: LythSemanticColors.clear,
         elevation: 0,
         indicatorColor: colors.primaryContainer,
         indicatorShape: shape,
@@ -235,7 +252,7 @@ class LythausTheme {
       ),
       drawerTheme: DrawerThemeData(
         backgroundColor: colors.surfaceContainer,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: LythSemanticColors.clear,
         elevation: 0,
       ),
       tabBarTheme: TabBarThemeData(
@@ -260,7 +277,8 @@ class LythausTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: colors.surfaceContainer,
-        surfaceTintColor: Colors.transparent,
+        barrierColor: colors.scrim.withValues(alpha: 0.65),
+        surfaceTintColor: LythSemanticColors.clear,
         elevation: 0,
         titleTextStyle: text.headlineSmall,
         contentTextStyle: text.bodyMedium,
@@ -272,7 +290,8 @@ class LythausTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colors.surfaceContainer,
         modalBackgroundColor: colors.surfaceContainer,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: LythSemanticColors.clear,
+        modalBarrierColor: colors.scrim.withValues(alpha: 0.65),
         dragHandleColor: colors.outline,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -280,7 +299,7 @@ class LythausTheme {
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: colors.surfaceContainerHigh,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: LythSemanticColors.clear,
         textStyle: text.bodyMedium,
         shape: shape,
       ),
@@ -318,7 +337,7 @@ class LythausTheme {
         fillColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? colors.primary
-              : Colors.transparent,
+              : LythSemanticColors.clear,
         ),
         side: BorderSide(color: colors.outline, width: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -334,6 +353,20 @@ class LythausTheme {
         color: colors.primary,
         linearTrackColor: colors.surfaceContainerHigh,
         linearMinHeight: 4,
+        circularTrackColor: colors.surfaceContainerHigh,
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: colors.primary,
+        inactiveTrackColor: colors.onSurface,
+        thumbColor: colors.primary,
+        overlayColor: colors.primary.withValues(alpha: 0.12),
+        disabledActiveTrackColor: colors.onSurface,
+        disabledInactiveTrackColor: colors.surfaceContainer,
+        disabledThumbColor: colors.onSurface,
+        valueIndicatorColor: colors.primary,
+        valueIndicatorTextStyle: text.labelLarge?.copyWith(
+          color: colors.onPrimary,
+        ),
       ),
       dataTableTheme: DataTableThemeData(
         headingTextStyle: text.labelLarge,

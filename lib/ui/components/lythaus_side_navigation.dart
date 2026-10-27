@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 /// Shared compact/expanded desktop navigation; routing remains with the shell.
 class LythausSideNavigation extends StatelessWidget {
@@ -152,7 +153,7 @@ class LythausSideNavigation extends StatelessWidget {
               foregroundColor: foreground,
               backgroundColor: selected == true
                   ? colors.primaryContainer
-                  : Colors.transparent,
+                  : LythSemanticColors.clear,
               minimumSize: Size(48, extended ? 48 : 64),
               padding: EdgeInsets.symmetric(
                 horizontal: extended ? 12 : 4,

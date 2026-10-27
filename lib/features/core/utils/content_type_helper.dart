@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 /// LYTHAUS CONTENT TYPE HELPER UTILITY
 ///
@@ -68,27 +69,27 @@ class ContentTypeHelper {
   static Color getColor(String contentType) {
     switch (contentType.toLowerCase()) {
       case 'post':
-        return Colors.blue;
+        return LythSemanticColors.info;
       case 'comment':
-        return Colors.green;
+        return LythSemanticColors.success;
       case 'image':
-        return Colors.purple;
+        return LythSemanticColors.accent;
       case 'video':
-        return Colors.red;
+        return LythSemanticColors.danger;
       case 'audio':
-        return Colors.orange;
+        return LythSemanticColors.warning;
       case 'link':
-        return Colors.teal;
+        return LythSemanticColors.accent;
       case 'poll':
-        return Colors.indigo;
+        return LythSemanticColors.accent;
       case 'event':
-        return Colors.amber;
+        return LythSemanticColors.warning;
       case 'group':
-        return Colors.cyan;
+        return LythSemanticColors.accent;
       case 'message':
-        return Colors.pink;
+        return LythSemanticColors.accent;
       default:
-        return Colors.grey;
+        return LythSemanticColors.text;
     }
   }
 

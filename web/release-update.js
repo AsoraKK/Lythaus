@@ -264,9 +264,9 @@
         alignItems: 'center',
         gap: '16px',
         borderRadius: '12px',
-        background: '#17212b',
-        color: '#fff',
-        boxShadow: '0 4px 18px rgba(0, 0, 0, 0.28)',
+        background: 'var(--startup-surface)',
+        color: 'var(--startup-text)',
+        boxShadow: '0 4px 18px color-mix(in srgb, var(--startup-canvas) 28%, transparent)',
         font: '500 14px/1.4 system-ui, sans-serif',
       });
       bannerMessage = document.createElement('span');
@@ -278,8 +278,8 @@
         border: '0',
         borderRadius: '8px',
         padding: '9px 14px',
-        background: '#d8e9ff',
-        color: '#10243a',
+        background: 'var(--startup-accent)',
+        color: 'var(--startup-canvas)',
         font: '600 14px/1 system-ui, sans-serif',
         cursor: 'pointer',
       });

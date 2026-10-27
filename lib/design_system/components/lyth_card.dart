@@ -7,6 +7,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/design_system/tokens/spacing.dart';
@@ -157,7 +158,7 @@ class LythCardElevated extends StatelessWidget {
         borderRadius: BorderRadius.circular(context.radius.card.toDouble()),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: LythSemanticColors.canvas.withValues(alpha: 0.1),
             blurRadius: elevation,
             offset: Offset(0, elevation / 2),
           ),

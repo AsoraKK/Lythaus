@@ -227,11 +227,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
                         extended: constraints.maxWidth >= 1100,
                         brand:
                             widget.brand ??
-                            LythBrand(
-                              variant: constraints.maxWidth >= 1100
-                                  ? LythBrandVariant.wordmark
-                                  : LythBrandVariant.symbol,
-                            ),
+                            const LythBrand(variant: LythBrandVariant.symbol),
                       ),
                       const VerticalDivider(width: 1),
                       Expanded(child: content),

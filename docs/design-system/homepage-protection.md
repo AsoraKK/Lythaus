@@ -1,6 +1,8 @@
 # Homepage protection evidence
 
-The marketing root `/` remains a frozen consumer of the existing design. The explicit source baseline is `8e3b3ebad2f846e61db2bfe819376723da7e9863`. All checks below were local or read-only production observations on 26 September 2026. No commit, push, merge, deployment, production waitlist submission, or provider mutation was performed by this work.
+The explicit protection baseline is `8e3b3ebad2f846e61db2bfe819376723da7e9863`. The 27 October approved four-colour presentation updates only the listed visual-source pins, approved brand asset mapping and theme-colour metadata. The new [four-colour contract](four-colour-contract.md) and source/browser tests enforce token parity, artwork integrity, always-readable opening content and interaction states. Backend, waitlist, dependency, provider and release protections remain in place. This presentation approval does not authorize deployment.
+
+The evidence below records the earlier 26 September freeze and subsequent narrowly reviewed exceptions. Its byte-identical screenshot results describe that historical work, not the October restyle.
 
 ## Protected dependency graph
 

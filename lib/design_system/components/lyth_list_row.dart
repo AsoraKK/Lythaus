@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
@@ -149,7 +150,7 @@ class LythListRow extends StatelessWidget {
       child: Material(
         color: selected
             ? context.colorScheme.primaryContainer
-            : Colors.transparent,
+            : LythSemanticColors.clear,
         child: InkWell(
           onTap: onTap,
           onLongPress: onLongPress,
@@ -161,7 +162,7 @@ class LythListRow extends StatelessWidget {
                 left: BorderSide(
                   color: selected
                       ? context.colorScheme.primary
-                      : Colors.transparent,
+                      : LythSemanticColors.clear,
                   width: 3,
                 ),
                 bottom: BorderSide(color: context.colorScheme.outlineVariant),

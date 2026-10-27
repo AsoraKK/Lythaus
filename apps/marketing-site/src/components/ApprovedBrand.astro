@@ -1,0 +1,9 @@
+---
+import wordmark from '../../../../assets/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg?raw';
+import symbol from '../../../../assets/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg?raw';
+import { approvedMonochromeSvg } from '../../../../design/approved-monochrome-svg.mjs';
+
+const { variant = 'wordmark' } = Astro.props;
+const markup = approvedMonochromeSvg(variant === 'symbol' ? symbol : wordmark);
+---
+<Fragment set:html={markup} />

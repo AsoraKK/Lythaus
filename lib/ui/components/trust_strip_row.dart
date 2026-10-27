@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
@@ -117,7 +118,7 @@ class _CompactTrustDetailsState extends State<_CompactTrustDetails> {
               (states) => BorderSide(
                 color: states.contains(WidgetState.focused)
                     ? context.colorScheme.primary
-                    : Colors.transparent,
+                    : LythSemanticColors.clear,
                 width: 2,
               ),
             ),

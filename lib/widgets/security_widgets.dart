@@ -8,6 +8,7 @@
 // 📱 Platform: Flutter with Riverpod state management
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lythaus/core/security/device_integrity.dart';
@@ -43,11 +44,11 @@ class _CompromisedDeviceBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: Colors.red.shade800,
+      color: LythSemanticColors.surface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.security, color: Colors.white, size: 24),
+          const Icon(Icons.security, color: LythSemanticColors.text, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -57,7 +58,7 @@ class _CompromisedDeviceBanner extends StatelessWidget {
                 Text(
                   'Device Security Warning',
                   style: GoogleFonts.sora(
-                    color: Colors.white,
+                    color: LythSemanticColors.text,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -66,7 +67,7 @@ class _CompromisedDeviceBanner extends StatelessWidget {
                 Text(
                   'Device compromised. Posting disabled for security.',
                   style: GoogleFonts.sora(
-                    color: Colors.white70,
+                    color: LythSemanticColors.text,
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
@@ -75,7 +76,10 @@ class _CompromisedDeviceBanner extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.info_outline, color: Colors.white70),
+            icon: const Icon(
+              Icons.info_outline,
+              color: LythSemanticColors.text,
+            ),
             onPressed: () => _showSecurityDialog(context),
           ),
         ],
@@ -89,7 +93,7 @@ class _CompromisedDeviceBanner extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.security, color: Colors.red),
+            const Icon(Icons.security, color: LythSemanticColors.danger),
             const SizedBox(width: 8),
             Text(
               'Device Security',
@@ -117,7 +121,10 @@ class _CompromisedDeviceBanner extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'This protects the community from potential security risks.',
-              style: GoogleFonts.sora(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.sora(
+                fontSize: 12,
+                color: LythSemanticColors.text,
+              ),
             ),
           ],
         ),
@@ -169,7 +176,7 @@ class SecureFloatingActionButton extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.block, color: Colors.red),
+            const Icon(Icons.block, color: LythSemanticColors.danger),
             const SizedBox(width: 8),
             Text(
               'Action Blocked',
@@ -225,7 +232,7 @@ class DeviceSecurityStatus extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text(
                 'Error checking device security: $error',
-                style: GoogleFonts.sora(color: Colors.red),
+                style: GoogleFonts.sora(color: LythSemanticColors.danger),
               ),
             ),
           ],
@@ -236,10 +243,10 @@ class DeviceSecurityStatus extends ConsumerWidget {
 
   Widget _buildSecurityInfo(DeviceIntegrityInfo info) {
     final statusColor = switch (info.status) {
-      DeviceIntegrityStatus.secure => Colors.green,
-      DeviceIntegrityStatus.compromised => Colors.red,
-      DeviceIntegrityStatus.error => Colors.orange,
-      DeviceIntegrityStatus.unknown => Colors.grey,
+      DeviceIntegrityStatus.secure => LythSemanticColors.success,
+      DeviceIntegrityStatus.compromised => LythSemanticColors.danger,
+      DeviceIntegrityStatus.error => LythSemanticColors.warning,
+      DeviceIntegrityStatus.unknown => LythSemanticColors.text,
     };
 
     return Column(
@@ -262,7 +269,7 @@ class DeviceSecurityStatus extends ConsumerWidget {
         Text('Reason: ${info.reason}', style: GoogleFonts.sora(fontSize: 13)),
         Text(
           'Checked: ${info.checkedAt.toLocal().toString().split('.')[0]}',
-          style: GoogleFonts.sora(fontSize: 12, color: Colors.grey[600]),
+          style: GoogleFonts.sora(fontSize: 12, color: LythSemanticColors.text),
         ),
         const SizedBox(height: 8),
         Row(
@@ -283,7 +290,9 @@ class DeviceSecurityStatus extends ConsumerWidget {
         Icon(
           allowed ? Icons.check_circle : Icons.cancel,
           size: 16,
-          color: allowed ? Colors.green : Colors.red,
+          color: allowed
+              ? LythSemanticColors.success
+              : LythSemanticColors.danger,
         ),
         const SizedBox(width: 4),
         Text(label, style: GoogleFonts.sora(fontSize: 12)),

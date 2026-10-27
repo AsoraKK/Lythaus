@@ -82,7 +82,7 @@ class LythIcon extends StatelessWidget {
     return switch (semanticColor) {
       'primary' => context.colorScheme.primary,
       'error' => context.colorScheme.error,
-      'muted' => context.colorScheme.onSurface.withValues(alpha: 0.4),
+      'muted' => context.colorScheme.onSurface,
       _ => context.colorScheme.onSurface,
     };
   }

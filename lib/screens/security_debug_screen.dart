@@ -266,9 +266,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
           '⚠️ This screen is only accessible in debug builds and should never '
           'appear in production.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: Theme.of(context).colorScheme.onSurface,
             fontStyle: FontStyle.italic,
           ),
           textAlign: TextAlign.center,
@@ -316,11 +314,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             child: SelectableText(
               value,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color:
-                    valueColor ??
-                    Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.8),
+                color: valueColor ?? Theme.of(context).colorScheme.onSurface,
                 fontWeight: valueColor != null ? FontWeight.w600 : null,
               ),
             ),

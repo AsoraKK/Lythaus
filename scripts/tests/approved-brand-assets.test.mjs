@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import './four-colour-brand-assets.test.mjs';
 
 const read = file => readFileSync(file);
 const json = file => JSON.parse(read(file));
@@ -10,6 +11,7 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const directory = 'docs/brand/approved-v1/';
 const manifest = json(directory + 'INTEGRATION-MANIFEST.json');
 const imported = json(directory + 'import-map.json');
+const derived = json('docs/brand/four-colour/manifest.json');
 const approved = new Map(read(directory + 'SHA256SUMS.txt').toString().trim().split('\n')
   .map(line => { const [hash, file] = line.trim().split(/\s+/); return [file, hash]; }));
 const pngSize = bytes => {
@@ -39,19 +41,22 @@ test('web and admin mappings use approved fingerprints, aliases, and icon purpos
     const html = read(root === 'web' ? 'web/index.html' : 'apps/control-panel/index.html').toString();
     const icons = [...html.matchAll(/<link\s+rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"/g)];
     assert.equal(icons.length, 4);
-    for (const [, url] of icons) assert.ok(manifest.web_copy_map.some(asset => asset.public_url === '/' + url.replace(/^\//, '')));
+    for (const [, url] of icons) {
+      const publicUrl = '/' + url.replace(/^\//, '');
+      assert.ok(root === 'web' ? Object.values(derived.web).includes(publicUrl) : manifest.web_copy_map.some(asset => asset.public_url === publicUrl));
+    }
   }
   const web = json('web/manifest.json');
   assert.equal(web.name, 'Lythaus');
   assert.equal(web.start_url, '.');
   assert.equal(web.display, 'standalone');
   assert.equal(web.orientation, 'portrait-primary');
-  assert.equal(web.background_color, manifest.colors.ink);
-  assert.equal(web.theme_color, manifest.colors.ink);
+  assert.equal(web.background_color, '#242321');
+  assert.equal(web.theme_color, '#242321');
   assert.deepEqual(web.icons.map(icon => icon.purpose), ['any', 'any', 'maskable', 'maskable']);
   for (const icon of web.icons) {
     assert.equal(pngSize(read('web/' + icon.src)).join('x'), icon.sizes);
-    assert.ok(manifest.web_copy_map.some(asset => asset.public_url === '/' + icon.src));
+    assert.ok(Object.values(derived.web).includes('/' + icon.src));
   }
 });
 
@@ -104,9 +109,9 @@ test('named admin headers use approved standalone wordmarks, never combined lock
 });
 
 test('app social previews reuse the standalone wordmark card', () => {
-  const asset = '/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png';
+  const asset = derived.web['social.png'];
   const card = read('apps/marketing-site/public' + asset);
-  assert.equal(sha(card), '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab');
+  assert.equal(sha(card), derived.entries.find(entry => entry.path === 'apps/marketing-site/public' + asset).sha256);
   assert.deepEqual(pngSize(card), [1200, 630]);
   const html = read('web/index.html').toString();
   for (const [attribute, name] of [['property', 'og:image'], ['name', 'twitter:image']]) {

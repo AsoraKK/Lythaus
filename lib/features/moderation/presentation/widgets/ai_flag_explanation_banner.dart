@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 /// Banner shown to users when their content is flagged by AI moderation.
 ///
@@ -36,13 +37,13 @@ class AiFlagExplanationBanner extends StatelessWidget {
         color: isBlocked
             ? scheme.errorContainer
             : (isLight
-                  ? Colors.amber.shade50
-                  : Colors.amber.shade900.withValues(alpha: 0.3)),
+                  ? LythSemanticColors.warning
+                  : LythSemanticColors.warning.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isBlocked
               ? scheme.error.withValues(alpha: 0.4)
-              : Colors.amber.withValues(alpha: 0.4),
+              : LythSemanticColors.warning.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
@@ -53,7 +54,7 @@ class AiFlagExplanationBanner extends StatelessWidget {
               Icon(
                 isBlocked ? Icons.block : Icons.info_outline,
                 size: 20,
-                color: isBlocked ? scheme.error : Colors.amber.shade700,
+                color: isBlocked ? scheme.error : LythSemanticColors.warning,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -69,11 +70,7 @@ class AiFlagExplanationBanner extends StatelessWidget {
               if (onDismiss != null)
                 GestureDetector(
                   onTap: onDismiss,
-                  child: Icon(
-                    Icons.close,
-                    size: 18,
-                    color: scheme.onSurface.withValues(alpha: 0.5),
-                  ),
+                  child: Icon(Icons.close, size: 18, color: scheme.onSurface),
                 ),
             ],
           ),
@@ -86,9 +83,9 @@ class AiFlagExplanationBanner extends StatelessWidget {
                 : 'Our automated system flagged this content for additional '
                       'review. Your post is still visible while under review. '
                       'If you believe this is an error, you can submit an appeal.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.7),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurface),
           ),
           if (onAppeal != null) ...[
             const SizedBox(height: 12),
@@ -101,11 +98,11 @@ class AiFlagExplanationBanner extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: isBlocked
                       ? scheme.error
-                      : Colors.amber.shade800,
+                      : LythSemanticColors.warning,
                   side: BorderSide(
                     color: isBlocked
                         ? scheme.error.withValues(alpha: 0.4)
-                        : Colors.amber.withValues(alpha: 0.4),
+                        : LythSemanticColors.warning.withValues(alpha: 0.4),
                   ),
                 ),
               ),

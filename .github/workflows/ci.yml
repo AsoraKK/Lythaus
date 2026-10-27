@@ -437,6 +437,11 @@ jobs:
             -g '!.dart_tool/**' \
             | xargs -r dart format --output=none --set-exit-if-changed
       - run: flutter analyze
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
       - run: node --test scripts/tests/version-web-entrypoints.test.mjs scripts/tests/approved-brand-assets.test.mjs scripts/tests/flutter-bootstrap.test.mjs
       - run: bash scripts/test-with-coverage.sh
       - run: bash scripts/check_coverage_gates.sh
@@ -463,11 +468,6 @@ jobs:
           path: build/web
           if-no-files-found: error
           retention-days: 7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci --ignore-scripts --no-audit
       - name: Enforce per-module authentication coverage
         run: node scripts/check-auth-flutter-coverage.mjs
       - name: Install authentication test browsers
@@ -616,7 +616,17 @@ jobs:
       - name: Verify existing browsers receive new app entrypoints
         run: node scripts/tests/web-release-cache.browser.mjs
       - name: Verify homepage optical and accessibility contracts
+        env:
+          HOMEPAGE_QA_DIR: ${{ runner.temp }}/lythaus-marketing-brand-evidence
         run: npm run marketing:test:browser
+      - name: Upload marketing brand browser evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: marketing-brand-browser-evidence
+          path: ${{ runner.temp }}/lythaus-marketing-brand-evidence
+          if-no-files-found: warn
+          retention-days: 7
       - name: Verify rendered email authentication controls
         run: |
           node --test --test-name-pattern='^chromium ' --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs

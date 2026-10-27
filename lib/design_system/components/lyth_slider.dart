@@ -93,7 +93,7 @@ class LythSlider extends StatelessWidget {
                 Text(
                   _formatValue(value),
                   style: context.textTheme.labelMedium?.copyWith(
-                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
             ],
@@ -183,7 +183,7 @@ class LythRangeSlider extends StatelessWidget {
               Text(
                 '${_formatValue(values.start)} - ${_formatValue(values.end)}',
                 style: context.textTheme.labelMedium?.copyWith(
-                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: context.colorScheme.onSurface,
                 ),
               ),
             ],

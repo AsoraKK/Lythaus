@@ -6,6 +6,7 @@ import path from 'node:path';
 import {installFlutterEngineFonts} from './flutter-engine-font-fixture.mjs';
 import {observeRenderHealth,assertRenderHealth} from './brand-render-health.mjs';
 import {compareApprovedArtwork} from './brand-reference.mjs';
+import {brandPresentation} from './brand-presentation-contract.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {refreshUrl,loginFixtureResponse,expectedRefreshConsole} from './brand-login-transport.mjs';
 import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutLoginHost,waitForSignedOutOnboardingHost,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
@@ -89,7 +90,7 @@ async function staticReference(browser,origin,condition,output,name){
   return result;
  }finally{await writeFile(path.join(output,name+'-static-reference.json'),JSON.stringify(result,null,2)+'\n');await observation.context.close();}
 }
-export async function runOnboardingCase({browser,engine,origin,referenceOrigin,theme,width,scale,output,source,approved}){
+export async function runOnboardingCase({browser,engine,origin,referenceOrigin,theme,width,scale,output,source,iconAssets}){
  const name=`${engine}-onboarding-${theme}-${width}`,condition={theme,width,scale};
  const result={screen:'onboarding',...condition,source,scope:'Actual component in a visibly painted settled signed-out app; cold startup and shipping journey deferred',status:'pending',snapshots:[]};
  let observation,boundary='static reference';
@@ -128,8 +129,8 @@ export async function runOnboardingCase({browser,engine,origin,referenceOrigin,t
   const originalsCompleted=await readState(page,'onboarding',true);assertUntouchedPresentation(originalsCompleted,result.presentation.at);assertSignedOutHost(originalsCompleted.host,result.presentation.result.before.navigatorId);
   for(const {snapshot,png} of images){
    if(snapshot.stage==='login')assertLoginFirstPaintPixels(snapshot);else assertOnboardingPaint(snapshot);
-   const file=theme==='dark'?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg';
-   snapshot.fidelity=await compareApprovedArtwork(page,png,snapshot.artwork,origin+'/assets/assets/brand/lythaus-v1/'+file,PNG);
+   const presentation=brandPresentation('onboarding',theme);
+   snapshot.fidelity=await compareApprovedArtwork(page,png,snapshot.artwork,origin+'/assets/assets/brand/lythaus-v1/'+presentation.file,PNG,'canvas',snapshot.artwork,presentation.foreground);
   }
   boundary='verify duplicate presentation rejection';
   const beforeDuplicate=await readState(page,'onboarding',true);assertSignedOutHost(beforeDuplicate.host,result.presentation.result.before.navigatorId);
@@ -143,7 +144,7 @@ export async function runOnboardingCase({browser,engine,origin,referenceOrigin,t
   boundary='verify onboarding policy copy and icons';
   for(const text of onboardingCopy)await page.getByText(text,{exact:true}).waitFor();
   const iconUrls=await page.locator('link[rel="icon"],link[rel="apple-touch-icon"]').evaluateAll(nodes=>nodes.map(n=>n.href));assert.equal(iconUrls.length,4);result.icons=[];
-  for(const url of iconUrls){const expected=approved.web_copy_map.find(a=>a.public_url===new URL(url).pathname);assert.ok(expected);const response=await context.request.get(url);assert.equal(response.status(),200);const digest=hash(await response.body());assert.equal(digest,expected.sha256);result.icons.push({path:new URL(url).pathname,status:response.status(),sha256:digest});}
+  for(const url of iconUrls){const expected=iconAssets.find(a=>a.public_url===new URL(url).pathname);assert.ok(expected);const response=await context.request.get(url);assert.equal(response.status(),200);const digest=hash(await response.body());assert.equal(digest,expected.sha256);result.icons.push({path:new URL(url).pathname,status:response.status(),sha256:digest});}
   boundary='verify host after semantics';
   result.afterSemantics=await readState(page,'onboarding',true);assertSignedOutHost(result.afterSemantics.host,result.presentation.result.before.navigatorId);
   await page.screenshot({path:path.join(output,name+'-after-semantics.png')});

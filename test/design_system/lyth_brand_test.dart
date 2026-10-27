@@ -1,9 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lythaus/design_system/theme/lyth_theme.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/design_system/theme/lyth_color_schemes.dart';
 import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/design_system/widgets/lyth_wordmark.dart';
@@ -21,7 +23,7 @@ void main() {
     final svg = tester.widget<SvgPicture>(find.byType(SvgPicture));
     expect(
       (svg.bytesLoader as SvgAssetLoader).assetName,
-      'assets/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+      'assets/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg',
     );
     expect(LythBrandVariant.values, [
       LythBrandVariant.symbol,
@@ -46,7 +48,7 @@ void main() {
             await tester.pumpAndSettle();
             final svg = tester.widget<SvgPicture>(find.byType(SvgPicture));
             final asset = (svg.bytesLoader as SvgAssetLoader).assetName;
-            final source = await rootBundle.loadString(asset);
+            final source = File(asset).readAsStringSync();
             final viewBox = RegExp(r'viewBox="([^"]+)"')
                 .firstMatch(source)!
                 .group(1)!
@@ -58,12 +60,7 @@ void main() {
               size.width / size.height,
               closeTo(viewBox[2] / viewBox[3], 0.00001),
             );
-            final fill = RegExp(
-              r'fill="#([0-9a-fA-F]{6})"',
-            ).firstMatch(source)!;
-            final foreground = Color(
-              0xFF000000 | int.parse(fill.group(1)!, radix: 16),
-            );
+            const foreground = LythSemanticColors.text;
             final background =
                 (dark ? LythausTheme.dark() : LythausTheme.light())
                     .colorScheme
@@ -75,14 +72,13 @@ void main() {
             expect(
               asset,
               contains(
-                dark
-                    ? (variant == LythBrandVariant.symbol
-                          ? '-warm.'
-                          : '-white.')
-                    : '-black.',
+                variant == LythBrandVariant.symbol ? '-warm.' : '-white.',
               ),
             );
-            expect(svg.colorFilter, isNull);
+            expect(
+              svg.colorFilter,
+              const ColorFilter.mode(LythSemanticColors.text, BlendMode.srcIn),
+            );
             expect(find.bySemanticsLabel('Lythaus'), findsOneWidget);
             expect(tester.getSize(find.byType(SvgPicture)).height, 32);
             expect(tester.takeException(), isNull);

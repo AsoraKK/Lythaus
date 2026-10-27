@@ -57,8 +57,9 @@ export function assertUntouchedPresentation(state,presentationAt){
   'No focusin, resize, input or scroll between presentation and original captures');
 }
 export function assertOnboardingLayout(layout,{scale,theme,width},reference){
+ assert.ok(['light','dark'].includes(theme),'Both OS colour preferences remain covered');
  assert.equal(layout.visibleAuthChoices,0);assert.equal(layout.screens.length,1);
- const screen=layout.screens[0];assert.equal(screen.scale,scale);assert.equal(screen.theme,theme);assert.equal(screen.disableAnimations,true);
+ const screen=layout.screens[0];assert.equal(screen.scale,scale);assert.equal(screen.theme,'dark','Consumer presentation stays charcoal for either OS preference');assert.equal(screen.disableAnimations,true);
  assert.equal(screen.bounds.width,width);assert.equal(screen.bounds.height,960);assert.equal(screen.brands.length,1);
  for(const text of onboardingCopy)assert.ok(screen.texts[text],text);
  for(const rect of [screen.bounds,...screen.brands,...Object.values(screen.texts)])assert.ok(Object.values(rect).every(Number.isFinite)&&rect.width>0&&rect.height>0,'Finite nonempty fractional geometry');

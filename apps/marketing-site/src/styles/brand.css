@@ -1,29 +1,23 @@
+.brand-symbol-slot {
+  display: block;
+  width: 40px;
+  aspect-ratio: 106.02 / 98.02;
+}
+
+.approved-brand { color: var(--ds-text); }
+.approved-brand-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .site-header .brand .brand-wordmark-slot {
   display: block;
   width: min(154px, 42vw);
   aspect-ratio: 627.24944891 / 130.68666880;
 }
-
-.site-header .brand img.brand-wordmark {
-  display: block;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
 .site-footer .brand .brand-wordmark-slot {
   display: block;
   width: min(134px, 42vw);
   aspect-ratio: 627.24944891 / 130.68666880;
-}
-
-.site-footer .brand img.brand-wordmark {
-  display: block;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-  object-position: center;
 }

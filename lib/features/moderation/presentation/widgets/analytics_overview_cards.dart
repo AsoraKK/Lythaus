@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/features/moderation/domain/appeal.dart';
 
 /// LYTHAUS ANALYTICS OVERVIEW CARDS
@@ -25,7 +26,7 @@ class AnalyticsOverviewCards extends StatelessWidget {
             'Total Appeals',
             analytics.totalAppeals.toString(),
             Icons.list,
-            Colors.blue,
+            LythSemanticColors.info,
           ),
         ),
         const SizedBox(width: 16),
@@ -35,7 +36,7 @@ class AnalyticsOverviewCards extends StatelessWidget {
             'Resolution Rate',
             '${analytics.resolutionRate.toStringAsFixed(1)}%',
             Icons.trending_up,
-            Colors.green,
+            LythSemanticColors.success,
           ),
         ),
         const SizedBox(width: 16),
@@ -45,7 +46,7 @@ class AnalyticsOverviewCards extends StatelessWidget {
             'Panel active',
             analytics.activeAppeals.toString(),
             Icons.pending_actions,
-            Colors.orange,
+            LythSemanticColors.warning,
           ),
         ),
       ],

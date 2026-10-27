@@ -129,13 +129,13 @@ test('focusin and resize join input and scroll rejection through both original c
 });
 function layout(condition){
  const brand={x:20.25,y:24.5,width:116.5,height:30};
- return {visibleAuthChoices:0,screens:[{bounds:{x:0,y:0,width:condition.width,height:960},brands:[brand],texts:Object.fromEntries(onboardingCopy.map((text,i)=>[text,{x:20.25,y:100+i*50,width:250,height:40}])),scale:condition.scale,theme:condition.theme,disableAnimations:true}]};
+ return {visibleAuthChoices:0,screens:[{bounds:{x:0,y:0,width:condition.width,height:960},brands:[brand],texts:Object.fromEntries(onboardingCopy.map((text,i)=>[text,{x:20.25,y:100+i*50,width:250,height:40}])),scale:condition.scale,theme:'dark',disableAnimations:true}]};
 }
-test('all six conditions preserve exact fractional geometry, copy and animation policy',()=>{
+test('all six OS preference and viewport conditions preserve charcoal theme, exact geometry, copy and animation policy',()=>{
  for(const theme of ['light','dark'])for(const width of [320,390,1440]){
   const condition={theme,width,scale:width===320?2:1},original=layout(condition),screen=original.screens[0];
   assertOnboardingLayout(original,condition,structuredClone(screen));
-  for(const [key,value] of Object.entries({theme:theme==='light'?'dark':'light',scale:3,disableAnimations:false}))assert.throws(()=>assertOnboardingLayout({...original,screens:[{...screen,[key]:value}]},condition,screen));
+  for(const [key,value] of Object.entries({theme:'light',scale:3,disableAnimations:false}))assert.throws(()=>assertOnboardingLayout({...original,screens:[{...screen,[key]:value}]},condition,screen));
   const shifted=structuredClone(original);shifted.screens[0].brands[0].x+=0.001;
   assert.throws(()=>assertOnboardingLayout(shifted,condition,screen),/geometry exactly/);
   const missing=structuredClone(original);delete missing.screens[0].texts[onboardingCopy[3]];assert.throws(()=>assertOnboardingLayout(missing,condition,screen));

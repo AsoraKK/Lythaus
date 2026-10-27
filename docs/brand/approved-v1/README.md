@@ -11,6 +11,8 @@ import-map.json records each imported repository path and source digest.
 
 ## Integration
 
+The 27 October four-colour integration supersedes the colour-selection and neutral-splash descriptions below for the consumer app and marketing site. See [palette-matched derivatives](../four-colour/README.md). This original package, its checksums, masters, imported copies and catalogs remain unchanged; active launcher/browser/social references select separately derived resources.
+
 - Kyle's 17 October either/or requirement selects standalone black/white
   wordmarks for named headers and entry screens, and standalone black/warm LH
   symbols for compact surfaces. Combined LH+wordmark lockups are not displayed.

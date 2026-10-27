@@ -38,11 +38,16 @@ class _FixtureFeed extends LiveFeedController {
                     feedId: feed.id,
                     author: 'Rowan Ellis',
                     authorId: '018f0000-0000-7000-8000-000000000003',
-                    contentType: ContentType.image,
+                    contentType:
+                        Uri.base.queryParameters['scenario'] == 'reading'
+                        ? ContentType.text
+                        : ContentType.image,
                     title: 'A little more room to grow',
                     body:
                         'The community garden is opening its gates this weekend. Neighbours have spent the spring turning an unused corner into a shared space for growing, learning and gathering. Everyone is welcome to bring a seedling, ask a question, or simply enjoy a quiet moment outside.',
-                    imageUrl: '${Uri.base.origin}/fixture.png',
+                    imageUrl: Uri.base.queryParameters['scenario'] == 'reading'
+                        ? null
+                        : '${Uri.base.origin}/fixture.png',
                     publishedAt: DateTime.utc(2026, 10, 22, 9, 30),
                     authorshipLabel: 'Human-authored',
                     classificationSource: 'user_disclosure',

@@ -63,7 +63,7 @@ class VotingStatusBadge extends StatelessWidget {
         );
       case VotingStatus.timeExpired:
         return StatusInfo(
-          color: scheme.onSurface.withValues(alpha: 0.6),
+          color: scheme.onSurface,
           icon: Icons.assignment_turned_in_outlined,
           label: 'Panel review complete',
         );

@@ -93,9 +93,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                         Text(
                           _formatTimeAgo(widget.post.createdAt),
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.6),
-                              ),
+                              ?.copyWith(color: scheme.onSurface),
                         ),
                         const SizedBox(height: 4),
                         Chip(
@@ -166,22 +164,22 @@ class _PostCardState extends ConsumerState<PostCard> {
                     Icon(
                       Icons.visibility_off,
                       size: 48,
-                      color: scheme.onSurface.withValues(alpha: 0.5),
+                      color: scheme.onSurface,
                     ),
                     SizedBox(height: spacing.sm),
                     Text(
                       'Content Hidden',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        color: scheme.onSurface,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: spacing.xs),
                     Text(
                       'This content is hidden pending moderation review.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.55),
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: scheme.onSurface),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -241,7 +239,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                   child: Icon(
                     Icons.broken_image,
                     size: 48,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
@@ -268,10 +266,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                       width: 150,
                       height: 200,
                       color: scheme.surfaceContainerHigh,
-                      child: Icon(
-                        Icons.broken_image,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                      child: Icon(Icons.broken_image, color: scheme.onSurface),
                     ),
                   ),
                 ),

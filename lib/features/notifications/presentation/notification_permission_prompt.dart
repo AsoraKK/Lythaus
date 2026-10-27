@@ -109,7 +109,7 @@ class _NotificationPermissionPromptState
                   'Get notified when people interact with your posts, when friends '
                   'post new content, and important updates about your account.',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -162,7 +162,7 @@ class _NotificationPermissionPromptState
                 Text(
                   'You can change notification preferences in Settings at any time.',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -218,7 +218,7 @@ class _BenefitItem extends StatelessWidget {
               Text(
                 subtitle,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],

@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
@@ -40,7 +41,7 @@ class FeedScreen extends ConsumerWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: LythSemanticColors.clear,
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
@@ -79,7 +80,9 @@ class _BackgroundPattern extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.infinite,
-      painter: _GridPainter(color: Colors.white.withValues(alpha: 0.02)),
+      painter: _GridPainter(
+        color: LythSemanticColors.text.withValues(alpha: 0.02),
+      ),
     );
   }
 }
@@ -284,7 +287,10 @@ class _PostCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 IconTheme(
-                  data: const IconThemeData(size: 20, color: Colors.white60),
+                  data: const IconThemeData(
+                    size: 20,
+                    color: LythSemanticColors.text,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -582,7 +588,11 @@ class _LythausDrawer extends ConsumerWidget {
             ],
           ),
         ),
-        child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+        child: const Icon(
+          Icons.auto_awesome,
+          color: LythSemanticColors.text,
+          size: 24,
+        ),
       ),
       children: [
         Padding(

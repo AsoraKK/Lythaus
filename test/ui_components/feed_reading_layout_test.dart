@@ -303,10 +303,7 @@ void main() {
           )
           .first,
     );
-    expect(
-      (parentSurface.shape! as RoundedRectangleBorder).side.color,
-      Colors.transparent,
-    );
+    expect((parentSurface.shape! as RoundedRectangleBorder).side.color.a, 0);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('Created: complete'), findsNothing);

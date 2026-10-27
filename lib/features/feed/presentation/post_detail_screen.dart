@@ -572,10 +572,7 @@ class _MediaFallback extends StatelessWidget {
     return Container(
       color: scheme.surfaceContainerHighest,
       alignment: Alignment.center,
-      child: Icon(
-        Icons.broken_image_outlined,
-        color: scheme.onSurface.withValues(alpha: 0.6),
-      ),
+      child: Icon(Icons.broken_image_outlined, color: scheme.onSurface),
     );
   }
 }

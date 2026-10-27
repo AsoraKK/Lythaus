@@ -64,8 +64,8 @@ test('every secondary route opts into its isolated layout without local styling'
   const layout = read('src/layouts/SecondaryLayout.astro');
   assert.match(layout, /design\/tokens\.json/);
   assert.doesNotMatch(layout, /global\.css|home-opening|home-pitch|fonts\.google/);
-  assert.match(layout, /prefers-color-scheme:dark/);
-  assert.match(layout, /lythaus-secondary-appearance/);
+  assert.match(layout, /data-appearance="dark"/);
+  assert.doesNotMatch(layout, /lythaus-secondary-appearance/);
   assert.match(layout, /no-referrer/);
   assert.match(layout, /noindex, nofollow, noarchive/);
 });
