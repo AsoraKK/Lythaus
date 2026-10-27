@@ -8,6 +8,7 @@ import { sourceConnection, restoredConnection, restoredConnectionMetadata, readO
   installMissingExtensions, checkedExtensionSpecifications } from './planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
 import { inspectCleanupReservation, finalizeQualificationEvidence, sha256 } from './planetscale-native-restore-evidence.mjs';
+import { RUN12, verifyRun12ReviewedCleanup } from './planetscale-native-restore-run12-reconciliation.mjs';
 
 const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
 const targetPath = `/branches/${RESTORE.target}`;
@@ -236,7 +237,7 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
         && typeof run.display_title === 'string'), 'execution_history_incomplete');
     requireThat(new Set(prior.workflow_runs.map(run => run.id)).size === prior.workflow_runs.length, 'execution_history_duplicate_run');
     const previous = prior.workflow_runs.filter(run => String(run.id) !== env.GITHUB_RUN_ID);
-    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure, pinnedManuallyDeletedFailure];
+    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure, pinnedManuallyDeletedFailure, RUN12];
     const pinnedRows = new Map(pinnedExecutions.map(pinned => [pinned.runId,
       previous.filter(run => String(run.id) === pinned.runId)]));
     const pinnedIds = new Set(pinnedExecutions.map(pinned => pinned.runId));
@@ -246,7 +247,8 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
       'prior_execution_requires_manual_reconciliation');
     requireThat(verifyPinnedHistoryEntry(pinnedRows.get(pinnedCancelledExecution.runId)[0], pinnedCancelledExecution, 'cancelled')
       && verifyPinnedHistoryEntry(pinnedRows.get(pinnedPrecreateFailure.runId)[0], pinnedPrecreateFailure, 'failure')
-      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedManuallyDeletedFailure.runId)[0], pinnedManuallyDeletedFailure, 'failure'),
+      && verifyPinnedHistoryEntry(pinnedRows.get(pinnedManuallyDeletedFailure.runId)[0], pinnedManuallyDeletedFailure, 'failure')
+      && verifyPinnedHistoryEntry(pinnedRows.get(RUN12.runId)[0], RUN12, 'failure'),
     'prior_execution_history_entry_mismatch');
     const cancelledRun = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
     const cancelledProof = await verifyPinnedCancelledExecution(cancelledRun, read, env);
@@ -254,8 +256,9 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
     const precreateProof = await verifyPinnedPrecreateFailure(precreateRun, read, env);
     const manuallyDeletedRun = await read(`/actions/runs/${pinnedManuallyDeletedFailure.runId}`);
     const manuallyDeletedProof = await verifyPinnedManuallyDeletedFailure(manuallyDeletedRun, read, env);
+    const reviewedProof = await verifyRun12ReviewedCleanup(await read(`/actions/runs/${RUN12.runId}`), read, env);
     return { executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED', workflowPath, workflowId,
-      pinnedExecutions: [cancelledProof, precreateProof, manuallyDeletedProof] } };
+      pinnedExecutions: [cancelledProof, precreateProof, manuallyDeletedProof, reviewedProof] } };
   }
   return { executionHistoryReconciliation: null };
 }
@@ -323,7 +326,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       const directTarget = await api.request(targetPath, { absent: true });
       requireThat(directTarget === null, 'preexisting_target_refused');
       const branches = await api.list('/branches');
-      requireThat(!branches.some(row => row.name === RESTORE.target || row.id === pinnedManuallyDeletedFailure.targetId), 'preexisting_target_refused');
+      requireThat(!branches.some(row => row.name === RESTORE.target || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
       const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
       requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
       requireThat(Array.isArray(protectedBackup.restored_branches)
@@ -388,7 +391,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     requireThat(backup.protected === true, 'protected_backup_with_finite_retention_plan_is_manual_prerequisite');
     const branches = await api.list('/branches');
     requireThat(!branches.some(row => row.name === RESTORE.target || row.id === report.createdTargetId
-      || row.id === pinnedManuallyDeletedFailure.targetId), 'preexisting_target_refused');
+      || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
     requireThat(await api.request(targetPath, { absent: true }) === null, 'preexisting_target_refused');
     requireThat(Array.isArray(backup.restored_branches)
       && !backup.restored_branches.some(row => row.name === RESTORE.target), 'backup_target_history_unexpected');

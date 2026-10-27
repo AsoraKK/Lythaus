@@ -68,7 +68,7 @@ jobs:
       - name: Validate fixed read-only native restore inventory
         run: node --test scripts/tests/planetscale-native-restore-inventory.test.mjs
       - name: Verify fixed native restore runner without provider access
-        run: node --test scripts/tests/planetscale-native-restore-check.test.mjs scripts/tests/planetscale-native-restore-cleanup.test.mjs
+        run: node --test scripts/tests/planetscale-native-restore-check.test.mjs scripts/tests/planetscale-native-restore-cleanup.test.mjs scripts/tests/planetscale-native-restore-run12-reconciliation.test.mjs
       - name: Verify reviewed restore cleanup transport and staged Actions handoff
         run: node --test scripts/tests/planetscale-native-restore-unmerged-cleanup-prototype.test.mjs scripts/tests/planetscale-native-restore-unmerged-reconciliation.test.mjs scripts/tests/planetscale-native-restore-unmerged-cleanup-command-prototype.test.mjs scripts/tests/planetscale-native-restore-cleanup-artifact-transport.test.mjs scripts/tests/planetscale-native-restore-reviewed-cleanup.test.mjs scripts/tests/native-restore-artifact-transport-rehearsal.test.mjs
       - name: Validate protected Jobs session lifecycle without provider access

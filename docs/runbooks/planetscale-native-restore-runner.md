@@ -17,8 +17,8 @@ and a fresh separate owner action packet remain required before execution.
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
 record. Every prior execute run in the complete workflow history blocks another
-execution, even across SHAs. The only reconciled prior executions are the three
-exact pinned runs #7, #8 and #9; complete history must include all three and every other
+execution, even across SHAs. The only reconciled prior executions are the four
+exact pinned runs #7, #8, #9 and #12; complete history must include all four and every other
 non-plan execution blocks. Run #7 (`40184823787`, SHA
 `43829abc3424a88a22826695bbfdc7be4a116e62`) must remain a terminal cancellation
 with no production approval, one terminal job with no runner and an explicit
@@ -39,11 +39,13 @@ Any missing, changed, extra or uncertain evidence blocks. Before target creation
 requires an exact target GET 404, a complete branch inventory without the
 target name or old acknowledged target ID, and backup restore history without
 the target. These pinned reconciliations never permit retry after any other
-runner or step sequence, or after an uncertain provider mutation.
+runner or step sequence, or after an uncertain provider mutation. Run #12 is
+bound to its original denied reset and reviewed cleanup #2 as described below;
+it remains FAILED and NOT_CERTIFIED.
 
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
-`tfqwht9d9bt4` (provisional until a fresh API read confirms its exact metadata).
-The only target is `lythaus-0021-native-restore-check-20261026-01`: PS-5 ARM,
+`6vew80jo0epr` (provisional until a fresh API read confirms its exact metadata).
+The only target is `lythaus-0021-native-restore-check-20261027-01`: PS-5 ARM,
 Frankfurt, zero replicas, minimum and maximum 21474836480 bytes. Any preexisting
 target is refused. The runner creates no database, role, GitHub secret,
 Hyperdrive, binding, traffic route or application deployment. Source passwords
@@ -58,7 +60,8 @@ restoring that backup's schema and data. `restore_point` is a separate optional
 PostgreSQL PITR request and is omitted from the fixed create body. The backup's
 completion time is validated from API `completed_at` metadata; it is distinct
 from the dashboard's snapshot label. The read-only inventory reports normalized
-`completedAt` as `2026-10-26T02:27:04.589Z`. Its collector normalizes timestamps
+`completedAt` as `2026-10-27T02:27:08.161Z` in inventory run `40455833265`
+on source `9e9759181069c3636af3ffefe1d8ec9a3de22f37`. Its collector normalizes timestamps
 to millisecond ISO strings and omits `restored_branches`; this is provisional pin
 preparation. Before execution, the dedicated read-only plan must confirm exact
 raw API `completed_at` equality, complete restore history and fresh target
@@ -71,9 +74,9 @@ References: [backup GET](https://planetscale.com/docs/api/reference/get_backup),
 
 The whole two-hour window must fit before the backup reaches 24 hours old and
 before expiry. From the provisional completion, start before
-`2026-10-27T00:27:04.589Z` and finish before
-`2026-10-27T02:27:04.589Z`; the inventory reports expiry
-`2026-10-28T02:25:02.938Z`. Allow queue and setup time before that runner start;
+`2026-10-28T00:27:08.161Z` and finish before
+`2026-10-28T02:27:08.161Z`; the inventory reports expiry
+`2026-10-29T02:25:03.601Z`. Allow queue and setup time before that runner start;
 recompute these limits from a fresh API read.
 Freshness and expiry are different gates. No replacement is silently chosen.
 The backup must already be protected under a separately approved, finite
@@ -440,7 +443,7 @@ After qualification completes, use this operator-controlled sequence:
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `tfqwht9d9bt4.json` record in a same-repository
+   Commit it with the canonical `6vew80jo0epr.json` record in a same-repository
    evidence-only PR descended from the exact qualification source SHA. Preserve
    the original `zw0so7f5jbpu.json` and run-9 qualification/manual-cleanup files
    unchanged. Keep protected main at that qualified SHA through cleanup; reserve exclusive
@@ -604,6 +607,28 @@ Build cancellation uses esbuild's documented
 [context cancellation/disposal](https://esbuild.github.io/api/#cancel); the
 SQL and Worker cancellation adapters are verified with synthetic failure tests.
 These contracts do not prove the existing token has those rights.
+
+### Exact run-12 reconciliation candidate
+
+The additional historical binding admits only qualification run 40360605402,
+attempt 1, and its separately approved cleanup run 40371017566, attempt 1,
+cleanup permit 394840164/2. Its backup and target identities are immutable
+historical constants, independent of the next attempt's pins. The original
+qualification remains FAILED and NOT_CERTIFIED; successful containment does not
+certify recovery or authorize another attempt.
+
+Review the original qualification, durable pending intent and cleanup receipt
+using `assertRun12Payloads`, and verify their enclosing archive digests before
+approving these historical source pins. No private receipt is added to the
+repository. Admission reads the exact GitHub run/job/approval identities,
+artifact IDs and digests, attested PR head and unedited human comment. Its
+reported evidence basis explicitly identifies the pinned archive digests and
+offline payload hashes; it does not claim a fresh download of private payloads.
+Expired or changed artifacts, moved evidence, an additional execution, or
+missing/changed review evidence still block. Current branch inventory must also
+exclude the original target ID, including if it reappears under a new name.
+This consumes no new cleanup permit and changes no live approval, release
+certification, migration or source-freeze requirements.
 
 Focused tests use mocks for denial, stale/budget failures, partial resets,
 identity/binding mismatch, lost acknowledgments, no retries, and failed cleanup.
