@@ -10,25 +10,25 @@
     "prefer_related_applications": false,
     "icons": [
         {
-            "src": "icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+            "src": "icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+            "src": "icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+            "src": "icons/lythaus-four-colour/pwa-maskable-192x192.7105ec6fa742.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "maskable"
         },
         {
-            "src": "icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+            "src": "icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"

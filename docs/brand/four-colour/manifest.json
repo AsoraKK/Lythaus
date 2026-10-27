@@ -1,0 +1,407 @@
+{
+  "version": "lythaus-four-colour-2026-10-27",
+  "source_package_sha256": "5e39cb394ce182f540a5434f8e14267a51b40977a05c1ed3816918d85ff22995",
+  "palette": {
+    "canvas": "#242321",
+    "surface": "#302E2B",
+    "text": "#F5F3EE",
+    "accent": "#EFC58D"
+  },
+  "method": "No resizing or resampling. Preserve dimensions, alpha and outline coverage; project original raster antialias values onto canvas/accent, clamping original resampling overshoot. Vector edits replace colour attributes only. ICO frames and Apple catalog declarations retain their original order and dimensions.",
+  "web": {
+    "favicon.ico": "/icons/lythaus-four-colour/favicon.b3b17204ae17.ico",
+    "favicon.svg": "/icons/lythaus-four-colour/favicon.843c17f8b307.svg",
+    "favicon-96x96.png": "/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png",
+    "apple-touch-icon.png": "/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png",
+    "pwa-icon-192x192.png": "/icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png",
+    "pwa-icon-512x512.png": "/icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png",
+    "pwa-maskable-192x192.png": "/icons/lythaus-four-colour/pwa-maskable-192x192.7105ec6fa742.png",
+    "pwa-maskable-512x512.png": "/icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png",
+    "social.png": "/brand/lythaus-four-colour/lythaus-social-card-1200x630.871084ba8f81.png"
+  },
+  "aliases": {
+    "web": {
+      "/favicon.ico": "/icons/lythaus-four-colour/favicon.b3b17204ae17.ico",
+      "/favicon.png": "/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png",
+      "/apple-touch-icon.png": "/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png",
+      "/icons/Icon-192.png": "/icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png",
+      "/icons/Icon-512.png": "/icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png",
+      "/icons/Icon-maskable-192.png": "/icons/lythaus-four-colour/pwa-maskable-192x192.7105ec6fa742.png",
+      "/icons/Icon-maskable-512.png": "/icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png"
+    },
+    "marketing": {
+      "/favicon.ico": "/icons/lythaus-four-colour/favicon.b3b17204ae17.ico",
+      "/favicon.png": "/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png",
+      "/apple-touch-icon.png": "/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png",
+      "/icons/lythaus-192.png": "/icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png",
+      "/icons/lythaus-512.png": "/icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png",
+      "/icons/lythaus-512-maskable.png": "/icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png"
+    }
+  },
+  "entries": [
+    {
+      "source": "web/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "source_sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c",
+      "path": "web/icons/lythaus-four-colour/favicon.b3b17204ae17.ico",
+      "sha256": "b3b17204ae17662fc8be4d885ff709def1f7c15aced3f5f734a559b4e5481113",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "source_sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/favicon.b3b17204ae17.ico",
+      "sha256": "b3b17204ae17662fc8be4d885ff709def1f7c15aced3f5f734a559b4e5481113",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "source_sha256": "116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7",
+      "path": "web/icons/lythaus-four-colour/favicon.843c17f8b307.svg",
+      "sha256": "843c17f8b307829df9bcb028e0d061007e7ffe76416c4f26e0c419a59a1f3bf2",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "source_sha256": "116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/favicon.843c17f8b307.svg",
+      "sha256": "843c17f8b307829df9bcb028e0d061007e7ffe76416c4f26e0c419a59a1f3bf2",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "source_sha256": "572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef",
+      "path": "web/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png",
+      "sha256": "de330b9cd99a36c2e511a86974a6c24c9249dfb61d458be9f66f506da35bea77",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "source_sha256": "572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png",
+      "sha256": "de330b9cd99a36c2e511a86974a6c24c9249dfb61d458be9f66f506da35bea77",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "source_sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd",
+      "path": "web/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png",
+      "sha256": "9a0cab560dae4d912896e4ea53b100ac477946c53cf2bef1573ab6e8fc9766d1",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "source_sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png",
+      "sha256": "9a0cab560dae4d912896e4ea53b100ac477946c53cf2bef1573ab6e8fc9766d1",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "source_sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8",
+      "path": "web/icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png",
+      "sha256": "3966427cb29f61b7ca228c453cf901426db5f6b662f76705927ad8676d72ef04",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "source_sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png",
+      "sha256": "3966427cb29f61b7ca228c453cf901426db5f6b662f76705927ad8676d72ef04",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "source_sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d",
+      "path": "web/icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png",
+      "sha256": "7f0c224676996d39b4bf2adaffb05b3551ec2057de247db7aaf33aa9f280d72e",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "source_sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png",
+      "sha256": "7f0c224676996d39b4bf2adaffb05b3551ec2057de247db7aaf33aa9f280d72e",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "source_sha256": "36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f",
+      "path": "web/icons/lythaus-four-colour/pwa-maskable-192x192.7105ec6fa742.png",
+      "sha256": "7105ec6fa7421cdf13fdb9002db0c3f739758146ae36012a62af92d0a4e47bc6",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "source_sha256": "36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/pwa-maskable-192x192.7105ec6fa742.png",
+      "sha256": "7105ec6fa7421cdf13fdb9002db0c3f739758146ae36012a62af92d0a4e47bc6",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "source_sha256": "10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d",
+      "path": "web/icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png",
+      "sha256": "f4fd2eb0b66a82bf4bf4529b7758e5cc62ff72d9d0419eae4017cbf5555b64fc",
+      "role": "browser-icon"
+    },
+    {
+      "source": "web/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "source_sha256": "10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d",
+      "path": "apps/marketing-site/public/icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png",
+      "sha256": "f4fd2eb0b66a82bf4bf4529b7758e5cc62ff72d9d0419eae4017cbf5555b64fc",
+      "role": "browser-icon"
+    },
+    {
+      "source": "apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png",
+      "source_sha256": "78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab",
+      "path": "web/brand/lythaus-four-colour/lythaus-social-card-1200x630.871084ba8f81.png",
+      "sha256": "871084ba8f81df8045a70bba76bcf91eceb192eb9a3a9c66f5a783f416b98d37",
+      "role": "social-preview"
+    },
+    {
+      "source": "apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png",
+      "source_sha256": "78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab",
+      "path": "apps/marketing-site/public/brand/lythaus-four-colour/lythaus-social-card-1200x630.871084ba8f81.png",
+      "sha256": "871084ba8f81df8045a70bba76bcf91eceb192eb9a3a9c66f5a783f416b98d37",
+      "role": "social-preview"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "source_sha256": "00fbf41cb3e5e117cd325262a2d434d09eadbbe48d9b13bb4a15299f75bee368",
+      "path": "android/app/src/main/res/mipmap-mdpi/ic_launcher_four_colour.png",
+      "sha256": "937fc58865135d25ada68a654af9d660c602a23c4a29e03d98af2b94f4edc984",
+      "role": "android"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "source_sha256": "9cad537f743a87179d3eecb4527c38ed91140241b46fec6ee872af7575679892",
+      "path": "android/app/src/main/res/mipmap-hdpi/ic_launcher_four_colour.png",
+      "sha256": "263caed9a406afc19f35dedd52f4562e10cb268345b212fe7665327190608ac6",
+      "role": "android"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "source_sha256": "50bab416003d578c368019ffedb92838ff5500700e0c07000ea09897e9590de9",
+      "path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher_four_colour.png",
+      "sha256": "b4afda290fb78c8f16e7d70db63a906ae474e4621693b65818a9b9c88a5dd8a5",
+      "role": "android"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "source_sha256": "b3608d4928bb8a6153c1d20321ce9c0d94618c0ad2631b5994c11204f2e2ea9c",
+      "path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_four_colour.png",
+      "sha256": "b60529043db04285c93d6f2851ab17da0251ef33cf12f9971b25668ec729330c",
+      "role": "android"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "source_sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8",
+      "path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_four_colour.png",
+      "sha256": "3966427cb29f61b7ca228c453cf901426db5f6b662f76705927ad8676d72ef04",
+      "role": "android"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png",
+      "source_sha256": "9ec167c5ccca4adb6afce4ebba525500d09ba18b9f2cf44d5a03b71c2d306183",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-20x20@1x.png",
+      "sha256": "1f3ca591adb677185c6b60e283a60795dd5c85816ee22482ace86e90da385db1",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png",
+      "source_sha256": "b9156f41ee6ffead2c49d5c0074e86981ee08d3e5ff0a97faa587975cf5145a3",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-20x20@2x.png",
+      "sha256": "e07bbb50e060200baa86a49dac52f2f5648652af907cabca7c3db27651dd110e",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png",
+      "source_sha256": "483a51bff293d75fa470ec92acaad595f4d9252e58b86475d7f53a1436d247ef",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-20x20@3x.png",
+      "sha256": "4e7e88d8663aa59aa345e251f062155e1f06999f57237131a55ad2e36b9019f1",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png",
+      "source_sha256": "d9e12f11b256112dcd7c25c05cc15641883fa7f7de04e1bcf1654c2ceb5a4d93",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-29x29@1x.png",
+      "sha256": "e4a9e4226d3dcc18b6409896b9af785bb67d1de47dc634eb41950d739d9d8a35",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png",
+      "source_sha256": "60b5687c31fc286492d4651c9c2255e87f33441ad8e65d7584845281aa63a815",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-29x29@2x.png",
+      "sha256": "fd1fc6271635c0d69f7c074022ac9e6e2a3403534b5f260dc4df5ba8f4c5aa69",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png",
+      "source_sha256": "6d119119e5657a21e3f17ea338fecfe32f99e793a8e9f03788f96d25401c5923",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-29x29@3x.png",
+      "sha256": "83a2eb23048f38a8cd329166b29af6d053a6d4b1b6bcd995ddc6584f8d67a072",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png",
+      "source_sha256": "b9156f41ee6ffead2c49d5c0074e86981ee08d3e5ff0a97faa587975cf5145a3",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-40x40@1x.png",
+      "sha256": "e07bbb50e060200baa86a49dac52f2f5648652af907cabca7c3db27651dd110e",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png",
+      "source_sha256": "b2dc44f4565f0fca2e35c8d8cde2108ea4c572b166c91c1c952deeec39175066",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-40x40@2x.png",
+      "sha256": "ce8ce342f79a577d65466b37cf23bc506534ce565036e1e5994d0400d7f738a7",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png",
+      "source_sha256": "3893c37862c5a313af0e173894f8cda9b11b19f295c2d0dadaa190c8f8b5afdf",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-40x40@3x.png",
+      "sha256": "49608225640d43fae203f394934f9ff91fa7d4232baeaec6affa715910089b72",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png",
+      "source_sha256": "3893c37862c5a313af0e173894f8cda9b11b19f295c2d0dadaa190c8f8b5afdf",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-60x60@2x.png",
+      "sha256": "49608225640d43fae203f394934f9ff91fa7d4232baeaec6affa715910089b72",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png",
+      "source_sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-60x60@3x.png",
+      "sha256": "9a0cab560dae4d912896e4ea53b100ac477946c53cf2bef1573ab6e8fc9766d1",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png",
+      "source_sha256": "346cd9faab9e1e69d16003353045bad93837c0e42855f0cc5895e68a008a8e85",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-76x76@1x.png",
+      "sha256": "9648bc0b6e560a422a7763abc6ec18c20559bb26a79951c3356b265fffe30a20",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png",
+      "source_sha256": "f7b7c63b29d16fcd4bbba88218ddaacaa6b8e67aadd8bd7c66ec40ab2ea4176c",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-76x76@2x.png",
+      "sha256": "0173cca579bc838ed6166eaf66e6c52b0be5035b51d1859ccabbadb3514eebca",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png",
+      "source_sha256": "19273567da62d7c301cd3ee1588185671b737abaa121f9ec80234e8c82d3ba43",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-83.5x83.5@2x.png",
+      "sha256": "7a059a3a5c13889f54a8a75f5d67ec58f761bc61fcbaba03e6293b18ed4bf5cf",
+      "role": "ios"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png",
+      "source_sha256": "d4c351982a026595a759c1a42cdb024fd23420f48a17236430298a22cd9b25a4",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Icon-App-1024x1024@1x.png",
+      "sha256": "2bc6451e4442d2ef2911cb7c9cb4c047feb81fefcb81cde789e2f58524214e4d",
+      "role": "ios"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png",
+      "source_sha256": "f3fdd49f5d44284cbc4e779cb6c99d08ee764d14a20689c5d78e7d76263ff1f7",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_16.png",
+      "sha256": "16a3e5d7ecad69a49b3dff806a93479c7516169eaa1a44d3153d306ca048a583",
+      "role": "macos"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png",
+      "source_sha256": "8bdd1c050011d04222f2c9acb0ed808bfb0e78ecc602e9db547eb31db899b545",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_32.png",
+      "sha256": "e74550cf40872288b460b33ce335f9bdc0e952d1198a198ff0496fdf8092cf2b",
+      "role": "macos"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png",
+      "source_sha256": "db6687f8697f0c07e908611f2f06cd2110301b8e00b5dd31fd4ffbdf49a7ea99",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_64.png",
+      "sha256": "d91290975dff378b4cff7dbf1e9af0b38f5cb4d781398afba79426a0469ec5fb",
+      "role": "macos"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png",
+      "source_sha256": "2f3395ab79f06b600de1abaea66a0051c4e049e8ed5a101dd817890738522d5d",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_128.png",
+      "sha256": "659b80195433060997154de6286805466145e0684d5a315e5fc26d3efce04744",
+      "role": "macos"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png",
+      "source_sha256": "1d9251e5ea10ec4b0be4bb2e2e88077ba6315ebedfb0801d09b7eff67570f870",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_256.png",
+      "sha256": "be8d6cde0cb21af90fc7b321f64856a6ecce089f6efe0308429fd7fa18b680a5",
+      "role": "macos"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png",
+      "source_sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_512.png",
+      "sha256": "7f0c224676996d39b4bf2adaffb05b3551ec2057de247db7aaf33aa9f280d72e",
+      "role": "macos"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png",
+      "source_sha256": "d4c351982a026595a759c1a42cdb024fd23420f48a17236430298a22cd9b25a4",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/app_icon_1024.png",
+      "sha256": "2bc6451e4442d2ef2911cb7c9cb4c047feb81fefcb81cde789e2f58524214e4d",
+      "role": "macos"
+    },
+    {
+      "source": "windows/runner/resources/app_icon.ico",
+      "source_sha256": "cb1eac9916cf54dd5fdd88c2893419c9fd331b778284fd1c250d4989bf7c3b01",
+      "path": "windows/runner/resources/app_icon_four_colour.ico",
+      "sha256": "af997458f4de78d26c621170309d766ba0fd7969636ee73b7b6102fc004f033a",
+      "role": "windows"
+    },
+    {
+      "source": "android/app/src/main/res/drawable/ic_launcher_foreground.xml",
+      "source_sha256": "9d60c123b6f065a47a9d90613ed394819fbf64eb640113ab7895a19491ea7b27",
+      "path": "android/app/src/main/res/drawable/ic_launcher_four_colour_foreground.xml",
+      "sha256": "1d641cca5a93a8676158262c9070c1cab026c5b8c4b78168a578336c91f1bd0a",
+      "role": "android-adaptive-vector"
+    },
+    {
+      "source": "android/app/src/main/res/drawable/ic_launcher_monochrome.xml",
+      "source_sha256": "6a669cce27cde0dc06405ab43895def0ca7e07a25b0016e7456415b2f58aeb00",
+      "path": "android/app/src/main/res/drawable/ic_launcher_four_colour_monochrome.xml",
+      "sha256": "3903a445933973ee9b615efdd1091494c26219e595a18b18b7275491889ba2a6",
+      "role": "android-adaptive-vector"
+    },
+    {
+      "source": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_sha256": "3b1e214f466ffedff74baa5598ad5c4421130eea6bc8d57b8fe23435e8280ae4",
+      "path": "ios/Runner/Assets.xcassets/AppIconFourColour.appiconset/Contents.json",
+      "sha256": "3b1e214f466ffedff74baa5598ad5c4421130eea6bc8d57b8fe23435e8280ae4",
+      "role": "native-catalog"
+    },
+    {
+      "source": "macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_sha256": "bc6ba8105ca69651aeeb77358851590de295dca04681a1d58c0f449641c242f3",
+      "path": "macos/Runner/Assets.xcassets/AppIconFourColour.appiconset/Contents.json",
+      "sha256": "bc6ba8105ca69651aeeb77358851590de295dca04681a1d58c0f449641c242f3",
+      "role": "native-catalog"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "source_sha256": "d0b7050d918713b6bd1598265d44b6553aecc667db9be269c11c75b61521ca75",
+      "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_four_colour.xml",
+      "sha256": "72c83972f7f810a385daaf4c58dd2585a04a12605936d63d6130c8dc9618a1ca",
+      "role": "android-adaptive"
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml",
+      "source_sha256": "a9476ffa50e6412caac2a41c3dbc2df366c90e27dccdc9ce9b6346dd90be998c",
+      "path": "android/app/src/main/res/mipmap-anydpi-v33/ic_launcher_four_colour.xml",
+      "sha256": "4ee51052e7662cdc72b496b3ff6b7c006e8a0a2df7d373f4a9d5fdae77fefac4",
+      "role": "android-adaptive"
+    }
+  ]
+}

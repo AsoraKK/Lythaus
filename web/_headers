@@ -39,3 +39,9 @@
 
 /icons/lythaus-v1/*
   Cache-Control: public, max-age=31536000, immutable
+
+/brand/lythaus-four-colour/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/icons/lythaus-four-colour/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -8,7 +8,6 @@
   isolation: isolate;
 }
 .wordmark-fallback { display: block; width: 100%; height: 100%; }
-.wordmark-fallback img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .wordmark-scene {
   --light-core-width: 3px;
   --light-bloom-width: 44px;

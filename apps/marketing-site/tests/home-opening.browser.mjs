@@ -1,29 +1,44 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { before, after, test } from 'node:test';
 import { chromium, firefox, webkit } from 'playwright';
+import sharp from 'sharp';
+import { artworkFidelity } from '../../../scripts/tests/brand-artwork-pixels.mjs';
 
 const dist = path.resolve(import.meta.dirname, '../dist');
+const startupSource = path.resolve(import.meta.dirname, '../../../web');
+const derivedBrand = JSON.parse(await readFile(path.resolve(import.meta.dirname, '../../../docs/brand/four-colour/manifest.json'), 'utf8'));
 const evidence = process.env.HOMEPAGE_QA_DIR;
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
 let server;
 let origin;
+let iconRedirects;
 
 before(async () => {
   await readFile(path.join(dist, 'index.html'));
+  iconRedirects = new Map((await readFile(path.join(dist, '_redirects'), 'utf8')).split('\n')
+    .map(line => line.trim().split(/\s+/)).filter(([, , status]) => status === '302').map(([from, to]) => [from, to]));
   if (evidence) await mkdir(evidence, { recursive: true });
   server = createServer(async (request, response) => {
     try {
       const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-      let file = path.resolve(dist, '.' + pathname);
-      if (file !== dist && !file.startsWith(dist + path.sep)) {
+      if (iconRedirects.has(pathname)) {
+        response.writeHead(302, { location: iconRedirects.get(pathname) }).end();
+        return;
+      }
+      const startup = pathname.startsWith('/__startup/');
+      const root = startup ? startupSource : dist;
+      let file = path.resolve(root, '.' + (startup ? pathname.slice('/__startup'.length) : pathname));
+      if (file !== root && !file.startsWith(root + path.sep)) {
         response.writeHead(403).end();
         return;
       }
       if (!path.extname(file)) file = path.join(file, 'index.html');
-      const content = await readFile(file);
+      let content = await readFile(file);
+      if (startup && file.endsWith('/index.html')) content = content.toString().replace('$FLUTTER_BASE_HREF', '/__startup/');
       response.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' }).end(content);
     } catch {
       response.writeHead(404).end();
@@ -98,7 +113,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           const { context, page, errors } = await open({ viewport: { width, height } });
           try {
             assert.equal(await page.getByRole('heading', { level: 1, name: 'Lythaus', exact: true }).count(), 1);
-            assert.equal(await page.locator('h1 svg').getAttribute('aria-hidden'), 'true');
+            assert.equal(await page.locator('.wordmark-scene').getAttribute('aria-hidden'), 'true');
             const wordmarkGeometry = await page.evaluate(() => {
               const wordmark = document.querySelector('.pitch-wordmark');
               const bounds = wordmark.getBoundingClientRect();
@@ -339,23 +354,23 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved', null, { timeout: 5000 });
     assert.match(await page.title(), /For the living internet/u);
-    assert.equal(await page.locator('.site-header .brand-symbol').getAttribute('alt'), '');
+    assert.equal(await page.locator('.site-header .approved-brand-art').getAttribute('aria-hidden'), 'true');
     assert.equal(await page.locator('.site-header .brand').getAttribute('aria-label'), 'Lythaus home');
     const logo = await page.locator('.site-header .brand-symbol-slot').evaluate(element => {
       const slot = element.getBoundingClientRect();
-      const image = element.querySelector('img');
-      const art = image.getBoundingClientRect();
+      const svg = element.querySelector('svg');
+      const art = svg.getBoundingClientRect();
       return {
-        complete: image.complete,
-        naturalWidth: image.naturalWidth,
+        paths: svg.querySelectorAll('path').length,
+        viewBox: svg.getAttribute('viewBox'),
         slotWidth: slot.width,
         slotHeight: slot.height,
         width: art.width,
         height: art.height,
       };
     });
-    assert.equal(logo.complete, true);
-    assert.ok(logo.naturalWidth > 0);
+    assert.equal(logo.paths, 2);
+    assert.equal(logo.viewBox, '23.99000000 23.99000000 106.02000000 98.02000000');
     assert.ok(logo.slotWidth >= 39 && logo.slotWidth <= 41);
     assert.ok(logo.slotHeight >= 36 && logo.slotHeight <= 38);
     assert.ok(logo.width >= 39 && logo.width <= 41);
@@ -363,16 +378,16 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
 
     const socialImage = await page.locator('meta[property="og:image"]').getAttribute('content');
-    assert.match(socialImage, /lythaus-social-card-1200x630\.78f698ef4283\.png$/u);
+    assert.equal(new URL(socialImage).pathname, derivedBrand.web['social.png']);
     const assetTypes = await page.evaluate(async (urls) => Promise.all(urls.map(async url => {
       const response = await fetch(url);
       return { url, status: response.status, type: response.headers.get('content-type')?.split(';')[0] };
     })), [
       '/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg',
-      '/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png',
-      '/icons/lythaus-v1/favicon.116ff3e020c6.svg',
-      '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png',
-      '/icons/lythaus-v1/favicon.e3dfdd675a74.ico',
+      derivedBrand.web['social.png'],
+      derivedBrand.web['favicon.svg'],
+      derivedBrand.web['favicon-96x96.png'],
+      derivedBrand.web['favicon.ico'],
     ]);
     assert.deepEqual(assetTypes.map(asset => [asset.status, asset.type]), [
       [200, 'image/svg+xml'],
@@ -381,12 +396,32 @@ test('marketing brand assets render responsively with correct theme and MIME', {
       [200, 'image/png'],
       [200, 'image/x-icon'],
     ]);
+    for (const [alias, target] of Object.entries(derivedBrand.aliases.marketing)) {
+      const response = await context.request.get(origin + alias, { maxRedirects: 0 });
+      assert.equal(response.status(), 302);
+      assert.equal(response.headers().location, target);
+      const followed = await context.request.get(origin + alias);
+      assert.equal(followed.status(), 200);
+      assert.equal(new URL(followed.url()).pathname, target);
+      const expected = derivedBrand.entries.find(entry => entry.path === 'apps/marketing-site/public' + target);
+      assert.equal(createHash('sha256').update(await followed.body()).digest('hex'), expected.sha256);
+    }
+    // A bare /favicon.ico fetch fails without a network event in the local
+    // browser fixture. Use a fresh query for browser-follow coverage; the exact
+    // bare paths, redirect locations, final URLs and bytes are verified above.
+    const aliases = await page.evaluate(async entries => Promise.all(entries.map(async ([alias, target]) => {
+      const response = await fetch(alias + '?brand-qa=1').catch(error => { throw new Error(`${alias}: ${error.message}`); });
+      return [response.status, response.redirected, new URL(response.url).pathname, target];
+    })), Object.entries(derivedBrand.aliases.marketing));
+    for (const [status, redirected, actual, expected] of aliases) {
+      assert.equal(status, 200); assert.equal(redirected, true); assert.equal(actual, expected);
+    }
 
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-desktop.png'), fullPage: false });
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileHome = await page.locator('.site-header .brand-symbol-slot').boundingBox();
     assert.ok(mobileHome.width >= 39 && mobileHome.height >= 36);
-    assert.ok(await page.locator('.site-header .brand-symbol').evaluate(element => element.getBoundingClientRect().height >= 36));
+    assert.ok(await page.locator('.site-header .approved-brand-art').evaluate(element => element.getBoundingClientRect().height >= 36));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-mobile.png'), fullPage: false });
     await page.setViewportSize({ width: 320, height: 800 });
@@ -396,7 +431,7 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     await page.goto(`${origin}/about`, { waitUntil: 'domcontentloaded' });
     const secondaryLogo = page.locator('.secondary-header .brand-symbol-slot');
     await secondaryLogo.waitFor();
-    assert.match(await secondaryLogo.evaluate(element => getComputedStyle(element).maskImage), /lythaus-symbol-white\.8e20f9650ccb\.svg/u);
+    assert.equal(await secondaryLogo.locator('path').first().evaluate(element => getComputedStyle(element).fill), 'rgb(245, 243, 238)');
     assert.equal(await page.locator('.secondary-header .secondary-brand').getAttribute('aria-label'), 'Lythaus home');
     const secondaryBounds = await secondaryLogo.boundingBox();
     assert.ok(Math.abs(secondaryBounds.width - 40) < 1);
@@ -426,6 +461,75 @@ test('marketing brand assets render responsively with correct theme and MIME', {
 });
 
 for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })) {
+  test(`${engineName} static brand pixels survive unavailable JavaScript, masks and filters`, { timeout: 90000 }, async () => {
+    const browser = await engine.launch();
+    const reference = new Map();
+    try {
+      for (const [mode, javaScriptEnabled, disableEffects] of [
+        ['normal', true, false],
+        ['no-javascript', false, false],
+        ['no-masks-or-filters', true, true],
+        ['no-javascript-masks-or-filters', false, true],
+      ]) {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', javaScriptEnabled });
+        await context.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\//, route => route.abort());
+        await context.route('**/__startup/flutter_bootstrap.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
+        await context.route('**/__startup/release-update.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
+        const page = await context.newPage();
+        const errors = [];
+        page.on('pageerror', error => errors.push(error.message));
+        if (disableEffects) await page.addInitScript(() => {
+          window.SVGMaskElement = undefined;
+          window.SVGFilterElement = undefined;
+          const supports = CSS.supports.bind(CSS);
+          CSS.supports = (...args) => args.some(value => /mask|filter/.test(value)) ? false : supports(...args);
+        });
+        try {
+          for (const [route, selectors] of [
+            ['/', ['.site-header .approved-brand-art', '.wordmark-fallback .approved-brand-art']],
+            ['/about', ['.secondary-header .approved-brand-art', '.secondary-footer .approved-brand-art']],
+            ['/__startup/', [javaScriptEnabled ? '#lythaus-startup .approved-brand-art' : '.startup-noscript .approved-brand-art']],
+          ]) {
+            await page.goto(origin + route);
+            if (disableEffects) await page.evaluate(() => {
+              const style = document.createElement('style');
+              style.textContent = '* { mask: none !important; -webkit-mask: none !important; filter: none !important; }';
+              document.head.append(style);
+            });
+            assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(36, 35, 33)');
+            for (const [index, selector] of selectors.entries()) {
+              const art = page.locator(selector);
+              await art.waitFor({ state: 'visible' });
+              assert.deepEqual(await art.locator('path').evaluateAll(paths => [...new Set(paths.map(element => getComputedStyle(element).fill))]), ['rgb(245, 243, 238)']);
+              await art.scrollIntoViewIfNeeded();
+              const bounds = await art.boundingBox();
+              const clip = { x: Math.floor(bounds.x) - 1, y: Math.floor(bounds.y) - 1, width: Math.ceil(bounds.width) + 2, height: Math.ceil(bounds.height) + 2 };
+              const png = await page.screenshot({ clip, ...(evidence ? { path: path.join(evidence, `${engineName}-brand-${mode}-${route.replaceAll('/', '') || 'home'}-${index}.png`) } : {}) });
+              const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+              let textPixels = 0, whitePixels = 0;
+              for (let i = 0; i < data.length; i += 4) {
+                if (data[i] === 245 && data[i + 1] === 243 && data[i + 2] === 238) textPixels++;
+                if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) whitePixels++;
+              }
+              assert.ok(textPixels > 8, `${mode} ${route} ${index} has visible nonblank approved text-colour artwork (${textPixels} text pixels, ${whitePixels} white pixels)`);
+              assert.equal(whitePixels, 0, `${mode} ${route} cannot expose the original white asset fill`);
+              const key = `${route}:${index}`;
+              const pixels = { data, width: info.width, height: info.height };
+              if (mode === 'normal') reference.set(key, pixels);
+              else artworkFidelity(pixels, reference.get(key), [36, 35, 33]);
+            }
+            if (route === '/__startup/' && !javaScriptEnabled) {
+              assert.equal(await page.locator('.startup-noscript').evaluate(element => getComputedStyle(element).color), 'rgb(245, 243, 238)');
+              assert.equal(await page.getByText('Lythaus requires JavaScript to run. Please enable JavaScript in your browser.', { exact: true }).isVisible(), true);
+            }
+            if (evidence && mode === 'no-javascript-masks-or-filters') await page.screenshot({ path: path.join(evidence, `${engineName}-static-${route === '/' ? 'home' : route === '/about' ? 'about' : 'startup'}-no-js-masks-filters.png`) });
+          }
+          assert.deepEqual(errors, []);
+        } finally { await context.close(); }
+      }
+    } finally { await browser.close(); }
+  });
+
   test(`${engineName} four-colour supporting pages and form states`, { timeout: 90000 }, async () => {
     const browser = await engine.launch();
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });

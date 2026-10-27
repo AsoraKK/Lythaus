@@ -238,7 +238,8 @@ h1 {
   .mobile-nav-panel a:hover,
   .mobile-nav-panel a:focus-visible,
   .mobile-nav-panel a.is-active { color: var(--text); }
-  html:not(.js-enabled) .mobile-nav-panel { display: block; }
+  html:not(.js-enabled) .mobile-nav-panel { display: block; position: static; grid-column: 1 / -1; grid-row: 2; }
+  html:not(.js-enabled) .home-page .site-header { position: relative; left: auto; transform: none; grid-template-rows: minmax(66px, auto) auto; }
   html.js-enabled .mobile-nav-toggle { display: inline-flex; }
   html.js-enabled .mobile-nav-panel.is-open { display: block; }
   .header-actions { gap: 8px; }

@@ -1,4 +1,7 @@
 :root { color-scheme: dark; --startup-canvas: #242321; --startup-surface: #302E2B; --startup-text: #F5F3EE; --startup-accent: #EFC58D; }
+body { margin: 0; background: var(--startup-canvas); color: var(--startup-text); font: 16px/1.5 system-ui, sans-serif; }
+.startup-noscript { box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 24px; text-align: center; }
+.startup-noscript p { margin: 0; }
 #lythaus-startup {
   position: fixed;
   inset: 0;
@@ -16,7 +19,7 @@
 }
 #lythaus-startup[hidden], #lythaus-startup button[hidden] { display: none; }
 #lythaus-startup p { margin: 0; }
-#lythaus-startup img { display: block; }
+.approved-brand-art { display: block; width: 144px; height: 40px; }
 #lythaus-startup button {
   min-height: 48px;
   padding: 8px 24px;
@@ -28,7 +31,3 @@
   cursor: pointer;
 }
 #lythaus-startup button:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
-@supports (mask-image: url('brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg')) {
-  #lythaus-startup picture { background: var(--startup-text); mask: url('brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg') center / contain no-repeat; }
-  #lythaus-startup img { opacity: 0; }
-}

@@ -9,7 +9,7 @@ import { chromium, webkit } from 'playwright';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import {observeRenderHealth, assertRenderHealth} from './brand-render-health.mjs';
 import {compareApprovedArtwork} from './brand-reference.mjs';
-import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
+import {brandPresentation,containedBrandRect,selectedIconAssets} from './brand-presentation-contract.mjs';
 import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
@@ -30,11 +30,12 @@ const source = process.env.BRAND_SOURCE;
 const selectedCase = process.env.BRAND_CASE;
 assert.match(source ?? '', /^[a-f0-9]{40}$/);
 const approved = JSON.parse(await readFile('docs/brand/approved-v1/INTEGRATION-MANIFEST.json', 'utf8'));
-async function verifyIcons(page, context) {
+const derived = JSON.parse(await readFile('docs/brand/four-colour/manifest.json', 'utf8'));
+async function verifyIcons(page, context, screen) {
   const icons = await page.locator('link[rel="icon"],link[rel="apple-touch-icon"]').evaluateAll(nodes => nodes.map(node => node.href));
   assert.equal(icons.length, 4);
   for (const url of icons) {
-    const expected = approved.web_copy_map.find(asset => asset.public_url === new URL(url).pathname);
+    const expected = selectedIconAssets(screen,approved,derived).find(asset => asset.public_url === new URL(url).pathname);
     assert.ok(expected, url);
     const response = await context.request.get(url);
     assert.equal(response.status(), 200);
@@ -94,8 +95,8 @@ async function firstPaint(page, name, scale, theme) {
     record.pngSha256 = createHash('sha256').update(bytes).digest('hex');
     Object.assign(record, loginFirstPaintPixels(png, record.before));
     assertLoginFirstPaintPixels(record);
-    const artworkFile = theme === 'dark' ? 'lythaus-wordmark-white.5ba0451347e2.svg' : 'lythaus-wordmark-black.e450176663e0.svg';
-    record.fidelity = await compareApprovedArtwork(page,png,record.artwork,new URL('/assets/assets/brand/lythaus-v1/'+artworkFile,page.url()).href,PNG);
+    const presentation=brandPresentation('login',theme);
+    record.fidelity = await compareApprovedArtwork(page,png,record.artwork,new URL('/assets/assets/brand/lythaus-v1/'+presentation.file,page.url()).href,PNG,'canvas',record.artwork,presentation.foreground);
     record.status = 'passed';
     return record;
   } catch (error) {record.status='failed';record.error=error.message;throw error;}
@@ -116,6 +117,7 @@ async function saveCase(result) {
   console.log(`${engine} ${result.screen} ${result.theme} ${result.width}: ${result.status}${result.failureBoundary?' at '+result.failureBoundary:''}${result.error?' — '+result.error:''}`);
 }
 async function capture(page, name, validate = true) {
+  const [,screen,theme]=name.split('-'),presentation=brandPresentation(screen,theme);
   await page.evaluate(() => {
     const label = document.createElement('div');
     label.textContent = 'LOCAL SYNTHETIC BRAND QA';
@@ -133,9 +135,8 @@ async function capture(page, name, validate = true) {
     let rect = await brand.boundingBox();
     assert.ok(rect && rect.width > 0 && rect.height > 0, 'Brand has a visible layout box');
     const imageBox=rect;
-    const symbol = !(await image.count());
-    if (symbol) rect = {x:rect.x+(rect.width-24)/2,y:rect.y+(rect.height-24)/2,width:24,height:24};
-    if(!symbol) rect=containedWordmarkRect(rect);
+    const control = !(await image.count());
+    rect=containedBrandRect(rect,presentation.kind,control);
     const png = PNG.sync.read(bytes);
     const colors = new Map();
     let pixels = 0;
@@ -149,18 +150,16 @@ async function capture(page, name, validate = true) {
     }
     const painted = pixels - Math.max(0, ...colors.values());
     if (colors.size >= 4 && painted >= 16 && painted / pixels > 0.003) {
-      const dark=name.includes('-dark-');
-      const file=symbol ? (dark?'lythaus-symbol-square-warm.fb697a91817f.svg':'lythaus-symbol-square-black.6a1b6d025e69.svg')
-        : (dark?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg');
+      const file=presentation.file;
       const admin=name.includes('-admin-'),url=admin ? '/brand/lythaus-v1/'+file : '/assets/assets/brand/lythaus-v1/'+file;
       if(admin)assert.equal(await image.getAttribute('src'),url,'Admin selects the canonical standalone artwork');
-      const fidelity=await compareApprovedArtwork(page,png,rect,new URL(url,page.url()).href,PNG,admin?'image':'canvas',imageBox);
-      if(name.includes('-shell-')&&!symbol){
+      const fidelity=await compareApprovedArtwork(page,png,rect,new URL(url,page.url()).href,PNG,admin?'image':'canvas',imageBox,presentation.foreground);
+      if(screen==='shell'&&!control){
         const brands=page.getByRole('img',{name:'Lythaus',exact:true});
         for(let index=1;index<await brands.count();index++){
           const box=await brands.nth(index).boundingBox();
-          assert.ok(box && box.width>0 && box.height>0,'Every shell wordmark is visible');
-          await compareApprovedArtwork(page,png,containedWordmarkRect(box),new URL(url,page.url()).href,PNG,'canvas',box);
+          assert.ok(box && box.width>0 && box.height>0,'Every shell LH symbol is visible');
+          await compareApprovedArtwork(page,png,containedBrandRect(box,presentation.kind),new URL(url,page.url()).href,PNG,'canvas',box,presentation.foreground);
         }
       }
       return fidelity;
@@ -177,7 +176,7 @@ try {
         if (screen === 'onboarding') {
           const scale = width === 320 ? 2 : 1;
           results.push(await runOnboardingCase({browser,engine,origin:onboardingServers[scale-1].origin,referenceOrigin:onboardingReferenceServer.origin,
-            theme,width,scale,output,source,approved}));
+            theme,width,scale,output,source,iconAssets:selectedIconAssets('onboarding',approved,derived)}));
           await saveCase(results.at(-1));
           continue;
         }
@@ -228,7 +227,7 @@ try {
             await page.getByRole('img', { name: 'Lythaus', exact: true }).waitFor();
           }
           assert.equal(await page.getByRole('img',{name:'Lythaus',exact:true}).count(), screen==='shell'&&width>=1100?2:1,
-            'Header wordmark is named; the expanded desktop sidebar retains its own wordmark');
+            'The header brand is named; the expanded desktop sidebar retains its own LH symbol');
           if(login){
             const semanticBox=await page.getByRole('img',{name:'Lythaus',exact:true}).boundingBox();
             for(const key of ['x','y','width','height'])assert.ok(Math.abs(semanticBox[key]-initialPaint.before.brands[0][key])<0.02,'Named image matches original fractional '+key);
@@ -258,7 +257,7 @@ try {
             assert.equal(editingRestored.controllerId,editingBefore.controllerId,'Email controller survives restored size');
             draftTrace=await captureLoginDraftTrace(page,'after-draft-resize-check');
           }
-          await verifyIcons(page, context);
+          await verifyIcons(page, context, screen);
           if (screen !== 'shell') {
           const action = page.getByRole('button', { name: screen === 'login' ? 'Continue as guest' : 'Continue', exact: true });
           for (let attempt = 0; attempt < 12; attempt++) {
@@ -309,7 +308,7 @@ try {
         const artworkFidelity=await capture(page, engine + '-admin-' + theme + '-' + width);
         await page.getByRole('link', { name: 'Audit', exact: true }).click();
         assert.equal(new URL(page.url()).pathname, '/audit');
-        await verifyIcons(page, context);
+        await verifyIcons(page, context, 'admin');
         assert.deepEqual(errors, []);
         results.push({ screen: 'admin', theme, width, status: 'passed', artworkFidelity });
       } catch(error) {

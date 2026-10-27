@@ -1,6 +1,6 @@
 ---
 import tokens from '../../../../design/tokens.json';
-import BrandInkFilter from '../components/BrandInkFilter.astro';
+import ApprovedBrand from '../components/ApprovedBrand.astro';
 import regularFont from '../../../../assets/fonts/Manrope-Regular.ttf?url';
 import semiboldFont from '../../../../assets/fonts/Manrope-SemiBold.ttf?url';
 import '../styles/palette.css';
@@ -18,7 +18,7 @@ const {
 const pageTitle = absoluteTitle ? title : `${title} | Lythaus`;
 const siteUrl = Astro.site?.origin ?? 'https://lythaus.co';
 const canonicalUrl = `${siteUrl}${canonicalPath}`;
-const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png`;
+const socialImageUrl = `${siteUrl}/brand/lythaus-four-colour/lythaus-social-card-1200x630.871084ba8f81.png`;
 const navigation = [
   { href: '/features', label: 'Features' },
   { href: '/about', label: 'About' },
@@ -40,11 +40,11 @@ const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFo
     <meta name="theme-color" content={tokens.color.dark.canvas} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
-    <link rel="icon" type="image/svg+xml" href="/icons/lythaus-v1/favicon.116ff3e020c6.svg" />
-    <link rel="icon" type="image/png" href="/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png" sizes="96x96" />
-    <link rel="icon" type="image/x-icon" href="/icons/lythaus-v1/favicon.e3dfdd675a74.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/icons/lythaus-four-colour/favicon.843c17f8b307.svg" />
+    <link rel="icon" type="image/png" href="/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png" sizes="96x96" />
+    <link rel="icon" type="image/x-icon" href="/icons/lythaus-four-colour/favicon.b3b17204ae17.ico" sizes="any" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="apple-touch-icon" type="image/png" href="/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png" sizes="180x180" />
+    <link rel="apple-touch-icon" type="image/png" href="/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png" sizes="180x180" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
@@ -64,11 +64,10 @@ const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFo
     <style is:inline set:html={fontCss + foundationCss} />
   </head>
   <body class="secondary-page">
-    <BrandInkFilter />
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="secondary-header">
       <a class="secondary-brand" href="/" aria-label="Lythaus home">
-        <span class="brand-symbol-slot approved-brand" aria-hidden="true"><img src="/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg" alt="" width="106.02" height="98.02" /></span>
+        <span class="brand-symbol-slot approved-brand" aria-hidden="true"><ApprovedBrand variant="symbol" /></span>
       </a>
       <nav class="secondary-nav" aria-label="Main navigation">
         {navigation.map(({ href, label }) => <a href={href} aria-current={canonicalPath === href ? 'page' : undefined}>{label}</a>)}
@@ -96,7 +95,7 @@ const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFo
       <slot />
     </main>
     <footer class="secondary-footer">
-      <div class="footer-intro"><a class="secondary-brand" href="/" aria-label="Lythaus home"><span class="secondary-brand-wordmark approved-brand" aria-hidden="true"><img src="/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg" alt="" width="470" height="131" /></span></a><p>A calmer place for human ideas.</p></div>
+      <div class="footer-intro"><a class="secondary-brand" href="/" aria-label="Lythaus home"><span class="secondary-brand-wordmark approved-brand" aria-hidden="true"><ApprovedBrand /></span></a><p>A calmer place for human ideas.</p></div>
       <nav aria-label="Footer navigation">
         <a href="/help">Help</a><a href="/contact">Contact</a><a href="/guidelines">Guidelines</a>
         <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/invite">Redeem invite</a>

@@ -6,7 +6,7 @@ The opening keeps the approved Lythaus wordmark readable while a restrained warm
 
 `OpeningWordmark.astro` references the exact approved `lythaus-wordmark-white.5ba0451347e2.svg` bytes. Its original outlines and proportions are contained within the existing 1000-by-166 scene. An alpha mask applies the shared off-white text token; optical layers combine only off-white and amber. The original SVG file and generated outline data are unchanged.
 
-`palette.css` shares the four-colour contract with Flutter and `design/tokens.json`: canvas `#242321`, surface `#302E2B`, reading text `#F5F3EE`, accent `#EFC58D`. There are no brightness/saturation filters creating additional source colours. The original static artwork is tinted using an independent SVG flood filter when masks are unavailable. If both filters and masks are unsupported, the required original white artwork remains visible; this asset-preservation limitation is documented in `docs/design-system/four-colour-contract.md`.
+`palette.css` shares the four-colour contract with Flutter and `design/tokens.json`: canvas `#242321`, surface `#302E2B`, reading text `#F5F3EE`, accent `#EFC58D`. There are no brightness/saturation filters creating additional source colours. The static wordmark and LH symbol inline the exact approved SVG geometry with `currentColor` fill, inheriting the reading-text token. Their source asset bytes remain immutable. The static representation does not require JavaScript, masks or filters.
 
 `home-opening.css` owns optical geometry and timing. `home-polish.css` retains the existing type scale, spacing and waitlist layout. The scene uses SVG, CSS and native Web Animations without an animation dependency.
 

@@ -413,12 +413,14 @@ function assertReviewedReputationRepair(filename, blob) {
 function assertAuthorizedOpeningWordmark(filename, blob) {
   assert.equal(filename, 'apps/marketing-site/src/components/OpeningWordmark.astro',
     'The wordmark authorization covers only the existing opening component');
-  assert.equal(blob, '249e2ec5f85fc5f102c506650d2a89a213498a59',
+  assert.equal(blob, '4a6bae48de40d20c6d90a1e73de1b68940d354f6',
     'Opening artwork, palette and visible-content motion must match the approved design contract');
 }
 const approvedHomepageVisualEdits = new Map([
-  ['apps/marketing-site/src/styles/global.css', 'd5adf23e9bf6c75df4350624383e6ad3bf7b5679'],
-  ['apps/marketing-site/src/styles/home-opening.css', 'fafa1f1bc32129625fa68c7453c3003a6973fead'],
+  ['apps/marketing-site/public/_headers', 'eea917a1de454e11b1f91fd438b8a06b77dbbbbd'],
+  ['apps/marketing-site/public/_redirects', '4e149be2b99fa2c650fd5c619d27b3152bb4db6f'],
+  ['apps/marketing-site/src/styles/global.css', '4b7d4a19e57394162c6787eeb1d2340ad71f227e'],
+  ['apps/marketing-site/src/styles/home-opening.css', '699bbf0e22f74f4bee36ef65f1d542bff97da961'],
   ['apps/marketing-site/src/styles/home-pitch.css', 'fb6558c20c73daee20e1bf0d250031a5662bc2a1'],
   ['apps/marketing-site/src/styles/home-pitch-compact.css', 'bad9f0e9aa17860340f2bccb0fe169c68ee41da6'],
   ['apps/marketing-site/src/styles/home-polish.css', '594236fdeb02f388c28db7d21b93549d2420ce36'],
@@ -443,7 +445,7 @@ const approvedMarketingBrandAssets = new Map([
   ['apps/marketing-site/public/icons/lythaus-192.png', '5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8'],
   ['apps/marketing-site/public/icons/lythaus-512.png', '27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d'],
   ['apps/marketing-site/public/icons/lythaus-512-maskable.png', '10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d'],
-  ['apps/marketing-site/public/site.webmanifest', 'f173bf95da3187598e6e1034af2872311b316f9bdfdbbf23869e471d342d2295'],
+  ['apps/marketing-site/public/site.webmanifest', '98c12f8a34f655527f47bf26743436cd10f0fda55504bbc4bacce60bdbea6578'],
 ]);
 const approvedMarketingBrandRemovals = new Set([
   'apps/marketing-site/public/brand/lythaus-mark.svg',
@@ -872,10 +874,10 @@ test('approved copy refresh preserves homepage scripts, waitlist controls and me
   const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
   const frontmatter = source => source.split('---')[1].trim();
   const normalizeBrandFrontmatter = source => frontmatter(source)
-    .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png`;\n", '')
+    .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-four-colour/lythaus-social-card-1200x630.871084ba8f81.png`;\n", '')
     .replace("import '../styles/brand.css';", '')
     .replace("import tokens from '../../../../design/tokens.json';\n", '')
-    .replace("import BrandInkFilter from '../components/BrandInkFilter.astro';\n", '')
+    .replace("import ApprovedBrand from '../components/ApprovedBrand.astro';\n", '')
     .replace("import '../styles/palette.css';\n", '')
     .trim();
   const normalizeBrandHead = source => source

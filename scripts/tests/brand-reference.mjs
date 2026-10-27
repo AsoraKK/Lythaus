@@ -1,8 +1,9 @@
 import {artworkFidelity} from './brand-artwork-pixels.mjs';
 import assert from 'node:assert/strict';
 
-export async function compareApprovedArtwork(page, png, rect, url, PNG, renderer='canvas',imageBox=rect) {
+export async function compareApprovedArtwork(page, png, rect, url, PNG, renderer='canvas',imageBox=rect,foreground=null) {
   assert.ok(['canvas','image'].includes(renderer));
+  if(foreground!==null){assert.equal(renderer,'canvas');assert.match(foreground,/^#[0-9A-F]{6}$/);}
   const x=Math.floor(rect.x), y=Math.floor(rect.y);
   const width=Math.ceil(rect.x+rect.width)-x, height=Math.ceil(rect.y+rect.height)-y;
   assert.ok(x>=0&&y>=0&&x+width<=png.width&&y+height<=png.height,
@@ -17,7 +18,7 @@ export async function compareApprovedArtwork(page, png, rect, url, PNG, renderer
   try {
     await referencePage.setViewportSize({width:Math.max(320,width),height:Math.max(200,height)});
     await referencePage.setContent('<canvas id="reference"></canvas>');
-    await referencePage.evaluate(async({url,width,height,rect,imageBox,x,y,background,renderer})=>{
+    await referencePage.evaluate(async({url,width,height,rect,imageBox,x,y,background,renderer,foreground})=>{
       const canvas=document.querySelector('canvas');canvas.width=width;canvas.height=height;
       document.body.style.cssText='margin:0';
       const ctx=canvas.getContext('2d');ctx.fillStyle=`rgb(${background.join(',')})`;ctx.fillRect(0,0,width,height);
@@ -27,8 +28,13 @@ export async function compareApprovedArtwork(page, png, rect, url, PNG, renderer
         surface.style.cssText=`position:relative;width:${width}px;height:${height}px;background:rgb(${background.join(',')});overflow:hidden`;
         image.style.cssText=`position:absolute;left:${imageBox.x-x}px;top:${imageBox.y-y}px;width:${imageBox.width}px;height:${imageBox.height}px;object-fit:contain`;
         surface.append(image);canvas.replaceWith(surface);
+      }else if(foreground){
+        const stencil=document.createElement('canvas');stencil.width=width;stencil.height=height;
+        const paint=stencil.getContext('2d');paint.drawImage(image,rect.x-x,rect.y-y,rect.width,rect.height);
+        paint.globalCompositeOperation='source-in';paint.fillStyle=foreground;paint.fillRect(0,0,width,height);
+        ctx.drawImage(stencil,0,0);
       }else ctx.drawImage(image,rect.x-x,rect.y-y,rect.width,rect.height);
-    },{url,width,height,rect,imageBox,x,y,background,renderer});
+    },{url,width,height,rect,imageBox,x,y,background,renderer,foreground});
     const reference=PNG.sync.read(await referencePage.locator('#reference').screenshot());
     return {...artworkFidelity(actual,reference,background),referenceRenderer:renderer};
   } finally {await referencePage.close();await page.bringToFront();}

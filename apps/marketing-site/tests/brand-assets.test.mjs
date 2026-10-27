@@ -56,16 +56,16 @@ test('fingerprinted brand assets match approved hashes and MIME signatures', () 
 test('both marketing layouts use versioned icons and social metadata', () => {
   const layouts = `${baseLayout}\n${secondaryLayout}`;
   const referenced = [
-    '/icons/lythaus-v1/favicon.116ff3e020c6.svg',
-    '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png',
-    '/icons/lythaus-v1/favicon.e3dfdd675a74.ico',
-    '/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png',
+    '/icons/lythaus-four-colour/favicon.843c17f8b307.svg',
+    '/icons/lythaus-four-colour/favicon-96x96.de330b9cd99a.png',
+    '/icons/lythaus-four-colour/favicon.b3b17204ae17.ico',
+    '/icons/lythaus-four-colour/apple-touch-icon.9a0cab560dae.png',
   ];
   for (const url of referenced) assert.ok(layouts.includes(url), `${url} must be linked by both layouts`);
   assert.match(layouts, /type="image\/svg\+xml"/u);
   assert.match(layouts, /type="image\/png"/u);
   assert.match(layouts, /type="image\/x-icon"/u);
-  assert.match(layouts, /const socialImageUrl = `\$\{siteUrl\}\/brand\/lythaus-v1\/lythaus-social-card-1200x630\.78f698ef4283\.png`/u);
+  assert.match(layouts, /const socialImageUrl = `\$\{siteUrl\}\/brand\/lythaus-four-colour\/lythaus-social-card-1200x630\.871084ba8f81\.png`/u);
   assert.match(layouts, /property="og:image" content=\{socialImageUrl\}/u);
   assert.match(layouts, /property="og:image:alt" content="Lythaus wordmark"/u);
   assert.match(layouts, /name="twitter:image" content=\{socialImageUrl\}/u);
@@ -76,13 +76,13 @@ test('both marketing layouts use versioned icons and social metadata', () => {
 
 test('accessible wordmarks remain standalone, theme-aware, and responsive', () => {
   assert.equal((baseLayout.match(/class="brand-wordmark-slot approved-brand"/gu) ?? []).length, 1);
-  assert.equal((baseLayout.match(/class="brand-wordmark"/gu) ?? []).length, 1);
+  assert.equal((baseLayout.match(/<ApprovedBrand \/>/gu) ?? []).length, 1);
   assert.equal((secondaryLayout.match(/class="secondary-brand-wordmark approved-brand"/gu) ?? []).length, 1);
-  assert.match(baseLayout, /class="brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-symbol-slot approved-brand"[\s\S]*?class="brand-symbol"[^>]*alt=""/u);
+  assert.match(baseLayout, /class="brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-symbol-slot approved-brand" aria-hidden="true"><ApprovedBrand variant="symbol"/u);
   assert.match(secondaryLayout, /class="secondary-brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-symbol-slot approved-brand" aria-hidden="true"/u);
   assert.doesNotMatch(`${baseLayout}\n${secondaryLayout}\n${secondaryStyles}`, /lythaus-lockup|brand-lockup|<span>Lythaus<\/span>/u);
-  assert.match(brandStyles, /mask-mode: alpha/);
-  assert.match(brandStyles, /lythaus-symbol-white\.8e20f9650ccb\.svg/);
+  assert.match(brandStyles, /\.approved-brand \{ color: var\(--ds-text\); \}/);
+  assert.doesNotMatch(brandStyles, /mask|filter/);
   assert.doesNotMatch(secondaryLayout, /secondary-appearance/);
   assert.match(secondaryStyles, /secondary-brand-wordmark[^\n]*aspect-ratio/u);
   assert.match(brandStyles, /brand-wordmark-slot[\s\S]*?aspect-ratio:\s*627\.24944891 \/ 130\.68666880/u);
@@ -104,10 +104,10 @@ test('web manifest preserves identity and maps any and maskable icons separately
   assert.equal(manifest.background_color, '#242321');
   assert.equal(manifest.theme_color, '#242321');
   assert.deepEqual(manifest.icons, [
-    { src: '/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: '/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: '/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-    { src: '/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: '/icons/lythaus-four-colour/pwa-icon-192x192.3966427cb29f.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/lythaus-four-colour/pwa-icon-512x512.7f0c22467699.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/lythaus-four-colour/pwa-maskable-192x192.7105ec6fa742.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+    { src: '/icons/lythaus-four-colour/pwa-maskable-512x512.f4fd2eb0b66a.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ]);
   for (const icon of manifest.icons) {
     assert.match(icon.src, /\.[a-f0-9]{12}\.png$/u, 'manifest icons must be cache-safe versioned URLs');
