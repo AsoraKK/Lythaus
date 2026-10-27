@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "lythaus-0021-restore-evidence-v1",
+  "sourceBranch": {
+    "id": "vqa2g2xc9wsl",
+    "name": "main"
+  },
+  "selectedBackupId": "6vew80jo0epr",
+  "selectedBackupUiTimestamp": "2026-10-27T02:27:08.161Z",
+  "restoredBranch": {
+    "id": "p5953kdp72ac",
+    "name": "lythaus-0021-native-restore-check-20261027-01",
+    "state": "ready",
+    "createdAt": "2026-10-27T08:04:31.640Z"
+  },
+  "verificationWindow": {
+    "startedAt": "2026-10-27T08:03:53.242Z",
+    "completedAt": "2026-10-27T08:07:43.570Z"
+  },
+  "verifiedAt": "2026-10-27T08:07:43.570Z",
+  "artifactPath": "docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-40470687953.json",
+  "artifactStatus": "VERIFIED_NATIVE_QUALIFICATION_ONLY",
+  "evidenceSha256": "741b984dc35cf651156bdb99a9abedb9c4fef04b27a0f0ccc7413e82e343f354",
+  "verifiedScope": [
+    "backup_binding",
+    "restore_completion",
+    "schema_extensions_indexes",
+    "canonical_registry",
+    "effective_runtime_privileges",
+    "application_smoke"
+  ],
+  "unresolvedGates": [
+    "rpo_rto_acceptance",
+    "independent_recovery_destination"
+  ],
+  "review": {
+    "reviewedAt": "2026-10-27T08:27:25Z",
+    "reviewedBy": "AsoraKK",
+    "reference": "https://github.com/AsoraKK/Lythaus/pull/1122#pullrequestreview-5664060528"
+  },
+  "nativeRestoreCleanup": {
+    "schemaVersion": "native-restore-cleanup-intent-v1",
+    "state": "DELETE_PENDING",
+    "qualificationSha": "8dd80c4734ac5dad57c4e7338660b4e629c58da1",
+    "qualificationRunId": "40470687953",
+    "qualificationWorkflowId": 394786946,
+    "targetId": "p5953kdp72ac",
+    "workflowId": 394840164,
+    "runNumber": 3,
+    "artifactId": 12718234369,
+    "artifactArchiveSha256": "7e66ea427d9804594946aa71bb9321c6d4f25a906dfd59eef17d6b43e2c6583f",
+    "evidenceOutcome": "PASSED"
+  },
+  "recordSha256": "c8af5a2658260bfd1999db2c692da4ab26571c774b8f18a75374214b196b1ca1"
+}
