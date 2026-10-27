@@ -19,7 +19,7 @@ const time = minutes => new Date(start + minutes * 60000).toISOString();
 const targetId = 'newrestore123', qualificationSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), cleanupSha = evidenceSha;
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const branch = () => ({ id: targetId, name: RESTORE.target, created_at: time(1), deleted_at: null,
-  default: false, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false });
+  default: false, production: true, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false });
 
 function fixture() {
   const report = { phase: 'qualification', runId: '12345', sourceMainSha: qualificationSha, startedAt: time(0),
@@ -122,7 +122,7 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
     if (url === apiBase) return Response.json({ id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' });
     if (url.endsWith('/service-tokens/syntheticid')) return Response.json({ id: 'syntheticid', expires_at: time(180),
       service_token_accesses: ['read_database','read_branch','delete_branch','delete_production_branch','read_backups',
-        'create_branch','connect_branch','connect_production_branch','restore_production_branch_backup'].map(access => ({
+        'create_branch','connect_branch','connect_production_branch','restore_production_branch_backup','delete_production_branch_password'].map(access => ({
           access, resource_id: RESTORE.databaseId, resource_type: 'Database',
           resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } })) });
     if (path === '/branches/main') return Response.json(source);
