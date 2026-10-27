@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { before, after, test } from 'node:test';
 import { chromium, firefox, webkit } from 'playwright';
 import sharp from 'sharp';
 import { artworkFidelity } from '../../../scripts/tests/brand-artwork-pixels.mjs';
+import {approvedStaticSource,staticBrandReference} from './static-brand-reference.mjs';
 
 const dist = path.resolve(import.meta.dirname, '../dist');
 const startupSource = path.resolve(import.meta.dirname, '../../../web');
@@ -463,7 +464,7 @@ test('marketing brand assets render responsively with correct theme and MIME', {
 for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })) {
   test(`${engineName} static brand pixels survive unavailable JavaScript, masks and filters`, { timeout: 90000 }, async () => {
     const browser = await engine.launch();
-    const reference = new Map();
+    const dimensions = new Map();
     try {
       for (const [mode, javaScriptEnabled, disableEffects] of [
         ['normal', true, false],
@@ -486,9 +487,9 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         });
         try {
           for (const [route, selectors] of [
-            ['/', ['.site-header .approved-brand-art', '.wordmark-fallback .approved-brand-art']],
-            ['/about', ['.secondary-header .approved-brand-art', '.secondary-footer .approved-brand-art']],
-            ['/__startup/', [javaScriptEnabled ? '#lythaus-startup .approved-brand-art' : '.startup-noscript .approved-brand-art']],
+            ['/', [['.site-header .approved-brand-art','symbol'], ['.wordmark-fallback .approved-brand-art','wordmark']]],
+            ['/about', [['.secondary-header .approved-brand-art','symbol'], ['.secondary-footer .approved-brand-art','wordmark']]],
+            ['/__startup/', [[javaScriptEnabled ? '#lythaus-startup .approved-brand-art' : '.startup-noscript .approved-brand-art','wordmark']]],
           ]) {
             await page.goto(origin + route);
             if (disableEffects) await page.evaluate(() => {
@@ -497,7 +498,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
               document.head.append(style);
             });
             assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(36, 35, 33)');
-            for (const [index, selector] of selectors.entries()) {
+            for (const [index, [selector,kind]] of selectors.entries()) {
               const art = page.locator(selector);
               await art.waitFor({ state: 'visible' });
               assert.deepEqual(await art.locator('path').evaluateAll(paths => [...new Set(paths.map(element => getComputedStyle(element).fill))]), ['rgb(245, 243, 238)']);
@@ -515,8 +516,20 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
               assert.equal(whitePixels, 0, `${mode} ${route} cannot expose the original white asset fill`);
               const key = `${route}:${index}`;
               const pixels = { data, width: info.width, height: info.height };
-              if (mode === 'normal') reference.set(key, pixels);
-              else artworkFidelity(pixels, reference.get(key), [36, 35, 33]);
+              const detail={engineName,mode,route,index,kind,bounds,clip,normalDimensions:dimensions.get(key)};
+              try{
+                if(mode==='normal')dimensions.set(key,{width:bounds.width,height:bounds.height});
+                else for(const axis of ['width','height'])assert.ok(Math.abs(bounds[axis]-dimensions.get(key)[axis])<0.01,`${axis} retains its normal layout size`);
+                const expected=await staticBrandReference(page,kind,bounds,clip);
+                if(evidence)await writeFile(path.join(evidence,`${engineName}-brand-${mode}-${route.replaceAll('/','')||'home'}-${index}-reference.png`),expected);
+                const reference=await sharp(expected).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+                detail.fidelity=artworkFidelity(pixels,{data:reference.data,width:reference.info.width,height:reference.info.height},[36,35,33]);
+              }catch(error){
+                detail.error=error.message;
+                throw new Error(`Static brand comparison ${JSON.stringify(detail)}: ${error.message}`,{cause:error});
+              }finally{
+                if(evidence)await writeFile(path.join(evidence,`${engineName}-brand-${mode}-${route.replaceAll('/','')||'home'}-${index}.json`),JSON.stringify(detail,null,2)+'\n');
+              }
             }
             if (route === '/__startup/' && !javaScriptEnabled) {
               assert.equal(await page.locator('.startup-noscript').evaluate(element => getComputedStyle(element).color), 'rgb(245, 243, 238)');
@@ -528,6 +541,35 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
+  });
+
+  test(`${engineName} static brand references preserve fractional geometry and reject changed artwork`, { timeout: 60000 }, async () => {
+    const browser=await engine.launch(),context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
+    const wordmark=await approvedStaticSource('wordmark'),symbol=await approvedStaticSource('symbol');
+    const decode=async bytes=>{const {data,info}=await sharp(bytes).ensureAlpha().raw().toBuffer({resolveWithObject:true});return {data,width:info.width,height:info.height};};
+    const capture=async(source,x,y,color='#F5F3EE',clipPath='none')=>{
+      await page.setContent(`<style>body{margin:0;background:#242321}svg{position:absolute;left:${123+x}px;top:${354+y}px;width:144px;height:40px;clip-path:${clipPath}}svg,svg *{fill:${color}}</style>${source}`);
+      const bounds=await page.locator('svg').boundingBox();
+      const clip={x:Math.floor(bounds.x)-1,y:Math.floor(bounds.y)-1,width:Math.ceil(bounds.width)+2,height:Math.ceil(bounds.height)+2};
+      const actual=await decode(await page.screenshot({clip}));
+      const expected=await decode(await staticBrandReference(page,'wordmark',bounds,clip));
+      return {actual,expected};
+    };
+    try{
+      for(const [x,y] of [[0,0],[0,.5],[.5,0],[.5,.5]]){
+        const {actual,expected}=await capture(wordmark,x,y);
+        artworkFidelity(actual,expected,[36,35,33]);
+      }
+      for(const [name,source,color,clipPath] of [
+        ['wrong symbol',symbol,'#F5F3EE','none'],
+        ['wrong colour',wordmark,'#EFC58D','none'],
+        ['blank','<svg xmlns="http://www.w3.org/2000/svg"></svg>','#F5F3EE','none'],
+        ['clipped geometry',wordmark,'#F5F3EE','inset(0 35% 0 0)'],
+      ]){
+        const {actual,expected}=await capture(source,.5,.5,color,clipPath);
+        assert.throws(()=>artworkFidelity(actual,expected,[36,35,33]),/Artwork fidelity/,name+' must not certify the approved wordmark');
+      }
+    }finally{await context.close();await browser.close();}
   });
 
   test(`${engineName} four-colour supporting pages and form states`, { timeout: 90000 }, async () => {
