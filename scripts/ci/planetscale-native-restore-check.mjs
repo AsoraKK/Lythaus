@@ -3,7 +3,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { RESTORE, ROLE_NAMES, EXTENSIONS, CREATE_TARGET_BODY, RestoreApi, RestoreFailure, requireThat, failureCode, hash,
-  approvalRecord, checkBackup, checkBranch, checkOwnedBranch, checkedRoles, copiedRoleReadiness, safeId, object } from './planetscale-native-restore-contract.mjs';
+  approvalRecord, checkBackup, checkBranch, checkOwnedBranch, checkedRoles, copiedRoleReadiness, safeId, object,
+  restoreSchemaMode, restoreSchemaVersion } from './planetscale-native-restore-contract.mjs';
 import { sourceConnection, restoredConnection, restoredConnectionMetadata, readOnly, collectRestoreCatalog, inspectExtensionAuthority,
   installMissingExtensions, checkedExtensionSpecifications } from './planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
@@ -285,7 +286,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     qualificationStopAt: new Date(started + RESTORE.qualificationStopMs).toISOString(),
     escalationAt: new Date(started + RESTORE.escalationMs).toISOString(), reviewByAt: new Date(started + RESTORE.reviewMs).toISOString(),
     cleanupStartByAt: new Date(started + RESTORE.cleanupStartMs).toISOString() };
-  let owned = false, approval, scripts, setup, sourceUrl;
+  let owned = false, approval, scripts, setup, sourceUrl, schemaMode, catalogReader;
   const connections = {};
   const save = async () => { await checkpoint(structuredClone(report)); };
   const assertProtectedMain = async () => {
@@ -338,7 +339,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
           backupRestoreHistoryExcludedTarget: true, checkedAt: new Date(now()).toISOString() };
       }
       const currentSource = await phase('source_admission_catalog', signal => readSession(sourceUrl, RESTORE.sourceId,
-        'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
+        'pscale_api_qodocjs6vgrb', catalogReader, undefined, signal));
       requireThat(hash(currentSource) === hash(report.sourceBaseline), 'source_metadata_changed_before_restore');
     }
     report.providerMutations.push({ action: label, outcome: 'PENDING_OR_UNKNOWN' }); await save();
@@ -373,6 +374,9 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     execute ? Date.parse(report.cleanupDeadlineAt) : undefined);
   try {
     requireThat(['true', 'false', undefined].includes(environment.RESTORE_CHECK_EXECUTE), 'execution_mode_invalid');
+    schemaMode = restoreSchemaMode(environment.RESTORE_CHECK_SCHEMA_MODE);
+    report.schemaMode = schemaMode;
+    catalogReader = client => readCatalog(client, schemaMode);
     if (execute) {
       approval = approvalRecord(environment.RESTORE_CHECK_APPROVAL_JSON, environment, started);
       report.approvalSha256 = hash(approval); report.approvalExpiresAt = approval.expiresAt;
@@ -410,7 +414,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     await save();
     if (!execute) { report.status = 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED'; return report; }
     sourceUrl = sourceConnection(environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL, reviewedOriginFingerprint);
-    const baseline = await phase('source_catalog', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
+    const baseline = await phase('source_catalog', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', catalogReader, undefined, signal));
+    requireThat(baseline.schemaVersion === restoreSchemaVersion(schemaMode), 'source_restore_schema_mode_mismatch');
     requireThat(baseline.extensionCount === 3, 'source_required_extensions_incomplete');
     checkedExtensionSpecifications(baseline.extensionSpecifications);
     report.sourceBaseline = baseline;
@@ -490,7 +495,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     requireThat(Array.isArray(missing) && missing.every(name => EXTENSIONS.includes(name)), 'extension_probe_invalid');
     report.missingExtensions = missing;
     if (missing.length) await mutate('install_missing_named_extensions', () => phase('extensions', signal => installExtensions(setup, created.id, missing, undefined, signal, baseline.extensionSpecifications), 60000, true));
-    const restored = await phase('restored_catalog', signal => readSession(setup, created.id, RESTORE.setup, readCatalog, undefined, signal));
+    const restored = await phase('restored_catalog', signal => readSession(setup, created.id, RESTORE.setup, catalogReader, undefined, signal));
     requireThat(hash(restored) === hash(baseline), 'restored_catalog_registry_acl_or_grants_mismatch');
     report.restoredVerification = restored;
     for (const name of ['runtime', 'admin', 'jobs', 'privacy']) connections[name] = await reset(RESTORE[name]);
@@ -498,7 +503,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     report.applicationSmoke = await phase('smoke', signal => smoke(connections, created.id, baseline, scripts, undefined, signal));
     requireThat(report.applicationSmoke?.readOnlyDatabaseIdentity === true && report.applicationSmoke?.distinctRoles === 4,
       'application_smoke_not_verified');
-    const sourceAfter = await phase('source_readback', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', readCatalog, undefined, signal));
+    const sourceAfter = await phase('source_readback', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', catalogReader, undefined, signal));
     requireThat(hash(sourceAfter) === hash(baseline), 'source_metadata_changed_during_restore');
     time();
     report.verifiedAt = new Date(now()).toISOString();

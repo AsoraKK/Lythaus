@@ -121,6 +121,37 @@ test('disposable PG17 verifies actual catalog SQL, all 17 restored privileges an
     await assert.rejects(() => runRestoreSmoke(urls, branch, baseline, scripts, targetRuntime), /isolated_application_(?:public_contract|readiness)_failed/);
     await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', [checksum, version]);
     assert.deepEqual(await collectRestoreCatalog(targetClient), baseline);
+    const staged = loadApprovedMigrations().migrations.at(-1);
+    assert.equal(staged.name, '0021_media_quarantine_cleanup.sql');
+    await client.query('BEGIN'); await targetClient.query('BEGIN');
+    try {
+      for (const connection of [client, targetClient]) {
+        await connection.query(staged.contents.toString('utf8'));
+        await connection.query('INSERT INTO system.schema_migrations(version,checksum) VALUES ($1,$2)', [staged.name, staged.checksum]);
+      }
+      const current = await collectRestoreCatalog(client, 'post-0021');
+      assert.equal(current.schemaVersion, staged.name);
+      assert.equal(current.schemaFingerprint, '7fdff3474c152317336d2201626b3b69aac79387264e6481576e103f82e8342d');
+      assert.deepEqual(await collectRestoreCatalog(targetClient, 'post-0021'), current);
+      await assert.rejects(() => collectRestoreCatalog(targetClient), /exact_pre_0021_registry_required/);
+
+      await targetClient.query('SAVEPOINT invalid_marker');
+      await targetClient.query('ALTER TABLE media.upload_sessions ALTER COLUMN quarantine_deleted_at SET NOT NULL');
+      await assert.rejects(() => collectRestoreCatalog(targetClient, 'post-0021'), /media_quarantine_marker_contract/);
+      await targetClient.query('ROLLBACK TO SAVEPOINT invalid_marker');
+      await targetClient.query('SAVEPOINT invalid_index');
+      await targetClient.query('DROP INDEX media.media_upload_quarantine_cleanup_idx');
+      await targetClient.query('CREATE INDEX media_upload_quarantine_cleanup_idx ON media.upload_sessions (id)');
+      await assert.rejects(() => collectRestoreCatalog(targetClient, 'post-0021'), /media_upload_quarantine_cleanup_index/);
+      await targetClient.query('ROLLBACK TO SAVEPOINT invalid_index');
+      await targetClient.query('SAVEPOINT invalid_checksum');
+      await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', ['synthetic-drift', staged.name]);
+      await assert.rejects(() => collectRestoreCatalog(targetClient, 'post-0021'), /exact_post_0021_registry_required/);
+      await targetClient.query('ROLLBACK TO SAVEPOINT invalid_checksum');
+      assert.deepEqual(await collectRestoreCatalog(targetClient, 'post-0021'), current);
+    } finally {
+      await client.query('ROLLBACK'); await targetClient.query('ROLLBACK');
+    }
     await client.query(`REVOKE SELECT (id) ON editorial.publications FROM "${RESTORE.runtime}"`);
     await client.query('BEGIN READ ONLY');
     await assert.rejects(() => collectRestoreCatalog(client), /restored_approved_grants_not_present/); await client.query('ROLLBACK');
