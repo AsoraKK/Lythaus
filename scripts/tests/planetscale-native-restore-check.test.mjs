@@ -6,10 +6,12 @@ import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, ROLE_SQL_SECURITY_BAS
   ROLE_SQL_MEMBERSHIP_BASELINE, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
   checkedRoles, assertRestoreRoleSqlBaseline, apiBase, requireResetPermissions } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore, githubReadiness, assertPinnedManualCleanupProof } from '../ci/planetscale-native-restore-check.mjs';
-import { restoredConnection, readOnly, inspectExtensionAuthority, installMissingExtensions, restoreCatalogDigest } from '../ci/planetscale-native-restore-verifier.mjs';
+import { restoredConnection, readOnly, collectRestoreCatalog, inspectExtensionAuthority, installMissingExtensions, restoreCatalogDigest } from '../ci/planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 import { checkSetupWindow, DEPENDENCY_SETUP_RESERVE_MS } from '../ci/planetscale-native-restore-admission.mjs';
+import { expectedMigrationPrefix } from '../ci/planetscale-migration-manifest.mjs';
+import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
 import { syntheticRun12Metadata } from './planetscale-native-restore-run12-fixture.mjs';
 
 const instant = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000;
@@ -144,6 +146,139 @@ test('qualification restores the specified backup snapshot, exercises five copie
   assert.ok(f.calls.indexOf('extension_authority') < f.calls.indexOf(`POST /branches/${RESTORE.target}/roles/role1/reset`));
   assert.equal(JSON.stringify(f.checkpoints).includes(password), false);
   assert.doesNotMatch(JSON.stringify(f.checkpoints), /connectionString|postgresql:\/\/|access_host_url/);
+});
+
+function syntheticCatalog({ version = '0021_media_quarantine_cleanup.sql', registry, missingArtifact, absent = true, relations } = {}) {
+  const queries = [], canonical = canonicalReleaseSchemaContract();
+  const rows = registry ?? expectedMigrationPrefix(version).map(row => ({ version: row.name, checksum: row.appliedSha256 }));
+  return { queries, query: async sql => {
+    queries.push(sql);
+    if (sql.includes('AS table_type,') && sql.includes('AS table_schema')) return { rows: relations ?? canonical.relations };
+    if (sql.startsWith('SELECT version, checksum FROM system.schema_migrations')) return { rows };
+    if (sql.includes('AS index_absent')) return { rows: [{ index_absent: absent, column_absent: absent }] };
+    if (sql.includes('FROM pg_roles WHERE rolname')) return { rows: ROLE_NAMES.map(rolname => ({ rolname, ...ROLE_SQL_SECURITY_BASELINE[rolname] })) };
+    if (sql.includes('FROM pg_auth_members a')) return { rows: ROLE_SQL_MEMBERSHIP_BASELINE.map(row => ({ ...row,
+      grantor: 'postgres', admin_option: false, inherit_option: true, set_option: true })) };
+    if (sql.includes('FROM pg_extension e')) return { rows: extensionSpecifications() };
+    if (sql.includes('has_column_privilege(') || sql.includes('has_schema_privilege(')) return { rows: [{ permitted: true }] };
+    const artifact = /\/\* migration-artifact:([^*]+) \*\//.exec(sql)?.[1];
+    if (artifact || sql.includes(' AS present')) return { rows: [{ present: !missingArtifact || artifact !== missingArtifact }] };
+    return { rows: [] };
+  } };
+}
+
+test('synthetic catalog selects exact pre-0021 or post-0021 registry and strict postconditions', async () => {
+  const pre = syntheticCatalog({ version: '0020_auth_recovery_delivery.sql' });
+  const old = await collectRestoreCatalog(pre);
+  assert.equal(old.schemaVersion, '0020_auth_recovery_delivery.sql');
+  assert.equal(old.schemaFingerprint, 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0');
+  const post = syntheticCatalog(), current = await collectRestoreCatalog(post, 'post-0021');
+  assert.equal(current.schemaVersion, '0021_media_quarantine_cleanup.sql');
+  assert.equal(current.schemaFingerprint, '7fdff3474c152317336d2201626b3b69aac79387264e6481576e103f82e8342d');
+  assert.notEqual(old.schemaFingerprint, current.schemaFingerprint);
+  assert.equal(current.relationCount, 103);
+  assert.ok(post.queries.some(sql => sql.includes('migration-artifact:column:media.upload_sessions.quarantine_deleted_at')));
+  const column = post.queries.find(sql => sql.includes('migration-artifact:media_quarantine_marker_contract'));
+  assert.match(column, /NOT attribute\.attnotnull/); assert.match(column, /default_value\.oid IS NULL/);
+  const index = post.queries.find(sql => sql.includes('migration-artifact:media_upload_quarantine_cleanup_index'));
+  for (const field of ['indisvalid', 'indisready', 'pg_get_indexdef', 'pg_get_expr', 'indnkeyatts']) assert.ok(index.includes(field));
+  assert.ok(!post.queries.some(sql => sql.includes('AS index_absent')));
+  await assert.rejects(() => collectRestoreCatalog(syntheticCatalog(), 'pre-0021'), /exact_pre_0021_registry_required/);
+  await assert.rejects(() => collectRestoreCatalog(syntheticCatalog({ version: '0020_auth_recovery_delivery.sql' }), 'post-0021'), /exact_post_0021_registry_required/);
+  await assert.rejects(() => collectRestoreCatalog(syntheticCatalog({ version: '0020_auth_recovery_delivery.sql', absent: false })), /0021_catalog_must_be_absent/);
+});
+
+test('synthetic post-0021 catalog rejects ledger drift, incomplete objects and relation drift', async () => {
+  const good = expectedMigrationPrefix('0021_media_quarantine_cleanup.sql').map(row => ({ version: row.name, checksum: row.appliedSha256 }));
+  const badChecksum = structuredClone(good); badChecksum.at(-1).checksum = '0'.repeat(64);
+  for (const registry of [good.slice(0, -1), badChecksum, [...good, { version: '0022_unapproved.sql', checksum: 'a'.repeat(64) }]]) {
+    await assert.rejects(() => collectRestoreCatalog(syntheticCatalog({ registry }), 'post-0021'), /exact_post_0021_registry_required/);
+  }
+  for (const missingArtifact of ['column:media.upload_sessions.quarantine_deleted_at', 'media_quarantine_marker_contract',
+    'media_upload_quarantine_cleanup_index']) {
+    await assert.rejects(() => collectRestoreCatalog(syntheticCatalog({ missingArtifact }), 'post-0021'),
+      error => error.message.includes('canonical postcondition verification failed') && error.message.includes(missingArtifact));
+  }
+  await assert.rejects(() => collectRestoreCatalog(syntheticCatalog({ relations: canonicalReleaseSchemaContract().relations.slice(1) }), 'post-0021'),
+    /restore_relation_contract_incomplete/);
+  const invalid = syntheticCatalog();
+  await assert.rejects(() => collectRestoreCatalog(invalid, 'automatic'), /restore_schema_mode_invalid/);
+  assert.deepEqual(invalid.queries, []);
+});
+
+test('post-0021 workflow mode is explicitly approved and reaches every catalog and smoke stage', async () => {
+  const f = fixture(), seen = [];
+  f.options.environment.RESTORE_CHECK_SCHEMA_MODE = 'post-0021';
+  const approval = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  approval.schemaMode = 'post-0021'; f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(approval);
+  f.options.readSession = async (_raw, branchId, _role, work) => work({ branchId });
+  f.options.readCatalog = async (client, mode) => {
+    seen.push([client.branchId, mode]); return { ...baseline(), schemaVersion: '0021_media_quarantine_cleanup.sql' };
+  };
+  f.options.smoke = async (_connections, id, source) => {
+    assert.equal(id, newId); assert.equal(source.schemaVersion, '0021_media_quarantine_cleanup.sql');
+    return { readOnlyDatabaseIdentity: true, distinctRoles: 4 };
+  };
+  assert.equal(checkSetupWindow(f.options.environment, instant).mutationAuthorized, false);
+  const report = await runNativeRestore(f.options);
+  assert.equal(report.qualificationOutcome, 'PASSED'); assert.equal(report.schemaMode, 'post-0021');
+  assert.equal(report.sourceBaseline.schemaVersion, '0021_media_quarantine_cleanup.sql');
+  assert.equal(report.restoredVerification.schemaVersion, report.sourceBaseline.schemaVersion);
+  assert.deepEqual(seen, [[RESTORE.sourceId, 'post-0021'], [RESTORE.sourceId, 'post-0021'],
+    [newId, 'post-0021'], [RESTORE.sourceId, 'post-0021']]);
+  assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED');
+  const workflow = fs.readFileSync('.github/workflows/planetscale-native-restore-check.yml', 'utf8');
+  assert.match(workflow, /schema_mode:[\s\S]*?default: pre-0021[\s\S]*?- pre-0021[\s\S]*?- post-0021/);
+  assert.match(workflow, /RESTORE_CHECK_SCHEMA_MODE: \$\{\{ inputs\.schema_mode \}\}/);
+});
+
+test('wrong mode, unapproved mode and wrong source schema stop before provider calls or creation', async () => {
+  for (const [mode, approved, expected] of [['bad', undefined, 'restore_schema_mode_invalid'],
+    ['post-0021', undefined, 'approval_record_fields_invalid'], ['post-0021', 'pre-0021', 'approval_scope_mismatch'],
+    ['pre-0021', 'post-0021', 'approval_record_fields_invalid']]) {
+    const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+    f.options.environment.RESTORE_CHECK_SCHEMA_MODE = mode;
+    if (approved !== undefined) record.schemaMode = approved;
+    f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+    const report = await runNativeRestore(f.options);
+    assert.deepEqual(report.blockers, [expected]); assert.deepEqual(f.calls, []); assert.deepEqual(report.providerMutations, []);
+  }
+  const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  f.options.environment.RESTORE_CHECK_SCHEMA_MODE = 'post-0021'; record.schemaMode = 'post-0021';
+  f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, ['source_restore_schema_mode_mismatch']);
+  assert.equal(report.createdTargetId, null); assert.deepEqual(report.providerMutations, []);
+  assert.ok(!f.calls.some(call => call.startsWith('POST ')));
+  let clientCreated = false;
+  await assert.rejects(() => readOnly(f.options.environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL, newId,
+    branchQualifiedDatabaseTarget(f.options.environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL).role,
+    () => {}, () => { clientCreated = true; }), /sql_connection_target_mismatch/);
+  assert.equal(clientCreated, false);
+});
+
+test('post-0021 target and final source schema drift prevent qualification', async () => {
+  for (const drift of ['target', 'source_readback']) {
+    const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+    f.options.environment.RESTORE_CHECK_SCHEMA_MODE = 'post-0021'; record.schemaMode = 'post-0021';
+    f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+    let sourceReads = 0;
+    f.options.readSession = async (_raw, branchId, _role, work) => work({ branchId });
+    f.options.readCatalog = async (client, mode) => {
+      assert.equal(mode, 'post-0021');
+      if (client.branchId === RESTORE.sourceId) sourceReads++;
+      const wrong = drift === 'target' && client.branchId === newId
+        || drift === 'source_readback' && client.branchId === RESTORE.sourceId && sourceReads === 3;
+      return { ...baseline(), schemaVersion: wrong ? '0020_auth_recovery_delivery.sql' : '0021_media_quarantine_cleanup.sql' };
+    };
+    const report = await runNativeRestore(f.options);
+    assert.equal(report.qualificationOutcome, 'FAILED'); assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED');
+    assert.deepEqual(report.blockers, [drift === 'target' ? 'restored_catalog_registry_acl_or_grants_mismatch' : 'source_metadata_changed_during_restore']);
+    if (drift === 'target') {
+      assert.equal(report.credentialActions.length, 1);
+      assert.ok(!f.calls.includes('actual_smoke_adapter'));
+    }
+  }
 });
 
 test('pinned history plus source-role metadata failure stays pre-mutation and emits shape-only diagnostics', async () => {
