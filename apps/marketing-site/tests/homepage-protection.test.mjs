@@ -413,14 +413,14 @@ function assertReviewedReputationRepair(filename, blob) {
 function assertAuthorizedOpeningWordmark(filename, blob) {
   assert.equal(filename, 'apps/marketing-site/src/components/OpeningWordmark.astro',
     'The wordmark authorization covers only the existing opening component');
-  assert.equal(blob, 'f69acbe95d2177711eb3c7b786601ce8c1efc4ad',
+  assert.equal(blob, '6fe80d9563a688631dcf725816916a8e981f96ae',
     'Opening artwork, palette and visible-content motion must match the approved design contract');
 }
 const approvedHomepageVisualEdits = new Map([
   ['apps/marketing-site/public/_headers', 'eea917a1de454e11b1f91fd438b8a06b77dbbbbd'],
   ['apps/marketing-site/public/_redirects', '4e149be2b99fa2c650fd5c619d27b3152bb4db6f'],
   ['apps/marketing-site/src/styles/global.css', '4b7d4a19e57394162c6787eeb1d2340ad71f227e'],
-  ['apps/marketing-site/src/styles/home-opening.css', 'ed0fad271538766e0da3de539044845d25ab6896'],
+  ['apps/marketing-site/src/styles/home-opening.css', '447586f3542ae365443b9ac6a123ce96532e6fef'],
   ['apps/marketing-site/src/styles/home-pitch.css', 'fb6558c20c73daee20e1bf0d250031a5662bc2a1'],
   ['apps/marketing-site/src/styles/home-pitch-compact.css', 'bad9f0e9aa17860340f2bccb0fe169c68ee41da6'],
   ['apps/marketing-site/src/styles/home-polish.css', '3d842d8f7ecd5136d96d747d67840ad8267ed376'],
@@ -567,7 +567,7 @@ test('opening artwork authorization rejects every other component byte and path'
     ['xMidYMid meet', 'none'],
     ['viewBox="0 0 1000 166"', 'viewBox="0 0 1000 200"'],
     ['mask-type: alpha', 'mask-type: luminance'],
-    ['rx="44" ry="82"', 'rx="45" ry="82"'],
+    ['rx="88" ry="164"', 'rx="89" ry="164"'],
     ['stop-opacity=".96"', 'stop-opacity=".95"'],
     ['aria-label="Lythaus"', 'aria-label="Other"'],
   ]) {

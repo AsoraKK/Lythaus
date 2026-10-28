@@ -35,7 +35,7 @@
 .wordmark-optics { visibility: hidden; }
 .wordmark-core { rx: var(--light-core-width); }
 .wordmark-bloom { rx: var(--light-bloom-width); ry: var(--light-bloom-height); }
-.wordmark-atmosphere { opacity: var(--light-warmth); rx: 250px; ry: 300px; }
+.wordmark-atmosphere { opacity: var(--light-warmth); }
 .wordmark-afterlight { opacity: calc(.65 * var(--letter-reveal-gain)); }
 .wordmark-reflection-shoulder { stop-opacity: calc(.5 * var(--letter-reveal-gain)); }
 [data-light-position], [data-light-projection] { transform-box: view-box; transform-origin: 0 0; }

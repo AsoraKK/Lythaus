@@ -334,6 +334,29 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         }
       });
 
+      await t.test('the amber glow fades smoothly without a rectangular clipping edge', async () => {
+        const { context, page, errors } = await open();
+        try {
+          await frame(page, 660);
+          const box = await page.locator('.pitch-wordmark').boundingBox();
+          const png = await page.screenshot();
+          const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+          const scale = box.width / 1000;
+          const centre = box.x + box.width / 2;
+          const y = Math.round(box.y - 20);
+          const start = Math.round(centre - 260 * scale);
+          const end = Math.round(centre - 50 * scale);
+          assert.ok(y > 0 && start > 0 && end < info.width, 'The glow sample is inside the viewport');
+          const red = x => data[(y * info.width + x) * info.channels];
+          let maximumJump = 0;
+          for (let x = start + 1; x <= end; x++) maximumJump = Math.max(maximumJump, Math.abs(red(x) - red(x - 1)));
+          assert.ok(red(end) > red(start) + 15, 'The sampled region contains the visible amber glow');
+          assert.ok(maximumJump < 20, `The glow must not have a rectangular edge; maximum adjacent jump was ${maximumJump}`);
+          assert.deepEqual(errors, []);
+          if (evidence) await writeFile(path.join(evidence, `${engineName}-1440-beam-edge.png`), png);
+        } finally { await context.close(); }
+      });
+
       await t.test('source stays central while one beam passes over readable content', async () => {
         for (const width of [1440, 390]) {
           let previousX = -Infinity;
