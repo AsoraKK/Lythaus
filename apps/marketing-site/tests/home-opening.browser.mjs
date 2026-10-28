@@ -182,10 +182,6 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         ['no JavaScript', { javaScriptEnabled: false }],
         ['reduced motion', { reducedMotion: 'reduce' }],
         ['unsupported SVG masks', {}, (page) => page.addInitScript(() => { window.SVGMaskElement = undefined; })],
-        ['unsupported glow filters', {}, (page) => page.addInitScript(() => {
-          const supports = CSS.supports.bind(CSS);
-          CSS.supports = (...args) => args[0] === 'filter' ? false : supports(...args);
-        })],
         ['unsupported glow colour mixing', {}, (page) => page.addInitScript(() => {
           const supports = CSS.supports.bind(CSS);
           CSS.supports = (...args) => args[0] === 'color' ? false : supports(...args);
@@ -211,6 +207,18 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           } finally { await context.close(); }
         });
       }
+
+      await t.test('optional CSS filters can be unavailable without suppressing the opening', async () => {
+        const { context, page } = await open({}, (page) => page.addInitScript(() => {
+          const supports = CSS.supports.bind(CSS);
+          CSS.supports = (...args) => args[0] === 'filter' ? false : supports(...args);
+        }));
+        try {
+          await frame(page, 660);
+          assert.equal(await page.evaluate(() => document.documentElement.dataset.opening), 'playing');
+          assert.equal(await page.locator('.wordmark-bloom').evaluate(element => getComputedStyle(element).filter), 'none');
+        } finally { await context.close(); }
+      });
 
       for (const event of ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin']) {
         for (const at of [180, 680, 1180]) {
@@ -311,7 +319,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
                 assert.equal(motion.fallback, 'hidden');
                 assert.equal(motion.exposure, 'url(#wordmark-exposure)');
                 assert.ok(motion.intensity >= 1 && motion.energy >= .9, 'The beam reaches full energy');
-                assert.ok(motion.bloomWidth >= 76 && motion.filter !== 'none', 'The amber bloom is broad and illuminated');
+                assert.ok(motion.bloomWidth >= 76 && motion.filter === 'none', 'The broad amber bloom uses unclipped SVG gradients');
                 lit = await openingPixels(page);
               }
               await page.locator('.wordmark-optics').evaluate(element => element.style.setProperty('visibility', 'hidden', 'important'));
@@ -335,26 +343,39 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
       });
 
       await t.test('the amber glow fades smoothly without a rectangular clipping edge', async () => {
-        const { context, page, errors } = await open();
-        try {
-          await frame(page, 660);
-          const box = await page.locator('.pitch-wordmark').boundingBox();
-          const png = await page.screenshot();
-          const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-          const scale = box.width / 1000;
-          const centre = box.x + box.width / 2;
-          const y = Math.round(box.y - 20);
-          const start = Math.round(centre - 260 * scale);
-          const end = Math.round(centre - 50 * scale);
-          assert.ok(y > 0 && start > 0 && end < info.width, 'The glow sample is inside the viewport');
-          const red = x => data[(y * info.width + x) * info.channels];
-          let maximumJump = 0;
-          for (let x = start + 1; x <= end; x++) maximumJump = Math.max(maximumJump, Math.abs(red(x) - red(x - 1)));
-          assert.ok(red(end) > red(start) + 15, 'The sampled region contains the visible amber glow');
-          assert.ok(maximumJump < 20, `The glow must not have a rectangular edge; maximum adjacent jump was ${maximumJump}`);
-          assert.deepEqual(errors, []);
-          if (evidence) await writeFile(path.join(evidence, `${engineName}-1440-beam-edge.png`), png);
-        } finally { await context.close(); }
+        const sample = async (legacyFilter = false) => {
+          const { context, page, errors } = await open();
+          try {
+            await frame(page, 660);
+            if (legacyFilter) {
+              await page.locator('.wordmark-bloom, .wordmark-core').evaluateAll(elements => {
+                for (const element of elements) element.style.filter = 'drop-shadow(0 0 10px var(--ds-text)) drop-shadow(0 0 32px var(--ds-accent)) drop-shadow(0 0 64px color-mix(in srgb, var(--ds-accent) 55%, transparent))';
+              });
+            }
+            const box = await page.locator('.pitch-wordmark').boundingBox();
+            const png = await page.screenshot();
+            const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+            const scale = box.width / 1000;
+            const centre = box.x + box.width / 2;
+            const y = Math.round(box.y - 20);
+            const start = Math.round(centre - 260 * scale);
+            const end = Math.round(centre - 50 * scale);
+            assert.ok(y > 0 && start > 0 && end < info.width, 'The glow sample is inside the viewport');
+            const red = x => data[(y * info.width + x) * info.channels];
+            let maximumJump = 0;
+            for (let x = start + 1; x <= end; x++) maximumJump = Math.max(maximumJump, Math.abs(red(x) - red(x - 1)));
+            assert.deepEqual(errors, []);
+            if (evidence) await writeFile(path.join(evidence, `${engineName}-1440-beam-${legacyFilter ? 'legacy-filter' : 'edge'}.png`), png);
+            return { maximumJump, glowRise: red(end) - red(start) };
+          } finally { await context.close(); }
+        };
+        const actual = await sample();
+        if (engineName === 'chromium') {
+          const legacy = await sample(true);
+          console.log('Chromium beam edge diagnostics:', JSON.stringify({ actual, legacy }));
+        }
+        assert.ok(actual.glowRise > 15, 'The sampled region contains the visible amber glow');
+        assert.ok(actual.maximumJump < 20, `The glow must not have a rectangular edge; maximum adjacent jump was ${actual.maximumJump}`);
       });
 
       await t.test('source stays central while one beam passes over readable content', async () => {

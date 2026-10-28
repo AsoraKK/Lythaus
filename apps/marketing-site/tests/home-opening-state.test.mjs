@@ -82,7 +82,7 @@ test('normal supported opening plays only after the approved artwork loads', asy
   assert.deepEqual(state.calls.map(call => call.name), ['position', 'exposure', 'projection', 'energy', 'core']);
 });
 
-for (const unsupported of ['svg-mask', 'mask-image', 'filter', 'color']) {
+for (const unsupported of ['svg-mask', 'mask-image', 'color']) {
   test(`unsupported ${unsupported} keeps the static fallback`, async () => {
     const state = await opening({ unsupported });
     assert.equal(state.root.dataset.opening, undefined);
@@ -90,6 +90,12 @@ for (const unsupported of ['svg-mask', 'mask-image', 'filter', 'color']) {
     assert.equal(state.calls.length, 0);
   });
 }
+
+test('unavailable optional filters do not suppress the gradient-based opening', async () => {
+  const state = await opening({ unsupported: 'filter' });
+  state.frames[0]();
+  assert.equal(state.root.dataset.opening, 'playing');
+});
 
 test('reduced motion keeps the static fallback', async () => {
   const state = await opening({ motion: true });

@@ -27,7 +27,6 @@
     if (reducedMotion.matches || document.hidden || location.hash ||
         navigation?.type === 'back_forward' || !Element.prototype.animate ||
         !window.SVGMaskElement || !CSS.supports('mask-image', 'url("/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg")') ||
-        !CSS.supports('filter', 'drop-shadow(0 0 1px currentColor)') ||
         !CSS.supports('color', 'color-mix(in srgb, currentColor 50%, transparent)')) return;
 
     root.dataset.opening = 'armed';
