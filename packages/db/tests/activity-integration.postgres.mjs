@@ -7,11 +7,12 @@ import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
 import { uuidv7, signAccessToken, hmacLookup } from '@lythaus/security';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
+import { isAllowedLocalPostgres17Host } from '../../../scripts/ci/postgres17-host-policy.mjs';
 import { nativePostgresActivityFixture } from './native-postgres-activity-fixture.mjs';
 import { nativePostgresPrivacyWorkflowFixture } from '../../../apps/lythaus-public-api/tests/native-postgres-workflow-fixture.mjs';
 
 const supplied = new URL(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? 'file:///missing');
-assert.ok(['127.0.0.1','localhost'].includes(supplied.hostname));
+assert.ok(isAllowedLocalPostgres17Host(supplied.hostname));
 assert.ok(supplied.pathname.startsWith('/lythaus_auth_test') || (process.env.GITHUB_ACTIONS === 'true' && supplied.pathname === '/postgres'));
 const name = 'lythaus_auth_test_activity_integration_' + uuidv7().replaceAll('-','');
 const local = new URL(supplied); local.pathname = '/' + name;
