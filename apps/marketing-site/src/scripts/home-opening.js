@@ -6,6 +6,7 @@
   let watchdog;
   let startFrame;
   let fontDeadline;
+  let assetDeadline;
   let resolved = false;
 
   const resolve = () => {
@@ -14,6 +15,7 @@
     root.dataset.opening = 'resolved';
     window.clearTimeout(watchdog);
     window.clearTimeout(fontDeadline);
+    window.clearTimeout(assetDeadline);
     window.cancelAnimationFrame(startFrame);
     listeners.abort();
     animations.forEach((animation) => animation.cancel());
@@ -24,7 +26,9 @@
     // Deliberately not gated by sessionStorage: a normal full refresh should replay the opening.
     if (reducedMotion.matches || document.hidden || location.hash ||
         navigation?.type === 'back_forward' || !Element.prototype.animate ||
-        !window.SVGMaskElement || !CSS.supports('mask-image', 'url("/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg")')) return;
+        !window.SVGMaskElement || !CSS.supports('mask-image', 'url("/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg")') ||
+        !CSS.supports('filter', 'drop-shadow(0 0 1px currentColor)') ||
+        !CSS.supports('color', 'color-mix(in srgb, currentColor 50%, transparent)')) return;
 
     root.dataset.opening = 'armed';
     watchdog = window.setTimeout(resolve, 2500);
@@ -110,8 +114,24 @@
       const deadline = new Promise((resolveDeadline) => {
         fontDeadline = window.setTimeout(resolveDeadline, 300);
       });
-      Promise.race([fontReady, deadline]).then(() => {
+      const assetReady = new Promise((resolveAsset) => {
+        const source = document.querySelector('#wordmark-material')?.getAttribute('href');
+        if (!source) return resolveAsset(false);
+        const image = new Image();
+        const finish = (ready) => {
+          window.clearTimeout(assetDeadline);
+          image.onload = null;
+          image.onerror = null;
+          resolveAsset(ready);
+        };
+        image.onload = () => finish(image.naturalWidth > 0 && image.naturalHeight > 0);
+        image.onerror = () => finish(false);
+        assetDeadline = window.setTimeout(() => finish(false), 1200);
+        image.src = source;
+      });
+      Promise.all([Promise.race([fontReady, deadline]), assetReady]).then(([, ready]) => {
         window.clearTimeout(fontDeadline);
+        if (!ready) return resolve();
         if (!resolved) startFrame = window.requestAnimationFrame(start);
       }, resolve);
     };

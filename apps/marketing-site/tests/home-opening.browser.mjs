@@ -73,6 +73,7 @@ async function finished(page) {
       mask: getComputedStyle(document.querySelector('.wordmark-settled')).maskImage,
       sourceHidden: getComputedStyle(document.querySelector('.wordmark-optics')).visibility === 'hidden' ||
         getComputedStyle(document.querySelector('.wordmark-optics')).display === 'none',
+      fallbackVisible: getComputedStyle(document.querySelector('.wordmark-fallback')).visibility === 'visible',
       moving: document.getAnimations().filter((animation) => !(animation instanceof CSSTransition) && animation.playState !== 'finished').length,
       overflow: document.documentElement.scrollWidth > window.innerWidth,
     };
@@ -80,8 +81,30 @@ async function finished(page) {
   assert.equal(state.visible, true, 'All hero information and navigation is readable');
   assert.match(state.mask, /wordmark-contours/, 'The complete approved outlines stay visible');
   assert.equal(state.sourceHidden, true, 'No residual light is visible');
+  assert.equal(state.fallbackVisible, true, 'The complete approved wordmark is visible after playback or in fallback mode');
   assert.equal(state.moving, 0, 'The final page is still');
   assert.equal(state.overflow, false, 'No horizontal overflow');
+}
+
+async function openingPixels(page) {
+  const box = await page.locator('.pitch-wordmark').boundingBox();
+  const png = await page.screenshot({ clip: box });
+  const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  let left = 0;
+  let right = 0;
+  let amber = 0;
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      const i = (y * info.width + x) * info.channels;
+      const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+      if (r > 180 && g > 180 && b > 180) {
+        if (x < info.width / 2) left++;
+        else right++;
+      }
+      if (r > 65 && r - g >= 8 && g - b >= 8) amber++;
+    }
+  }
+  return { png, left, right, amber };
 }
 
 for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })) {
@@ -109,7 +132,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
       return { context, page, errors };
     };
     try {
-      for (const [width, height] of [[1440, 900], [1280, 800], [768, 1024], [390, 844]]) {
+      for (const [width, height] of [[1440, 900], [1280, 800], [768, 1024], [390, 844], [320, 720]]) {
         await t.test(`readable, stable completion at ${width}px`, async () => {
           const { context, page, errors } = await open({ viewport: { width, height } });
           try {
@@ -122,21 +145,33 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
               const clip = document.querySelector('#wordmark-space rect');
               return {
                 width: bounds.width,
-                expectedWidth: Math.min(parent.width / 2, 490),
+                expectedWidth: Math.min(parent.width, 980),
                 centerDelta: Math.abs(bounds.x + bounds.width / 2 - (parent.x + parent.width / 2)),
                 clip: ['x', 'y', 'width', 'height'].map((attribute) => Number(clip.getAttribute(attribute))),
               };
             });
             assert.ok(Math.abs(wordmarkGeometry.width - wordmarkGeometry.expectedWidth) < 0.1,
-              'The hero wordmark and beam stay at half their previous responsive scale');
-            assert.ok(wordmarkGeometry.centerDelta < 0.1, 'The smaller hero wordmark stays centered');
+              'The hero wordmark doubles in size without exceeding its responsive container');
+            assert.ok(wordmarkGeometry.centerDelta < 0.1, 'The hero wordmark stays centered');
             assert.deepEqual(wordmarkGeometry.clip, [-600, -500, 2300, 1150],
               'The SVG clip contains the full moving beam and its glow');
             assert.equal(await page.locator('.pitch-section').count(), 4);
+            assert.equal(await page.locator('.pitch-section-meta, .home-eyebrow').count(), 0);
             await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
             const elapsed = await page.evaluate(() => window.openingTimes.resolved - window.openingTimes.playing);
             assert.ok(elapsed >= 1250, 'Document loading must not consume the opening timeline');
             await finished(page);
+            const outsideViewport = await page.evaluate(() => {
+              const selectors = ['.brand', '.header-actions', '.header-cta', '.mobile-nav-toggle',
+                '.pitch-wordmark', '.pitch-intro-statement', '.pitch-intro-support .button', '#platform-title'];
+              return selectors.flatMap(selector => {
+                const element = document.querySelector(selector);
+                if (!element || getComputedStyle(element).display === 'none') return [];
+                const bounds = element.getBoundingClientRect();
+                return bounds.left < -0.5 || bounds.right > innerWidth + 0.5 ? [{ selector, left: bounds.left, right: bounds.right }] : [];
+              });
+            });
+            assert.deepEqual(outsideViewport, [], 'Visible header, wordmark, CTA and section heading fit the viewport');
             assert.deepEqual(errors, []);
             if (evidence) await page.screenshot({ path: path.join(evidence, `${engineName}-${width}-final.png`) });
           } finally { await context.close(); }
@@ -147,15 +182,27 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         ['no JavaScript', { javaScriptEnabled: false }],
         ['reduced motion', { reducedMotion: 'reduce' }],
         ['unsupported SVG masks', {}, (page) => page.addInitScript(() => { window.SVGMaskElement = undefined; })],
+        ['unsupported glow filters', {}, (page) => page.addInitScript(() => {
+          const supports = CSS.supports.bind(CSS);
+          CSS.supports = (...args) => args[0] === 'filter' ? false : supports(...args);
+        })],
+        ['unsupported glow colour mixing', {}, (page) => page.addInitScript(() => {
+          const supports = CSS.supports.bind(CSS);
+          CSS.supports = (...args) => args[0] === 'color' ? false : supports(...args);
+        })],
         ['unavailable animation API', {}, (page) => page.addInitScript(() => { Element.prototype.animate = undefined; })],
         ['animation initialization failure', {}, (page) => page.addInitScript(() => {
           Element.prototype.animate = () => { throw new Error('Initialization failed'); };
+        })],
+        ['artwork load failure', {}, (page) => page.route('**/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg', route => route.abort())],
+        ['artwork load timeout', {}, (page) => page.addInitScript(() => {
+          window.Image = class { set src(value) { this.requested = value; } };
         })],
       ]) {
         await t.test(name + ' gives immediate complete content', async () => {
           const { context, page, errors } = await open(options, setup);
           try {
-            if (name === 'animation initialization failure') {
+            if (['animation initialization failure', 'artwork load failure', 'artwork load timeout'].includes(name)) {
               await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
             }
             await finished(page);
@@ -234,6 +281,57 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           assert.equal(await page.getByRole('button', { name: 'Menu', exact: true }).getAttribute('aria-expanded'), 'false');
           assert.equal(await page.locator('[data-mobile-nav-toggle]').evaluate((element) => element === document.activeElement), true);
         } finally { await context.close(); }
+      });
+
+      await t.test('normal motion progressively reveals the approved wordmark with an intense amber beam', async () => {
+        for (const width of [1440, 390]) {
+          const frames = [];
+          let lit;
+          for (const time of [0, 660, 1250]) {
+            const { context, page, errors } = await open({ viewport: { width, height: width === 390 ? 844 : 900 } });
+            try {
+              await frame(page, time);
+              if (time === 660) {
+                const motion = await page.evaluate(() => {
+                  const scene = document.querySelector('.wordmark-scene');
+                  const bloom = document.querySelector('.wordmark-bloom');
+                  return {
+                    state: document.documentElement.dataset.opening,
+                    scene: getComputedStyle(scene).visibility,
+                    fallback: getComputedStyle(document.querySelector('.wordmark-fallback')).visibility,
+                    exposure: document.querySelector('.wordmark-reveal').getAttribute('mask'),
+                    intensity: Number.parseFloat(getComputedStyle(scene).getPropertyValue('--light-intensity')),
+                    bloomWidth: Number.parseFloat(getComputedStyle(scene).getPropertyValue('--light-bloom-width')),
+                    filter: getComputedStyle(bloom).filter,
+                    energy: Number(getComputedStyle(document.querySelector('[data-light-energy]')).opacity),
+                  };
+                });
+                assert.equal(motion.state, 'playing');
+                assert.equal(motion.scene, 'visible');
+                assert.equal(motion.fallback, 'hidden');
+                assert.equal(motion.exposure, 'url(#wordmark-exposure)');
+                assert.ok(motion.intensity >= 1 && motion.energy >= .9, 'The beam reaches full energy');
+                assert.ok(motion.bloomWidth >= 76 && motion.filter !== 'none', 'The amber bloom is broad and illuminated');
+                lit = await openingPixels(page);
+              }
+              await page.locator('.wordmark-optics').evaluate(element => element.style.setProperty('visibility', 'hidden', 'important'));
+              frames.push(await openingPixels(page));
+              assert.deepEqual(errors, []);
+            } finally { await context.close(); }
+          }
+          const [before, middle, after] = frames;
+          assert.ok(after.left > 30 && after.right > 30, 'The approved wordmark appears on both sides after the sweep');
+          assert.ok(before.left + before.right < Math.max(12, (after.left + after.right) * .02), 'Before the sweep the wordmark is not already exposed');
+          assert.ok(middle.left > after.left * .3, 'The sweep has revealed the left side midway');
+          assert.ok(middle.right < Math.max(12, after.right * .12), 'The unswept right side is still hidden midway');
+          assert.ok(lit.amber > middle.amber + (width === 390 ? 20 : 100), 'The visible beam adds a real amber-lit area');
+          if (evidence) {
+            await writeFile(path.join(evidence, `${engineName}-${width}-beam-mid.png`), lit.png);
+            for (const [index, label] of ['before', 'middle', 'after'].entries()) {
+              await writeFile(path.join(evidence, `${engineName}-${width}-reveal-${label}.png`), frames[index].png);
+            }
+          }
+        }
       });
 
       await t.test('source stays central while one beam passes over readable content', async () => {

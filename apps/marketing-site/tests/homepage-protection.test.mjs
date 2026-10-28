@@ -413,18 +413,18 @@ function assertReviewedReputationRepair(filename, blob) {
 function assertAuthorizedOpeningWordmark(filename, blob) {
   assert.equal(filename, 'apps/marketing-site/src/components/OpeningWordmark.astro',
     'The wordmark authorization covers only the existing opening component');
-  assert.equal(blob, '4a6bae48de40d20c6d90a1e73de1b68940d354f6',
+  assert.equal(blob, 'f69acbe95d2177711eb3c7b786601ce8c1efc4ad',
     'Opening artwork, palette and visible-content motion must match the approved design contract');
 }
 const approvedHomepageVisualEdits = new Map([
   ['apps/marketing-site/public/_headers', 'eea917a1de454e11b1f91fd438b8a06b77dbbbbd'],
   ['apps/marketing-site/public/_redirects', '4e149be2b99fa2c650fd5c619d27b3152bb4db6f'],
   ['apps/marketing-site/src/styles/global.css', '4b7d4a19e57394162c6787eeb1d2340ad71f227e'],
-  ['apps/marketing-site/src/styles/home-opening.css', '699bbf0e22f74f4bee36ef65f1d542bff97da961'],
+  ['apps/marketing-site/src/styles/home-opening.css', 'ed0fad271538766e0da3de539044845d25ab6896'],
   ['apps/marketing-site/src/styles/home-pitch.css', 'fb6558c20c73daee20e1bf0d250031a5662bc2a1'],
   ['apps/marketing-site/src/styles/home-pitch-compact.css', 'bad9f0e9aa17860340f2bccb0fe169c68ee41da6'],
-  ['apps/marketing-site/src/styles/home-polish.css', '594236fdeb02f388c28db7d21b93549d2420ce36'],
-  ['apps/marketing-site/src/scripts/home-opening.js', '71f9a6f2bb28ea7bab25e0a00b375da571937225'],
+  ['apps/marketing-site/src/styles/home-polish.css', '3d842d8f7ecd5136d96d747d67840ad8267ed376'],
+  ['apps/marketing-site/src/scripts/home-opening.js', 'fa5b3d7eaf2304082add18ca952bab2c78f29090'],
 ]);
 const approvedMarketingBrandAssets = new Map([
   ['apps/marketing-site/public/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg', '8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436'],

@@ -361,9 +361,9 @@
   html[data-opening="armed"] .home-page .wordmark-core,
   html[data-opening="playing"] .home-page .wordmark-core {
     filter:
-      drop-shadow(0 0 5px var(--ds-text))
-      drop-shadow(0 0 14px color-mix(in srgb, var(--ds-accent) 82%, transparent))
-      drop-shadow(0 0 28px color-mix(in srgb, var(--ds-accent) 42%, transparent));
+      drop-shadow(0 0 10px var(--ds-text))
+      drop-shadow(0 0 32px var(--ds-accent))
+      drop-shadow(0 0 64px color-mix(in srgb, var(--ds-accent) 55%, transparent));
   }
 }
 

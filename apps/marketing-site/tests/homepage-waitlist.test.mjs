@@ -47,10 +47,6 @@ test('homepage public copy matches the living internet pitch and stays launch sa
     'For the living internet.',
     'Human ideas. Conversations worth having.',
     'We’re building a social platform',
-    'PERSPECTIVE',
-    'CONVERSATION',
-    'RECOGNITION &amp; REWARDS',
-    'TRUST',
     'Share your perspective.',
     'Find conversations worth joining.',
     'Build reputation through contribution.',
@@ -71,17 +67,11 @@ test('homepage public copy matches the living internet pitch and stays launch sa
   assert.match(styles, /--accent: var\(--ds-accent\)/);
 });
 
-test('homepage story sections use the approved narrative labels and anchors', () => {
-  for (const label of [
-    'PERSPECTIVE',
-    'CONVERSATION',
-    'RECOGNITION &amp; REWARDS',
-    'TRUST',
-  ]) assert.match(homepage, new RegExp(label));
+test('homepage story sections keep their descriptive headings and anchors without decorative category labels', () => {
   for (const anchor of ['problem', 'human-first', 'platform', 'authorship', 'discovery', 'reputation', 'accountability', 'public-interest', 'editorial', 'why-lythaus', 'waitlist']) {
     assert.match(homepage, new RegExp(`id="${anchor}"`));
   }
-  assert.match(homepage, /class="pitch-section-meta">PERSPECTIVE<\/div>/);
+  assert.doesNotMatch(homepage, /class="(?:pitch-section-meta|home-eyebrow)"/);
   assert.equal((homepage.match(/class="pitch-section /g) ?? []).length, 4);
   assert.doesNotMatch(homepage, /story-section|story-section--tint/);
 });
