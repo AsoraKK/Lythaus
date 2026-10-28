@@ -40,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
       - name: Download actionlint
         run: |
           set -euo pipefail
@@ -67,6 +69,8 @@ jobs:
         run: node --test scripts/tests/cloudflare-billing-diagnostic.test.mjs
       - name: Validate fixed read-only native restore inventory
         run: node --test scripts/tests/planetscale-native-restore-inventory.test.mjs
+      - name: Verify PostgreSQL 17 local service host fencing
+        run: node --test scripts/tests/postgres17-host-policy.test.mjs
       - name: Verify fixed native restore runner without provider access
         run: node --test scripts/tests/planetscale-native-restore-check.test.mjs scripts/tests/planetscale-native-restore-cleanup.test.mjs
       - name: Verify reviewed restore cleanup transport and staged Actions handoff
@@ -77,6 +81,10 @@ jobs:
         run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs
       - name: Validate read-only GitHub controls audit contract
         run: node --test scripts/tests/github-controls-audit.test.mjs
+      - name: Test report-only affected-check classifier
+        run: node --test scripts/tests/ci-affected-check-classifier.test.mjs
+      - name: Report future affected-check candidate (report only)
+        run: node scripts/ci/report-ci-affected-checks.mjs >> "$GITHUB_STEP_SUMMARY"
 
   native_runtime:
     name: Native Workers and PlanetScale
@@ -243,6 +251,12 @@ jobs:
   activity_pilot:
     name: Disabled activity pilot integration
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.0-noble@sha256:baed2032d533817f3dbe6425de795788430ba345e819a1201337009ba17c9d07
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
     services:
       postgres:
         image: postgres:17
@@ -255,7 +269,8 @@ jobs:
           --health-cmd "pg_isready -U postgres -d lythaus_auth_test_activity_pilot"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_activity_pilot
+      HOME: /tmp
+      PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/lythaus_auth_test_activity_pilot
       ACTIVITY_PILOT_FIXTURE_OUTPUT: /tmp/lythaus-activity-snapshot.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -282,7 +297,6 @@ jobs:
         env:
           VITE_ACTIVITY_MEASUREMENT_PILOT: 'true'
         run: npm --prefix apps/control-panel run build
-      - run: npx playwright install --with-deps chromium webkit
       - name: Verify labelled synthetic responsive and keyboard rendering
         env:
           ACTIVITY_PILOT_BROWSER_OUTPUT: build/activity-pilot-browser
@@ -583,6 +597,14 @@ jobs:
   frontends:
     name: Web frontends
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.0-noble@sha256:baed2032d533817f3dbe6425de795788430ba345e819a1201337009ba17c9d07
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
+    env:
+      HOME: /tmp
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -611,8 +633,6 @@ jobs:
           test -f dist/contact/index.html
           echo "All critical marketing site files present"
       - run: node scripts/cloudflare/validate-marketing-output.mjs apps/marketing-site/dist
-      - name: Install homepage test browsers
-        run: npx playwright install --with-deps chromium firefox webkit
       - name: Verify existing browsers receive new app entrypoints
         run: node scripts/tests/web-release-cache.browser.mjs
       - name: Verify homepage optical and accessibility contracts

@@ -1,0 +1,32 @@
+{
+  "workflow": "CI",
+  "window": "2026-09-26 through 2026-10-26 UTC",
+  "selection": "Five completed CI workflow runs per date stratum; one main push, two successful pull requests, one failure, and one cancellation when available. Run IDs are unique and latest attempts are recorded.",
+  "runs": [
+    { "id": 37046645422, "stratum": "2026-09-26..2026-10-02", "category": "main_push" },
+    { "id": 37044669028, "stratum": "2026-09-26..2026-10-02", "category": "application_success" },
+    { "id": 37043700409, "stratum": "2026-09-26..2026-10-02", "category": "security_success" },
+    { "id": 37043823099, "stratum": "2026-09-26..2026-10-02", "category": "dependency_failure" },
+    { "id": 37043498631, "stratum": "2026-09-26..2026-10-02", "category": "application_cancelled" },
+    { "id": 37897118647, "stratum": "2026-10-03..2026-10-09", "category": "main_push" },
+    { "id": 37842009860, "stratum": "2026-10-03..2026-10-09", "category": "application_success" },
+    { "id": 37881738331, "stratum": "2026-10-03..2026-10-09", "category": "dependency_failure" },
+    { "id": 37841326510, "stratum": "2026-10-03..2026-10-09", "category": "application_cancelled" },
+    { "id": 37894965121, "stratum": "2026-10-03..2026-10-09", "category": "activity_pilot_success" },
+    { "id": 38972519307, "stratum": "2026-10-10..2026-10-16", "category": "main_push" },
+    { "id": 38903142100, "stratum": "2026-10-10..2026-10-16", "category": "application_success" },
+    { "id": 38895335640, "stratum": "2026-10-10..2026-10-16", "category": "application_failure" },
+    { "id": 38882476131, "stratum": "2026-10-10..2026-10-16", "category": "application_success" },
+    { "id": 38886466857, "stratum": "2026-10-10..2026-10-16", "category": "application_cancelled" },
+    { "id": 40036720081, "stratum": "2026-10-17..2026-10-23", "category": "main_push" },
+    { "id": 40032387574, "stratum": "2026-10-17..2026-10-23", "category": "application_success" },
+    { "id": 40032593004, "stratum": "2026-10-17..2026-10-23", "category": "dependency_failure" },
+    { "id": 40024806174, "stratum": "2026-10-17..2026-10-23", "category": "application_cancelled" },
+    { "id": 39997863177, "stratum": "2026-10-17..2026-10-23", "category": "application_success" },
+    { "id": 40345777664, "stratum": "2026-10-24..2026-10-26", "category": "main_push" },
+    { "id": 40326742675, "stratum": "2026-10-24..2026-10-26", "category": "recovery_success" },
+    { "id": 40315389490, "stratum": "2026-10-24..2026-10-26", "category": "dependency_success" },
+    { "id": 40065163770, "stratum": "2026-10-24..2026-10-26", "category": "recovery_failure" },
+    { "id": 40304257525, "stratum": "2026-10-24..2026-10-26", "category": "recovery_cancelled" }
+  ]
+}

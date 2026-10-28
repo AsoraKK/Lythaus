@@ -9,10 +9,11 @@ import { activityPrivacyReadiness } from '../src/activity-measurement-privacy.ts
 import { handleActivityMeasurement, activityAccountScope } from '../../../apps/lythaus-public-api/src/activity-measurement-handler.ts';
 import { handleActivityMeasurementSummary } from '../../../apps/lythaus-admin-api/src/activity-measurement-handler.ts';
 import { ACTIVITY_NOTICE_VERSION } from '../../contracts/src/activity-measurement.ts';
+import { isAllowedLocalPostgres17Host } from '../../../scripts/ci/postgres17-host-policy.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
-if (!['127.0.0.1', 'localhost'].includes(target.hostname) || !target.pathname.startsWith('/lythaus_auth_test_activity_pilot')) throw new Error('Activity tests require the dedicated disposable local PostgreSQL17 fixture');
+if (!isAllowedLocalPostgres17Host(target.hostname) || !target.pathname.startsWith('/lythaus_auth_test_activity_pilot')) throw new Error('Activity tests require the dedicated disposable local PostgreSQL17 fixture');
 const ids = [];
 const makeId = () => { const id = uuidv7(); ids.push(id); return id; };
 const userA = makeId(), userB = makeId(), raceUser = makeId(), owner = makeId();
