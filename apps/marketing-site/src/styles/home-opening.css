@@ -1,7 +1,7 @@
-/* The approved artwork stays visible; motion only adds a brief amber reflection. */
+/* The approved artwork is revealed by the same moving light used for the beam. */
 .pitch-wordmark {
   position: relative;
-  width: min(50%, 490px);
+  width: min(100%, 980px);
   max-width: none;
   aspect-ratio: 1000 / 166;
   margin: 0;
@@ -10,10 +10,10 @@
 .wordmark-fallback { display: block; width: 100%; height: 100%; }
 .wordmark-scene {
   --light-core-width: 3px;
-  --light-bloom-width: 44px;
-  --light-bloom-height: 82px;
-  --light-warmth: .55;
-  --light-intensity: .65;
+  --light-bloom-width: 88px;
+  --light-bloom-height: 164px;
+  --light-warmth: 1;
+  --light-intensity: 1;
   --wordmark-ivory: var(--ds-text);
   --light-ivory: var(--ds-text);
   --light-gold: var(--ds-accent);
@@ -30,7 +30,7 @@
   pointer-events: none;
   visibility: hidden;
 }
-.wordmark-dark { fill: var(--ds-text); }
+.wordmark-dark { fill: var(--ds-canvas); }
 .wordmark-settled { fill: var(--ds-text); }
 .wordmark-optics { visibility: hidden; }
 .wordmark-core { rx: var(--light-core-width); }
@@ -41,9 +41,10 @@
 [data-light-position], [data-light-projection] { transform-box: view-box; transform-origin: 0 0; }
 html[data-opening="playing"] .wordmark-scene,
 html[data-opening="playing"] .wordmark-optics { visibility: visible; }
+html[data-opening="armed"] .wordmark-fallback,
 html[data-opening="playing"] .wordmark-fallback { visibility: hidden; }
 @media (max-width: 700px) {
-  .wordmark-scene { --light-bloom-width: 38px; --light-bloom-height: 74px; }
+  .wordmark-scene { --light-bloom-width: 76px; --light-bloom-height: 148px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wordmark-scene, .wordmark-optics { display: none !important; }

@@ -356,15 +356,6 @@
     justify-self: start;
   }
 
-  html[data-opening="armed"] .home-page .wordmark-bloom,
-  html[data-opening="playing"] .home-page .wordmark-bloom,
-  html[data-opening="armed"] .home-page .wordmark-core,
-  html[data-opening="playing"] .home-page .wordmark-core {
-    filter:
-      drop-shadow(0 0 5px var(--ds-text))
-      drop-shadow(0 0 14px color-mix(in srgb, var(--ds-accent) 82%, transparent))
-      drop-shadow(0 0 28px color-mix(in srgb, var(--ds-accent) 42%, transparent));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

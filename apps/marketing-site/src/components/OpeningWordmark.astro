@@ -21,14 +21,14 @@ import '../styles/home-opening.css';
       </radialGradient>
       <radialGradient id="wordmark-bloom">
         <stop stop-color="var(--ds-text)" stop-opacity=".96" />
-        <stop offset=".12" stop-color="var(--light-ivory)" stop-opacity=".7" />
-        <stop offset=".36" stop-color="var(--light-gold)" stop-opacity=".22" />
+        <stop offset=".12" stop-color="var(--light-ivory)" stop-opacity=".9" />
+        <stop offset=".36" stop-color="var(--light-gold)" stop-opacity=".5" />
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
       </radialGradient>
       <radialGradient id="wordmark-atmosphere">
-        <stop stop-color="var(--light-ivory)" stop-opacity=".5" />
-        <stop offset=".35" stop-color="var(--light-gold)" stop-opacity=".2" />
-        <stop offset=".68" stop-color="var(--light-gold)" stop-opacity=".04" />
+        <stop stop-color="var(--light-ivory)" stop-opacity=".8" />
+        <stop offset=".35" stop-color="var(--light-gold)" stop-opacity=".55" />
+        <stop offset=".68" stop-color="var(--light-gold)" stop-opacity=".1" />
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
       </radialGradient>
       <radialGradient id="wordmark-core">
@@ -38,9 +38,9 @@ import '../styles/home-opening.css';
       </radialGradient>
       <linearGradient id="wordmark-projection" x1="0" y1="0" x2="0" y2="1">
         <stop stop-color="var(--light-gold)" stop-opacity="0" />
-        <stop offset=".35" stop-color="var(--light-gold)" stop-opacity=".06" />
-        <stop offset=".5" stop-color="var(--light-ivory)" stop-opacity=".2" />
-        <stop offset=".65" stop-color="var(--light-gold)" stop-opacity=".06" />
+        <stop offset=".35" stop-color="var(--light-gold)" stop-opacity=".18" />
+        <stop offset=".5" stop-color="var(--light-ivory)" stop-opacity=".52" />
+        <stop offset=".65" stop-color="var(--light-gold)" stop-opacity=".18" />
         <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
       </linearGradient>
       <mask id="wordmark-exposure" maskUnits="userSpaceOnUse" x="-110" y="-140" width="1220" height="450" style="mask-type: alpha">
@@ -52,7 +52,9 @@ import '../styles/home-opening.css';
     </defs>
     <g clip-path="url(#wordmark-space)">
       <rect class="wordmark-dark" x="0" y="0" width="1000" height="166" mask="url(#wordmark-contours)" />
-      <rect class="wordmark-settled" x="0" y="0" width="1000" height="166" mask="url(#wordmark-contours)" />
+      <g class="wordmark-reveal" mask="url(#wordmark-exposure)">
+        <rect class="wordmark-settled" x="0" y="0" width="1000" height="166" mask="url(#wordmark-contours)" />
+      </g>
       <g class="wordmark-optics" visibility="hidden">
         <g data-light-energy>
           <path data-light-projection d="M0 0 Q.45 -12 1 -100 V100 Q.45 12 0 0Z" fill="url(#wordmark-projection)" />
@@ -63,8 +65,8 @@ import '../styles/home-opening.css';
             </g>
           </g>
           <g data-light-position data-light-beam>
-            <ellipse class="wordmark-atmosphere" cx="-18" cy="80" rx="125" ry="150" fill="url(#wordmark-atmosphere)" />
-            <ellipse class="wordmark-bloom" cx="0" cy="80" rx="44" ry="82" fill="url(#wordmark-bloom)" />
+            <ellipse class="wordmark-atmosphere" cx="-18" cy="80" rx="250" ry="300" fill="url(#wordmark-atmosphere)" />
+            <ellipse class="wordmark-bloom" cx="0" cy="80" rx="88" ry="164" fill="url(#wordmark-bloom)" />
           </g>
         </g>
         <g data-light-core data-light-source>
