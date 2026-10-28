@@ -158,6 +158,36 @@ test('disposable PG17 verifies actual catalog SQL, all 17 restored privileges an
     await client.query("UPDATE system.schema_migrations SET checksum='tampered' WHERE version='0020_auth_recovery_delivery.sql'");
     await client.query('BEGIN READ ONLY');
     await assert.rejects(() => collectRestoreCatalog(client), /exact_pre_0021_registry_required/); await client.query('ROLLBACK');
+    await client.query(`GRANT SELECT (id) ON editorial.publications TO "${RESTORE.runtime}"`);
+    await client.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', [checksum, version]);
+    assert.deepEqual(await collectRestoreCatalog(client), baseline);
+
+    for (const connection of [client, targetClient]) {
+      await connection.query('BEGIN');
+      try {
+        await connection.query(staged.contents.toString('utf8'));
+        await connection.query('INSERT INTO system.schema_migrations(version,checksum) VALUES ($1,$2)', [staged.name, staged.checksum]);
+        await connection.query('COMMIT');
+      } catch (error) {
+        await connection.query('ROLLBACK'); throw error;
+      }
+    }
+    const postSource = await collectRestoreCatalog(client, 'post-0021');
+    assert.equal(postSource.schemaVersion, staged.name);
+    assert.equal(postSource.schemaFingerprint, '7fdff3474c152317336d2201626b3b69aac79387264e6481576e103f82e8342d');
+    assert.deepEqual(await collectRestoreCatalog(targetClient, 'post-0021'), postSource);
+    const postSmoke = await runRestoreSmoke(urls, branch, postSource, scripts, targetRuntime);
+    assert.equal(postSmoke.services, 3); assert.equal(postSmoke.distinctRoles, 4); assert.equal(postSmoke.externalHttpRequests, 0);
+    await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', ['post-target-only-canary', staged.name]);
+    try {
+      assert.deepEqual(await collectRestoreCatalog(client, 'post-0021'), postSource,
+        'post-0021 source remains healthy while only the target is broken');
+      await assert.rejects(() => runRestoreSmoke(urls, branch, postSource, scripts, targetRuntime),
+        /isolated_application_(?:public_contract|readiness)_failed/);
+    } finally {
+      await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', [staged.checksum, staged.name]);
+    }
+    assert.deepEqual(await collectRestoreCatalog(targetClient, 'post-0021'), postSource);
   } finally {
     if (client) await client.end();
     if (targetClient) await targetClient.end();
