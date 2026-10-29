@@ -12,6 +12,7 @@ import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/components/author_profile_link.dart';
 import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
@@ -95,6 +96,8 @@ void main() {
           id: 'fixture',
           feedId: 'discover',
           author: 'A contributor with a deliberately long display name',
+          authorId: 'fixture-author',
+          isPinned: true,
           sourceName: 'An independent source with a long title',
           sourceUrl: 'https://example.com/source',
           contentType: ContentType.image,
@@ -131,7 +134,16 @@ void main() {
               ),
               home: switch (screen) {
                 'post' => Scaffold(
-                  body: SingleChildScrollView(child: FeedCard(item: post)),
+                  body: SingleChildScrollView(
+                    child: FeedCard(
+                      item: post,
+                      saveAction: IconButton(
+                        tooltip: 'Save post',
+                        onPressed: () {},
+                        icon: const Icon(Icons.bookmark_add_outlined),
+                      ),
+                    ),
+                  ),
                 ),
                 'search-unavailable' || 'search-auth-required' =>
                   const FeedSearchScreen(initialQuery: 'civic'),
@@ -146,6 +158,12 @@ void main() {
         if (screen == 'post') {
           expect(find.text('Media unavailable'), findsOneWidget);
           expect(find.text('Authorship: Under review'), findsOneWidget);
+          expect(find.byTooltip('Pinned post'), findsOneWidget);
+          expect(find.byTooltip('Save post'), findsOneWidget);
+          expect(
+            tester.getSize(find.byType(AuthorProfileLink)).width,
+            greaterThan(150),
+          );
         }
         if (screen == 'rewards-error') {
           expect(find.text('Retry'), findsOneWidget);

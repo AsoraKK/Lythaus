@@ -100,11 +100,13 @@ void main() {
   testWidgets('unbacked News publication exposes no post mutation controls', (
     tester,
   ) async {
+    var opened = false;
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
           home: Scaffold(
             body: InteractiveFeedCard(
+              onTap: () => opened = true,
               item: FeedItem(
                 id: 'publication',
                 feedId: 'news',
@@ -122,10 +124,46 @@ void main() {
     );
     expect(find.byTooltip('Save post'), findsNothing);
     expect(find.byTooltip('Comments'), findsNothing);
+    expect(find.text('Read article'), findsNothing);
+    expect(find.text('View post'), findsNothing);
+    await tester.tap(find.text('Bulletin'));
+    expect(opened, isFalse);
     expect(
       find.text('Post interactions are unavailable for this publication.'),
       findsOneWidget,
     );
+  });
+  testWidgets('backed publication labels its existing post action clearly', (
+    tester,
+  ) async {
+    var opened = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [feedBookmarksProvider.overrideWith((ref) async => {})],
+        child: MaterialApp(
+          home: Scaffold(
+            body: InteractiveFeedCard(
+              onTap: () => opened = true,
+              item: FeedItem(
+                id: 'publication',
+                backingPostId: 'post',
+                isPublication: true,
+                feedId: 'news',
+                author: 'Editorial',
+                contentType: ContentType.text,
+                title: 'Bulletin',
+                body: 'An introduction.',
+                publishedAt: DateTime.utc(2026),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Read article'), findsNothing);
+    await tester.tap(find.text('View post'));
+    expect(opened, isTrue);
   });
   testWidgets(
     'feedback controls explain unavailable channels without writing',

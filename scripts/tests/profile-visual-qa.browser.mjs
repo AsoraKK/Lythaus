@@ -670,7 +670,17 @@ test(
           const nav = (name) => page.getByRole('button', {
             name: new RegExp(`^${name}(?:$|\\s+Tab)`),
           }).and(page.locator(':not([aria-disabled="true"])')).first();
-          await nav('Discover').click();
+          const requireDiscoverySelection = async (timeout = 30000) => {
+            const discoveryFeed = page.getByRole('checkbox', { name: /\bDiscovery\b/ });
+            await discoveryFeed.waitFor({ timeout });
+            assert.equal(await discoveryFeed.count(), 1,
+              'The feed carousel has one accessible Discovery control');
+            assert.equal(await discoveryFeed.getAttribute('aria-checked'), 'true',
+              'Discovery is announced as the selected feed');
+            assert.match(await discoveryFeed.getAttribute('aria-label'), /Public posts, newest first\./,
+              'The Discovery explanation remains available to assistive technology');
+          };
+          await nav('Feed').click();
           const emptyFeed = page.locator('flt-semantics').getByText('No public posts yet', { exact: true });
           await emptyFeed.waitFor();
           await page.getByText(
@@ -684,14 +694,11 @@ test(
           );
           assert.ok(wordmarkBoxes.some(box => box && box.y < 100 && box.height >= 35),
             'An approved Lythaus wordmark is visible in the header');
-          const discoveryFeed = page.getByLabel('Discovery', { exact: true });
-          await discoveryFeed.waitFor();
-          assert.equal(await discoveryFeed.count(), 1,
-            'The feed carousel has one accessible Discovery control');
+          await requireDiscoverySelection();
           assert.equal(await page.getByText('Some feeds could not be loaded.', { exact: true }).count(), 0,
             'Valid empty custom feeds and free entitlements load without an error');
-          assert.equal(await nav('Discover').count(), 1,
-            'Discover navigation remains available beside the branded header');
+          assert.equal(await nav('Feed').count(), 1,
+            'Feed navigation remains available beside the branded header');
           await screenshot('feed-branded-empty');
           feedMode = 'single';
           await page.getByRole('button', { name: 'Check for posts', exact: true }).click();
@@ -703,22 +710,29 @@ test(
           ownProfile.moderationState = 'under_review';
           await openApp('/?tab=profile');
           const reviewNotice = page.locator('flt-semantics').getByText(
-            'Profile visibility & review', { exact: false },
-          ).last();
+            'Profile visibility & review', { exact: true },
+          );
+          const reviewMessage = page.locator('flt-semantics').getByText(
+            'Saved, under review. Your profile changes are not public yet.', { exact: true },
+          );
           await reviewNotice.waitFor();
-          assert.ok((await reviewNotice.textContent()).includes(
-            'Saved, under review. Your profile changes are not public yet.',
-          ));
+          await reviewMessage.waitFor();
           const noticeBox = await reviewNotice.boundingBox();
+          const messageBox = await reviewMessage.boundingBox();
           const bioBox = await page.getByText(owner.bio, { exact: true }).boundingBox();
           const settingsBox = await page.getByRole('button', {
             name: /^Settings[\s\S]*Security, privacy and notifications/,
           }).boundingBox();
-          assert.ok(bioBox && noticeBox && settingsBox &&
-            bioBox.y < noticeBox.y && noticeBox.y + noticeBox.height <= settingsBox.y,
+          assert.ok(bioBox && noticeBox && messageBox && settingsBox &&
+            bioBox.y < noticeBox.y && noticeBox.y + noticeBox.height <= messageBox.y &&
+            messageBox.y + messageBox.height <= settingsBox.y,
           'Profile moderation notice belongs below the bio and above Settings');
           await screenshot('owner-profile-review-notice');
 
+          if (size.width < 768) {
+            await nav('Feed').click();
+            await page.getByRole('button', { name: 'Account menu', exact: true }).click();
+          }
           await nav('Rewards').click();
           const rewardRetry = page.getByRole('button', { name: 'Retry', exact: true });
           const rewardError = page.getByText('Rewards could not be loaded', { exact: true });
@@ -929,9 +943,7 @@ test(
                   otherProfileUrl,
                   { timeout: 10000 },
                 );
-                await page.locator('flt-semantics').getByText(
-                  'Public posts, newest first.', { exact: true },
-                ).waitFor({ timeout: 10000 });
+                await requireDiscoverySelection(10000);
                 await page.getByRole('button', {
                   name: 'Post actions', exact: true,
                 }).waitFor({ timeout: 10000 });

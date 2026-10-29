@@ -235,6 +235,65 @@ Future<void> _scrollTo(WidgetTester tester, Finder target) async {
 void main() {
   setUpAll(loadFontsForGoldenTests);
 
+  testWidgets(
+    'overview previews owner posts and preserves their privacy state',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final service = _FakeOwnerPostsService(
+        page: OwnerPostsPage(
+          items: [
+            _post(
+              id: 'one',
+              body: 'First contribution',
+              publishedAt: DateTime.utc(2026),
+            ),
+            _post(
+              id: 'two',
+              body: 'Private draft',
+              moderationState: 'under_review',
+            ),
+            _post(
+              id: 'three',
+              body: 'Third contribution',
+              publishedAt: DateTime.utc(2026),
+            ),
+          ],
+          nextCursor: 'next',
+        ),
+      );
+      await tester.pumpWidget(
+        _buildApp(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
+            ownerPostsServiceProvider.overrideWithValue(service),
+            jwtProvider.overrideWith((ref) async => 'synthetic-token'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Your recent posts'), findsOneWidget);
+      expect(find.text('First contribution'), findsOneWidget);
+      expect(find.text('Private draft'), findsOneWidget);
+      expect(
+        find.text('Only you can see this while it is under review.'),
+        findsOneWidget,
+      );
+      expect(find.text('Third contribution'), findsNothing);
+      expect(service.requests, 1);
+      await tester.tap(find.widgetWithText(Tab, 'Posts'));
+      await tester.pumpAndSettle();
+      expect(find.text('Third contribution'), findsOneWidget);
+      expect(service.requests, 1);
+    },
+  );
+
   for (final state in ['under_review', 'blocked', 'allowed', 'unknown']) {
     testWidgets('owner $state notice belongs to profile above Settings', (
       tester,
@@ -272,6 +331,12 @@ void main() {
       expect(
         tester.getTopLeft(find.text('Profile visibility & review')).dy,
         greaterThan(tester.getTopLeft(find.text('My bio')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Your recent posts')).dy,
+        lessThan(
+          tester.getTopLeft(find.text('Profile visibility & review')).dy,
+        ),
       );
       expect(
         tester.getTopLeft(find.text(owner.statusMessage)).dy,
@@ -414,6 +479,7 @@ void main() {
 
       expect(find.text('Profile'), findsOneWidget);
       expect(find.text('Jane Doe'), findsOneWidget);
+      await _scrollTo(tester, find.text('Subscription: silver'));
       expect(find.text('Subscription: silver'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -434,6 +500,7 @@ void main() {
         ),
         findsOneWidget,
       );
+      await _scrollTo(tester, find.text('Subscription: silver'));
       expect(find.text('Subscription: silver'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -625,6 +692,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await _scrollTo(
+        tester,
+        find.textContaining('A short bio can add context'),
+      );
       expect(
         find.textContaining('A short bio can add context'),
         findsOneWidget,
@@ -761,7 +832,6 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Subscription: gold'), findsOneWidget);
       expect(find.text('Editorial Contributor'), findsNothing);
       expect(find.text('Trusted'), findsNothing);
       expect(find.text('Editor'), findsNothing);
@@ -770,6 +840,8 @@ void main() {
       await _scrollTo(tester, find.text('Settings'));
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Reputation'), findsNothing);
+      await _scrollTo(tester, find.text('Subscription: gold'));
+      expect(find.text('Subscription: gold'), findsOneWidget);
     });
 
     testWidgets('admin owner sees staff tools', (tester) async {

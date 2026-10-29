@@ -41,6 +41,7 @@ class CommentThreadScreen extends ConsumerStatefulWidget {
 class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   final TextEditingController _composerController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _composerScrollController = ScrollController();
   final FocusNode _composerFocusNode = FocusNode();
 
   List<_ThreadComment> _comments = const [];
@@ -267,6 +268,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     _scrollController.removeListener(_onScroll);
     _composerController.dispose();
     _scrollController.dispose();
+    _composerScrollController.dispose();
     _composerFocusNode.dispose();
     super.dispose();
   }
@@ -1456,29 +1458,34 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
                   constraints: BoxConstraints(
                     maxHeight: constraints.maxHeight * 0.5,
                   ),
-                  child: SingleChildScrollView(
-                    child: _ComposerBar(
-                      key: ValueKey('comment-create-input:$_sessionEpoch'),
-                      enabled: canCompose,
-                      controller: _composerController,
-                      replyTarget: _replyTarget,
-                      isSubmitting: _isSubmitting || _restoring,
-                      locked: _locked,
-                      aiLabel: _aiLabel,
-                      composerFocusNode: _composerFocusNode,
-                      onCancelReply: () => setState(() {
-                        if (!_isSubmitting && !_locked) {
-                          _replyTarget = null;
-                          _pendingParentId = null;
+                  child: Scrollbar(
+                    controller: _composerScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _composerScrollController,
+                      child: _ComposerBar(
+                        key: ValueKey('comment-create-input:$_sessionEpoch'),
+                        enabled: canCompose,
+                        controller: _composerController,
+                        replyTarget: _replyTarget,
+                        isSubmitting: _isSubmitting || _restoring,
+                        locked: _locked,
+                        aiLabel: _aiLabel,
+                        composerFocusNode: _composerFocusNode,
+                        onCancelReply: () => setState(() {
+                          if (!_isSubmitting && !_locked) {
+                            _replyTarget = null;
+                            _pendingParentId = null;
+                            _saveDraft();
+                          }
+                        }),
+                        onChanged: _saveDraft,
+                        onDisclosureChanged: (label) => setState(() {
+                          _aiLabel = label;
                           _saveDraft();
-                        }
-                      }),
-                      onChanged: _saveDraft,
-                      onDisclosureChanged: (label) => setState(() {
-                        _aiLabel = label;
-                        _saveDraft();
-                      }),
-                      onSend: _submitComment,
+                        }),
+                        onSend: _submitComment,
+                      ),
                     ),
                   ),
                 ),
@@ -1907,15 +1914,21 @@ class _CommentTile extends StatelessWidget {
                 ),
               ),
             ),
-          Text(comment.text, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 6),
+          Text(
+            comment.text,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.5),
+          ),
           if (comment.moderationState == 'under_review')
             const Text('Under review. Publication checks are pending.'),
           if (!comment.deleted && comment.declaredCreationMode != null)
-            Text(
-              comment.declaredCreationMode == 'ai_assisted'
-                  ? 'AI-assisted'
-                  : 'Human-authored',
-            ),
+            Text(switch (comment.declaredCreationMode) {
+              'human' => 'Author declaration: Human-authored',
+              'ai_assisted' => 'Author declaration: AI-assisted',
+              _ => 'Author declaration unavailable',
+            }, style: Theme.of(context).textTheme.bodySmall),
           if (showFeedback)
             ContributionFeedbackControls(
               target: FeedbackTarget(FeedbackTargetType.comment, comment.id),

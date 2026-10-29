@@ -149,7 +149,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify create post screen is shown
-      expect(find.text('Create Post'), findsOneWidget);
+      expect(find.text('New post'), findsOneWidget);
       expect(find.textContaining('5000 characters remaining'), findsOneWidget);
 
       // Enter post text
@@ -246,7 +246,7 @@ void main() {
       expect(find.text('hate_speech'), findsOneWidget);
 
       // User should still be on the create post screen (not closed)
-      expect(find.text('Create Post'), findsOneWidget);
+      expect(find.text('New post'), findsOneWidget);
 
       // Text should still be there so user can modify it
       expect(find.text('Some inappropriate content'), findsOneWidget);
@@ -305,7 +305,7 @@ void main() {
       expect(find.textContaining('18h'), findsOneWidget);
 
       // User should still be on the create post screen
-      expect(find.text('Create Post'), findsOneWidget);
+      expect(find.text('New post'), findsOneWidget);
     });
 
     testWidgets('network error flow with retry', (tester) async {

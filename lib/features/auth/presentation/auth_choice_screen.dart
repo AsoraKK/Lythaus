@@ -15,7 +15,7 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
-import 'package:lythaus/design_system/widgets/lyth_brand.dart';
+import 'package:lythaus/design_system/widgets/lyth_loading_wordmark.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
 import 'package:lythaus/features/auth/domain/password_policy.dart';
@@ -257,7 +257,17 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const LythBrand(height: 40),
+                        Semantics(
+                          container: true,
+                          explicitChildNodes: true,
+                          liveRegion: _isSignInPending,
+                          label: _isSignInPending ? 'Signing in…' : null,
+                          child: LythLoadingWordmark(
+                            active:
+                                (authState.isLoading || _isSignInPending) &&
+                                !authState.hasError,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Welcome back',

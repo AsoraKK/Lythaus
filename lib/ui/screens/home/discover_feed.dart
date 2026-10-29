@@ -22,6 +22,7 @@ class DiscoverFeed extends StatelessWidget {
     this.currentUserId,
     this.onEditItem,
     this.onOpenItem,
+    this.showContext = true,
   });
 
   final FeedModel feed;
@@ -38,6 +39,7 @@ class DiscoverFeed extends StatelessWidget {
   final String? currentUserId;
   final Future<void> Function(FeedItem item)? onEditItem;
   final Future<void> Function(FeedItem item)? onOpenItem;
+  final bool showContext;
 
   @override
   Widget build(BuildContext context) {
@@ -67,33 +69,36 @@ class DiscoverFeed extends StatelessWidget {
               controller: controller,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Public posts, newest first.',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
+                if (showContext)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Public posts, newest first.',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        if (onRefresh != null && !hasError && items.isNotEmpty)
-                          IconButton(
-                            tooltip: 'Refresh feed',
-                            onPressed: isRefreshing ? null : onRefresh,
-                            icon: const Icon(Icons.refresh),
-                          ),
-                      ],
+                          if (onRefresh != null &&
+                              !hasError &&
+                              items.isNotEmpty)
+                            IconButton(
+                              tooltip: 'Refresh feed',
+                              onPressed: isRefreshing ? null : onRefresh,
+                              icon: const Icon(Icons.refresh),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 if (isRefreshing)
                   const SliverToBoxAdapter(
                     child: _FeedProgress(label: 'Loading posts'),

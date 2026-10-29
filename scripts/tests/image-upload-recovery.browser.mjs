@@ -166,7 +166,7 @@ for (const [engineName, engine] of Object.entries(engines)) for (const width of 
       await enter(page.getByRole('textbox', { name: 'Email', exact: true }), user.email);
       await enter(page.locator('input[type=password]'), 'synthetic12');
       await button('Sign in with email').click();
-      const create = page.getByRole('button', { name: /^Create(?:\b|$)/ });
+      const create = page.getByRole('button', { name: /^Create(?:\b|$)/ }).first();
       await create.waitFor({ timeout: 60_000 }); await create.click();
       await enter(page.getByRole('textbox', { name: /Your post/ }), 'Synthetic private image test');
       await page.getByRole('checkbox', { name: 'Human-authored', exact: true }).click();

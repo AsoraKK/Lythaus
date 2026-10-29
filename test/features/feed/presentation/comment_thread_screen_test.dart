@@ -98,6 +98,58 @@ void main() {
     dio = _MockDio();
   });
 
+  testWidgets('large-text comment disclosures remain reachable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        any(),
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer((_) async => _commentPageResponse(items: [_commentJson('1')]));
+    await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+    await tester.pumpAndSettle();
+    expect(find.text('Author declaration: Human-authored'), findsOneWidget);
+    final scrollbar = find.byType(Scrollbar);
+    expect(tester.widget<Scrollbar>(scrollbar).thumbVisibility, isTrue);
+    await tester.drag(scrollbar, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(
+      find
+          .textContaining('AI-generated public content is not allowed.')
+          .hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unknown declaration is not presented as human-authored', (
+    tester,
+  ) async {
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        any(),
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _commentPageResponse(
+        items: [
+          {..._commentJson('unknown'), 'declaredCreationMode': 'future_mode'},
+        ],
+      ),
+    );
+    await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+    await tester.pumpAndSettle();
+    expect(find.text('Author declaration unavailable'), findsOneWidget);
+    expect(find.text('Author declaration: Human-authored'), findsNothing);
+  });
+
   // ── AppBar ─────────────────────────────────────────────────────────────────
   group('AppBar', () {
     testWidgets('shows "Comments" title', (tester) async {

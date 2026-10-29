@@ -80,15 +80,18 @@ class NewsFeed extends ConsumerWidget {
       return Semantics(
         liveRegion: true,
         label: 'News Board is available to Black accounts only',
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(Spacing.lg),
-            child: LythEmptyState(
-              icon: Icons.lock_outline,
-              title: 'News Board is Black-only',
-              subtitle:
-                  'Your current account tier is $tierLabel. Free and Premium have no News Board access; Black has full access. $_membershipAccessDisclosure',
-            ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Spacing.lg),
+          child: Column(
+            children: [
+              LythEmptyState(
+                icon: Icons.lock_outline,
+                title: 'News Board is Black-only',
+                subtitle:
+                    'Your current account tier is $tierLabel. News Board access is not currently available to this account. Under the standard tier policy, Black includes News Board access; Free and Premium do not. $_membershipAccessDisclosure',
+              ),
+              _MembershipComparison(current: currentEntitlements),
+            ],
           ),
         ),
       );
@@ -116,8 +119,10 @@ class NewsFeed extends ConsumerWidget {
                   horizontal: Spacing.md,
                   vertical: Spacing.sm,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('About News Board'),
+                  childrenPadding: const EdgeInsets.only(bottom: 12),
                   children: [
                     Text(
                       'Current account tier: ${_tierLabel(currentEntitlements.tier)}',
@@ -135,6 +140,7 @@ class NewsFeed extends ConsumerWidget {
                       'Editorial coverage from earned, revocable contributors.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
+                    _MembershipComparison(current: currentEntitlements),
                   ],
                 ),
               ),
@@ -203,6 +209,55 @@ class NewsFeed extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MembershipComparison extends StatelessWidget {
+  const _MembershipComparison({required this.current});
+
+  final FeedEntitlements current;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // The comparison follows packages/contracts/src/tier-policy.ts. The
+    // current row always uses the account's server-issued entitlement.
+    const tiers = [
+      ('free', 'Free', 1, false),
+      ('premium', 'Premium', 2, false),
+      ('black', 'Black', 3, true),
+    ];
+    return ExpansionTile(
+      title: const Text('Compare feed access'),
+      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      children: [
+        for (final tier in tiers)
+          Builder(
+            builder: (context) {
+              final selected = current.tier.toLowerCase() == tier.$1;
+              final count = selected ? current.maxCustomFeeds : tier.$3;
+              final news = selected ? current.canAccessNewsBoard : tier.$4;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(selected ? '${tier.$2} · Your access' : tier.$2),
+                subtitle: Text(
+                  '$count custom feed${count == 1 ? '' : 's'} · '
+                  '${news ? 'News Board access' : 'No News Board access'}',
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 8),
+        Text(
+          'Editorial status is earned and separate from membership.',
+          style: theme.textTheme.bodySmall,
+        ),
+        Text(
+          'Your current access comes from your account; it does not confirm payment or expiry.',
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }
