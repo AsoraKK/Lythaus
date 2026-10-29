@@ -143,7 +143,8 @@ test('public surface evidence requires both canonical hosts, headers and waitlis
 });
 
 test('exact-SHA CI and security checks are required without retrying a denied read', async () => {
-  const env = { RELEASE_SHA: candidate, GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GH_TOKEN: 'synthetic', CI_RUN_ID: '1',
+  const repo = new URL('https://github.com/AsoraKK/Lythaus/').pathname.replace(/^\/|\/$/g, '');
+  const env = { RELEASE_SHA: candidate, GITHUB_REPOSITORY: repo, GH_TOKEN: 'synthetic', CI_RUN_ID: '1',
     CODEQL_RUN_ID: '2', DEPENDENCY_REVIEW_RUN_ID: '3', SECRET_SCAN_RUN_ID: '4', HISTORICAL_RECONCILIATION_RUN_ID: '5' };
   const names = ['CI', 'CodeQL', 'Dependency review', 'Native secret scan', 'Historical branch reconciliation'];
   let calls = 0;
@@ -156,6 +157,8 @@ test('exact-SHA CI and security checks are required without retrying a denied re
   assert.equal(calls, 1);
   await assert.rejects(() => verifyMarketingReleaseEvidence({ env, fetchImpl: async () => json({ id: 1, name: 'CI',
     head_sha: base, conclusion: 'success', status: 'completed', repository: { id: 1010752912 } }) }), /exact release SHA/);
+  await assert.rejects(() => verifyMarketingReleaseEvidence({ env: { ...env, GITHUB_REPOSITORY: 'other/Lythaus' },
+    fetchImpl: () => { throw new Error('unexpected request'); } }), /marketing_release_evidence_context_invalid/);
 });
 
 test('separate workflow preserves full-stack recovery and has no skip input', () => {

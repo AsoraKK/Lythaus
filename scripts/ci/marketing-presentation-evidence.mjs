@@ -5,10 +5,11 @@ const runs = Object.freeze([
   ['CI', 'CI_RUN_ID'], ['CodeQL', 'CODEQL_RUN_ID'], ['Dependency review', 'DEPENDENCY_REVIEW_RUN_ID'],
   ['Native secret scan', 'SECRET_SCAN_RUN_ID'], ['Historical branch reconciliation', 'HISTORICAL_RECONCILIATION_RUN_ID'],
 ]);
+const repositoryUrl = 'https://github.com/AsoraKK/Lythaus/';
 
 export async function verifyMarketingReleaseEvidence({ env, fetchImpl = fetch }) {
   const sha = env.RELEASE_SHA, repository = env.GITHUB_REPOSITORY, token = env.GH_TOKEN;
-  if (!/^[a-f0-9]{40}$/.test(sha ?? '') || repository !== 'AsoraKK/Lythaus' || !token)
+  if (!/^[a-f0-9]{40}$/.test(sha ?? '') || `https://github.com/${repository}/` !== repositoryUrl || !token)
     throw new Error('marketing_release_evidence_context_invalid');
   const evidence = [];
   for (const [name, key] of runs) {

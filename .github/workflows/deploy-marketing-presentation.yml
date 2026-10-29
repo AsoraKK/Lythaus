@@ -39,7 +39,6 @@ jobs:
     timeout-minutes: 35
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
-      MARKETING_RELEASE_DIR: ${{ runner.temp }}/marketing-presentation-release
       PAGES_PROJECT: lythaus-marketing
       PAGES_BRANCH: main
       PUBLIC_API_BASE_URL: https://api.lythaus.co
@@ -49,6 +48,8 @@ jobs:
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
+      - name: Set temporary marketing evidence directory
+        run: echo "MARKETING_RELEASE_DIR=$RUNNER_TEMP/marketing-presentation-release" >> "$GITHUB_ENV"
       - name: Require exact protected current main
         env:
           REF_PROTECTED: ${{ github.ref_protected }}
