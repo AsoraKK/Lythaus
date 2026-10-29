@@ -13,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
@@ -202,16 +203,16 @@ void main() {
       final nextControl = destination == 'comments'
           ? find.widgetWithText(Tab, 'Comments')
           : find.descendant(
-              of: find.byType(BottomNavigationBar),
-              matching: find.text('Create'),
+              of: find.byType(LythausBottomNav),
+              matching: find.text('Feed'),
             );
       final nextFocus = Focus.of(tester.element(nextControl));
       final profileTabs = tester
           .widget<TabBar>(find.byType(TabBar))
           .controller!;
       final selectShellTab = tester
-          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-          .onTap!;
+          .widget<LythausBottomNav>(find.byType(LythausBottomNav))
+          .onTap;
       card.requestFocus();
       await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);

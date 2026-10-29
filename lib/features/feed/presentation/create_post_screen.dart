@@ -167,7 +167,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       child: ReadingPane(
         child: Scaffold(
           appBar: AppBar(
-            title: Text('Create Post', style: context.textTheme.titleLarge),
+            title: Text('New post', style: context.textTheme.titleLarge),
             leading: IconButton(
               icon: const Icon(Icons.close),
               tooltip: 'Close composer',
@@ -275,9 +275,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               labelText: 'Your post',
                               floatingLabelBehavior:
                                   FloatingLabelBehavior.always,
-                              hintText: "What's on your mind?",
+                              hintText: 'Share your thoughts…',
                               hintStyle: context.textTheme.bodyMedium?.copyWith(
                                 color: context.colorScheme.onSurfaceVariant,
+                              ),
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8,
                               ),
                               border: InputBorder.none,
                               errorText: state.validationError,
@@ -306,7 +310,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Choose one. AI-assisted text is limited to 249 characters.',
+                            'Choose one. This is your declaration; publication checks are separate. '
+                            'AI-assisted text is limited to 249 characters.',
                             style: context.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),

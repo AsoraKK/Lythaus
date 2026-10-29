@@ -128,6 +128,6 @@ void main() {
 
     expect(find.text('Sign in to create a post.'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
-    expect(find.text('Create Post'), findsNothing);
+    expect(find.text('New post'), findsNothing);
   });
 }

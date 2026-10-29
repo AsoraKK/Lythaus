@@ -14,6 +14,8 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onTitleTap,
     this.onSearchTap,
     this.onTrendingTap,
+    this.onAccountTap,
+    this.onCreateTap,
     this.logoFocusNode,
     this.titleFocusNode,
     this.showDivider = false,
@@ -25,6 +27,8 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onTitleTap;
   final VoidCallback? onSearchTap;
   final VoidCallback? onTrendingTap;
+  final VoidCallback? onAccountTap;
+  final VoidCallback? onCreateTap;
   final FocusNode? logoFocusNode;
   final FocusNode? titleFocusNode;
   final bool showDivider;
@@ -48,6 +52,12 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
       padding: EdgeInsets.symmetric(horizontal: spacing.lg),
       child: Row(
         children: [
+          if (onAccountTap != null)
+            IconButton(
+              onPressed: onAccountTap,
+              tooltip: 'Account menu',
+              icon: const Icon(Icons.account_circle_outlined),
+            ),
           if (useWordmark) ...[
             const Expanded(
               child: Align(
@@ -89,16 +99,23 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
           ],
           Row(
             children: [
-              LythIconButton(
-                icon: Icons.search,
-                tooltip: 'Search',
-                onPressed: onSearchTap,
-              ),
+              if (onCreateTap == null)
+                LythIconButton(
+                  icon: Icons.search,
+                  tooltip: 'Search',
+                  onPressed: onSearchTap,
+                ),
               LythIconButton(
                 icon: Icons.trending_up_outlined,
                 tooltip: 'Trending',
                 onPressed: onTrendingTap,
               ),
+              if (onCreateTap != null)
+                LythIconButton(
+                  icon: Icons.edit_outlined,
+                  tooltip: 'Create',
+                  onPressed: onCreateTap,
+                ),
             ],
           ),
         ],

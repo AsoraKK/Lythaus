@@ -249,12 +249,6 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                         ),
                       ],
-                      if (isOwner) ...[
-                        const SizedBox(height: Spacing.xs),
-                        TierBadge(label: 'Subscription: ${profile.tier}'),
-                        const SizedBox(height: Spacing.xs),
-                        _ReputationStateBadge(),
-                      ],
                     ],
                   );
 
@@ -319,14 +313,6 @@ class ProfileScreen extends ConsumerWidget {
               ],
               const SizedBox(height: Spacing.lg),
               if (isOwner) ...[
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.settings_outlined),
-                  title: const Text('Settings'),
-                  subtitle: const Text('Security, privacy and notifications'),
-                  onTap: () => _openSettings(context),
-                ),
-                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
                   title: Text(
@@ -342,6 +328,15 @@ class ProfileScreen extends ConsumerWidget {
                       builder: (_) => EditProfileScreen(profile: owner!),
                     ),
                   ),
+                ),
+                const Divider(),
+                _OwnerPostsSection(userId: profile.id, preview: true),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined),
+                  title: const Text('Settings'),
+                  subtitle: const Text('Security, privacy and notifications'),
+                  onTap: () => _openSettings(context),
                 ),
                 ListTile(
                   leading: const Icon(Icons.insights_outlined),
@@ -368,6 +363,15 @@ class ProfileScreen extends ConsumerWidget {
                     },
                   ),
                 const SizedBox(height: Spacing.lg),
+                Wrap(
+                  spacing: Spacing.sm,
+                  runSpacing: Spacing.xs,
+                  children: [
+                    TierBadge(label: 'Subscription: ${profile.tier}'),
+                    _ReputationStateBadge(),
+                  ],
+                ),
+                const SizedBox(height: Spacing.md),
                 const MonthlyReputationTrackerCard(),
               ],
               const SizedBox(height: Spacing.lg),
@@ -474,9 +478,10 @@ class _ProfileCompletionGuide extends StatelessWidget {
 }
 
 class _OwnerPostsSection extends ConsumerWidget {
-  const _OwnerPostsSection({required this.userId});
+  const _OwnerPostsSection({required this.userId, this.preview = false});
 
   final String userId;
+  final bool preview;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -492,7 +497,7 @@ class _OwnerPostsSection extends ConsumerWidget {
           container: true,
           header: true,
           child: Text(
-            'Your posts',
+            preview ? 'Your recent posts' : 'Your posts',
             style: Theme.of(context).textTheme.titleLarge,
           ),
         ),
@@ -535,7 +540,7 @@ class _OwnerPostsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final post in timeline.items)
+        for (final post in preview ? timeline.items.take(2) : timeline.items)
           _OwnerPostCard(
             key: ValueKey('owner-post-${post.id}'),
             post: post,
@@ -547,7 +552,15 @@ class _OwnerPostsSection extends ConsumerWidget {
               await route.completed;
             },
           ),
-        if (timeline.loadMoreError != null)
+        if (preview && (timeline.items.length > 2 || timeline.hasMore))
+          Padding(
+            padding: const EdgeInsets.only(bottom: Spacing.sm),
+            child: Text(
+              'See the Posts tab for your complete list.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        if (!preview && timeline.loadMoreError != null)
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.xs),
             child: Text(
@@ -559,7 +572,7 @@ class _OwnerPostsSection extends ConsumerWidget {
               ),
             ),
           ),
-        if (timeline.hasMore)
+        if (!preview && timeline.hasMore)
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(

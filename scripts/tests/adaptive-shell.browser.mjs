@@ -81,10 +81,10 @@ try {
         await page.setViewportSize({ width, height: 960 });
         await page.waitForTimeout(150);
         assert.deepEqual(await snapshot(page), initial, 'Resize preserves controller, text, selection and focus');
-        await nav(page, 'Discover').click();
+        await nav(page, 'Feed').click();
         await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
         assert.equal((await snapshot(page)).focused, false, 'Hidden composer cannot keep focus');
-        await nav(page, 'Create').click();
+        await nav(page, 'Create').first().click();
         await field.waitFor();
         await page.waitForFunction(() => JSON.parse(window.lythausNavigationSnapshot()).focused);
         assert.deepEqual(await snapshot(page), initial, 'Tab return preserves controller, text, selection and focus');
@@ -94,7 +94,7 @@ try {
         await page.screenshot({ path: path.join(output, filename) });
         results.push({ engine, theme, scale, width, filename, state: await snapshot(page) });
       }
-      const discover = nav(page, 'Discover');
+      const discover = nav(page, 'Feed');
       for (let i = 0; i < 40; i++) {
         await page.keyboard.press('Tab');
         await waitForTwoFrames(page);
@@ -103,7 +103,7 @@ try {
       assert.ok(await discover.evaluate(element => element === document.activeElement), 'Tab reaches navigation');
       await page.keyboard.press('Enter');
       await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
-      await nav(page, 'Create').click();
+      await nav(page, 'Create').first().click();
       await field.waitFor();
       await page.evaluate(() => window.lythausNavigationSignOut());
       await page.setViewportSize({ width: 320, height: 960 });

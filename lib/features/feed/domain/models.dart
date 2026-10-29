@@ -21,6 +21,7 @@ class Post {
   final bool isPublication;
   final String? backingPostId;
   final DateTime createdAt;
+  final DateTime? publishedAt;
   final DateTime? updatedAt;
   final int likeCount;
   final int dislikeCount;
@@ -52,6 +53,7 @@ class Post {
     this.isPublication = false,
     this.backingPostId,
     required this.createdAt,
+    this.publishedAt,
     this.updatedAt,
     this.likeCount = 0,
     this.dislikeCount = 0,
@@ -125,6 +127,7 @@ class Post {
       createdAt:
           DateTime.tryParse(createdAtValue?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      publishedAt: DateTime.tryParse(json['publishedAt']?.toString() ?? ''),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : null,
@@ -202,6 +205,7 @@ class Post {
       if (isPublication) 'post_id': backingPostId,
       'text': text,
       'createdAt': createdAt.toIso8601String(),
+      if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       'likeCount': likeCount,
       'dislikeCount': dislikeCount,

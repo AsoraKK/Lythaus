@@ -670,7 +670,7 @@ test(
           const nav = (name) => page.getByRole('button', {
             name: new RegExp(`^${name}(?:$|\\s+Tab)`),
           }).and(page.locator(':not([aria-disabled="true"])')).first();
-          await nav('Discover').click();
+          await nav('Feed').click();
           const emptyFeed = page.locator('flt-semantics').getByText('No public posts yet', { exact: true });
           await emptyFeed.waitFor();
           await page.getByText(
@@ -690,8 +690,8 @@ test(
             'The feed carousel has one accessible Discovery control');
           assert.equal(await page.getByText('Some feeds could not be loaded.', { exact: true }).count(), 0,
             'Valid empty custom feeds and free entitlements load without an error');
-          assert.equal(await nav('Discover').count(), 1,
-            'Discover navigation remains available beside the branded header');
+          assert.equal(await nav('Feed').count(), 1,
+            'Feed navigation remains available beside the branded header');
           await screenshot('feed-branded-empty');
           feedMode = 'single';
           await page.getByRole('button', { name: 'Check for posts', exact: true }).click();
@@ -719,6 +719,10 @@ test(
           'Profile moderation notice belongs below the bio and above Settings');
           await screenshot('owner-profile-review-notice');
 
+          if (size.width < 768) {
+            await nav('Feed').click();
+            await page.getByRole('button', { name: 'Account menu', exact: true }).click();
+          }
           await nav('Rewards').click();
           const rewardRetry = page.getByRole('button', { name: 'Retry', exact: true });
           const rewardError = page.getByText('Rewards could not be loaded', { exact: true });

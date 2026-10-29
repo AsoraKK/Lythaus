@@ -74,8 +74,19 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
       _resultsScrollController.jumpTo(0);
     }
     final router = GoRouter.maybeOf(context);
-    if (router != null && GoRouterState.of(context).uri.path == '/search') {
-      router.go(_location);
+    if (router != null) {
+      final uri = GoRouterState.of(context).uri;
+      if (uri.path == '/search') {
+        router.go(_location);
+      } else if (uri.path == '/' && uri.queryParameters['tab'] == 'search') {
+        final parameters = Map<String, String>.of(uri.queryParameters);
+        if (query.isEmpty) {
+          parameters.remove('q');
+        } else {
+          parameters['q'] = query;
+        }
+        router.go(uri.replace(queryParameters: parameters).toString());
+      }
     }
   }
 

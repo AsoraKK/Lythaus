@@ -130,11 +130,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
           body: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: ListView(
               padding: const EdgeInsets.all(Spacing.md),
               children: [
                 const Text(
                   'Add what you like, then save. You can return from Profile at any time.',
+                ),
+                const SizedBox(height: Spacing.xs),
+                Text(
+                  'Your name and bio may be visible to others after review. '
+                  'Your profile shows its current visibility and review status.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: Spacing.md),
                 if (widget.profile.hasDetails) ...[
@@ -170,6 +177,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 if (_error != null)
                   Semantics(liveRegion: true, child: Text(_error!)),
                 const SizedBox(height: Spacing.md),
+                if (_hasChanges && !_saving)
+                  Semantics(
+                    liveRegion: true,
+                    child: const Padding(
+                      padding: EdgeInsets.only(bottom: Spacing.sm),
+                      child: Text('Unsaved changes'),
+                    ),
+                  ),
                 FilledButton.icon(
                   onPressed: _saving || !_hasChanges ? null : _save,
                   icon: _saving

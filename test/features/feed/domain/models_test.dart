@@ -111,6 +111,56 @@ void main() {
       expect(post.userDisliked, false);
     });
 
+    test(
+      'keeps publication and creation times distinct through serialization',
+      () {
+        final post = Post.fromJson({
+          'id': 'post1',
+          'authorId': 'user1',
+          'authorUsername': 'testuser',
+          'text': 'Article text',
+          'createdAt': '2026-01-01T12:00:00Z',
+          'publishedAt': '2026-01-03T12:00:00Z',
+        });
+        expect(post.createdAt, DateTime.utc(2026, 1, 1, 12));
+        expect(post.publishedAt, DateTime.utc(2026, 1, 3, 12));
+        final restored = Post.fromJson({...post.toJson(), 'text': 'Edited'});
+        expect(restored.createdAt, post.createdAt);
+        expect(restored.publishedAt, post.publishedAt);
+      },
+    );
+
+    test('does not invent publication time for unpublished posts', () {
+      final post = Post.fromJson({
+        'id': 'post1',
+        'authorId': 'user1',
+        'text': 'Draft',
+        'createdAt': '2026-01-01T12:00:00Z',
+        'publishedAt': null,
+        'moderationState': 'under_review',
+      });
+      expect(post.publishedAt, isNull);
+      expect(post.toJson().containsKey('publishedAt'), isFalse);
+      expect(
+        Post.fromJson({...post.toJson(), 'publishedAt': 'bad'}).publishedAt,
+        isNull,
+      );
+    });
+
+    test(
+      'keeps the existing creation fallback for a publication-only response',
+      () {
+        final post = Post.fromJson({
+          'id': 'post1',
+          'authorId': 'user1',
+          'text': 'Article',
+          'publishedAt': '2026-01-03T12:00:00Z',
+        });
+        expect(post.publishedAt, DateTime.utc(2026, 1, 3, 12));
+        expect(post.createdAt, post.publishedAt);
+      },
+    );
+
     test('fromJson with all data', () {
       final json = {
         'id': 'post1',

@@ -139,6 +139,7 @@ class _Fixture extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
     title: 'Lythaus feed · synthetic QA',
+    debugShowCheckedModeBanner: false,
     theme: LythausTheme.light(),
     darkTheme: LythausTheme.dark(),
     themeMode: Uri.base.queryParameters['theme'] == 'dark'

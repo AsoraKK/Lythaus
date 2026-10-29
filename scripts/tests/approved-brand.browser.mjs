@@ -219,7 +219,7 @@ try {
           await page.locator('flt-semantics-placeholder').evaluate(element => element.click());
           if (screen === 'shell') {
             await page.getByRole('textbox', { name: /Your post/ }).waitFor();
-            await page.getByRole('button', { name: /^Discover(?:$|\s+Tab)/ }).click();
+            await page.getByRole('button', { name: /^Feed(?:$|\s+Tab)/ }).click();
             await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
             assert.equal(await page.getByRole('button', { name: 'Feed controls', exact: true }).count(), 0,
               'The single-feed fixture must not offer unavailable feed switching');
@@ -271,7 +271,7 @@ try {
           if(login){
             await page.waitForURL(url=>url.pathname==='/');
             assert.equal(new URL(page.url()).pathname,'/','Real GoRouter guest destination');
-            await page.getByRole('button',{name:/^Discover(?:$|\s+Tab)/}).and(page.locator('[aria-current="true"]')).waitFor();
+            await page.getByRole('button',{name:/^Feed(?:$|\s+Tab)/}).and(page.locator('[aria-current="true"]')).waitFor();
             await page.locator('flt-semantics').getByText('No public posts yet',{exact:true}).waitFor();
             assert.equal(requests.filter(r=>r.url===refreshUrl&&r.method==='POST').length,1,'Real signed-out refresh');
             assert.equal(requests.filter(r=>r.url===logoutUrl&&r.method==='POST').length,1,'One real guest logout');

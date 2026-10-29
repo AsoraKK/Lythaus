@@ -123,6 +123,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               },
             ),
+            const Divider(height: Spacing.xl),
+            Semantics(
+              container: true,
+              header: true,
+              child: Text(
+                'Activity and alerts',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_outlined),
@@ -283,6 +292,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(height: Spacing.xl),
             ],
             ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.help_outline),
               title: const Text('Help and support'),
               subtitle: const Text('Guidance, account help and policies'),

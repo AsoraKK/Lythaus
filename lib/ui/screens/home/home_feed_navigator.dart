@@ -34,16 +34,20 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
     super.key,
     this.section = AlphaFeedSection.discover,
     this.initialFeedId,
+    this.onAccountTap,
+    this.onCreateTap,
   });
 
   final AlphaFeedSection section;
   final String? initialFeedId;
+  final VoidCallback? onAccountTap;
+  final VoidCallback? onCreateTap;
 
   @override
-  ConsumerState<HomeFeedNavigator> createState() => _HomeFeedNavigatorState();
+  ConsumerState<HomeFeedNavigator> createState() => HomeFeedNavigatorState();
 }
 
-class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
+class HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   PageController? _pageController;
   String _selectedId = 'discover';
   String? _pagesIdentity;
@@ -172,6 +176,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                   : null,
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
+              onAccountTap: widget.onAccountTap,
+              onCreateTap: widget.onCreateTap,
               useWordmark: true,
             ),
             FeedNavigationRail(
@@ -310,6 +316,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     );
   }
 
+  void openFeedControls() => _openFeedControl();
+
+  void showAppeals() => _selectId('appeals');
+
   void _openFeedControl() {
     if (_feedControlsOpen) return;
     final session = ref.read(feedReadSessionProvider);
@@ -350,6 +360,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                     child: FeedControlPanel(
                       availableFeeds: available,
                       selectedFeedId: _selectedId,
+                      onCreateCustom: () {
+                        Navigator.of(sheetContext).pop();
+                        if (session.isCurrent) _createFeed();
+                      },
                       onSelect: (feed) {
                         Navigator.of(sheetContext).pop();
                         if (session.isCurrent) _selectId(feed.id);

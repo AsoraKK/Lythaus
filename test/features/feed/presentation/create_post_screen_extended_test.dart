@@ -205,6 +205,12 @@ void main() {
     expect(find.text('Human-authored'), findsOneWidget);
     expect(find.text('AI-assisted'), findsOneWidget);
     expect(find.text('AI-generated'), findsNothing);
+    expect(
+      find.textContaining(
+        'This is your declaration; publication checks are separate.',
+      ),
+      findsOneWidget,
+    );
     await tester.ensureVisible(find.text('Posting policy'));
     await tester.tap(find.text('Posting policy'));
     await tester.pumpAndSettle();

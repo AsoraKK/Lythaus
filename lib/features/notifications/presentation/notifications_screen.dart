@@ -10,8 +10,10 @@
 /// - Pull-to-refresh
 library;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/ui/components/sign_in_required.dart';
@@ -20,12 +22,20 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart'
     as models;
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/components/lyth_card.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({
+    super.key,
+    this.isActive = true,
+    this.activeListenable,
+  });
+
+  final bool isActive;
+  final ValueListenable<bool>? activeListenable;
 
   @override
   ConsumerState<NotificationsScreen> createState() =>
@@ -40,15 +50,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   ModalRoute<dynamic>? _route;
   Animation<double>? _coverAnimation;
   int _navigationEpoch = 0;
+  _NotificationFilter _filter = _NotificationFilter.all;
   ({int session, int token})? _scheduledReload;
   ({int session, int token}) get _sessionEpoch => (
     session: ref.read(authSessionRevisionProvider.notifier).revision,
     token: ref.read(tokenVersionProvider),
   );
+  bool get _isActive => widget.activeListenable?.value ?? widget.isActive;
+
+  void _onActiveChanged() {
+    if (widget.activeListenable?.value == false) ++_navigationEpoch;
+  }
 
   @override
   void initState() {
     super.initState();
+    widget.activeListenable?.addListener(_onActiveChanged);
     _scrollController.addListener(_onScroll);
     // Load notifications on init
     Future.microtask(() async {
@@ -73,12 +90,29 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (route?.isCurrent != true) ++_navigationEpoch;
   }
 
+  @override
+  void didUpdateWidget(NotificationsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activeListenable == null &&
+        widget.activeListenable == null &&
+        oldWidget.isActive &&
+        !widget.isActive) {
+      ++_navigationEpoch;
+    }
+    if (oldWidget.activeListenable != widget.activeListenable) {
+      oldWidget.activeListenable?.removeListener(_onActiveChanged);
+      widget.activeListenable?.addListener(_onActiveChanged);
+      ++_navigationEpoch;
+    }
+  }
+
   void _onCover(AnimationStatus status) {
     if (status != AnimationStatus.dismissed) ++_navigationEpoch;
   }
 
   @override
   void dispose() {
+    widget.activeListenable?.removeListener(_onActiveChanged);
     _coverAnimation?.removeStatusListener(_onCover);
     _scrollController.dispose();
     super.dispose();
@@ -163,7 +197,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _handleTap(models.Notification notification) async {
-    if (_opening || _pending.contains(notification.id)) return;
+    if (!_isActive || _opening || _pending.contains(notification.id)) {
+      return;
+    }
     _opening = true;
     final epoch = _sessionEpoch;
     final navigationEpoch = _navigationEpoch;
@@ -173,6 +209,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       if (!mounted ||
           epoch != _sessionEpoch ||
           navigationEpoch != _navigationEpoch ||
+          !_isActive ||
           route?.isCurrent != true ||
           ref.read(notificationsControllerProvider).authRequired) {
         return;
@@ -193,6 +230,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       _pending.clear();
       _markingAll = false;
       _opening = false;
+      _filter = _NotificationFilter.all;
     });
     final epoch = _sessionEpoch;
     if (ref.read(currentUserProvider) == null || _scheduledReload == epoch) {
@@ -214,10 +252,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (ref.watch(guestModeProvider)) return _signIn();
     final state = ref.watch(notificationsControllerProvider);
     if (state.authRequired) return _signIn();
+    final visible = state.notifications
+        .where((item) => _filter.matches(item))
+        .toList();
 
     return ReadingPane(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Notifications')),
+        appBar: AppBar(
+          title: const Text('Notifications'),
+          actions: [
+            IconButton(
+              tooltip: 'Notification settings',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NotificationsSettingsScreen(),
+                ),
+              ),
+            ),
+          ],
+        ),
         body: SafeArea(
           child: Align(
             alignment: Alignment.topCenter,
@@ -225,6 +279,43 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               constraints: const BoxConstraints(maxWidth: 760),
               child: Column(
                 children: [
+                  if (state.notifications.isNotEmpty)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.spacing.lg,
+                      ),
+                      child: Row(
+                        children: [
+                          for (final filter in _NotificationFilter.values)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: FilterChip(
+                                label: Text(filter.label),
+                                selected: _filter == filter,
+                                onSelected: (_) => setState(() {
+                                  _filter = filter;
+                                  if (_scrollController.hasClients) {
+                                    _scrollController.jumpTo(0);
+                                  }
+                                }),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  if (state.notifications.isNotEmpty &&
+                      _filter != _NotificationFilter.all)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Showing loaded notifications only.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ),
                   if (state.notifications.any((n) => !n.read))
                     Align(
                       alignment: Alignment.centerRight,
@@ -235,7 +326,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         child: LythButton(
                           variant: LythButtonVariant.tertiary,
                           size: LythButtonSize.small,
-                          label: 'Mark all read',
+                          label: 'Mark loaded read',
                           tooltip: 'Mark loaded notifications as read',
                           isLoading: _markingAll,
                           onPressed: _markingAll ? null : _markAllRead,
@@ -260,7 +351,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(),
                               itemCount:
-                                  state.notifications.length +
+                                  visible.length +
+                                  (visible.isEmpty ? 1 : 0) +
                                   (state.continuationToken != null ||
                                           state.hasError
                                       ? 1
@@ -268,7 +360,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               separatorBuilder: (context, index) =>
                                   const Divider(height: 1),
                               itemBuilder: (context, index) {
-                                if (index >= state.notifications.length) {
+                                if (visible.isEmpty && index == 0) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(24),
+                                    child: Text(
+                                      'No matching notifications in the loaded items.',
+                                    ),
+                                  );
+                                }
+                                if (index >= visible.length) {
                                   return Padding(
                                     padding: EdgeInsets.all(context.spacing.lg),
                                     child: state.isLoadingMore
@@ -303,7 +403,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                   );
                                 }
 
-                                final notification = state.notifications[index];
+                                final notification = visible[index];
                                 return _NotificationCard(
                                   notification: notification,
                                   onTap: () => _handleTap(notification),
@@ -324,15 +424,74 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
-  Widget _signIn() => ReadingPane(
-    child: Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
-      body: const SignInRequired(
-        message: 'Sign in to view your notifications.',
-        returnTo: '/notifications',
+  Widget _signIn() {
+    final router = GoRouter.maybeOf(context);
+    final returnTo = widget.activeListenable == null
+        ? '/notifications'
+        : router == null
+        ? '/?tab=notifications'
+        : GoRouterState.of(context).uri.toString();
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Notifications')),
+        body: SignInRequired(
+          message: 'Sign in to view your notifications.',
+          returnTo: returnTo,
+        ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+enum _NotificationFilter {
+  all('All'),
+  replies('Replies'),
+  review('Review'),
+  other('Other');
+
+  const _NotificationFilter(this.label);
+  final String label;
+
+  bool matches(models.Notification item) => this == all || this == _group(item);
+}
+
+_NotificationFilter _group(models.Notification item) {
+  final type = item.nativeType;
+  if (type != null) {
+    if (const {
+      'reply',
+      'content.reply_received',
+      'content.comment_received',
+    }.contains(type)) {
+      return _NotificationFilter.replies;
+    }
+    if (type == 'moderation_decision' ||
+        type == 'appeal_result' ||
+        type == 'reviewer_eligibility' ||
+        type.startsWith('moderation.') ||
+        type.startsWith('appeals.')) {
+      return _NotificationFilter.review;
+    }
+    return _NotificationFilter.other;
+  }
+  final rawEventType = item.rawEventType?.toUpperCase();
+  if (rawEventType != null &&
+      !const {
+        'COMMENT_CREATED',
+        'COMMENT_REPLY',
+        'MODERATION_CONTENT_BLOCKED',
+        'MODERATION_APPEAL_DECIDED',
+      }.contains(rawEventType)) {
+    return _NotificationFilter.other;
+  }
+  return switch (item.eventType) {
+    models.NotificationEventType.commentCreated ||
+    models.NotificationEventType.commentReply => _NotificationFilter.replies,
+    models.NotificationEventType.moderationContentBlocked ||
+    models.NotificationEventType.moderationAppealDecided =>
+      _NotificationFilter.review,
+    _ => _NotificationFilter.other,
+  };
 }
 
 // ============================================================================
@@ -391,6 +550,7 @@ class _NotificationCard extends StatelessWidget {
         onTap: busy ? null : onTap,
         padding: EdgeInsets.all(spacing.lg),
         backgroundColor: backgroundColor,
+        borderColor: backgroundColor,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -403,7 +563,7 @@ class _NotificationCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _getCategoryIcon(notification.category),
+                _getCategoryIcon(notification),
                 size: 20,
                 color: _getCategoryIconColor(notification.category, scheme),
               ),
@@ -460,13 +620,21 @@ class _NotificationCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: spacing.xs),
                   Text(
-                    notification.body,
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    _eventLabel(notification),
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
+                  if (notification.body.isNotEmpty) ...[
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      notification.body,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                   SizedBox(height: spacing.sm),
                   Text(
                     _formatTime(context, notification.createdAt),
@@ -483,14 +651,46 @@ class _NotificationCard extends StatelessWidget {
     );
   }
 
-  IconData _getCategoryIcon(models.NotificationCategory category) {
-    return switch (category) {
+  IconData _getCategoryIcon(models.Notification notification) {
+    final group = _group(notification);
+    if (group == _NotificationFilter.replies) return Icons.chat_bubble_outline;
+    if (group == _NotificationFilter.review) return Icons.shield_outlined;
+    return switch (notification.category) {
       models.NotificationCategory.system => Icons.notifications_outlined,
       models.NotificationCategory.social => Icons.people,
       models.NotificationCategory.safety => Icons.shield,
       models.NotificationCategory.security => Icons.lock,
       models.NotificationCategory.news => Icons.article,
       models.NotificationCategory.marketing => Icons.campaign,
+    };
+  }
+
+  String _eventLabel(models.Notification notification) {
+    final group = _group(notification);
+    if (group == _NotificationFilter.replies) return 'Reply or comment';
+    if (group == _NotificationFilter.review) return 'Review activity';
+    final type = notification.nativeType;
+    if (type != null) {
+      if (type == 'social.follow_received') return 'Following';
+      if (type.startsWith('privacy.') || type == 'privacy_complete') {
+        return 'Privacy request';
+      }
+      if (type.startsWith('reputation.') || type == 'reputation_level') {
+        return 'Reputation';
+      }
+      if (type == 'reward_eligible') return 'Rewards';
+      return 'Account update';
+    }
+    return switch (notification.eventType) {
+      models.NotificationEventType.postLiked ||
+      models.NotificationEventType.postReacted => 'Contribution activity',
+      models.NotificationEventType.userFollowed ||
+      models.NotificationEventType.followerPosted => 'Following',
+      models.NotificationEventType.securityLoginNewDevice ||
+      models.NotificationEventType.accountChange => 'Account and security',
+      models.NotificationEventType.newsAlert => 'News',
+      models.NotificationEventType.marketingCampaign => 'Recommendations',
+      _ => 'Account update',
     };
   }
 

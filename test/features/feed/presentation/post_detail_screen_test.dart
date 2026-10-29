@@ -195,6 +195,175 @@ void main() {
 
   // ── Success state ──────────────────────────────────────────────────────────
   group('Success state', () {
+    testWidgets('shows article title, dates and a safe source link', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post(
+          id: 'article-1',
+          authorId: 'author-1',
+          authorUsername: 'Synthetic author',
+          title: 'A synthetic article',
+          text: 'A readable first paragraph.\n\nA second paragraph.',
+          createdAt: DateTime.utc(2026, 1, 1),
+          publishedAt: DateTime.utc(2026, 1, 3),
+          updatedAt: DateTime.utc(2026, 1, 4),
+          source: const domain.NewsSource(
+            type: 'curated',
+            name: 'Synthetic source',
+            url: 'https://example.invalid/report',
+          ),
+        ),
+      );
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('A synthetic article'), findsOneWidget);
+      final localizations = MaterialLocalizations.of(
+        tester.element(find.text('A synthetic article')),
+      );
+      expect(
+        find.text(
+          'Published ${localizations.formatMediumDate(DateTime.utc(2026, 1, 3).toLocal())}',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Updated'), findsOneWidget);
+      expect(find.text('Source: Synthetic source'), findsOneWidget);
+      expect(find.text('Open source'), findsOneWidget);
+      expect(
+        find.text('A readable first paragraph.\n\nA second paragraph.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('under-review content without publication time says Created', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post(
+          id: 'pending-article',
+          authorId: 'author-1',
+          authorUsername: 'Synthetic author',
+          title: 'Synthetic unpublished article',
+          text: 'Awaiting checks.',
+          createdAt: DateTime.utc(2026, 1, 1),
+          moderationState: 'under_review',
+        ),
+      );
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Created'), findsOneWidget);
+      expect(find.textContaining('Published'), findsNothing);
+      expect(
+        find.text('Under review. Publication checks are pending.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('omits unknown creation and publication dates', (tester) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post.fromJson({
+          'id': 'missing-date',
+          'authorId': 'author-1',
+          'authorUsername': 'Synthetic author',
+          'title': 'Synthetic article with no date',
+          'text': 'No date supplied.',
+        }),
+      );
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Created'), findsNothing);
+      expect(find.textContaining('Published'), findsNothing);
+    });
+
+    testWidgets('does not offer an unsafe source URL as a link', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post(
+          id: 'article-2',
+          authorId: 'author-1',
+          authorUsername: 'Synthetic author',
+          title: 'An article',
+          text: 'Text',
+          createdAt: DateTime.utc(2026, 1, 1),
+          source: const domain.NewsSource(
+            type: 'curated',
+            name: 'Synthetic source',
+            url: 'javascript:alert(1)',
+          ),
+        ),
+      );
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+      expect(find.text('Source: Synthetic source'), findsOneWidget);
+      expect(find.text('Open source'), findsNothing);
+    });
+
+    testWidgets('article remains readable with large text on mobile', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 960));
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post(
+          id: 'article-3',
+          authorId: 'author-1',
+          authorUsername: 'Synthetic author',
+          title: 'A title that wraps onto several lines on a small screen',
+          text: 'A synthetic paragraph to read.',
+          createdAt: DateTime.utc(2026, 1, 1),
+          source: const domain.NewsSource(
+            type: 'curated',
+            name: 'Synthetic source',
+            url: 'https://example.invalid/report',
+          ),
+        ),
+      );
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Open source'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('Open source'));
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(TextButton, 'Open source').hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('renders post text when loaded', (tester) async {
       when(
         () => repo.getPost(

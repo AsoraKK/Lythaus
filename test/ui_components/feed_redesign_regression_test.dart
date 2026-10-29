@@ -122,10 +122,42 @@ void main() {
     );
     expect(find.byTooltip('Save post'), findsNothing);
     expect(find.byTooltip('Comments'), findsNothing);
+    expect(find.text('Read article'), findsNothing);
     expect(
       find.text('Post interactions are unavailable for this publication.'),
       findsOneWidget,
     );
+  });
+  testWidgets('backed publication provides its existing reading action', (
+    tester,
+  ) async {
+    var opened = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [feedBookmarksProvider.overrideWith((ref) async => {})],
+        child: MaterialApp(
+          home: Scaffold(
+            body: InteractiveFeedCard(
+              onTap: () => opened = true,
+              item: FeedItem(
+                id: 'publication',
+                backingPostId: 'post',
+                isPublication: true,
+                feedId: 'news',
+                author: 'Editorial',
+                contentType: ContentType.text,
+                title: 'Bulletin',
+                body: 'An introduction.',
+                publishedAt: DateTime.utc(2026),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Read article'));
+    expect(opened, isTrue);
   });
   testWidgets(
     'feedback controls explain unavailable channels without writing',

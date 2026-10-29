@@ -633,7 +633,7 @@ void main() {
       expect(find.text('Trending'), findsOneWidget);
     });
 
-    testWidgets('launch feed tools hide deferred and staff-only actions', (
+    testWidgets('feed tools offer creation without staff-only actions', (
       tester,
     ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
@@ -674,7 +674,7 @@ void main() {
         find.descendant(of: find.byType(ListTile), matching: find.text('News')),
         findsOneWidget,
       );
-      expect(find.text('Build custom feed'), findsNothing);
+      expect(find.text('Build custom feed'), findsOneWidget);
       expect(find.text('Moderation hub'), findsNothing);
       expect(find.text('Appeals queue'), findsNothing);
     });
