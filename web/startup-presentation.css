@@ -39,6 +39,7 @@ body { margin: 0; background: var(--startup-canvas); color: var(--startup-text);
   #lythaus-startup .startup-wordmark > .approved-brand-art { visibility: visible; }
 }
 .approved-brand-art { display: block; width: 144px; height: 40px; }
+.startup-noscript .approved-brand-art { width: min(241px, calc(100vw - 48px)); height: min(40.006px, calc((100vw - 48px) * .166)); }
 #lythaus-startup button {
   min-height: 48px;
   padding: 8px 24px;
