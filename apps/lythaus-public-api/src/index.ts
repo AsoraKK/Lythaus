@@ -1,4 +1,5 @@
 import { readCommentThread, commentThreadErrorStatus } from './comment-thread-reader.ts';
+import { changeFeedback, feedbackInput, feedbackTarget, readFeedback } from './contribution-feedback.ts';
 import { commentReplyTargetQuery, nestedReplyDepth } from '../../../packages/db/src/comment-visibility.ts';
 import { commentNotificationVisibilitySql } from '../../../packages/db/src/comment-notifications.ts';
 import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
@@ -69,6 +70,7 @@ interface Env extends EnvBindings {
   TAG_SEARCH_INDEX_READ_ENABLED?: string;
   TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST?: string;
   TAG_SEARCH_MAX_CANDIDATES_PER_REQUEST?: string;
+  CONTRIBUTION_FEEDBACK_ENABLED?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -3551,6 +3553,38 @@ export default {
           respond: (body, status) => privateResponse(request, env, body, { status }),
           readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+      }
+      const feedback = url.pathname.match(/^\/api\/feedback\/(post|comment)\/([^/]+)(?:\/(quality|emotion))?$/);
+      if (feedback && (request.method === 'GET' || request.method === 'PUT')) {
+        if (env.CONTRIBUTION_FEEDBACK_ENABLED !== 'true') {
+          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
+        }
+        const target = feedbackTarget(feedback[1], feedback[2]);
+        if (request.method === 'GET' && !feedback[3]) {
+          const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
+          const data = await transaction(env.DB_APP_FRESH, client => readFeedback(client, target, user?.userId ?? null));
+          return privateResponse(request, env, data);
+        }
+        if (request.method === 'PUT' && feedback[3]) {
+          const user = await principal(request, env);
+          const body = await readJson<unknown>(request.clone() as Request, 1024);
+          if (body === null || typeof body !== 'object' || Array.isArray(body) || !('value' in body)) throw new Error('invalid_reaction');
+          const input = feedbackInput(feedback[3], body.value);
+          return await idempotentMutation(request, env, user.userId, 'contribution-feedback.change', async () => {
+            await enforceDailyAction(env, user.userId, 'reaction');
+            const result = await transaction(env.DB_APP_FRESH, async client => changeFeedback(client, {
+              target, actor: user.userId, ...input, id: uuidv7(),
+              audit: async () => writeActivity(client, request, user, uuidv7(), {
+                eventType: input.value === null ? 'content.reaction_removed' : 'content.reaction_added',
+                category: 'content', title: input.channel === 'quality' ? 'You rated a contribution' : 'You reacted to content',
+                explanation: input.value === null ? 'Your feedback was removed.' : 'Your feedback was saved separately from other reactions. It does not change reputation or rewards.',
+                objectType: target.type, objectId: target.id, metadata: { contentType: target.type },
+              }),
+            }));
+            return privateResponse(request, env, { target, channel: input.channel, value: input.value, changed: result.changed });
+          }, true);
+        }
+        return privateResponse(request, env, { error: 'not_found' }, { status: 404 });
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
       if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts' || url.pathname === '/api/users/me/comments')) {

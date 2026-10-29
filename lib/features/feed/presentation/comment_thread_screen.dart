@@ -17,6 +17,9 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/application/owner_content_repository.dart';
 import 'package:lythaus/features/feed/application/comment_preferences.dart';
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
+import 'package:lythaus/features/reactions/domain/contribution_feedback.dart';
+import 'package:lythaus/features/reactions/presentation/contribution_feedback_controls.dart';
 
 class CommentThreadScreen extends ConsumerStatefulWidget {
   const CommentThreadScreen({
@@ -1642,6 +1645,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     return _CommentTile(
       key: _commentKeys.putIfAbsent(comment.id, GlobalKey.new),
       comment: comment,
+      showFeedback:
+          ref.watch(contributionFeedbackCandidateProvider) &&
+          !comment.deleted &&
+          comment.moderationState == 'allowed',
       replyContext: comment.parentCommentId == null
           ? null
           : comment.replyToDeleted || replyTarget?.deleted == true
@@ -1834,6 +1841,7 @@ class _CommentTile extends StatelessWidget {
     super.key,
     required this.comment,
     required this.highlighted,
+    required this.showFeedback,
     required this.onReply,
     this.onEdit,
     this.onDelete,
@@ -1843,6 +1851,7 @@ class _CommentTile extends StatelessWidget {
 
   final _ThreadComment comment;
   final bool highlighted;
+  final bool showFeedback;
   final VoidCallback? onReply;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -1861,7 +1870,7 @@ class _CommentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: highlighted
             ? scheme.primaryContainer.withValues(alpha: 0.55)
-            : scheme.surfaceContainerLowest,
+            : scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: scheme.outlineVariant),
       ),
@@ -1906,6 +1915,11 @@ class _CommentTile extends StatelessWidget {
               comment.declaredCreationMode == 'ai_assisted'
                   ? 'AI-assisted'
                   : 'Human-authored',
+            ),
+          if (showFeedback)
+            ContributionFeedbackControls(
+              target: FeedbackTarget(FeedbackTargetType.comment, comment.id),
+              authorId: comment.authorId,
             ),
           Wrap(
             spacing: 8,
