@@ -97,9 +97,7 @@ void main() {
                 if (!['Settings', 'Help'].contains(label)) {
                   expect(
                     node.flagsCollection.isSelected,
-                    label == 'Feed'
-                        ? ui.Tristate.isTrue
-                        : ui.Tristate.isFalse,
+                    label == 'Feed' ? ui.Tristate.isTrue : ui.Tristate.isFalse,
                   );
                 }
                 expect(button.hitTestable(), findsOneWidget);
