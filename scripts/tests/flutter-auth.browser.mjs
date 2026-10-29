@@ -122,12 +122,23 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     }
     async function openSettingsFromReadyProfile() {
       await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
+      const settings=page.getByRole('button',{name:'Open settings',exact:true});
+      await settings.waitFor();
       if(width<700){
-        await page.getByLabel(/Reputation New, new, active/).waitFor();
-        await page.getByLabel(/^Monthly level unavailable/).waitFor();
+        await page.mouse.move(width/2,500);
+        await page.mouse.wheel(0,-2000);
+        for(const readiness of [
+          page.locator('flt-semantics span').filter({hasText:/Reputation New, new, active/}),
+          page.getByLabel(/^Monthly level unavailable/),
+        ]){
+          for(let attempt=0;attempt<10&&!await readiness.isVisible();attempt++){
+            await page.mouse.wheel(0,250);
+            await page.waitForTimeout(150);
+          }
+          await readiness.waitFor();
+        }
       }
-      await page.getByRole('button',{name:'Open settings',exact:true}).waitFor();
-      await page.getByRole('button',{name:'Open settings',exact:true}).click();
+      await settings.click();
       await page.waitForURL(url=>url.pathname==='/settings');
     }
     await openApp();
