@@ -46,7 +46,7 @@ class LythausSideNavigation extends StatelessWidget {
       double.infinity,
     );
     return SizedBox(
-      width: (extended ? 224 : 104) * scale,
+      width: (extended ? 224 : 136) * scale,
       child: SafeArea(
         child: FocusTraversalGroup(
           child: LayoutBuilder(

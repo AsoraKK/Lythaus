@@ -74,9 +74,11 @@ void main() {
                 findsOneWidget,
               );
               for (final label in [
-                'Discover',
-                'Create',
+                'Feed',
+                'Search',
+                'Notifications',
                 'Profile',
+                'Create',
                 'Rewards',
                 'Settings',
                 'Help',
@@ -95,7 +97,7 @@ void main() {
                 if (!['Settings', 'Help'].contains(label)) {
                   expect(
                     node.flagsCollection.isSelected,
-                    label == 'Discover'
+                    label == 'Feed'
                         ? ui.Tristate.isTrue
                         : ui.Tristate.isFalse,
                   );
@@ -148,7 +150,7 @@ void main() {
                       : LogicalKeyboardKey.enter,
                 );
                 await tester.pumpAndSettle();
-                if (label == 'Discover') {
+                if (label == 'Feed') {
                   final output = Platform.environment['LYTHAUS_NAV_EVIDENCE'];
                   if (output != null) {
                     await tester.runAsync(() async {
@@ -168,7 +170,7 @@ void main() {
                   }
                 }
               }
-              expect(calls, ['0', '1', '2', '3', 'settings', 'help']);
+              expect(calls, ['0', '4', '5', '2', '1', '3', 'settings', 'help']);
               await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
               await tester.sendKeyEvent(LogicalKeyboardKey.tab);
               await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);

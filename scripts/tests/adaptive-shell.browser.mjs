@@ -81,6 +81,11 @@ try {
         await page.setViewportSize({ width, height: 960 });
         await page.waitForTimeout(150);
         assert.deepEqual(await snapshot(page), initial, 'Resize preserves controller, text, selection and focus');
+        if (width === 1024 && scale === 1) {
+          const notifications = await nav(page, 'Notifications').boundingBox();
+          assert.ok(notifications && notifications.height < 80,
+            'The compact navigation label fits on one line');
+        }
         await nav(page, 'Feed').click();
         await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
         assert.equal((await snapshot(page)).focused, false, 'Hidden composer cannot keep focus');

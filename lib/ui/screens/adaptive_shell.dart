@@ -322,24 +322,31 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
           return Scaffold(
             key: _scaffoldKey,
             drawer: _accountDrawer(currentUser != null),
-            body: desktop
-                ? Row(
-                    children: [
-                      LythausSideNavigation(
-                        currentIndex: _currentIndex,
-                        onDestinationSelected: _onTabTapped,
-                        onSettings: _openSettings,
-                        onHelp: _openHelp,
-                        extended: constraints.maxWidth >= 1100,
-                        brand:
-                            widget.brand ??
-                            const LythBrand(variant: LythBrandVariant.symbol),
-                      ),
-                      const VerticalDivider(width: 1),
-                      Expanded(child: content),
-                    ],
+            // Keep the content under the same parent while the navigation
+            // changes, so resizing cannot reparent an active composer during
+            // layout or discard its focus and draft.
+            body: Row(
+              children: [
+                if (desktop)
+                  LythausSideNavigation(
+                    currentIndex: _currentIndex,
+                    onDestinationSelected: _onTabTapped,
+                    onSettings: _openSettings,
+                    onHelp: _openHelp,
+                    extended: constraints.maxWidth >= 1100,
+                    brand:
+                        widget.brand ??
+                        const LythBrand(variant: LythBrandVariant.symbol),
                   )
-                : content,
+                else
+                  const SizedBox.shrink(),
+                if (desktop)
+                  const VerticalDivider(width: 1)
+                else
+                  const SizedBox.shrink(),
+                Expanded(child: content),
+              ],
+            ),
             bottomNavigationBar:
                 desktop || MediaQuery.viewInsetsOf(context).bottom > 0
                 ? null
