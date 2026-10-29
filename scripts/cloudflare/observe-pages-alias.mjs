@@ -170,10 +170,11 @@ export async function collectPagesAliasEvidence({ token, sourceSha, runId, runAt
 }
 
 function assertContext(env) {
-  if (env.GITHUB_ACTIONS !== 'true' || env.GITHUB_REPOSITORY !== 'AsoraKK/Lythaus'
+  if (env.GITHUB_ACTIONS !== 'true' || env.GITHUB_REPOSITORY_ID !== '1010752912'
+    || typeof env.GITHUB_REPOSITORY !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(env.GITHUB_REPOSITORY)
     || env.GITHUB_EVENT_NAME !== 'workflow_dispatch' || env.GITHUB_REF !== 'refs/heads/main'
     || env.GITHUB_REF_PROTECTED !== 'true'
-    || env.GITHUB_WORKFLOW_REF !== 'AsoraKK/Lythaus/.github/workflows/cloudflare-domain-audit.yml@refs/heads/main'
+    || env.GITHUB_WORKFLOW_REF !== `${env.GITHUB_REPOSITORY}/.github/workflows/cloudflare-domain-audit.yml@refs/heads/main`
     || env.RUNNER_DEBUG === '1' || env.ACTIONS_STEP_DEBUG === 'true') {
     throw new ObservationFailure('diagnostic_context_invalid');
   }

@@ -131,7 +131,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REPOSITORY" = 'AsoraKK/Lythaus'
+          test "$GITHUB_REPOSITORY_ID" = '1010752912'
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$GITHUB_REF_PROTECTED" = 'true'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"

@@ -185,10 +185,13 @@ test('the real command suppresses synthetic provider exceptions and refuses debu
     writeFileSync(preload, `globalThis.fetch = async () => { throw new Error(${JSON.stringify(`${secret} ${token}`)}); };\n`);
     const script = path.resolve('scripts/cloudflare/observe-pages-alias.mjs');
     const env = { PATH: process.env.PATH ?? '', CLOUDFLARE_API_TOKEN: token, GITHUB_ACTIONS: 'true',
-      GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main',
-      GITHUB_REF_PROTECTED: 'true', GITHUB_WORKFLOW_REF: 'AsoraKK/Lythaus/.github/workflows/cloudflare-domain-audit.yml@refs/heads/main',
+      GITHUB_REPOSITORY_ID: '1010752912', GITHUB_REPOSITORY: 'ExampleOwner/Lythaus',
+      GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main',
+      GITHUB_REF_PROTECTED: 'true', GITHUB_WORKFLOW_REF: 'ExampleOwner/Lythaus/.github/workflows/cloudflare-domain-audit.yml@refs/heads/main',
       GITHUB_SHA: sha, GITHUB_RUN_ID: '12345', GITHUB_RUN_ATTEMPT: '1' };
-    for (const [extra, expected] of [[{}, 'provider_read_failed'], [{ RUNNER_DEBUG: '1' }, 'diagnostic_context_invalid']]) {
+    for (const [extra, expected] of [[{}, 'provider_read_failed'], [{ RUNNER_DEBUG: '1' }, 'diagnostic_context_invalid'],
+      [{ GITHUB_REPOSITORY_ID: '1' }, 'diagnostic_context_invalid'],
+      [{ GITHUB_WORKFLOW_REF: 'other/workflow@refs/heads/main' }, 'diagnostic_context_invalid']]) {
       const result = spawnSync(process.execPath, ['--import', preload, script], { env: { ...env, ...extra }, encoding: 'utf8' });
       assert.equal(result.status, 1);
       assert.equal(result.stdout, '');
@@ -210,6 +213,7 @@ test('workflow isolates manual observation, existing inventory and step-scoped s
   assert.match(job, /environment: production/);
   assert.match(job, /persist-credentials: false/);
   assert.match(job, /GITHUB_REF_PROTECTED/);
+  assert.match(job, /GITHUB_REPOSITORY_ID/);
   assert.match(job, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.match(job, /NODE_OPTIONS: ''[\s\S]*?NODE_DEBUG: ''/);
   assert.ok(job.indexOf('node --test') < job.indexOf('node scripts/cloudflare/observe-pages-alias.mjs'));
