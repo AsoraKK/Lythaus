@@ -522,6 +522,111 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    for (final command in ['search', 'searchThenFeed', 'feed']) {
+      testWidgets('newer tab navigation cancels pending feed controls '
+          '(command=$command)', (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._baseOverrides(guest: true),
+              currentUserProvider.overrideWithValue(null),
+            ],
+            child: const MaterialApp(home: AdaptiveShell()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final navigation = tester.widget<LythausBottomNav>(
+          find.byType(LythausBottomNav),
+        );
+        await tester.tap(find.byTooltip('Account menu'));
+        await tester.pumpAndSettle();
+        final manage = tester.widget<ListTile>(
+          find.widgetWithText(ListTile, 'Manage feeds'),
+        );
+        manage.onTap!();
+        if (command != 'feed') navigation.onTap(4);
+        if (command != 'search') navigation.onTap(0);
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a feed'), findsNothing);
+        expect(
+          tester
+              .widget<LythausBottomNav>(find.byType(LythausBottomNav))
+              .currentIndex,
+          command == 'search' ? 4 : 0,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('newer drawer section cancels pending feed controls', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+          ],
+          child: const MaterialApp(home: AdaptiveShell()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(AdaptiveShell));
+      ModalRoute.of(context)!.addLocalHistoryEntry(LocalHistoryEntry());
+      await tester.tap(find.byTooltip('Account menu'));
+      await tester.pumpAndSettle();
+      final manage = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Manage feeds'),
+      );
+      final appeals = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Review and appeals'),
+      );
+      manage.onTap!();
+      appeals.onTap!();
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a feed'), findsNothing);
+      expect(find.text('Sign in to view your appeals.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('newer route feed selection cancels pending feed controls', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final selectedFeed = ValueNotifier<String?>(null);
+      addTearDown(selectedFeed.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+          ],
+          child: MaterialApp(
+            home: ValueListenableBuilder<String?>(
+              valueListenable: selectedFeed,
+              builder: (_, value, _) => AdaptiveShell(initialFeedId: value),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Account menu'));
+      await tester.pumpAndSettle();
+      tester
+          .widget<ListTile>(find.widgetWithText(ListTile, 'Manage feeds'))
+          .onTap!();
+      selectedFeed.value = 'appeals';
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a feed'), findsNothing);
+      expect(find.text('Sign in to view your appeals.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('keyboard leaves room for the draft and navigation returns', (
       tester,
     ) async {

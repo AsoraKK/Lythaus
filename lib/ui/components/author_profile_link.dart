@@ -81,14 +81,11 @@ class _AuthorProfileLinkState extends State<AuthorProfileLink> {
         onPressed: _openingProfile ? null : _openProfile,
         style: TextButton.styleFrom(
           alignment: Alignment.centerLeft,
-          foregroundColor: scheme.primary,
+          foregroundColor: scheme.onSurface,
           minimumSize: const Size(0, 48),
           padding: EdgeInsets.zero,
           tapTargetSize: MaterialTapTargetSize.padded,
-          textStyle: widget.textStyle?.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: scheme.primary,
-          ),
+          textStyle: widget.textStyle,
         ),
         child: Text(
           label,

@@ -47,83 +47,79 @@ class _FeedCardState extends State<FeedCard> {
     final theme = Theme.of(context);
     final label = publicAuthorLabel(item.author, authorId: item.authorId);
     final media = item.imageUrl ?? item.videoThumbnailUrl;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final hasMedia = media != null && media.isNotEmpty;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final roomyText = MediaQuery.textScalerOf(context).scale(14) > 20;
+        final fullWidth =
+            item.isPublication || constraints.maxWidth < 360 || roomyText;
+        final date = Tooltip(
+          message: DateFormat.yMMMd().add_jm().format(
+            item.publishedAt.toLocal(),
+          ),
+          child: Text(
+            DateFormat.MMMd().format(item.publishedAt.toLocal()),
+            style: theme.textTheme.bodySmall,
+          ),
+        );
+        final author = item.authorId?.trim().isNotEmpty == true
+            ? AuthorProfileLink(
+                userId: item.authorId!,
+                label: label,
+                maxLines: 2,
+                textStyle: theme.textTheme.titleSmall,
+              )
+            : Text(label, style: theme.textTheme.titleSmall);
+        final mediaPreview = hasMedia
+            ? _MediaPreview(
+                imageUrl: media,
+                isVideo: item.videoThumbnailUrl != null,
+              )
+            : null;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ExcludeSemantics(
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  foregroundColor: theme.colorScheme.onSurfaceVariant,
-                  child: const Icon(Icons.person_outline),
-                ),
+              Row(
+                children: [
+                  ExcludeSemantics(
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: theme.colorScheme.surfaceContainer,
+                      foregroundColor: theme.colorScheme.onSurfaceVariant,
+                      child: const Icon(Icons.person_outline, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: roomyText
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [author, date],
+                          )
+                        : Row(
+                            children: [
+                              Flexible(child: author),
+                              const SizedBox(width: 8),
+                              date,
+                            ],
+                          ),
+                  ),
+                  if (item.isPinned)
+                    const Tooltip(
+                      message: 'Pinned post',
+                      child: Icon(Icons.push_pin_outlined, size: 16),
+                    ),
+                  if (widget.saveAction != null) widget.saveAction!,
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
+              if (roomyText) const SizedBox(height: 8),
+              Padding(
+                padding: EdgeInsets.only(left: fullWidth ? 0 : 44),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              item.authorId?.trim().isNotEmpty == true
-                                  ? AuthorProfileLink(
-                                      userId: item.authorId!,
-                                      label: label,
-                                      maxLines: 2,
-                                      textStyle: theme.textTheme.titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    )
-                                  : Text(
-                                      label,
-                                      style: theme.textTheme.titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                              Wrap(
-                                spacing: 8,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Tooltip(
-                                    message: DateFormat.yMMMd().add_jm().format(
-                                      item.publishedAt.toLocal(),
-                                    ),
-                                    child: Text(
-                                      DateFormat.MMMd().add_jm().format(
-                                        item.publishedAt.toLocal(),
-                                      ),
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                  ),
-                                  if (item.isPinned)
-                                    const Tooltip(
-                                      message: 'Pinned post',
-                                      child: Icon(
-                                        Icons.push_pin_outlined,
-                                        size: 18,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (widget.saveAction != null) widget.saveAction!,
-                      ],
-                    ),
-                    const SizedBox(height: 4),
                     Material(
                       color: LythSemanticColors.clear,
                       shape: RoundedRectangleBorder(
@@ -143,16 +139,23 @@ class _FeedCardState extends State<FeedCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            if (item.isPublication && mediaPreview != null) ...[
+                              mediaPreview,
+                              const SizedBox(height: 12),
+                            ],
                             if (item.title.trim().isNotEmpty) ...[
                               Semantics(
                                 header: true,
                                 child: Text(
                                   item.title,
-                                  style: theme.textTheme.headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.25,
-                                      ),
+                                  style:
+                                      (item.isPublication
+                                              ? theme.textTheme.headlineSmall
+                                              : theme.textTheme.titleLarge)
+                                          ?.copyWith(
+                                            height: 1.3,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -189,6 +192,10 @@ class _FeedCardState extends State<FeedCard> {
                                       ),
                                       if (expandable)
                                         TextButton(
+                                          style: TextButton.styleFrom(
+                                            padding: EdgeInsets.zero,
+                                            alignment: Alignment.centerLeft,
+                                          ),
                                           onPressed: () => setState(
                                             () => _expanded = !_expanded,
                                           ),
@@ -202,12 +209,10 @@ class _FeedCardState extends State<FeedCard> {
                                   );
                                 },
                               ),
-                            if (media != null && media.isNotEmpty) ...[
+                            if (!item.isPublication &&
+                                mediaPreview != null) ...[
                               const SizedBox(height: 12),
-                              _MediaPreview(
-                                imageUrl: media,
-                                isVideo: item.videoThumbnailUrl != null,
-                              ),
+                              mediaPreview,
                             ],
                           ],
                         ),
@@ -218,9 +223,12 @@ class _FeedCardState extends State<FeedCard> {
                         widget.onTap != null)
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: TextButton(
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
                           onPressed: widget.onTap,
-                          child: const Text('Read article'),
+                          label: const Text('View post'),
+                          icon: const Icon(Icons.arrow_forward, size: 18),
+                          iconAlignment: IconAlignment.end,
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -252,7 +260,9 @@ class _FeedCardState extends State<FeedCard> {
                               if (action == 'details') {
                                 ReceiptDrawer.show(context, item.id);
                               }
-                              if (action == 'edit') widget.onEdit?.call();
+                              if (action == 'edit') {
+                                widget.onEdit?.call();
+                              }
                             },
                             itemBuilder: (_) => [
                               const PopupMenuItem(
@@ -277,12 +287,12 @@ class _FeedCardState extends State<FeedCard> {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: theme.colorScheme.outlineVariant),
             ],
           ),
-          const SizedBox(height: 8),
-          Divider(color: theme.colorScheme.outlineVariant),
-        ],
-      ),
+        );
+      },
     );
   }
 }

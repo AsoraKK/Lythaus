@@ -41,6 +41,7 @@ class AdaptiveShell extends ConsumerStatefulWidget {
 
 class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   late int _currentIndex;
+  int _navigationEpoch = 0;
   late final ValueNotifier<bool> _notificationActive;
   final Set<int> _visited = {0};
   final List<int> _history = [];
@@ -99,6 +100,12 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   @override
   void didUpdateWidget(AdaptiveShell oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if ((oldWidget.initialIndex != widget.initialIndex &&
+            widget.initialIndex.clamp(0, 5) != _currentIndex) ||
+        oldWidget.initialFeedId != widget.initialFeedId ||
+        oldWidget.initialSearchQuery != widget.initialSearchQuery) {
+      ++_navigationEpoch;
+    }
     if (oldWidget.initialIndex != widget.initialIndex) {
       _notificationActive.value = widget.initialIndex.clamp(0, 5) == 5;
       _prepareTabFocus(widget.initialIndex.clamp(0, 5));
@@ -111,6 +118,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   }
 
   void _onTabTapped(int index) {
+    ++_navigationEpoch;
     if (index == _currentIndex) return;
     _notificationActive.value = index == 5;
     _prepareTabFocus(index);
@@ -133,9 +141,15 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
 
   void _openFeedSection(ValueChanged<HomeFeedNavigatorState> action) {
     _onTabTapped(0);
+    final epoch = _navigationEpoch;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final feed = _feedKey.currentState;
-      if (mounted && feed != null) action(feed);
+      if (mounted &&
+          _currentIndex == 0 &&
+          epoch == _navigationEpoch &&
+          feed != null) {
+        action(feed);
+      }
     });
   }
 
@@ -219,6 +233,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   );
 
   void _openSettings() {
+    ++_navigationEpoch;
     final router = GoRouter.maybeOf(context);
     if (router != null) {
       router.go(
@@ -232,6 +247,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   }
 
   Future<void> _openHelp() async {
+    ++_navigationEpoch;
     try {
       if (await launchUrl(Uri.https('lythaus.co', '/help'))) return;
     } catch (_) {}
@@ -297,6 +313,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
       canPop: _history.isEmpty,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _history.isNotEmpty) {
+          ++_navigationEpoch;
           _notificationActive.value = _history.last == 5;
           _prepareTabFocus(_history.last);
           setState(() => _currentIndex = _history.removeLast());

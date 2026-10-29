@@ -218,11 +218,12 @@ class ProfileScreen extends ConsumerWidget {
           ),
           overview: ListView(
             key: PageStorageKey('profile-overview-${profile.id}'),
-            padding: const EdgeInsets.all(Spacing.lg),
+            padding: const EdgeInsets.all(Spacing.md),
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
                   final avatar = LythAvatar(
+                    diameter: 56,
                     name: profile.displayName.isEmpty
                         ? profile.handleLabel ?? 'Member'
                         : profile.displayName,
@@ -238,7 +239,7 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       if (profile.handleLabel case final handleLabel?) ...[
-                        const SizedBox(height: Spacing.xs),
+                        const SizedBox(height: Spacing.xxxs),
                         Text(
                           handleLabel,
                           style: Theme.of(context).textTheme.bodyMedium
@@ -273,29 +274,26 @@ class ProfileScreen extends ConsumerWidget {
                 },
               ),
               if (profile.bio?.trim().isNotEmpty == true) ...[
-                const SizedBox(height: Spacing.lg),
+                const SizedBox(height: Spacing.md),
                 Text(
                   profile.bio!,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
+              if (isOwner) ...[
+                const SizedBox(height: Spacing.xl),
+                _OwnerPostsSection(userId: profile.id, preview: true),
+                const Divider(height: Spacing.xl),
+              ],
               if (isOwner && owner != null && owner.hasDetails) ...[
-                const SizedBox(height: Spacing.lg),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(Spacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Profile visibility & review',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: Spacing.xs),
-                        Text(owner.statusMessage),
-                      ],
-                    ),
-                  ),
+                Text(
+                  'Profile visibility & review',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: Spacing.xxxs),
+                Text(
+                  owner.statusMessage,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
               if (isOwner) ...[
@@ -314,7 +312,11 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: Spacing.lg),
               if (isOwner) ...[
                 ListTile(
-                  leading: const Icon(Icons.edit_outlined),
+                  contentPadding: EdgeInsets.zero,
+                  minLeadingWidth: 20,
+                  horizontalTitleGap: Spacing.sm,
+                  leading: const Icon(Icons.edit_outlined, size: 20),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
                   title: Text(
                     owner?.hasDetails == false
                         ? 'Complete your profile'
@@ -330,16 +332,22 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const Divider(),
-                _OwnerPostsSection(userId: profile.id, preview: true),
-                const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.settings_outlined),
+                  contentPadding: EdgeInsets.zero,
+                  minLeadingWidth: 20,
+                  horizontalTitleGap: Spacing.sm,
+                  leading: const Icon(Icons.settings_outlined, size: 20),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
                   title: const Text('Settings'),
                   subtitle: const Text('Security, privacy and notifications'),
                   onTap: () => _openSettings(context),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.insights_outlined),
+                  contentPadding: EdgeInsets.zero,
+                  minLeadingWidth: 20,
+                  horizontalTitleGap: Spacing.sm,
+                  leading: const Icon(Icons.insights_outlined, size: 20),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
                   title: const Text('Activity & Audit Log'),
                   subtitle: const Text(
                     'Private reputation and account activity',
@@ -352,7 +360,11 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 if (canModerate)
                   ListTile(
-                    leading: const Icon(Icons.shield_outlined),
+                    contentPadding: EdgeInsets.zero,
+                    minLeadingWidth: 20,
+                    horizontalTitleGap: Spacing.sm,
+                    leading: const Icon(Icons.shield_outlined, size: 20),
+                    trailing: const Icon(Icons.chevron_right, size: 20),
                     title: const Text('Moderation hub'),
                     onTap: () {
                       Navigator.of(context).push(
@@ -379,7 +391,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           posts: ListView(
             key: PageStorageKey('profile-posts-${profile.id}'),
-            padding: const EdgeInsets.all(Spacing.lg),
+            padding: const EdgeInsets.all(Spacing.md),
             children: [
               if (isOwner)
                 _OwnerPostsSection(userId: profile.id)
@@ -393,7 +405,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           comments: ListView(
             key: PageStorageKey('profile-comments-${profile.id}'),
-            padding: const EdgeInsets.all(Spacing.lg),
+            padding: const EdgeInsets.all(Spacing.md),
             children: [
               if (isOwner)
                 OwnerCommentsSection(userId: profile.id)

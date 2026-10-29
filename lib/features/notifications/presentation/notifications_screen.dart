@@ -24,7 +24,6 @@ import 'package:lythaus/features/notifications/domain/notification_models.dart'
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
-import 'package:lythaus/design_system/components/lyth_card.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -291,6 +290,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: FilterChip(
+                                side: BorderSide.none,
+                                shape: const StadiumBorder(),
                                 label: Text(filter.label),
                                 selected: _filter == filter,
                                 onSelected: (_) => setState(() {
@@ -546,106 +547,112 @@ class _NotificationCard extends StatelessWidget {
         }
         return false;
       },
-      child: LythCard.clickable(
-        onTap: busy ? null : onTap,
-        padding: EdgeInsets.all(spacing.lg),
-        backgroundColor: backgroundColor,
-        borderColor: backgroundColor,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Category icon
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _getCategoryColor(notification.category, scheme),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _getCategoryIcon(notification),
-                size: 20,
-                color: _getCategoryIconColor(notification.category, scheme),
-              ),
+      child: Material(
+        color: backgroundColor,
+        child: InkWell(
+          onTap: busy ? null : onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: spacing.lg,
+              vertical: spacing.md,
             ),
-            SizedBox(width: spacing.lg),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category icon
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _getCategoryIcon(notification),
+                    size: 20,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                SizedBox(width: spacing.lg),
 
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: notification.read
-                                ? FontWeight.normal
-                                : FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      if (!notification.read)
-                        Semantics(
-                          label: 'Unread',
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: scheme.primary,
-                              shape: BoxShape.circle,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notification.title,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: notification.read
+                                    ? FontWeight.w500
+                                    : FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                      PopupMenuButton<String>(
-                        tooltip: 'Notification actions',
-                        enabled: !busy,
-                        onSelected: (action) async {
-                          if (action == 'read') await onMarkRead();
-                          if (action == 'dismiss') await onDismiss();
-                        },
-                        itemBuilder: (_) => [
                           if (!notification.read)
-                            const PopupMenuItem(
-                              value: 'read',
-                              child: Text('Mark as read'),
+                            Semantics(
+                              label: 'Unread',
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: scheme.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                             ),
-                          const PopupMenuItem(
-                            value: 'dismiss',
-                            child: Text('Dismiss notification'),
+                          PopupMenuButton<String>(
+                            tooltip: 'Notification actions',
+                            enabled: !busy,
+                            onSelected: (action) async {
+                              if (action == 'read') await onMarkRead();
+                              if (action == 'dismiss') await onDismiss();
+                            },
+                            itemBuilder: (_) => [
+                              if (!notification.read)
+                                const PopupMenuItem(
+                                  value: 'read',
+                                  child: Text('Mark as read'),
+                                ),
+                              const PopupMenuItem(
+                                value: 'dismiss',
+                                child: Text('Dismiss notification'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                      Text(
+                        _eventLabel(notification),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (notification.body.isNotEmpty) ...[
+                        SizedBox(height: spacing.xs),
+                        Text(
+                          notification.body,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: spacing.sm),
+                      Text(
+                        _formatTime(context, notification.createdAt),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
-                  Text(
-                    _eventLabel(notification),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (notification.body.isNotEmpty) ...[
-                    SizedBox(height: spacing.xs),
-                    Text(
-                      notification.body,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: spacing.sm),
-                  Text(
-                    _formatTime(context, notification.createdAt),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -691,34 +698,6 @@ class _NotificationCard extends StatelessWidget {
       models.NotificationEventType.newsAlert => 'News',
       models.NotificationEventType.marketingCampaign => 'Recommendations',
       _ => 'Account update',
-    };
-  }
-
-  Color _getCategoryColor(
-    models.NotificationCategory category,
-    ColorScheme scheme,
-  ) {
-    return switch (category) {
-      models.NotificationCategory.system => scheme.secondary,
-      models.NotificationCategory.social => scheme.primary,
-      models.NotificationCategory.safety => scheme.tertiary,
-      models.NotificationCategory.security => scheme.error,
-      models.NotificationCategory.news => scheme.secondary,
-      models.NotificationCategory.marketing => scheme.secondaryContainer,
-    };
-  }
-
-  Color _getCategoryIconColor(
-    models.NotificationCategory category,
-    ColorScheme scheme,
-  ) {
-    return switch (category) {
-      models.NotificationCategory.system => scheme.onSecondary,
-      models.NotificationCategory.social => scheme.onPrimary,
-      models.NotificationCategory.safety => scheme.onTertiary,
-      models.NotificationCategory.security => scheme.onError,
-      models.NotificationCategory.news => scheme.onSecondary,
-      models.NotificationCategory.marketing => scheme.onSecondaryContainer,
     };
   }
 

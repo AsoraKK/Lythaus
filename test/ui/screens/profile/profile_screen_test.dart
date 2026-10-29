@@ -333,6 +333,12 @@ void main() {
         greaterThan(tester.getTopLeft(find.text('My bio')).dy),
       );
       expect(
+        tester.getTopLeft(find.text('Your recent posts')).dy,
+        lessThan(
+          tester.getTopLeft(find.text('Profile visibility & review')).dy,
+        ),
+      );
+      expect(
         tester.getTopLeft(find.text(owner.statusMessage)).dy,
         lessThan(tester.getTopLeft(find.text('Settings')).dy),
       );
@@ -686,6 +692,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await _scrollTo(
+        tester,
+        find.textContaining('A short bio can add context'),
+      );
       expect(
         find.textContaining('A short bio can add context'),
         findsOneWidget,

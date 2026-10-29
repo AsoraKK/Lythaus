@@ -175,7 +175,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ),
             actions: [
               Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: 16),
                 child: FilledButton(
                   onPressed:
                       state.isSubmitting ||
@@ -266,7 +266,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             ),
                             controller: _textController,
                             focusNode: _focusNode,
-                            minLines: 5,
+                            minLines: 6,
                             maxLines: 10,
                             textAlignVertical: TextAlignVertical.top,
                             enabled: canEdit,
@@ -284,6 +284,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 vertical: 8,
                               ),
                               border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
                               errorText: state.validationError,
                               counterText: isAssisted
                                   ? '$characterCount/$characterLimit '
@@ -301,24 +304,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   .updateText(value);
                             },
                           ),
-                          const SizedBox(height: 12),
+                          const Divider(height: 24),
                           Text(
                             'How did you write this?',
                             style: context.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Choose one. This is your declaration; publication checks are separate. '
-                            'AI-assisted text is limited to 249 characters.',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _showPostingPolicy,
-                            child: const Text('Posting policy'),
                           ),
                           const SizedBox(height: 8),
                           Wrap(
@@ -351,6 +342,22 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Choose one. This is your declaration; publication checks are separate. '
+                            'AI-assisted text is limited to 249 characters.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _showPostingPolicy,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              alignment: Alignment.centerLeft,
+                            ),
+                            child: const Text('Posting policy'),
+                          ),
                           if (isAssisted)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
@@ -373,7 +380,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           else ...[
                             Text(
                               'Photos are not available yet',
-                              style: context.textTheme.titleSmall,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(

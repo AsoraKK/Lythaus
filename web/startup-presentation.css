@@ -19,6 +19,25 @@ body { margin: 0; background: var(--startup-canvas); color: var(--startup-text);
 }
 #lythaus-startup[hidden], #lythaus-startup button[hidden] { display: none; }
 #lythaus-startup p { margin: 0; }
+.startup-status:not([data-visible]) { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.startup-wordmark { position: relative; display: block; flex: none; width: min(241px, calc(100vw - 48px)); height: min(40.006px, calc((100vw - 48px) * .166)); isolation: isolate; }
+.startup-wordmark .startup-wordmark-fallback { position: absolute; inset: 0; width: 100%; height: 100%; }
+.startup-wordmark-scene { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; visibility: hidden; --ds-text: var(--startup-text); --ds-canvas: var(--startup-canvas); --light-ivory: var(--startup-text); --light-gold: var(--startup-accent); }
+.startup-wordmark-dark { fill: var(--startup-canvas); }
+.startup-wordmark-settled { fill: var(--startup-text); }
+.startup-wordmark-afterlight { opacity: .65; }
+.startup-wordmark-atmosphere { opacity: 1; }
+[data-light-position], [data-light-projection] { transform-box: view-box; transform-origin: 0 0; }
+#lythaus-startup[data-light="playing"] .startup-wordmark-scene,
+#lythaus-startup[data-light="playing"] .startup-wordmark-optics { visibility: visible; }
+#lythaus-startup[data-light="playing"] .startup-wordmark-fallback { visibility: hidden; }
+@media (max-width: 700px) {
+  .startup-wordmark-bloom { rx: 76px; ry: 148px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .startup-wordmark-scene { display: none; }
+  #lythaus-startup .startup-wordmark-fallback { visibility: visible; }
+}
 .approved-brand-art { display: block; width: 144px; height: 40px; }
 #lythaus-startup button {
   min-height: 48px;

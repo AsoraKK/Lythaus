@@ -278,6 +278,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('About News Board'));
+    await tester.pumpAndSettle();
     expect(find.text('Current account tier: Black'), findsOneWidget);
     expect(
       find.textContaining(

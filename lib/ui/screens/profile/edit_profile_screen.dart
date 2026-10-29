@@ -134,20 +134,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             child: ListView(
               padding: const EdgeInsets.all(Spacing.md),
               children: [
-                const Text(
-                  'Add what you like, then save. You can return from Profile at any time.',
-                ),
-                const SizedBox(height: Spacing.xs),
-                Text(
-                  'Your name and bio may be visible to others after review. '
-                  'Your profile shows its current visibility and review status.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                const Text('Your name and bio are optional.'),
                 const SizedBox(height: Spacing.md),
-                if (widget.profile.hasDetails) ...[
-                  Text(widget.profile.statusMessage),
-                  const SizedBox(height: Spacing.md),
-                ],
                 TextFormField(
                   controller: _displayName,
                   enabled: !_saving,
@@ -174,6 +162,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     labelText: 'Bio (optional)',
                   ),
                 ),
+                const SizedBox(height: Spacing.xs),
+                Text(
+                  'Your name and bio may be visible to others after review. '
+                  'Your profile shows its current visibility and review status.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (widget.profile.hasDetails) ...[
+                  const SizedBox(height: Spacing.xs),
+                  Text(
+                    widget.profile.statusMessage,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
                 if (_error != null)
                   Semantics(liveRegion: true, child: Text(_error!)),
                 const SizedBox(height: Spacing.md),

@@ -119,8 +119,10 @@ class NewsFeed extends ConsumerWidget {
                   horizontal: Spacing.md,
                   vertical: Spacing.sm,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('About News Board'),
+                  childrenPadding: const EdgeInsets.only(bottom: 12),
                   children: [
                     Text(
                       'Current account tier: ${_tierLabel(currentEntitlements.tier)}',

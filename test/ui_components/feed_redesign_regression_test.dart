@@ -100,11 +100,13 @@ void main() {
   testWidgets('unbacked News publication exposes no post mutation controls', (
     tester,
   ) async {
+    var opened = false;
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
           home: Scaffold(
             body: InteractiveFeedCard(
+              onTap: () => opened = true,
               item: FeedItem(
                 id: 'publication',
                 feedId: 'news',
@@ -123,12 +125,15 @@ void main() {
     expect(find.byTooltip('Save post'), findsNothing);
     expect(find.byTooltip('Comments'), findsNothing);
     expect(find.text('Read article'), findsNothing);
+    expect(find.text('View post'), findsNothing);
+    await tester.tap(find.text('Bulletin'));
+    expect(opened, isFalse);
     expect(
       find.text('Post interactions are unavailable for this publication.'),
       findsOneWidget,
     );
   });
-  testWidgets('backed publication provides its existing reading action', (
+  testWidgets('backed publication labels its existing post action clearly', (
     tester,
   ) async {
     var opened = false;
@@ -156,7 +161,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Read article'));
+    expect(find.text('Read article'), findsNothing);
+    await tester.tap(find.text('View post'));
     expect(opened, isTrue);
   });
   testWidgets(

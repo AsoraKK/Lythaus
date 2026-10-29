@@ -11,9 +11,11 @@ class ContributionFeedbackControls extends ConsumerStatefulWidget {
     super.key,
     required this.target,
     required this.authorId,
+    this.trailingActions,
   });
   final FeedbackTarget target;
   final String authorId;
+  final Widget? trailingActions;
 
   @override
   ConsumerState<ContributionFeedbackControls> createState() =>
@@ -52,15 +54,48 @@ class _ContributionFeedbackControlsState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          expanded: _expanded,
-          child: TextButton.icon(
-            onPressed: () => setState(() => _expanded = !_expanded),
-            icon: const Icon(Icons.add_reaction_outlined, size: 20),
-            label: Text(
-              'React to content${summary == null ? '' : ' · $total'}',
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                expanded: _expanded,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: const Icon(Icons.add_reaction_outlined, size: 20),
+                  label: Text(
+                    'React to content${summary == null ? '' : ' · $total'}',
+                  ),
+                ),
+              ),
             ),
-          ),
+            IconButton(
+              tooltip: 'About quality feedback',
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('About quality feedback'),
+                  content: const Text(
+                    'Rate the author’s quality of work, not whether you agree with the conclusion. Reactions express how the content makes you feel.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              ),
+              icon: const Icon(Icons.info_outline, size: 20),
+            ),
+          ],
         ),
         if (_expanded)
           Wrap(
@@ -71,6 +106,11 @@ class _ContributionFeedbackControlsState
                   selected: summary?.myEmotion == entry.key,
                   child: TextButton(
                     style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                       backgroundColor: summary?.myEmotion == entry.key
                           ? Theme.of(context).colorScheme.primaryContainer
                           : null,
@@ -96,55 +136,69 @@ class _ContributionFeedbackControlsState
                 ),
             ],
           ),
-        Wrap(
-          spacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            for (final vote in QualityVote.values)
-              Semantics(
-                selected: summary?.myQuality == vote,
-                child: TextButton.icon(
-                  onPressed: !canVote
-                      ? null
-                      : () => controller.change(
-                          FeedbackChannel.quality,
-                          summary.myQuality == vote ? null : vote.name,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final quality = Wrap(
+              spacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final vote in QualityVote.values)
+                  Semantics(
+                    selected: summary?.myQuality == vote,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
                         ),
-                  icon: Icon(
-                    vote == QualityVote.like
-                        ? summary?.myQuality == vote
-                              ? Icons.thumb_up
-                              : Icons.thumb_up_outlined
-                        : summary?.myQuality == vote
-                        ? Icons.thumb_down
-                        : Icons.thumb_down_outlined,
-                    size: 20,
-                  ),
-                  label: Text(
-                    '${vote == QualityVote.like ? 'Like' : 'Dislike'}${summary == null ? '' : ' ${summary.qualityCounts[vote]}'}',
-                  ),
-                ),
-              ),
-            IconButton(
-              tooltip: 'About quality feedback',
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('About quality feedback'),
-                  content: const Text(
-                    'Rate the author’s quality of work, not whether you agree with the conclusion. Reactions express how the content makes you feel.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
+                        foregroundColor: summary?.myQuality == vote
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      onPressed: !canVote
+                          ? null
+                          : () => controller.change(
+                              FeedbackChannel.quality,
+                              summary.myQuality == vote ? null : vote.name,
+                            ),
+                      icon: Icon(
+                        vote == QualityVote.like
+                            ? summary?.myQuality == vote
+                                  ? Icons.thumb_up
+                                  : Icons.thumb_up_outlined
+                            : summary?.myQuality == vote
+                            ? Icons.thumb_down
+                            : Icons.thumb_down_outlined,
+                        size: 20,
+                      ),
+                      label: Text(
+                        '${vote == QualityVote.like ? 'Like' : 'Dislike'}${summary == null ? '' : ' ${summary.qualityCounts[vote]}'}',
+                      ),
                     ),
-                  ],
+                  ),
+              ],
+            );
+            if (widget.trailingActions == null) return quality;
+            final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+            if (constraints.maxWidth >= 212 * scale + 96) {
+              return Row(
+                children: [
+                  Expanded(child: quality),
+                  widget.trailingActions!,
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: widget.trailingActions!,
                 ),
-              ),
-              icon: const Icon(Icons.info_outline, size: 20),
-            ),
-          ],
+                quality,
+              ],
+            );
+          },
         ),
         if (feedback.loading || feedback.busy)
           const LinearProgressIndicator(semanticsLabel: 'Loading feedback'),
