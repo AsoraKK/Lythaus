@@ -1,5 +1,6 @@
 import { readCommentThread, commentThreadErrorStatus } from './comment-thread-reader.ts';
 import { changeFeedback, feedbackInput, feedbackTarget, readFeedback } from './contribution-feedback.ts';
+import { lockRelationshipUsers } from './feedback-visibility-locks.ts';
 import { commentReplyTargetQuery, nestedReplyDepth } from '../../../packages/db/src/comment-visibility.ts';
 import { commentNotificationVisibilitySql } from '../../../packages/db/src/comment-notifications.ts';
 import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
@@ -1913,6 +1914,7 @@ async function createFollow(request: Request, env: Env, user: Principal, routeTa
   const targetUserId = input.userId;
   const sourceEventId = uuidv7();
   const created = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, targetUserId);
     await assertSocialInteractionAllowed(client, user.userId, targetUserId);
     const result = await client.query(
       `INSERT INTO social.follows (follower_id, followed_id) VALUES ($1, $2)
@@ -1960,6 +1962,7 @@ async function relationshipList(request: Request, env: Env, user: Principal, kin
 async function removeFollow(request: Request, env: Env, user: Principal, followedId: string): Promise<Response> {
   const sourceEventId = uuidv7();
   const removed = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, followedId);
     const result = await client.query(
       `DELETE FROM social.follows WHERE follower_id = $1 AND followed_id = $2 RETURNING followed_id`,
       [user.userId, followedId],
@@ -1980,6 +1983,7 @@ async function setBlock(request: Request, env: Env, user: Principal, targetUserI
   const change = planRelationshipMutation('block', user.userId, targetUserId, blocked);
   const sourceEventId = uuidv7();
   const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, change.targetUserId);
     const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [change.targetUserId]);
     if (target.rowCount !== 1) throw new Error('user_not_found');
     if (blocked) {
@@ -2005,6 +2009,7 @@ async function setMute(request: Request, env: Env, user: Principal, targetUserId
   const change = planRelationshipMutation('mute', user.userId, targetUserId, muted);
   const sourceEventId = uuidv7();
   const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, change.targetUserId);
     const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [change.targetUserId]);
     if (target.rowCount !== 1) throw new Error('user_not_found');
     const mutation = muted
@@ -3554,37 +3559,39 @@ export default {
           readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
       }
-      const feedback = url.pathname.match(/^\/api\/feedback\/(post|comment)\/([^/]+)(?:\/(quality|emotion))?$/);
-      if (feedback && (request.method === 'GET' || request.method === 'PUT')) {
+      const feedbackRead = url.pathname.match(/^\/api\/feedback\/(post|comment)\/([^/]+)$/);
+      if (request.method === 'GET' && feedbackRead) {
         if (env.CONTRIBUTION_FEEDBACK_ENABLED !== 'true') {
           return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
         }
-        const target = feedbackTarget(feedback[1], feedback[2]);
-        if (request.method === 'GET' && !feedback[3]) {
-          const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
-          const data = await transaction(env.DB_APP_FRESH, client => readFeedback(client, target, user?.userId ?? null));
-          return privateResponse(request, env, data);
+        const target = feedbackTarget(feedbackRead[1], feedbackRead[2]);
+        const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
+        const data = await transaction(env.DB_APP_FRESH, client => readFeedback(client, target, user?.userId ?? null));
+        return privateResponse(request, env, data);
+      }
+      const feedbackWrite = url.pathname.match(/^\/api\/feedback\/(post|comment)\/([^/]+)\/(quality|emotion)$/);
+      if (request.method === 'PUT' && feedbackWrite) {
+        if (env.CONTRIBUTION_FEEDBACK_ENABLED !== 'true') {
+          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
         }
-        if (request.method === 'PUT' && feedback[3]) {
-          const user = await principal(request, env);
-          const body = await readJson<unknown>(request.clone() as Request, 1024);
-          if (body === null || typeof body !== 'object' || Array.isArray(body) || !('value' in body)) throw new Error('invalid_reaction');
-          const input = feedbackInput(feedback[3], body.value);
-          return await idempotentMutation(request, env, user.userId, 'contribution-feedback.change', async () => {
-            await enforceDailyAction(env, user.userId, 'reaction');
-            const result = await transaction(env.DB_APP_FRESH, async client => changeFeedback(client, {
-              target, actor: user.userId, ...input, id: uuidv7(),
-              audit: async () => writeActivity(client, request, user, uuidv7(), {
-                eventType: input.value === null ? 'content.reaction_removed' : 'content.reaction_added',
-                category: 'content', title: input.channel === 'quality' ? 'You rated a contribution' : 'You reacted to content',
-                explanation: input.value === null ? 'Your feedback was removed.' : 'Your feedback was saved separately from other reactions. It does not change reputation or rewards.',
-                objectType: target.type, objectId: target.id, metadata: { contentType: target.type },
-              }),
-            }));
-            return privateResponse(request, env, { target, channel: input.channel, value: input.value, changed: result.changed });
-          }, true);
-        }
-        return privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+        const target = feedbackTarget(feedbackWrite[1], feedbackWrite[2]);
+        const user = await principal(request, env);
+        const body = await readJson<unknown>(request.clone() as Request, 1024);
+        if (body === null || typeof body !== 'object' || Array.isArray(body) || !('value' in body)) throw new Error('invalid_reaction');
+        const input = feedbackInput(feedbackWrite[3], body.value);
+        return await idempotentMutation(request, env, user.userId, 'contribution-feedback.change', async () => {
+          await enforceDailyAction(env, user.userId, 'reaction');
+          const result = await transaction(env.DB_APP_FRESH, async client => changeFeedback(client, {
+            target, actor: user.userId, ...input, id: uuidv7(),
+            audit: async () => writeActivity(client, request, user, uuidv7(), {
+              eventType: input.value === null ? 'content.reaction_removed' : 'content.reaction_added',
+              category: 'content', title: input.channel === 'quality' ? 'You rated a contribution' : 'You reacted to content',
+              explanation: input.value === null ? 'Your feedback was removed.' : 'Your feedback was saved separately from other reactions. It does not change reputation or rewards.',
+              objectType: target.type, objectId: target.id, metadata: { contentType: target.type },
+            }),
+          }));
+          return privateResponse(request, env, { target, channel: input.channel, value: input.value, changed: result.changed });
+        }, true);
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
       if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts' || url.pathname === '/api/users/me/comments')) {

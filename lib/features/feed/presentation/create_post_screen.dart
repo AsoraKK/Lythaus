@@ -103,6 +103,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         }
       },
     );
+    // Account changes must close a private appeal even when registry
+    // notifications are deferred until the end of a build frame.
+    ref.listen<String?>(currentUserProvider.select((user) => user?.id), (
+      previous,
+      next,
+    ) {
+      if (previous != next) _dismissAppealDialog();
+    });
     final canCreate = ref.watch(canCreatePostProvider);
     final privateImagesEnabled = ref.watch(privateImageUploadsEnabledProvider);
     final imageBlocksPost =

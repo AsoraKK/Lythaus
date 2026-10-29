@@ -106,6 +106,330 @@
     }
   ],
   "paths": {
+    "/feedback/post/{targetId}": {
+      "get": {
+        "operationId": "postContributionFeedbackGet",
+        "summary": "Read separate quality and emotional feedback for a post",
+        "description": "Public visitors can read visible targets; authenticated readers receive their own values and block/mute filtered counts. Returns 404 while this feature is disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-authoritative counts and the reader's selections. Private and no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/post/{targetId}/quality": {
+      "put": {
+        "operationId": "postContributionQualitySet",
+        "summary": "Set or remove quality feedback on a post",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/post/{targetId}/emotion": {
+      "put": {
+        "operationId": "postContributionEmotionSet",
+        "summary": "Set or remove emotion feedback on a post",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmotionFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/comment/{targetId}": {
+      "get": {
+        "operationId": "commentContributionFeedbackGet",
+        "summary": "Read separate quality and emotional feedback for a comment",
+        "description": "Public visitors can read visible targets; authenticated readers receive their own values and block/mute filtered counts. Returns 404 while this feature is disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-authoritative counts and the reader's selections. Private and no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/comment/{targetId}/quality": {
+      "put": {
+        "operationId": "commentContributionQualitySet",
+        "summary": "Set or remove quality feedback on a comment",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/comment/{targetId}/emotion": {
+      "put": {
+        "operationId": "commentContributionEmotionSet",
+        "summary": "Set or remove emotion feedback on a comment",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmotionFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
     "/authenticity/cases": {
       "get": {
         "operationId": "listAuthenticityBetaCases",
@@ -14769,6 +15093,219 @@
           }
         }
       },
+      "ContributionFeedbackTarget": {
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "post",
+              "comment"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ContributionQuality": {
+        "type": "object",
+        "required": [
+          "counts",
+          "myValue"
+        ],
+        "properties": {
+          "counts": {
+            "type": "object",
+            "required": [
+              "like",
+              "dislike"
+            ],
+            "properties": {
+              "like": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dislike": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "myValue": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "like",
+              "dislike"
+            ]
+          }
+        }
+      },
+      "ContributionEmotion": {
+        "type": "object",
+        "required": [
+          "counts",
+          "myValue"
+        ],
+        "properties": {
+          "counts": {
+            "type": "object",
+            "required": [
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ],
+            "properties": {
+              "amused": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sad": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "angry": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "surprised": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "appreciative": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "myValue": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ]
+          }
+        }
+      },
+      "ContributionFeedbackSummary": {
+        "type": "object",
+        "required": [
+          "target",
+          "quality",
+          "emotion"
+        ],
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/ContributionFeedbackTarget"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/ContributionQuality"
+          },
+          "emotion": {
+            "$ref": "#/components/schemas/ContributionEmotion"
+          }
+        }
+      },
+      "ContributionFeedbackError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        }
+      },
+      "QualityFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "like",
+              "dislike"
+            ],
+            "description": "Null removes the current quality vote."
+          }
+        }
+      },
+      "ContributionFeedbackChange": {
+        "type": "object",
+        "required": [
+          "target",
+          "channel",
+          "value",
+          "changed"
+        ],
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/ContributionFeedbackTarget"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "quality",
+              "emotion"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "like",
+              "dislike",
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ]
+          },
+          "changed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EmotionFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ],
+            "description": "Null removes the current emotional reaction."
+          }
+        }
+      },
       "BetaReview": {
         "type": "object",
         "additionalProperties": false,
@@ -22150,6 +22687,25 @@
       }
     },
     "parameters": {
+      "targetId": {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "feedbackIdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "description": "Reuse the same key to retry an identical change safely.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"
+        }
+      },
       "AlphaCaseId": {
         "name": "caseId",
         "in": "path",
@@ -22336,6 +22892,46 @@
       }
     },
     "responses": {
+      "FeedbackError": {
+        "description": "Request rejected, target unavailable, rate limited, or feature disabled.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContributionFeedbackError"
+            }
+          }
+        }
+      },
+      "FeedbackIdempotencyConflict": {
+        "description": "The replay key conflicts, is still processing, or has an uncertain outcome.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContributionFeedbackError"
+            },
+            "examples": {
+              "keyConflict": {
+                "value": {
+                  "error": "idempotency_key_conflict",
+                  "correlationId": "synthetic"
+                }
+              },
+              "inProgress": {
+                "value": {
+                  "error": "idempotency_in_progress",
+                  "correlationId": "synthetic"
+                }
+              },
+              "outcomeUnknown": {
+                "value": {
+                  "error": "idempotency_outcome_unknown",
+                  "correlationId": "synthetic"
+                }
+              }
+            }
+          }
+        }
+      },
       "BadRequest": {
         "description": "The request could not be validated or a domain invariant prevented it.",
         "content": {

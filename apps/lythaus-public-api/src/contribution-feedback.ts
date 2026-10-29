@@ -13,6 +13,44 @@ const values: Record<FeedbackChannel, readonly FeedbackValue[]> = {
   emotion: ['amused', 'sad', 'angry', 'surprised', 'appreciative'],
 };
 
+type VisibilityPathRow = { id: string; parent_id: string | null; post_id: string; author_id: string; post_author_id: string };
+
+async function visibilityPath(client: DatabaseClient, target: FeedbackTarget): Promise<VisibilityPathRow[]> {
+  const result = target.type === 'post'
+    ? await client.query<VisibilityPathRow>(`SELECT post.id, NULL::uuid AS parent_id, post.id AS post_id,
+        post.author_id, post.author_id AS post_author_id FROM content.posts post WHERE post.id = $1`, [target.id])
+    : await client.query<VisibilityPathRow>(`WITH RECURSIVE ancestry AS (
+        SELECT c.id, c.parent_id, c.post_id, c.author_id, ARRAY[c.id] AS path
+          FROM content.comments c WHERE c.id = $1
+        UNION ALL
+        SELECT parent.id, parent.parent_id, parent.post_id, parent.author_id, ancestry.path || parent.id
+          FROM content.comments parent JOIN ancestry ON parent.id = ancestry.parent_id AND parent.post_id = ancestry.post_id
+         WHERE NOT parent.id = ANY(ancestry.path) AND cardinality(ancestry.path) < 64
+      ) SELECT ancestry.id, ancestry.parent_id, ancestry.post_id, ancestry.author_id, post.author_id AS post_author_id
+          FROM ancestry JOIN content.posts post ON post.id = ancestry.post_id ORDER BY ancestry.id`, [target.id]);
+  return result.rows;
+}
+
+/** Hold every record that visibility depends on until the feedback transaction ends. */
+async function lockFeedbackVisibility(client: DatabaseClient, target: FeedbackTarget, actor: string): Promise<void> {
+  const missing = target.type === 'post' ? 'post_not_found' : 'comment_not_found';
+  const before = await visibilityPath(client, target);
+  if (before.length === 0) throw new Error(missing);
+  const users = [...new Set([actor, ...before.flatMap(row => [row.author_id, row.post_author_id])])];
+  const accounts = await client.query<{ id: string; status: string; deleted_at: string | null }>(
+    'SELECT id, status, deleted_at FROM identity.users WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE', [users]);
+  if (!accounts.rows.some(row => row.id === actor.toLowerCase() && row.status === 'active' && row.deleted_at === null)) {
+    throw new Error('authentication_required');
+  }
+  await client.query('SELECT id FROM content.posts WHERE id = $1 FOR SHARE', [before[0].post_id]);
+  if (target.type === 'comment') {
+    await client.query('SELECT id FROM content.comments WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE', [before.map(row => row.id)]);
+  }
+  await client.query('SELECT post_id FROM content.content_declarations WHERE post_id = $1 FOR SHARE', [before[0].post_id]);
+  // The path could have changed while locks were being acquired. Fail closed and retry at the caller.
+  if (JSON.stringify(before) !== JSON.stringify(await visibilityPath(client, target))) throw new Error(missing);
+}
+
 export function feedbackTarget(type: string, rawId: string): FeedbackTarget {
   let id: string;
   try { id = decodeURIComponent(rawId); } catch { throw new Error('post_not_found'); }
@@ -98,11 +136,9 @@ export async function changeFeedback(client: DatabaseClient, input: {
   const { target, actor, channel, value, id } = input;
   feedbackInput(channel, value);
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`feedback:${actor.toLowerCase()}:${target.type}:${target.id.toLowerCase()}:${channel}`]);
-  const account = await client.query(
-    "SELECT id FROM identity.users WHERE id = $1 AND status = 'active' AND deleted_at IS NULL FOR SHARE", [actor]);
-  if (account.rowCount !== 1) throw new Error('authentication_required');
+  await lockFeedbackVisibility(client, target, actor);
   const author = await visibleTarget(client, target, actor);
-  if (author === actor) throw new Error('self_reaction_not_allowed');
+  if (author === actor.toLowerCase()) throw new Error('self_reaction_not_allowed');
   const column = target.type === 'post' ? 'post_id' : 'comment_id';
   const existing = await client.query<{ value: FeedbackValue }>(
     `SELECT value FROM social.contribution_feedback WHERE actor_id = $1 AND ${column} = $2 AND channel = $3`,

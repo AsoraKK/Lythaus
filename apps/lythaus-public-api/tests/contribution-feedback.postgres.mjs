@@ -13,7 +13,7 @@ const connectionString = privacyPostgresTarget(process.env.PLANETSCALE_PG17_TEST
 const users = Object.fromEntries(['author', 'alice', 'bob', 'blocked'].map(name => [name, { id: uuidv7() }]));
 const posts = Object.fromEntries(['public', 'private', 'followers', 'unlabelled', 'pending'].map(name => [name, uuidv7()]));
 const comments = { visible: uuidv7(), deleted: uuidv7(), pending: uuidv7(), blocked: uuidv7(), child: uuidv7() };
-let db, enabled, disabled;
+let db, enabled, disabled, afterFixtureQuery, onFixtureQuery;
 
 before(async () => {
   db = new pg.Client({ connectionString, ssl: false });
@@ -43,7 +43,11 @@ before(async () => {
   const bindings = { ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
     WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-feedback' },
     JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid, alg: 'ES256', use: 'sig' }] }) };
-  enabled = await nativePostgresProfileFixture(connectionString, { ...bindings, CONTRIBUTION_FEEDBACK_ENABLED: 'true' });
+  enabled = await nativePostgresProfileFixture(connectionString, { ...bindings, CONTRIBUTION_FEEDBACK_ENABLED: 'true' }, {
+    afterQuery: (...args) => afterFixtureQuery?.(...args),
+    onQuery: (...args) => onFixtureQuery?.(...args),
+    shouldTraceQueries: () => onFixtureQuery !== undefined,
+  });
   disabled = await nativePostgresProfileFixture(connectionString, bindings);
 });
 
@@ -96,6 +100,7 @@ test('authorization, visibility, blocked ancestry, self-votes and input validati
   for (const name of ['deleted', 'pending']) assert.equal((await call(enabled, 'alice', 'GET', path('comment', comments[name]))).status, 404, name);
   assert.equal((await call(enabled, null, 'PUT', path('post', posts.public, 'quality'), 'like')).status, 401);
   assert.equal((await call(enabled, 'author', 'PUT', path('post', posts.public, 'quality'), 'like')).status, 400);
+  await assert.rejects(mutate(db, users.author.id.toUpperCase(), target('post', posts.public), 'quality', 'like'), /self_reaction_not_allowed/);
   assert.equal((await call(enabled, 'bob', 'PUT', path('comment', comments.visible, 'emotion'), 'sad')).status, 400);
   assert.equal((await call(enabled, 'alice', 'PUT', path('post', posts.public, 'quality'), 'angry')).status, 400);
   const malformed = await enabled.dispatchFetch('https://api.lythaus.test' + path('post', posts.public, 'quality'), {
@@ -200,5 +205,123 @@ test('account deletion cannot overtake an in-flight feedback write', async () =>
   } finally {
     await writer.query('ROLLBACK').catch(() => {});
     await Promise.all([writer.end(), locker.end()]);
+  }
+});
+
+async function waitUntilBlocked(pid) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const result = await db.query('SELECT cardinality(pg_blocking_pids($1)) AS blockers', [pid]);
+    if (result.rows[0].blockers > 0) return;
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  assert.fail('expected transaction to wait for its visibility lock');
+}
+
+test('real block, mute and unfollow routes serialize against feedback visibility', async () => {
+  const writer = new pg.Client({ connectionString, ssl: false });
+  await writer.connect();
+  try {
+    for (const action of ['block', 'mute', 'unfollow']) {
+      if (action === 'unfollow') {
+        await db.query('INSERT INTO social.follows(follower_id, followed_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [users.alice.id, users.author.id]);
+      }
+      let release, locked;
+      const held = new Promise(resolve => { release = resolve; });
+      const acquired = new Promise(resolve => { locked = resolve; });
+      afterFixtureQuery = async input => {
+        if (input.text.includes('ORDER BY id FOR UPDATE') && input.text.includes('identity.users')) {
+          afterFixtureQuery = undefined;
+          locked();
+          await held;
+        }
+      };
+      const url = action === 'unfollow' ? `/api/follows/${users.author.id}` : `/api/${action}s`;
+      const request = enabled.dispatchFetch('https://api.lythaus.test' + url, {
+        method: action === 'unfollow' ? 'DELETE' : 'POST',
+        headers: { origin: 'https://app.lythaus.test', 'cf-connecting-ip': '2001:db8::cafe',
+          authorization: 'Bearer ' + users.alice.token, 'content-type': 'application/json', 'idempotency-key': uuidv7() },
+        ...(action === 'unfollow' ? {} : { body: JSON.stringify({ userId: users.author.id }) }),
+      });
+      await acquired;
+      const item = target('post', action === 'unfollow' ? posts.followers : posts.public);
+      const write = mutate(writer, users.alice.id, item, 'quality', 'like');
+      const rejection = assert.rejects(write, /post_not_found/);
+      await waitUntilBlocked(writer.processID);
+      release();
+      const response = await request;
+      assert.ok(response.ok, await response.text());
+      await rejection;
+      if (action === 'block') await db.query('DELETE FROM social.blocks WHERE blocker_id=$1 AND blocked_id=$2', [users.alice.id, users.author.id]);
+      if (action === 'mute') await db.query('DELETE FROM social.mutes WHERE muter_id=$1 AND muted_id=$2', [users.alice.id, users.author.id]);
+    }
+  } finally {
+    afterFixtureQuery = undefined;
+    await writer.query('ROLLBACK').catch(() => {});
+    await writer.end();
+  }
+});
+
+test('a real block waits for a feedback transaction already in progress', async () => {
+  const writer = new pg.Client({ connectionString, ssl: false });
+  await writer.connect();
+  try {
+    await writer.query('BEGIN');
+    await changeFeedback(writer, { target: target('post', posts.public), actor: users.alice.id,
+      channel: 'quality', value: 'like', id: uuidv7(), audit: async () => {} });
+    let started;
+    const waiting = new Promise(resolve => { started = resolve; });
+    onFixtureQuery = input => {
+      if (input.text.includes('ORDER BY id FOR UPDATE') && input.text.includes('identity.users')) {
+        onFixtureQuery = undefined;
+        started(input.backendPid);
+      }
+    };
+    const request = enabled.dispatchFetch('https://api.lythaus.test/api/blocks', {
+      method: 'POST', headers: { origin: 'https://app.lythaus.test', 'cf-connecting-ip': '2001:db8::cafe',
+        authorization: 'Bearer ' + users.alice.token, 'content-type': 'application/json', 'idempotency-key': uuidv7() },
+      body: JSON.stringify({ userId: users.author.id }),
+    });
+    await waitUntilBlocked(await waiting);
+    await writer.query('COMMIT');
+    const response = await request;
+    assert.ok(response.ok, await response.text());
+    assert.equal((await call(enabled, 'alice', 'GET', path('post', posts.public))).status, 404);
+  } finally {
+    onFixtureQuery = undefined;
+    await writer.query('ROLLBACK').catch(() => {});
+    await writer.end();
+    await db.query('DELETE FROM social.blocks WHERE blocker_id=$1 AND blocked_id=$2', [users.alice.id, users.author.id]);
+  }
+});
+
+test('ancestor moderation and feedback are serialized in both orders', async () => {
+  const parent = uuidv7(), child = uuidv7();
+  await db.query(`INSERT INTO content.comments(id,post_id,author_id,body,declared_creation_mode,moderation_state,parent_id,depth)
+    VALUES($1,$3,$4,'synthetic','human','allowed',NULL,0),($2,$3,$5,'synthetic','human','allowed',$1,1)`,
+  [parent, child, posts.public, users.bob.id, users.author.id]);
+  const writer = new pg.Client({ connectionString, ssl: false });
+  const moderator = new pg.Client({ connectionString, ssl: false });
+  await Promise.all([writer.connect(), moderator.connect()]);
+  try {
+    await moderator.query('BEGIN');
+    await moderator.query("UPDATE content.comments SET moderation_state='under_review' WHERE id=$1", [parent]);
+    const rejected = mutate(writer, users.alice.id, target('comment', child), 'quality', 'like');
+    const rejection = assert.rejects(rejected, /comment_not_found/);
+    await waitUntilBlocked(writer.processID);
+    await moderator.query('COMMIT');
+    await rejection;
+    assert.equal((await db.query('SELECT count(*)::int AS n FROM social.contribution_feedback WHERE comment_id=$1', [child])).rows[0].n, 0);
+    await db.query("UPDATE content.comments SET moderation_state='allowed' WHERE id=$1", [parent]);
+    await writer.query('BEGIN');
+    await changeFeedback(writer, { target: target('comment', child), actor: users.alice.id,
+      channel: 'quality', value: 'like', id: uuidv7(), audit: async () => {} });
+    const moderation = moderator.query("UPDATE content.comments SET moderation_state='under_review' WHERE id=$1", [parent]);
+    await waitUntilBlocked(moderator.processID);
+    await writer.query('COMMIT');
+    await moderation;
+    assert.equal((await call(enabled, 'alice', 'GET', path('comment', child))).status, 404);
+  } finally {
+    await Promise.all([writer.query('ROLLBACK').catch(() => {}), moderator.query('ROLLBACK').catch(() => {})]);
+    await Promise.all([writer.end(), moderator.end()]);
   }
 });

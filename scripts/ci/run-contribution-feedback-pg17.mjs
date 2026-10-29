@@ -33,6 +33,8 @@ try {
   await run(['scripts/ci/validate-planetscale-postgres17.mjs'], isolated.toString());
   await run(['--experimental-strip-types', '--experimental-test-module-mocks', '--test', '--test-concurrency=1',
     '--test-timeout=120000', 'apps/lythaus-public-api/tests/contribution-feedback.postgres.mjs'], isolated.toString());
+  await run(['--experimental-strip-types', '--experimental-test-module-mocks', '--test', '--test-concurrency=1',
+    '--test-timeout=120000', 'apps/lythaus-public-api/tests/contribution-feedback-privacy.workerd.mjs'], isolated.toString());
 } finally {
   if (created) await control.query(`DROP DATABASE ${database} WITH (FORCE)`);
   await control.end();

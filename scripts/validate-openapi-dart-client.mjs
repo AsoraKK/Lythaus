@@ -52,6 +52,8 @@ try {
     join(validationPackage, 'test/subscription_status500_response_test.dart'));
   cpSync(resolve('tests/contract/dart/reward_redemption_serialization_test.dart.fixture'),
     join(validationPackage, 'test/reward_redemption_serialization_test.dart'));
+  cpSync(resolve('tests/contract/dart/contribution_feedback_serialization_test.dart.fixture'),
+    join(validationPackage, 'test/contribution_feedback_serialization_test.dart'));
   // Keep the temporary validator on the verified compatible build toolchain.
   // analyzer 14.5 removed the contextFeatures setter used by build_runner 2.16.1.
   const manifestPath = join(validationPackage, 'pubspec.yaml');
@@ -63,7 +65,7 @@ try {
     '  build_runner: 2.16.1\n  analyzer: 14.4.0'));
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
-  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/owner_comments_serialization_test.dart', 'test/moderation_rereview_serialization_test.dart', 'test/subscription_status_test.dart', 'test/subscription_status_entitlements_test.dart', 'test/subscription_status401_response_test.dart', 'test/subscription_status500_response_test.dart', 'test/reward_redemption_serialization_test.dart']);
+  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/owner_comments_serialization_test.dart', 'test/moderation_rereview_serialization_test.dart', 'test/subscription_status_test.dart', 'test/subscription_status_entitlements_test.dart', 'test/subscription_status401_response_test.dart', 'test/subscription_status500_response_test.dart', 'test/reward_redemption_serialization_test.dart', 'test/contribution_feedback_serialization_test.dart']);
   run(['analyze', '--no-fatal-warnings']);
   run(['test', '--reporter', 'compact']);
 } finally {
