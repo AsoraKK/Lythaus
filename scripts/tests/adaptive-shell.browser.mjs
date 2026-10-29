@@ -32,7 +32,7 @@ const browser = await ({ chromium, webkit }[engine]).launch({ headless: true });
 const results = [];
 const scenarios = [];
 const snapshot = page => page.evaluate(() => JSON.parse(window.lythausNavigationSnapshot()));
-const nav = (page, name) => page.getByRole('button', { name: new RegExp(`^${name}(?:$|\\s+Tab)`) });
+const nav = (page, name) => page.getByRole('button', { name: new RegExp(`^${name}(?:$|\\s)`) });
 const waitForTwoFrames = page => page.evaluate(() => new Promise(resolve =>
   requestAnimationFrame(() => requestAnimationFrame(resolve))));
 try {
