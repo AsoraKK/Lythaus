@@ -59,7 +59,7 @@ function mockFetch(fixture = data(), alter = ({ body }) => body) {
     const kind = 'deployments';
     const page = Number(url.searchParams.get('page'));
     assert.ok(page === 1 || page === 2);
-    assert.equal(url.searchParams.get('per_page'), page === 1 ? '100' : '1');
+    assert.equal(url.searchParams.get('per_page'), page === 1 ? '25' : '1');
     assert.deepEqual([...url.searchParams.keys()].sort(), ['page', 'per_page']);
     const body = { success: true, result: [fixture[kind][page - 1]],
       result_info: { page, per_page: 1, total_pages: 2, total_count: 2 } };
@@ -95,10 +95,44 @@ test('missing hostname alias is inconclusive, never a release authorization', as
   assert.equal(result.match, null);
 });
 
+test('the deployment inventory uses 25 per page and reads every page in both snapshots', async () => {
+  const fixture = data();
+  const extraDeployments = Array.from({ length: 25 }, (_, index) => {
+    const part = (index + 2).toString(16).padStart(8, '0');
+    return { ...fixture.deployments[1], id: `${part}-0000-4000-8000-${part.padStart(12, '0')}`,
+      url: `https://${part}.lythaus-web.pages.dev`, aliases: [] };
+  });
+  const deployments = [fixture.deployments[0], ...extraDeployments];
+  const requestedPages = [];
+  const fetchImpl = async (rawUrl, options) => {
+    const url = new URL(rawUrl);
+    assert.equal(url.origin, 'https://api.cloudflare.com');
+    assert.equal(options.method, 'GET');
+    assert.equal(options.headers.authorization, `Bearer ${token}`);
+    if (url.pathname === apiPath) return Response.json({ success: true, result: fixture.project });
+    if (url.pathname === `${apiPath}/domains/app.lythaus.co`) return Response.json({ success: true, result: fixture.domain });
+    assert.equal(url.pathname, `${apiPath}/deployments`);
+    assert.equal(url.searchParams.get('per_page'), '25');
+    assert.deepEqual([...url.searchParams.keys()].sort(), ['page', 'per_page']);
+    const page = Number(url.searchParams.get('page'));
+    assert.ok(page === 1 || page === 2);
+    requestedPages.push(page);
+    const result = deployments.slice((page - 1) * 25, page * 25);
+    return Response.json({ success: true, result, result_info: { page, per_page: 25,
+      total_pages: 2, total_count: 26, count: result.length } });
+  };
+  const result = await collect(fetchImpl);
+  assert.equal(result.status, 'OBSERVED_UNIQUE_ALIAS');
+  assert.equal(result.authorization, 'NONE');
+  assert.equal(result.deploymentCount, 26);
+  assert.deepEqual(requestedPages, [1, 2, 1, 2]);
+});
+
 test('incomplete, changing, malformed and oversized pagination cannot produce an observation', async () => {
   for (const alter of [
     ({ kind, body }) => { if (kind === 'deployments') delete body.result_info; return body; },
     ({ kind, body }) => { if (kind === 'deployments') body.result_info.total_pages = 101; return body; },
+    ({ kind, body }) => { if (kind === 'deployments') body.result_info.per_page = 26; return body; },
     ({ kind, body }) => { if (kind === 'deployments') body.result_info.count = 0; return body; },
     ({ kind, body }) => { if (kind === 'deployments') body.result_info.count = '1'; return body; },
     ({ kind, page, body }) => { if (kind === 'deployments' && page === 2) body.result_info.page = 1; return body; },
@@ -145,7 +179,20 @@ test('missing deployment pagination metadata is reported precisely without provi
     return body;
   });
   await assert.rejects(collect(fetchImpl), error =>
-    error.code === 'pagination_metadata_missing' && !error.message.includes(secret));
+    error.code === 'pagination_metadata_missing' && error.requestStage === 'deployments' && !error.message.includes(secret));
+});
+
+test('HTTP failures identify only the fixed request stage without exposing provider content', async () => {
+  for (const [requestStage, failurePath] of [['project', apiPath], ['domain', `${apiPath}/domains/app.lythaus.co`],
+    ['deployments', `${apiPath}/deployments`]]) {
+    const fallback = mockFetch().fetchImpl;
+    const fetchImpl = async (url, options) => new URL(url).pathname === failurePath
+      ? new Response(JSON.stringify({ errors: [{ code: 1234, message: secret, details: { token } }] }), { status: 400 })
+      : fallback(url, options);
+    await assert.rejects(collect(fetchImpl), error => error.code === 'provider_read_failed'
+      && error.httpStatus === 400 && error.requestStage === requestStage
+      && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
+  }
 });
 
 test('provider failure and malformed bodies return fixed messages, never provider details', async () => {
@@ -195,10 +242,20 @@ test('the real command suppresses synthetic provider exceptions and refuses debu
       const result = spawnSync(process.execPath, ['--import', preload, script], { env: { ...env, ...extra }, encoding: 'utf8' });
       assert.equal(result.status, 1);
       assert.equal(result.stdout, '');
-      assert.deepEqual(JSON.parse(result.stderr), { status: 'BLOCKED', authorization: 'NONE', reason: expected });
+      const expectedOutput = { status: 'BLOCKED', authorization: 'NONE', reason: expected };
+      if (expected === 'provider_read_failed') expectedOutput.requestStage = 'project';
+      assert.deepEqual(JSON.parse(result.stderr), expectedOutput);
       assert.equal(result.stderr.includes(secret), false);
       assert.equal(result.stderr.includes(token), false);
     }
+    writeFileSync(preload, `globalThis.fetch = async () => new Response(${JSON.stringify(`${secret} ${token}`)}, { status: 400 });\n`);
+    const result = spawnSync(process.execPath, ['--import', preload, script], { env, encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.deepEqual(JSON.parse(result.stderr), { status: 'BLOCKED', authorization: 'NONE', reason: 'provider_read_failed',
+      httpStatus: 400, requestStage: 'project' });
+    assert.equal(result.stderr.includes(secret), false);
+    assert.equal(result.stderr.includes(token), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
