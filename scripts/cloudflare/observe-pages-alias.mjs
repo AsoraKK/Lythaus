@@ -7,13 +7,16 @@ const API = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/p
 const MAX_RESPONSE = 8 * 1024 * 1024;
 const MAX_OBSERVATION = 32 * 1024 * 1024;
 const MAX_PAGES = 100;
+const DEPLOYMENTS_PER_PAGE = 25;
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const REQUEST_STAGES = new Set(['project', 'domain', 'deployments']);
 
 class ObservationFailure extends Error {
-  constructor(code, httpStatus) {
+  constructor(code, httpStatus, requestStage) {
     super(code);
     this.code = code;
     this.httpStatus = httpStatus;
+    this.requestStage = REQUEST_STAGES.has(requestStage) ? requestStage : undefined;
   }
 }
 
@@ -86,7 +89,7 @@ function deploymentResult(item) {
 function pageResult(data, projectItem) {
   const info = data?.result_info;
   if (info == null) throw new ObservationFailure('pagination_metadata_missing');
-  if (!Array.isArray(data?.result) || data.result.length > 100) throw new ObservationFailure('provider_response_invalid');
+  if (!Array.isArray(data?.result) || data.result.length > DEPLOYMENTS_PER_PAGE) throw new ObservationFailure('provider_response_invalid');
   if (info.count !== undefined && (!Number.isSafeInteger(info.count) || info.count !== data.result.length)) {
     throw new ObservationFailure('provider_response_invalid');
   }
@@ -94,16 +97,16 @@ function pageResult(data, projectItem) {
     totalCount: integer(info?.total_count), records: data.result.map(projectItem) };
 }
 
-async function request(url, token, fetchImpl, project, budget) {
+async function request(url, token, fetchImpl, project, budget, requestStage) {
   let response;
   try {
     response = await fetchImpl(url, { method: 'GET', headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
       redirect: 'error', signal: AbortSignal.timeout(15000) });
-  } catch { throw new ObservationFailure('provider_read_failed'); }
+  } catch { throw new ObservationFailure('provider_read_failed', undefined, requestStage); }
   if (!response?.ok || response.status !== 200 || response.redirected) {
     const status = Number.isInteger(response?.status) && response.status >= 400 && response.status <= 599
       ? response.status : undefined;
-    throw new ObservationFailure('provider_read_failed', status);
+    throw new ObservationFailure('provider_read_failed', status, requestStage);
   }
   let payload;
   try {
@@ -111,22 +114,24 @@ async function request(url, token, fetchImpl, project, budget) {
     if (payload?.success !== true) throw new ObservationFailure('provider_response_invalid');
     return project(payload);
   } catch (error) {
-    if (error instanceof ObservationFailure && ['pagination_metadata_missing', 'observation_limit_exceeded'].includes(error.code)) throw error;
-    throw new ObservationFailure('provider_response_invalid');
+    if (error instanceof ObservationFailure && ['pagination_metadata_missing', 'observation_limit_exceeded'].includes(error.code)) {
+      throw new ObservationFailure(error.code, undefined, requestStage);
+    }
+    throw new ObservationFailure('provider_response_invalid', undefined, requestStage);
   }
   finally { payload = undefined; }
 }
 
 async function pages(endpoint, token, fetchImpl, projectItem, budget) {
   const collected = [];
-  let totalPages = 1, perPage = 100, totalCount;
+  let totalPages = 1, perPage = DEPLOYMENTS_PER_PAGE, totalCount;
   for (let page = 1; page <= totalPages; page++) {
     const url = `${API}/${endpoint}?page=${page}&per_page=${perPage}`;
-    const item = await request(url, token, fetchImpl, data => pageResult(data, projectItem), budget);
-    if (item.page !== page || item.perPage < 1 || item.perPage > 100
+    const item = await request(url, token, fetchImpl, data => pageResult(data, projectItem), budget, 'deployments');
+    if (item.page !== page || item.perPage < 1 || item.perPage > DEPLOYMENTS_PER_PAGE
       || item.totalPages < 1 || item.totalPages > MAX_PAGES || item.totalCount < 0
       || (page > 1 && (item.totalPages !== totalPages || item.totalCount !== totalCount || item.perPage !== perPage))) {
-      throw new ObservationFailure('pagination_incomplete');
+      throw new ObservationFailure('pagination_incomplete', undefined, 'deployments');
     }
     totalPages = item.totalPages;
     totalCount = item.totalCount;
@@ -137,8 +142,8 @@ async function pages(endpoint, token, fetchImpl, projectItem, budget) {
 }
 
 async function snapshot(token, fetchImpl, now, budget) {
-  const project = await request(API, token, fetchImpl, projectResult, budget);
-  const domain = await request(`${API}/domains/app.lythaus.co`, token, fetchImpl, data => domainResult(data?.result), budget);
+  const project = await request(API, token, fetchImpl, projectResult, budget, 'project');
+  const domain = await request(`${API}/domains/app.lythaus.co`, token, fetchImpl, data => domainResult(data?.result), budget, 'domain');
   const deploymentPages = await pages('deployments', token, fetchImpl, deploymentResult, budget);
   return { at: now(), project, domain, deploymentPages };
 }
@@ -192,6 +197,7 @@ async function main() {
     const reason = error instanceof ObservationFailure && allowed.has(error.code) ? error.code : 'diagnostic_failed';
     const output = { status: 'BLOCKED', authorization: 'NONE', reason };
     if (error instanceof ObservationFailure && Number.isInteger(error.httpStatus)) output.httpStatus = error.httpStatus;
+    if (error instanceof ObservationFailure && REQUEST_STAGES.has(error.requestStage)) output.requestStage = error.requestStage;
     console.error(JSON.stringify(output));
     process.exitCode = 1;
   }
