@@ -35,8 +35,49 @@ test('absence is inconclusive and a lookalike hostname is not a match', () => {
     assert.equal(result.status, 'INCONCLUSIVE');
     assert.equal(result.match, null);
     assert.equal(result.authorization, 'NONE');
+    assert.equal(result.reason, 'hostname_alias_absent');
     assert.doesNotMatch(JSON.stringify(result), /evil/);
   }
+});
+
+test('nullable aliases make the inventory inconclusive even when another deployment matches', () => {
+  const input = pair();
+  for (const part of [input.first, input.second]) {
+    part.deploymentPages = [page([deployment(), deployment({ id: otherId, environment: 'preview',
+      url: 'https://22222222.lythaus-web.pages.dev', aliases: null })])];
+  }
+  const result = reducePagesAliasEvidence(input);
+  assert.equal(result.status, 'INCONCLUSIVE');
+  assert.equal(result.reason, 'aliases_unavailable');
+  assert.equal(result.authorization, 'NONE');
+  assert.equal(result.match, null);
+  assert.equal(result.deploymentCount, 2);
+  const changed = structuredClone(input);
+  changed.second.deploymentPages[0].records[1].aliases = [];
+  assert.throws(() => reducePagesAliasEvidence(changed), /observation_changed/);
+  const malformed = structuredClone(input);
+  malformed.first.deploymentPages[0].records[1].url = 'https://example.test';
+  assert.throws(() => reducePagesAliasEvidence(malformed), /deployment_invalid/);
+  const ambiguous = structuredClone(input);
+  for (const part of [ambiguous.first, ambiguous.second]) {
+    part.deploymentPages[0].records.push(deployment({ id: '33333333-3333-4333-8333-333333333333',
+      url: 'https://33333333.lythaus-web.pages.dev' }));
+    part.deploymentPages[0].totalCount = 3;
+  }
+  assert.throws(() => reducePagesAliasEvidence(ambiguous), /alias_match_ambiguous/);
+});
+
+test('null, missing, empty and malformed aliases remain distinct', () => {
+  const unknown = pair();
+  for (const part of [unknown.first, unknown.second]) part.deploymentPages[0].records[0].aliases = null;
+  assert.equal(reducePagesAliasEvidence(unknown).reason, 'aliases_unavailable');
+  const empty = pair();
+  for (const part of [empty.first, empty.second]) part.deploymentPages[0].records[0].aliases = [];
+  assert.equal(reducePagesAliasEvidence(empty).reason, 'hostname_alias_absent');
+  const missing = pair(); delete missing.first.deploymentPages[0].records[0].aliases;
+  assert.throws(() => reducePagesAliasEvidence(missing), /unexpected_or_sensitive_input_field/);
+  const wrongType = pair(); wrongType.first.deploymentPages[0].records[0].aliases = {};
+  assert.throws(() => reducePagesAliasEvidence(wrongType), /deployment_invalid/);
 });
 
 test('target-host paths or trailing dots fail even beside an exact alias', () => {

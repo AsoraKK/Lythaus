@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { reducePagesAliasEvidence } from './reduce-pages-alias-evidence.mjs';
+import { diagnosePagesAliasEvidence, reducePagesAliasEvidence } from './reduce-pages-alias-evidence.mjs';
 
 const ACCOUNT_ID = 'e5b7ae46e04698f507b7e4b3d4ef1af0';
 const API = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/lythaus-web`;
@@ -12,7 +12,7 @@ const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const REQUEST_STAGES = new Set(['project', 'domain', 'deployments']);
 const RESPONSE_DETAILS = new Set([
   'body_missing', 'body_too_large', 'body_invalid_json', 'body_unreadable', 'envelope_invalid',
-  'project_id_invalid', 'project_name_invalid', 'project_branch_invalid', 'project_subdomain_invalid',
+  'project_id_invalid', 'project_name_invalid', 'project_branch_invalid', 'project_subdomain_invalid', 'project_subdomain_missing',
   'domain_name_invalid', 'domain_status_invalid', 'result_invalid', 'result_too_large',
   'pagination_info_missing', 'pagination_info_invalid', 'pagination_page_missing', 'pagination_page_invalid',
   'pagination_per_page_missing', 'pagination_per_page_invalid', 'pagination_total_count_missing',
@@ -21,18 +21,25 @@ const RESPONSE_DETAILS = new Set([
   'deployment_environment_invalid', 'deployment_is_skipped_invalid', 'deployment_stage_name_invalid',
   'deployment_stage_status_invalid', 'deployment_branch_invalid', 'deployment_commit_sha_invalid',
   'deployment_commit_dirty_invalid', 'deployment_url_invalid', 'deployment_aliases_invalid',
+  'deployment_fields_invalid', 'deployment_aliases_missing', 'deployment_aliases_type_invalid',
+  'deployment_aliases_limit_exceeded', 'deployment_alias_type_invalid', 'deployment_alias_too_long',
+  'deployment_record_invalid', 'deployment_id_format_invalid', 'deployment_id_duplicate', 'deployment_project_binding_invalid',
+  'deployment_environment_value_invalid', 'deployment_stage_name_value_invalid', 'deployment_stage_status_value_invalid',
+  'deployment_branch_format_invalid', 'deployment_commit_sha_format_invalid', 'deployment_url_format_invalid',
+  'deployment_url_duplicate', 'deployment_alias_duplicate', 'deployment_alias_url_invalid',
   'unexpected_or_sensitive_input_field', 'pagination_incomplete', 'aliases_invalid', 'target_alias_ambiguous',
   'deployment_invalid', 'timestamp_invalid', 'project_binding_invalid', 'domain_binding_invalid', 'domain_inactive',
   'alias_match_invalid', 'alias_match_ambiguous', 'observation_changed',
 ]);
 
 class ObservationFailure extends Error {
-  constructor(code, httpStatus, requestStage, detail) {
+  constructor(code, httpStatus, requestStage, detail, issues) {
     super(code);
     this.code = code;
     this.httpStatus = httpStatus;
     this.requestStage = REQUEST_STAGES.has(requestStage) ? requestStage : undefined;
     this.detail = RESPONSE_DETAILS.has(detail) ? detail : undefined;
+    this.issues = Array.isArray(issues) ? [...new Set(issues.filter(issue => RESPONSE_DETAILS.has(issue)))].sort() : undefined;
   }
 }
 
@@ -88,6 +95,7 @@ async function readJson(response, budget) {
 
 function projectResult(data) {
   const project = data?.result;
+  if (project?.subdomain === undefined) throw new ObservationFailure('project_metadata_missing', undefined, undefined, 'project_subdomain_missing');
   return { accountId: ACCOUNT_ID, id: string(project?.id, 'project_id_invalid'), name: string(project?.name, 'project_name_invalid'),
     productionBranch: string(project?.production_branch, 'project_branch_invalid'), subdomain: string(project?.subdomain, 'project_subdomain_invalid') };
 }
@@ -96,15 +104,43 @@ function domainResult(item) {
   return { name: string(item?.name, 'domain_name_invalid'), status: string(item?.status, 'domain_status_invalid') };
 }
 
-function deploymentResult(item) {
+function deploymentResult(item, issues) {
   const metadata = item?.deployment_trigger?.metadata, stage = item?.latest_stage;
-  if (!Array.isArray(item?.aliases) || item.aliases.length > 1000) throw new ObservationFailure('provider_response_invalid', undefined, undefined, 'deployment_aliases_invalid');
-  return { id: string(item?.id, 'deployment_id_invalid'), projectId: string(item?.project_id, 'deployment_project_id_invalid'),
-    projectName: string(item?.project_name, 'deployment_project_name_invalid'), environment: string(item?.environment, 'deployment_environment_invalid'),
-    isSkipped: optionalBoolean(item?.is_skipped, 'deployment_is_skipped_invalid'), stageName: optionalString(stage?.name, 'deployment_stage_name_invalid'),
-    stageStatus: optionalString(stage?.status, 'deployment_stage_status_invalid'), branch: optionalString(metadata?.branch, 'deployment_branch_invalid'),
-    commitSha: optionalString(metadata?.commit_hash, 'deployment_commit_sha_invalid'), commitDirty: optionalBoolean(metadata?.commit_dirty, 'deployment_commit_dirty_invalid'),
-    url: string(item?.url, 'deployment_url_invalid'), aliases: item.aliases.map(value => string(value, 'deployment_aliases_invalid')) };
+  let invalid = false;
+  function field(fn) {
+    try { return fn(); }
+    catch (error) {
+      if (!(error instanceof ObservationFailure) || !RESPONSE_DETAILS.has(error.detail)) throw error;
+      issues.add(error.detail);
+      invalid = true;
+      return null;
+    }
+  }
+  const aliases = field(() => {
+    if (item?.aliases === null) return null;
+    if (item?.aliases === undefined) throw new ObservationFailure('provider_response_invalid', undefined, undefined, 'deployment_aliases_missing');
+    if (!Array.isArray(item.aliases)) throw new ObservationFailure('provider_response_invalid', undefined, undefined, 'deployment_aliases_type_invalid');
+    if (item.aliases.length > 1000) throw new ObservationFailure('provider_response_invalid', undefined, undefined, 'deployment_aliases_limit_exceeded');
+    let aliasInvalid = false;
+    for (const value of item.aliases) {
+      if (typeof value !== 'string') { issues.add('deployment_alias_type_invalid'); aliasInvalid = true; }
+      else if (value.length > 2048) { issues.add('deployment_alias_too_long'); aliasInvalid = true; }
+    }
+    if (aliasInvalid) { invalid = true; return null; }
+    return item.aliases;
+  });
+  const result = { id: field(() => string(item?.id, 'deployment_id_invalid')),
+    projectId: field(() => string(item?.project_id, 'deployment_project_id_invalid')),
+    projectName: field(() => string(item?.project_name, 'deployment_project_name_invalid')),
+    environment: field(() => string(item?.environment, 'deployment_environment_invalid')),
+    isSkipped: field(() => optionalBoolean(item?.is_skipped, 'deployment_is_skipped_invalid')),
+    stageName: field(() => optionalString(stage?.name, 'deployment_stage_name_invalid')),
+    stageStatus: field(() => optionalString(stage?.status, 'deployment_stage_status_invalid')),
+    branch: field(() => optionalString(metadata?.branch, 'deployment_branch_invalid')),
+    commitSha: field(() => optionalString(metadata?.commit_hash, 'deployment_commit_sha_invalid')),
+    commitDirty: field(() => optionalBoolean(metadata?.commit_dirty, 'deployment_commit_dirty_invalid')),
+    url: field(() => string(item?.url, 'deployment_url_invalid')), aliases };
+  return invalid ? null : result;
 }
 
 function pageResult(data, projectItem) {
@@ -149,7 +185,7 @@ async function request(url, token, fetchImpl, project, budget, requestStage) {
     if (payload?.success !== true) throw new ObservationFailure('provider_response_invalid', undefined, undefined, 'envelope_invalid');
     return project(payload);
   } catch (error) {
-    if (error instanceof ObservationFailure && ['provider_response_invalid', 'pagination_metadata_missing',
+    if (error instanceof ObservationFailure && ['provider_response_invalid', 'project_metadata_missing', 'pagination_metadata_missing',
       'pagination_incomplete', 'observation_limit_exceeded'].includes(error.code)) {
       throw new ObservationFailure(error.code, undefined, requestStage, error.detail);
     }
@@ -160,20 +196,29 @@ async function request(url, token, fetchImpl, project, budget, requestStage) {
 
 async function pages(endpoint, token, fetchImpl, projectItem, budget) {
   const collected = [];
+  const issues = new Set();
   let totalPages = 1, perPage = DEPLOYMENTS_PER_PAGE, totalCount;
-  for (let page = 1; page <= totalPages; page++) {
-    const url = `${API}/${endpoint}?page=${page}&per_page=${perPage}`;
-    const item = await request(url, token, fetchImpl, data => pageResult(data, projectItem), budget, 'deployments');
-    if (item.page !== page || item.perPage < 1 || item.perPage > DEPLOYMENTS_PER_PAGE
-      || item.totalPages < 1 || item.totalPages > MAX_PAGES || item.totalCount < 0
-      || (page > 1 && (item.totalPages !== totalPages || item.totalCount !== totalCount || item.perPage !== perPage))) {
-      throw new ObservationFailure('pagination_incomplete', undefined, 'deployments');
+  try {
+    for (let page = 1; page <= totalPages; page++) {
+      const url = `${API}/${endpoint}?page=${page}&per_page=${perPage}`;
+      const item = await request(url, token, fetchImpl, data => pageResult(data, value => projectItem(value, issues)), budget, 'deployments');
+      if (item.page !== page || item.perPage < 1 || item.perPage > DEPLOYMENTS_PER_PAGE
+        || item.totalPages < 1 || item.totalPages > MAX_PAGES || item.totalCount < 0
+        || (page > 1 && (item.totalPages !== totalPages || item.totalCount !== totalCount || item.perPage !== perPage))) {
+        throw new ObservationFailure('pagination_incomplete', undefined, 'deployments');
+      }
+      totalPages = item.totalPages;
+      totalCount = item.totalCount;
+      perPage = item.perPage;
+      collected.push(item);
     }
-    totalPages = item.totalPages;
-    totalCount = item.totalCount;
-    perPage = item.perPage;
-    collected.push(item);
+  } catch (error) {
+    if (error instanceof ObservationFailure && issues.size) {
+      throw new ObservationFailure(error.code, error.httpStatus, error.requestStage, error.detail, [...issues]);
+    }
+    throw error;
   }
+  if (issues.size) throw new ObservationFailure('provider_response_invalid', undefined, 'deployments', 'deployment_fields_invalid', [...issues]);
   return collected;
 }
 
@@ -198,7 +243,11 @@ export async function collectPagesAliasEvidence({ token, sourceSha, runId, runAt
   const completedAt = now();
   let observation;
   try { observation = reducePagesAliasEvidence({ first, second }); }
-  catch (error) { throw new ObservationFailure('evidence_invalid', undefined, undefined, error?.message); }
+  catch (error) {
+    let issues;
+    try { issues = diagnosePagesAliasEvidence({ first, second }); } catch { /* remain blocked without diagnostics */ }
+    throw new ObservationFailure('evidence_invalid', undefined, undefined, error?.message, issues);
+  }
   if (typeof startedAt !== 'string' || !ISO_UTC.test(startedAt) || !Number.isFinite(Date.parse(startedAt))
     || new Date(startedAt).toISOString() !== startedAt
     || typeof completedAt !== 'string' || !ISO_UTC.test(completedAt) || !Number.isFinite(Date.parse(completedAt))
@@ -228,13 +277,14 @@ async function main() {
       sourceSha: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT });
     console.log(JSON.stringify(result));
   } catch (error) {
-    const allowed = new Set(['diagnostic_context_invalid', 'provider_read_failed', 'provider_response_invalid',
+    const allowed = new Set(['diagnostic_context_invalid', 'provider_read_failed', 'provider_response_invalid', 'project_metadata_missing',
       'pagination_metadata_missing', 'pagination_incomplete', 'observation_limit_exceeded', 'evidence_invalid']);
     const reason = error instanceof ObservationFailure && allowed.has(error.code) ? error.code : 'diagnostic_failed';
     const output = { status: 'BLOCKED', authorization: 'NONE', reason };
     if (error instanceof ObservationFailure && Number.isInteger(error.httpStatus)) output.httpStatus = error.httpStatus;
     if (error instanceof ObservationFailure && REQUEST_STAGES.has(error.requestStage)) output.requestStage = error.requestStage;
     if (error instanceof ObservationFailure && RESPONSE_DETAILS.has(error.detail)) output.detail = error.detail;
+    if (error instanceof ObservationFailure && error.issues?.length) output.issues = error.issues;
     console.error(JSON.stringify(output));
     process.exitCode = 1;
   }
