@@ -95,7 +95,7 @@ test('missing hostname alias is inconclusive, never a release authorization', as
   assert.equal(result.match, null);
 });
 
-test('the deployment inventory uses 25 per page and reads every page in both snapshots', async () => {
+test('the deployment inventory reads every page with or without optional total_pages', async () => {
   const fixture = data();
   const extraDeployments = Array.from({ length: 25 }, (_, index) => {
     const part = (index + 2).toString(16).padStart(8, '0');
@@ -103,29 +103,80 @@ test('the deployment inventory uses 25 per page and reads every page in both sna
       url: `https://${part}.lythaus-web.pages.dev`, aliases: [] };
   });
   const deployments = [fixture.deployments[0], ...extraDeployments];
-  const requestedPages = [];
-  const fetchImpl = async (rawUrl, options) => {
-    const url = new URL(rawUrl);
-    assert.equal(url.origin, 'https://api.cloudflare.com');
-    assert.equal(options.method, 'GET');
-    assert.equal(options.headers.authorization, `Bearer ${token}`);
-    if (url.pathname === apiPath) return Response.json({ success: true, result: fixture.project });
-    if (url.pathname === `${apiPath}/domains/app.lythaus.co`) return Response.json({ success: true, result: fixture.domain });
-    assert.equal(url.pathname, `${apiPath}/deployments`);
-    assert.equal(url.searchParams.get('per_page'), '25');
-    assert.deepEqual([...url.searchParams.keys()].sort(), ['page', 'per_page']);
-    const page = Number(url.searchParams.get('page'));
-    assert.ok(page === 1 || page === 2);
-    requestedPages.push(page);
-    const result = deployments.slice((page - 1) * 25, page * 25);
-    return Response.json({ success: true, result, result_info: { page, per_page: 25,
-      total_pages: 2, total_count: 26, count: result.length } });
-  };
-  const result = await collect(fetchImpl);
-  assert.equal(result.status, 'OBSERVED_UNIQUE_ALIAS');
-  assert.equal(result.authorization, 'NONE');
-  assert.equal(result.deploymentCount, 26);
-  assert.deepEqual(requestedPages, [1, 2, 1, 2]);
+  for (const includeTotalPages of [true, false]) {
+    const requestedPages = [];
+    const fetchImpl = async (rawUrl, options) => {
+      const url = new URL(rawUrl);
+      assert.equal(url.origin, 'https://api.cloudflare.com');
+      assert.equal(options.method, 'GET');
+      assert.equal(options.headers.authorization, `Bearer ${token}`);
+      if (url.pathname === apiPath) return Response.json({ success: true, result: fixture.project });
+      if (url.pathname === `${apiPath}/domains/app.lythaus.co`) return Response.json({ success: true, result: fixture.domain });
+      assert.equal(url.pathname, `${apiPath}/deployments`);
+      assert.equal(url.searchParams.get('per_page'), '25');
+      assert.deepEqual([...url.searchParams.keys()].sort(), ['page', 'per_page']);
+      const page = Number(url.searchParams.get('page'));
+      assert.ok(page === 1 || page === 2);
+      requestedPages.push(page);
+      const result = deployments.slice((page - 1) * 25, page * 25);
+      const resultInfo = { page, per_page: 25, total_count: 26, count: result.length };
+      if (includeTotalPages) resultInfo.total_pages = 2;
+      return Response.json({ success: true, result, result_info: resultInfo });
+    };
+    const result = await collect(fetchImpl);
+    assert.equal(result.status, 'OBSERVED_UNIQUE_ALIAS');
+    assert.equal(result.authorization, 'NONE');
+    assert.equal(result.deploymentCount, 26);
+    assert.deepEqual(requestedPages, [1, 2, 1, 2]);
+  }
+});
+
+test('derived page counts do not accept missing or contradictory inventory evidence', async () => {
+  const mutations = [
+    [{ page: undefined }, 'pagination_metadata_missing', 'pagination_page_missing'],
+    [{ per_page: undefined }, 'pagination_metadata_missing', 'pagination_per_page_missing'],
+    [{ total_count: undefined }, 'pagination_metadata_missing', 'pagination_total_count_missing'],
+    [{ total_pages: null }, 'provider_response_invalid', 'pagination_total_pages_invalid'],
+    [{ total_pages: 3 }, 'pagination_incomplete', undefined],
+    [{ per_page: 0, total_pages: undefined }, 'pagination_incomplete', undefined],
+    [{ total_count: -1, total_pages: undefined }, 'pagination_incomplete', undefined],
+  ];
+  for (const [change, code, detail] of mutations) {
+    const { fetchImpl } = mockFetch(data(), ({ kind, body }) => {
+      if (kind === 'deployments') Object.assign(body.result_info, change);
+      return body;
+    });
+    await assert.rejects(collect(fetchImpl), error => error.code === code && error.requestStage === 'deployments'
+      && error.detail === detail && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
+  }
+  const { fetchImpl } = mockFetch(data(), ({ kind, page, body }) => {
+    if (kind === 'deployments') {
+      delete body.result_info.total_pages;
+      if (page === 2) body.result_info.total_count = 3;
+    }
+    return body;
+  });
+  await assert.rejects(collect(fetchImpl), error => error.code === 'pagination_incomplete');
+});
+
+test('deployment response failures expose only fixed field categories', async () => {
+  const cases = [
+    [body => { body.success = false; }, 'envelope_invalid'],
+    [body => { body.result = { private_value: secret }; }, 'result_invalid'],
+    [body => { body.result_info.count = secret; }, 'pagination_count_invalid'],
+    [body => { body.result[0].id = [secret]; }, 'deployment_id_invalid'],
+    [body => { body.result[0].project_id = [secret]; }, 'deployment_project_id_invalid'],
+    [body => { body.result[0].environment = [secret]; }, 'deployment_environment_invalid'],
+    [body => { body.result[0].aliases = [{ private_value: secret }]; }, 'deployment_aliases_invalid'],
+    [body => { body.result[0].url = [secret]; }, 'deployment_url_invalid'],
+    [body => { body.result[0].deployment_trigger.metadata.commit_dirty = secret; }, 'deployment_commit_dirty_invalid'],
+  ];
+  for (const [mutate, detail] of cases) {
+    const { fetchImpl } = mockFetch(data(), ({ kind, body }) => { if (kind === 'deployments') mutate(body); return body; });
+    await assert.rejects(collect(fetchImpl), error => error.code === 'provider_response_invalid'
+      && error.requestStage === 'deployments' && error.detail === detail
+      && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
+  }
 });
 
 test('incomplete, changing, malformed and oversized pagination cannot produce an observation', async () => {
@@ -256,6 +307,21 @@ test('the real command suppresses synthetic provider exceptions and refuses debu
       httpStatus: 400, requestStage: 'project' });
     assert.equal(result.stderr.includes(secret), false);
     assert.equal(result.stderr.includes(token), false);
+    const fixture = data();
+    fixture.deployments[0].aliases = [{ private_value: secret }];
+    writeFileSync(preload, `const fixture = ${JSON.stringify(fixture)};\n` +
+      `globalThis.fetch = async raw => { const url = new URL(raw);\n` +
+      `if (url.pathname.endsWith('/domains/app.lythaus.co')) return Response.json({success:true,result:fixture.domain});\n` +
+      `if (url.pathname.endsWith('/deployments')) return Response.json({success:true,result:[fixture.deployments[0]],` +
+      `result_info:{page:1,per_page:25,total_count:1}});\n` +
+      `return Response.json({success:true,result:fixture.project}); };\n`);
+    const malformed = spawnSync(process.execPath, ['--import', preload, script], { env, encoding: 'utf8' });
+    assert.equal(malformed.status, 1);
+    assert.equal(malformed.stdout, '');
+    assert.deepEqual(JSON.parse(malformed.stderr), { status: 'BLOCKED', authorization: 'NONE', reason: 'provider_response_invalid',
+      requestStage: 'deployments', detail: 'deployment_aliases_invalid' });
+    assert.equal(malformed.stderr.includes(secret), false);
+    assert.equal(malformed.stderr.includes(token), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
