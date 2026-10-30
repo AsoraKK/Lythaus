@@ -93,6 +93,22 @@ test('missing hostname alias is inconclusive, never a release authorization', as
   assert.equal(result.status, 'INCONCLUSIVE');
   assert.equal(result.authorization, 'NONE');
   assert.equal(result.match, null);
+  assert.equal(result.reason, 'hostname_alias_absent');
+});
+
+test('nullable aliases remain unknown even beside a known target match', async () => {
+  const fixture = data();
+  fixture.deployments[1].aliases = null;
+  const { fetchImpl, calls } = mockFetch(fixture);
+  const result = await collect(fetchImpl);
+  assert.equal(result.status, 'INCONCLUSIVE');
+  assert.equal(result.reason, 'aliases_unavailable');
+  assert.equal(result.authorization, 'NONE');
+  assert.equal(result.match, null);
+  assert.equal(result.deploymentCount, 2);
+  assert.equal(calls.length, 8);
+  assert.equal(JSON.stringify(result).includes(secret), false);
+  assert.equal(JSON.stringify(result).includes(token), false);
 });
 
 test('the deployment inventory reads every page with or without optional total_pages', async () => {
@@ -167,16 +183,81 @@ test('deployment response failures expose only fixed field categories', async ()
     [body => { body.result[0].id = [secret]; }, 'deployment_id_invalid'],
     [body => { body.result[0].project_id = [secret]; }, 'deployment_project_id_invalid'],
     [body => { body.result[0].environment = [secret]; }, 'deployment_environment_invalid'],
-    [body => { body.result[0].aliases = [{ private_value: secret }]; }, 'deployment_aliases_invalid'],
+    [body => { body.result[0].aliases = [{ private_value: secret }]; }, 'deployment_alias_type_invalid'],
     [body => { body.result[0].url = [secret]; }, 'deployment_url_invalid'],
     [body => { body.result[0].deployment_trigger.metadata.commit_dirty = secret; }, 'deployment_commit_dirty_invalid'],
   ];
   for (const [mutate, detail] of cases) {
     const { fetchImpl } = mockFetch(data(), ({ kind, body }) => { if (kind === 'deployments') mutate(body); return body; });
     await assert.rejects(collect(fetchImpl), error => error.code === 'provider_response_invalid'
-      && error.requestStage === 'deployments' && error.detail === detail
+      && error.requestStage === 'deployments'
+      && (error.detail === detail || (error.detail === 'deployment_fields_invalid' && error.issues.includes(detail)))
       && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
   }
+});
+
+test('malformed deployment categories are gathered across all bounded pages without partial evidence', async () => {
+  const fixture = data();
+  delete fixture.deployments[0].aliases;
+  fixture.deployments[0].id = [secret];
+  fixture.deployments[1].aliases = [secret.repeat(200), { leaked: token }];
+  fixture.deployments[1].url = [secret];
+  fixture.deployments[1].deployment_trigger.metadata.commit_dirty = secret;
+  const { fetchImpl, calls } = mockFetch(fixture);
+  await assert.rejects(collect(fetchImpl), error => error.code === 'provider_response_invalid'
+    && error.requestStage === 'deployments' && error.detail === 'deployment_fields_invalid'
+    && JSON.stringify(error.issues) === JSON.stringify(['deployment_alias_too_long', 'deployment_alias_type_invalid',
+      'deployment_aliases_missing', 'deployment_commit_dirty_invalid', 'deployment_id_invalid', 'deployment_url_invalid'])
+    && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
+  assert.deepEqual(calls.slice(-2), [`${apiPath}/deployments?page=1&per_page=25`, `${apiPath}/deployments?page=2&per_page=1`]);
+});
+
+test('a null alias list cannot hide malformed evidence on another page', async () => {
+  const fixture = data();
+  fixture.deployments[0].aliases = null;
+  fixture.deployments[1].aliases = { value: secret };
+  await assert.rejects(collect(mockFetch(fixture).fetchImpl), error => error.code === 'provider_response_invalid'
+    && error.detail === 'deployment_fields_invalid' && error.issues.includes('deployment_aliases_type_invalid')
+    && !JSON.stringify(error).includes(secret));
+});
+
+test('later page failures retain earlier fixed categories while remaining blocked', async () => {
+  const fixture = data();
+  delete fixture.deployments[0].aliases;
+  const changing = mockFetch(fixture, ({ kind, page, body }) => {
+    if (kind === 'deployments' && page === 2) body.result_info.total_count = 3;
+    return body;
+  });
+  await assert.rejects(collect(changing.fetchImpl), error => error.code === 'pagination_incomplete'
+    && error.requestStage === 'deployments' && error.issues.includes('deployment_aliases_missing')
+    && !JSON.stringify(error).includes(secret));
+  const fallback = mockFetch(fixture).fetchImpl;
+  const unavailable = async (rawUrl, options) => {
+    const url = new URL(rawUrl);
+    if (url.pathname.endsWith('/deployments') && url.searchParams.get('page') === '2') {
+      return new Response(secret, { status: 503 });
+    }
+    return fallback(rawUrl, options);
+  };
+  await assert.rejects(collect(unavailable), error => error.code === 'provider_read_failed'
+    && error.httpStatus === 503 && error.requestStage === 'deployments'
+    && error.issues.includes('deployment_aliases_missing') && !JSON.stringify(error).includes(secret));
+});
+
+test('blocked evidence reports fixed semantic categories across sanitized records', async () => {
+  const fixture = data();
+  fixture.deployments[0].id = 'invalid-deployment-id';
+  fixture.deployments[0].url = 'https://invalid.example.test';
+  fixture.deployments[0].latest_stage.name = 'invalid-stage';
+  fixture.deployments[1].aliases = null;
+  fixture.deployments[1].deployment_trigger.metadata.branch = 'invalid branch';
+  fixture.deployments[1].deployment_trigger.metadata.commit_hash = 'invalid-commit';
+  await assert.rejects(collect(mockFetch(fixture).fetchImpl), error => error.code === 'evidence_invalid'
+    && error.detail === 'deployment_invalid'
+    && ['deployment_id_format_invalid', 'deployment_url_format_invalid', 'deployment_stage_name_value_invalid',
+      'deployment_branch_format_invalid', 'deployment_commit_sha_format_invalid'].every(issue => error.issues.includes(issue))
+    && !JSON.stringify(error).includes('invalid-deployment-id') && !JSON.stringify(error).includes('invalid.example.test')
+    && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
 });
 
 test('incomplete, changing, malformed and oversized pagination cannot produce an observation', async () => {
@@ -231,6 +312,16 @@ test('missing deployment pagination metadata is reported precisely without provi
   });
   await assert.rejects(collect(fetchImpl), error =>
     error.code === 'pagination_metadata_missing' && error.requestStage === 'deployments' && !error.message.includes(secret));
+});
+
+test('an optional missing project subdomain blocks evidence without inventing a hostname', async () => {
+  const fixture = data();
+  delete fixture.project.subdomain;
+  const { fetchImpl, calls } = mockFetch(fixture);
+  await assert.rejects(collect(fetchImpl), error => error.code === 'project_metadata_missing'
+    && error.requestStage === 'project' && error.detail === 'project_subdomain_missing'
+    && !JSON.stringify(error).includes(secret) && !JSON.stringify(error).includes(token));
+  assert.deepEqual(calls, [apiPath]);
 });
 
 test('HTTP failures identify only the fixed request stage without exposing provider content', async () => {
@@ -319,9 +410,27 @@ test('the real command suppresses synthetic provider exceptions and refuses debu
     assert.equal(malformed.status, 1);
     assert.equal(malformed.stdout, '');
     assert.deepEqual(JSON.parse(malformed.stderr), { status: 'BLOCKED', authorization: 'NONE', reason: 'provider_response_invalid',
-      requestStage: 'deployments', detail: 'deployment_aliases_invalid' });
+      requestStage: 'deployments', detail: 'deployment_fields_invalid', issues: ['deployment_alias_type_invalid'] });
     assert.equal(malformed.stderr.includes(secret), false);
     assert.equal(malformed.stderr.includes(token), false);
+    fixture.deployments[0] = data().deployments[0];
+    fixture.deployments[1].aliases = null;
+    writeFileSync(preload, `const fixture = ${JSON.stringify(fixture)};\n` +
+      `globalThis.fetch = async raw => { const url = new URL(raw);\n` +
+      `if (url.pathname.endsWith('/domains/app.lythaus.co')) return Response.json({success:true,result:fixture.domain});\n` +
+      `if (url.pathname.endsWith('/deployments')) return Response.json({success:true,result:fixture.deployments,` +
+      `result_info:{page:1,per_page:25,total_count:2}});\n` +
+      `return Response.json({success:true,result:fixture.project}); };\n`);
+    const unavailable = spawnSync(process.execPath, ['--import', preload, script], { env, encoding: 'utf8' });
+    assert.equal(unavailable.status, 0);
+    assert.equal(unavailable.stderr, '');
+    const observation = JSON.parse(unavailable.stdout);
+    assert.equal(observation.status, 'INCONCLUSIVE');
+    assert.equal(observation.reason, 'aliases_unavailable');
+    assert.equal(observation.authorization, 'NONE');
+    assert.equal(observation.match, null);
+    assert.equal(unavailable.stdout.includes(secret), false);
+    assert.equal(unavailable.stdout.includes(token), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
