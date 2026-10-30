@@ -2,6 +2,12 @@ name: Cloudflare account audit
 
 on:
   workflow_dispatch:
+    inputs:
+      pages_alias_only:
+        description: Observe the app Pages deployment aliases without running the account inventory
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -14,12 +20,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: cloudflare-account-audit
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.pages_alias_only == true && 'cloudflare-pages-alias-observation' || 'cloudflare-account-audit' }}
   cancel-in-progress: false
 
 jobs:
   inventory:
     name: Sanitized Cloudflare inventory
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.pages_alias_only != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -103,3 +110,36 @@ jobs:
           name: cloudflare-account-audit-${{ github.sha }}
           if-no-files-found: error
           path: .artifacts/provider-inventory/
+
+  pages_alias:
+    name: Read-only app Pages alias observation
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pages_alias_only == true }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Require protected main and exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = '1010752912'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_REF_PROTECTED" = 'true'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Test the diagnostic without provider access
+        run: node --test scripts/tests/pages-alias-evidence.test.mjs scripts/tests/pages-alias-collector.test.mjs
+      - name: Observe sanitized Pages alias metadata
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NODE_OPTIONS: ''
+          NODE_DEBUG: ''
+        run: node scripts/cloudflare/observe-pages-alias.mjs

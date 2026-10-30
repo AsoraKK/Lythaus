@@ -77,6 +77,8 @@ jobs:
         run: node --experimental-strip-types --test scripts/tests/jobs-session-executor.test.mjs
       - name: Validate read-only Cloudflare audit contract
         run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs
+      - name: Validate read-only Pages alias observation
+        run: node --test scripts/tests/pages-alias-evidence.test.mjs scripts/tests/pages-alias-collector.test.mjs
       - name: Validate read-only GitHub controls audit contract
         run: node --test scripts/tests/github-controls-audit.test.mjs
 
