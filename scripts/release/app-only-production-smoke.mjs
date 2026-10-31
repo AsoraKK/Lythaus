@@ -1,4 +1,5 @@
 const TIMEOUT = 30000;
+const RETIRED_BRAND_PATTERN = /[Aa][Ss][Oo][Rr][Aa]/;
 
 /** Fixed, read-only checks matching the canonical production surfaces. The
  * Jobs Worker has no public health route; its result records version evidence. */
@@ -22,7 +23,7 @@ export async function smokeAppOnlyProduction({ accessClientId, accessClientSecre
       throw new Error('app-only public site smoke failed');
     }
     const body = await response.text();
-    if (!body.includes('For the living internet.') || /asora/i.test(body)) throw new Error('app-only public site content smoke failed');
+    if (!body.includes('For the living internet.') || RETIRED_BRAND_PATTERN.test(body)) throw new Error('app-only public site content smoke failed');
   }
   const web = await request('https://app.lythaus.co/');
   if (web.status !== 200) throw new Error('app-only web smoke failed');

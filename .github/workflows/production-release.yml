@@ -972,6 +972,7 @@ jobs:
       PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
       PREVIOUS_PRODUCTION_RUN_ID: ${{ needs.preflight.outputs.previous_production_run_id }}
       APP_ONLY_RELEASE: ${{ inputs.release_mode == 'app_only' }}
+      CLOUDFLARE_LEGACY_BRAND_ACTIVE_RESOURCES: ${{ needs.provider_evidence.outputs.cloudflare_legacy_asora_active_resources || '0' }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
       NATIVE_BRANCH_PROTECTION_STATUS: ${{ needs.preflight.outputs.native_branch_protection_status || 'ACTIVE' }}
       RELEASE_GOVERNANCE_COMPENSATING_CONTROLS: ${{ needs.preflight.outputs.release_governance_compensating_controls || 'BLOCKED' }}

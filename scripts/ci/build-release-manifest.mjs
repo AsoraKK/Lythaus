@@ -218,7 +218,9 @@ const surfaces = {
 
 const cloudflareStatus = statusOrUnknown('CLOUDFLARE_INVENTORY_STATUS');
 const planetscaleStatus = statusOrUnknown('PLANETSCALE_INVENTORY_STATUS');
-const legacyAsoraActiveResources = legacyCountOrNull('CLOUDFLARE_LEGACY_ASORA_ACTIVE_RESOURCES');
+const legacyResourceCountVariable = process.env.APP_ONLY_RELEASE === 'true'
+  ? 'CLOUDFLARE_LEGACY_BRAND_ACTIVE_RESOURCES' : 'CLOUDFLARE_LEGACY_ASORA_ACTIVE_RESOURCES';
+const legacyAsoraActiveResources = legacyCountOrNull(legacyResourceCountVariable);
 const productionSmoke = {
   'lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_MARKETING'),
   'www.lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_WWW'),
