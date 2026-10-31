@@ -3,7 +3,8 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig } from './
 import { expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
 import { runtimeSchemaFingerprint, canonicalReleaseSchemaContract, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
-import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, assertRestoreRoleSqlBaseline, checkCopiedRoleMetadata } from './planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, restoreSchemaMode, restoreSchemaVersion,
+  assertRestoreRoleSqlBaseline, checkCopiedRoleMetadata } from './planetscale-native-restore-contract.mjs';
 
 export function sourceConnection(raw, expectedOrigin) {
   const target = branchQualifiedDatabaseTarget(raw);
@@ -60,7 +61,8 @@ export async function readOnly(raw, branchId, role, work, clientFactory = config
   }
 }
 
-export async function collectRestoreCatalog(client) {
+export async function collectRestoreCatalog(client, mode = 'pre-0021') {
+  const schemaMode = restoreSchemaMode(mode), schemaVersion = restoreSchemaVersion(schemaMode);
   const sections = {};
   const queries = {
     schemaOwnership: `SELECT n.nspname AS schema, pg_get_userbyid(n.nspowner) AS owner
@@ -111,15 +113,18 @@ export async function collectRestoreCatalog(client) {
     requireThat(sections[section].length < 10000, 'catalog_bound_exceeded');
   }
   const migrations = (await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version LIMIT 23')).rows;
-  const approved = expectedMigrationPrefix('0020_auth_recovery_delivery.sql').map(row => ({ version: row.name, checksum: row.appliedSha256 }));
-  requireThat(JSON.stringify(migrations) === JSON.stringify(approved), 'exact_pre_0021_registry_required');
+  const approved = expectedMigrationPrefix(schemaVersion).map(row => ({ version: row.name, checksum: row.appliedSha256 }));
+  requireThat(JSON.stringify(migrations) === JSON.stringify(approved),
+    schemaMode === 'post-0021' ? 'exact_post_0021_registry_required' : 'exact_pre_0021_registry_required');
   for (const state of await classifyMigrationState(client, approved.filter(row => row.version >= '0017_').map(row => row.version))) {
     assertCompleteMigrationPostconditions(state);
   }
-  const staged = (await client.query(`SELECT to_regclass('media.media_upload_quarantine_cleanup_idx') IS NULL AS index_absent,
-    NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid='media.upload_sessions'::regclass
-      AND attname='quarantine_deleted_at' AND NOT attisdropped) AS column_absent`)).rows[0];
-  requireThat(staged?.index_absent === true && staged.column_absent === true, '0021_catalog_must_be_absent');
+  if (schemaMode === 'pre-0021') {
+    const staged = (await client.query(`SELECT to_regclass('media.media_upload_quarantine_cleanup_idx') IS NULL AS index_absent,
+      NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid='media.upload_sessions'::regclass
+        AND attname='quarantine_deleted_at' AND NOT attisdropped) AS column_absent`)).rows[0];
+    requireThat(staged?.index_absent === true && staged.column_absent === true, '0021_catalog_must_be_absent');
+  }
   const roles = (await client.query(`SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls
     FROM pg_roles WHERE rolname=ANY($1::text[]) ORDER BY rolname`, [ROLE_NAMES])).rows;
   const members = (await client.query(`SELECT r.rolname AS role,m.rolname AS member,g.rolname AS grantor,
@@ -144,7 +149,7 @@ export async function collectRestoreCatalog(client) {
   requireThat(JSON.stringify(keys(relations)) === JSON.stringify(keys(canonicalRelations)), 'restore_relation_contract_incomplete');
   return { catalogSha256: restoreCatalogDigest({ sections, migrations, roles, members, extensions }),
     schemaFingerprint: runtimeSchemaFingerprint(relations, migrations), relationCount: relations.length,
-    schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: extensions.length,
+    schemaVersion, approvedPrivilegeChecks: 17, extensionCount: extensions.length,
     extensionSpecifications: extensions };
 }
 

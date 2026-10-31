@@ -47,14 +47,25 @@ export class RestoreFailure extends Error {
 }
 export function requireThat(condition, code, outcome) { if (!condition) throw new RestoreFailure(code, outcome); }
 export const failureCode = error => error instanceof RestoreFailure ? error.code : 'operation_failed_details_redacted';
+export function restoreSchemaMode(value = 'pre-0021') {
+  requireThat(value === 'pre-0021' || value === 'post-0021', 'restore_schema_mode_invalid');
+  return value;
+}
+export function restoreSchemaVersion(mode) {
+  return restoreSchemaMode(mode) === 'post-0021' ? '0021_media_quarantine_cleanup.sql' : '0020_auth_recovery_delivery.sql';
+}
 const cleanupCapability = Symbol('fixed_target_cleanup');
 export function approvalRecord(raw, environment, now) {
+  const schemaMode = restoreSchemaMode(environment.RESTORE_CHECK_SCHEMA_MODE);
   let record;
   try { record = JSON.parse(raw); } catch { throw new RestoreFailure('explicit_owner_approval_record_required'); }
   requireThat(object(record) && Object.keys(record).sort().join(',') ===
-    'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd',
+    (schemaMode === 'post-0021'
+      ? 'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,schemaMode,target,taxAndFeeAllowanceUsd'
+      : 'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd'),
   'approval_record_fields_invalid');
   requireThat(record.releaseSha === environment.RELEASE_SHA && record.backupId === RESTORE.backupId && record.target === RESTORE.target
+    && (schemaMode !== 'post-0021' || record.schemaMode === schemaMode)
     && JSON.stringify(record.roles) === JSON.stringify(ROLE_NAMES) && JSON.stringify(record.actions) === JSON.stringify(ACTIONS)
     && record.maximumUsd === RESTORE.maximumUsd && record.backupSnapshotAcknowledged === true,
   'approval_scope_mismatch');

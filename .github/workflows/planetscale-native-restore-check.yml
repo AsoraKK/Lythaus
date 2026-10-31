@@ -13,6 +13,14 @@ on:
         required: true
         default: false
         type: boolean
+      schema_mode:
+        description: Explicit schema state to verify in source and restored copy
+        required: true
+        type: choice
+        default: pre-0021
+        options:
+          - pre-0021
+          - post-0021
       approval_json:
         description: Exact owner approval packet from the restore runner runbook; no secrets
         required: false
@@ -36,6 +44,7 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
       RESTORE_CHECK_EXECUTE: ${{ inputs.execute }}
+      RESTORE_CHECK_SCHEMA_MODE: ${{ inputs.schema_mode }}
       RESTORE_CHECK_APPROVAL_JSON: ${{ inputs.approval_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -91,7 +100,7 @@ jobs:
         run: |
           report="$EVIDENCE_DIR/qualification.json"
           if [[ -s "$report" ]]; then
-            jq '{sourceMainSha,status,state,qualificationOutcome,blockers,backupId,targetName,createdTargetId,cleanup,qualificationStopAt,escalationAt,reviewByAt,cleanupStartByAt,cleanupDeadlineAt,costEscalationRequired,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
+            jq '{sourceMainSha,schemaMode,status,state,qualificationOutcome,blockers,backupId,targetName,createdTargetId,cleanup,qualificationStopAt,escalationAt,reviewByAt,cleanupStartByAt,cleanupDeadlineAt,costEscalationRequired,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload immutable qualification evidence
         id: qualification_artifact
