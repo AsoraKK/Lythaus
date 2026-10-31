@@ -170,10 +170,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/',
         builder: (context, state) => AdaptiveShell(
           initialFeedId: state.uri.queryParameters['feed'],
+          initialSearchQuery: state.uri.queryParameters['q'] ?? '',
           initialIndex: switch (state.uri.queryParameters['tab']) {
             'create' => 1,
             'profile' => 2,
             'rewards' => 3,
+            'search' => 4,
+            'notifications' => 5,
             _ => 0,
           },
         ),

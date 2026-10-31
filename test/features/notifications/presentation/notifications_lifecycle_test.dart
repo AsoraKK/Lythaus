@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:lythaus/core/network/dio_client.dart';
-import 'package:lythaus/design_system/components/lyth_card.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
@@ -525,7 +524,14 @@ void main() {
         expect(find.byType(NotificationsScreen), findsOneWidget);
         expect(_unread, findsNothing);
         final openAgain = tester
-            .widget<LythCard>(find.byType(LythCard).first)
+            .widget<InkWell>(
+              find
+                  .ancestor(
+                    of: find.text('Synthetic update first'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+            )
             .onTap!;
         openAgain();
         openAgain();

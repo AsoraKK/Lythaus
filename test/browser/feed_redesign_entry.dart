@@ -11,6 +11,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
@@ -79,6 +80,9 @@ void main() {
   final guest = Uri.base.queryParameters['actor'] == 'guest';
   final tier = Uri.base.queryParameters['tier'] ?? 'black';
   final dio = Dio(BaseOptions(baseUrl: '${Uri.base.origin}/api'));
+  final useNewsBaseline =
+      Uri.base.queryParameters['scenario'] == 'news_baseline';
+  if (useNewsBaseline) dio.interceptors.add(CanonicalApiPathInterceptor());
   runApp(
     ProviderScope(
       overrides: [
@@ -91,6 +95,8 @@ void main() {
         ),
         secureDioProvider.overrideWithValue(dio),
         socialFeedServiceProvider.overrideWithValue(SocialFeedService(dio)),
+        if (Uri.base.queryParameters['feedback'] == 'candidate')
+          contributionFeedbackCandidateProvider.overrideWithValue(true),
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
@@ -127,7 +133,8 @@ void main() {
                   ),
                 ],
         ),
-        liveFeedStateProvider.overrideWith((ref, feed) => _FixtureFeed(feed)),
+        if (!useNewsBaseline)
+          liveFeedStateProvider.overrideWith((ref, feed) => _FixtureFeed(feed)),
       ],
       child: const _Fixture(),
     ),
@@ -139,6 +146,7 @@ class _Fixture extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
     title: 'Lythaus feed · synthetic QA',
+    debugShowCheckedModeBanner: false,
     theme: LythausTheme.light(),
     darkTheme: LythausTheme.dark(),
     themeMode: Uri.base.queryParameters['theme'] == 'dark'
@@ -148,6 +156,13 @@ class _Fixture extends ConsumerWidget {
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(
         disableAnimations: true,
+        viewInsets: EdgeInsets.only(
+          bottom:
+              double.tryParse(
+                Uri.base.queryParameters['keyboardInset'] ?? '',
+              ) ??
+              0,
+        ),
         textScaler: TextScaler.linear(
           double.tryParse(Uri.base.queryParameters['textScale'] ?? '') ?? 1,
         ),

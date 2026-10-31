@@ -47,190 +47,252 @@ class _FeedCardState extends State<FeedCard> {
     final theme = Theme.of(context);
     final label = publicAuthorLabel(item.author, authorId: item.authorId);
     final media = item.imageUrl ?? item.videoThumbnailUrl;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ExcludeSemantics(
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  foregroundColor: theme.colorScheme.onSurfaceVariant,
-                  child: const Icon(Icons.person_outline),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: item.authorId?.trim().isNotEmpty == true
-                    ? AuthorProfileLink(
-                        userId: item.authorId!,
-                        label: label,
-                        textStyle: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      )
-                    : Text(
-                        label,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-              ),
-              if (item.isPinned)
-                const Tooltip(
-                  message: 'Pinned post',
-                  child: Icon(Icons.push_pin_outlined, size: 18),
-                ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Tooltip(
-                  message: DateFormat.yMMMd().add_jm().format(
-                    item.publishedAt.toLocal(),
-                  ),
-                  child: Text(
-                    DateFormat.MMMd().add_jm().format(
-                      item.publishedAt.toLocal(),
-                    ),
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-              ),
-              if (widget.saveAction != null) widget.saveAction!,
-            ],
+    final hasMedia = media != null && media.isNotEmpty;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final roomyText = MediaQuery.textScalerOf(context).scale(14) > 20;
+        final fullWidth =
+            item.isPublication || constraints.maxWidth < 360 || roomyText;
+        final date = Tooltip(
+          message: DateFormat.yMMMd().add_jm().format(
+            item.publishedAt.toLocal(),
           ),
-          const SizedBox(height: 10),
-          Material(
-            color: LythSemanticColors.clear,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(
-                color: _focused
-                    ? theme.colorScheme.primary
-                    : LythSemanticColors.clear,
-                width: 2,
-              ),
-            ),
-            child: InkWell(
-              onTap: widget.onTap,
-              onFocusChange: (focused) => setState(() => _focused = focused),
-              borderRadius: BorderRadius.circular(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Text(
+            DateFormat.MMMd().format(item.publishedAt.toLocal()),
+            style: theme.textTheme.bodySmall,
+          ),
+        );
+        final author = item.authorId?.trim().isNotEmpty == true
+            ? AuthorProfileLink(
+                userId: item.authorId!,
+                label: label,
+                maxLines: 2,
+                textStyle: theme.textTheme.titleSmall,
+              )
+            : Text(label, style: theme.textTheme.titleSmall);
+        final mediaPreview = hasMedia
+            ? _MediaPreview(
+                imageUrl: media,
+                isVideo: item.videoThumbnailUrl != null,
+              )
+            : null;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
-                  if (item.title.trim().isNotEmpty) ...[
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        item.title,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
-                      ),
+                  ExcludeSemantics(
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: theme.colorScheme.surfaceContainer,
+                      foregroundColor: theme.colorScheme.onSurfaceVariant,
+                      child: const Icon(Icons.person_outline, size: 20),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (item.body.isNotEmpty)
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final style = theme.textTheme.bodyLarge?.copyWith(
-                          height: 1.5,
-                        );
-                        final painter = TextPainter(
-                          text: TextSpan(text: item.body, style: style),
-                          maxLines: 3,
-                          textDirection: Directionality.of(context),
-                          textScaler: MediaQuery.textScalerOf(context),
-                        )..layout(maxWidth: constraints.maxWidth);
-                        final expandable = painter.didExceedMaxLines;
-                        painter.dispose();
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.body,
-                              style: style,
-                              maxLines: _expanded ? null : 3,
-                              overflow: _expanded
-                                  ? null
-                                  : TextOverflow.ellipsis,
-                            ),
-                            if (expandable)
-                              TextButton(
-                                onPressed: () =>
-                                    setState(() => _expanded = !_expanded),
-                                child: Text(
-                                  _expanded ? 'Show less' : 'See more',
-                                ),
-                              ),
-                          ],
-                        );
-                      },
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: roomyText
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [author, date],
+                          )
+                        : Row(
+                            children: [
+                              Flexible(child: author),
+                              const SizedBox(width: 8),
+                              date,
+                            ],
+                          ),
+                  ),
+                  if (item.isPinned)
+                    const Tooltip(
+                      message: 'Pinned post',
+                      child: Icon(Icons.push_pin_outlined, size: 16),
                     ),
-                  if (media != null && media.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _MediaPreview(
-                      imageUrl: media,
-                      isVideo: item.videoThumbnailUrl != null,
-                    ),
-                  ],
+                  if (widget.saveAction != null) widget.saveAction!,
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          AuthorshipDisclosure(
-            label: item.authorshipLabel,
-            classificationSource: item.classificationSource,
-            classificationState: item.classificationState,
-          ),
-          if (item.trustSummary.trustStatus == 'under_appeal')
-            Text('Appeal in progress', style: theme.textTheme.bodySmall),
-          if (item.trustSummary.trustStatus == 'actioned')
-            Text('Content restricted', style: theme.textTheme.bodySmall),
-          if (item.trustSummary.timeline.moderation == 'pending_review')
-            Text('Review pending', style: theme.textTheme.bodySmall),
-          const SizedBox(height: 4),
-          widget.actions ??
-              Align(
-                alignment: Alignment.centerRight,
-                child: PopupMenuButton<String>(
-                  tooltip: 'Post actions',
-                  onSelected: (action) {
-                    if (action == 'details') {
-                      ReceiptDrawer.show(context, item.id);
-                    }
-                    if (action == 'edit') widget.onEdit?.call();
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'details',
-                      child: Text('Post details'),
+              if (roomyText) const SizedBox(height: 8),
+              Padding(
+                padding: EdgeInsets.only(left: fullWidth ? 0 : 44),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Material(
+                      color: LythSemanticColors.clear,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: _focused
+                              ? theme.colorScheme.primary
+                              : LythSemanticColors.clear,
+                          width: 2,
+                        ),
+                      ),
+                      child: InkWell(
+                        onTap: widget.onTap,
+                        onFocusChange: (focused) =>
+                            setState(() => _focused = focused),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (item.isPublication && mediaPreview != null) ...[
+                              mediaPreview,
+                              const SizedBox(height: 12),
+                            ],
+                            if (item.title.trim().isNotEmpty) ...[
+                              Semantics(
+                                header: true,
+                                child: Text(
+                                  item.title,
+                                  style:
+                                      (item.isPublication
+                                              ? theme.textTheme.headlineSmall
+                                              : theme.textTheme.titleLarge)
+                                          ?.copyWith(
+                                            height: 1.3,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            if (item.body.isNotEmpty)
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final style = theme.textTheme.bodyLarge
+                                      ?.copyWith(height: 1.5);
+                                  final painter = TextPainter(
+                                    text: TextSpan(
+                                      text: item.body,
+                                      style: style,
+                                    ),
+                                    maxLines: 3,
+                                    textDirection: Directionality.of(context),
+                                    textScaler: MediaQuery.textScalerOf(
+                                      context,
+                                    ),
+                                  )..layout(maxWidth: constraints.maxWidth);
+                                  final expandable = painter.didExceedMaxLines;
+                                  painter.dispose();
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.body,
+                                        style: style,
+                                        maxLines: _expanded ? null : 3,
+                                        overflow: _expanded
+                                            ? null
+                                            : TextOverflow.ellipsis,
+                                      ),
+                                      if (expandable)
+                                        TextButton(
+                                          style: TextButton.styleFrom(
+                                            padding: EdgeInsets.zero,
+                                            alignment: Alignment.centerLeft,
+                                          ),
+                                          onPressed: () => setState(
+                                            () => _expanded = !_expanded,
+                                          ),
+                                          child: Text(
+                                            _expanded
+                                                ? 'Show less'
+                                                : 'See more',
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            if (!item.isPublication &&
+                                mediaPreview != null) ...[
+                              const SizedBox(height: 12),
+                              mediaPreview,
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
-                    if (widget.showSource &&
-                        item.sourceName?.isNotEmpty == true)
-                      PopupMenuItem(
-                        enabled: false,
-                        child: Text('Source: ${item.sourceName}'),
+                    if (item.isPublication &&
+                        item.backingPostId != null &&
+                        widget.onTap != null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                          onPressed: widget.onTap,
+                          label: const Text('View post'),
+                          icon: const Icon(Icons.arrow_forward, size: 18),
+                          iconAlignment: IconAlignment.end,
+                        ),
                       ),
-                    if (widget.canEdit && widget.onEdit != null)
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edit post'),
+                    const SizedBox(height: 8),
+                    AuthorshipDisclosure(
+                      label: item.authorshipLabel,
+                      classificationSource: item.classificationSource,
+                      classificationState: item.classificationState,
+                    ),
+                    if (item.trustSummary.trustStatus == 'under_appeal')
+                      Text(
+                        'Appeal in progress',
+                        style: theme.textTheme.bodySmall,
                       ),
+                    if (item.trustSummary.trustStatus == 'actioned')
+                      Text(
+                        'Content restricted',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    if (item.trustSummary.timeline.moderation ==
+                        'pending_review')
+                      Text('Review pending', style: theme.textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    widget.actions ??
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: PopupMenuButton<String>(
+                            tooltip: 'Post actions',
+                            onSelected: (action) {
+                              if (action == 'details') {
+                                ReceiptDrawer.show(context, item.id);
+                              }
+                              if (action == 'edit') {
+                                widget.onEdit?.call();
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: 'details',
+                                child: Text('Post details'),
+                              ),
+                              if (widget.showSource &&
+                                  item.sourceName?.isNotEmpty == true)
+                                PopupMenuItem(
+                                  enabled: false,
+                                  child: Text('Source: ${item.sourceName}'),
+                                ),
+                              if (widget.canEdit && widget.onEdit != null)
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Edit post'),
+                                ),
+                            ],
+                            icon: const Icon(Icons.more_horiz),
+                          ),
+                        ),
                   ],
-                  icon: const Icon(Icons.more_horiz),
                 ),
               ),
-          const SizedBox(height: 8),
-          Divider(color: theme.colorScheme.outlineVariant),
-        ],
-      ),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: theme.colorScheme.outlineVariant),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -242,7 +304,7 @@ class _MediaPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(20),
+    borderRadius: BorderRadius.circular(16),
     child: Stack(
       children: [
         AspectRatio(

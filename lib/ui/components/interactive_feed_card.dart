@@ -424,6 +424,65 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
     final service = ref.read(feedActionsServiceProvider);
     final postId = _postId;
     final feedbackCandidate = ref.watch(contributionFeedbackCandidateProvider);
+    final utilityActions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Comments',
+          onPressed: _comments,
+          icon: const Icon(Icons.chat_bubble_outline, size: 20),
+        ),
+        PopupMenuButton<String>(
+          tooltip: 'Post actions',
+          icon: const Icon(Icons.more_horiz),
+          onSelected: (action) {
+            switch (action) {
+              case 'share':
+                _share();
+              case 'details':
+                ReceiptDrawer.show(context, _postId);
+              case 'sources':
+                _sources();
+              case 'why':
+                _sheet('Why this post is shown', [
+                  const Text(
+                    'This post was returned by the selected feed. Lythaus does not provide a post-specific recommendation explanation yet.',
+                  ),
+                ]);
+              case 'mute':
+                _mute();
+              case 'report':
+                _report();
+              case 'edit':
+                widget.onEdit?.call();
+            }
+          },
+          itemBuilder: (_) => [
+            const PopupMenuItem(value: 'share', child: Text('Share post link')),
+            const PopupMenuItem(value: 'details', child: Text('Post details')),
+            const PopupMenuItem(value: 'sources', child: Text('Sources')),
+            const PopupMenuItem(value: 'why', child: Text('Why shown')),
+            if (!isOwn && widget.item.authorId?.isNotEmpty == true)
+              PopupMenuItem(
+                value: 'mute',
+                enabled: enabled,
+                child: const Text('Mute account'),
+              ),
+            PopupMenuItem(
+              value: 'report',
+              enabled: enabled,
+              child: const Text('Report'),
+            ),
+            if (widget.canEdit && widget.onEdit != null)
+              PopupMenuItem(
+                value: 'edit',
+                enabled: enabled,
+                child: const Text('Edit post'),
+              ),
+          ],
+        ),
+      ],
+    );
     return FeedCard(
       item: widget.item,
       onTap: widget.onTap,
@@ -458,94 +517,38 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
             ContributionFeedbackControls(
               target: FeedbackTarget(FeedbackTargetType.post, postId),
               authorId: widget.item.authorId ?? '',
+              trailingActions: utilityActions,
             ),
-          Wrap(
-            spacing: 2,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (!feedbackCandidate)
-                TextButton.icon(
-                  onPressed: enabled && !isOwn ? _usefulPressed : null,
-                  icon: Icon(
-                    selected ? Icons.thumb_up : Icons.thumb_up_outlined,
-                    size: 20,
-                  ),
-                  label: Text(selected ? 'Useful selected' : 'Useful'),
-                ),
-              if (!feedbackCandidate)
-                IconButton(
-                  tooltip: 'Negative feedback',
-                  onPressed: enabled ? _negativeFeedback : null,
-                  icon: const Icon(Icons.thumb_down_outlined, size: 20),
-                ),
-              if (!feedbackCandidate)
-                IconButton(
-                  tooltip: 'Story emotions — unavailable',
-                  onPressed: _emotions,
-                  icon: const Icon(Icons.add_reaction_outlined, size: 20),
-                ),
-              IconButton(
-                tooltip: 'Comments',
-                onPressed: _comments,
-                icon: const Icon(Icons.chat_bubble_outline, size: 20),
-              ),
-              IconButton(
-                tooltip: 'Share post link',
-                onPressed: _share,
-                icon: const Icon(Icons.ios_share_outlined, size: 20),
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'Post actions',
-                icon: const Icon(Icons.more_horiz),
-                onSelected: (action) {
-                  switch (action) {
-                    case 'details':
-                      ReceiptDrawer.show(context, _postId);
-                    case 'sources':
-                      _sources();
-                    case 'why':
-                      _sheet('Why this post is shown', [
-                        const Text(
-                          'This post was returned by the selected feed. Lythaus does not provide a post-specific recommendation explanation yet.',
-                        ),
-                      ]);
-                    case 'mute':
-                      _mute();
-                    case 'report':
-                      _report();
-                    case 'edit':
-                      widget.onEdit?.call();
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'details',
-                    child: Text('Post details'),
-                  ),
-                  const PopupMenuItem(value: 'sources', child: Text('Sources')),
-                  const PopupMenuItem(value: 'why', child: Text('Why shown')),
-                  if (!isOwn && widget.item.authorId?.isNotEmpty == true)
-                    PopupMenuItem(
-                      value: 'mute',
-                      enabled: enabled,
-                      child: const Text('Mute account'),
+          if (!feedbackCandidate)
+            Wrap(
+              spacing: 2,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (!feedbackCandidate)
+                  TextButton.icon(
+                    onPressed: enabled && !isOwn ? _usefulPressed : null,
+                    icon: Icon(
+                      selected ? Icons.thumb_up : Icons.thumb_up_outlined,
+                      size: 20,
                     ),
-                  PopupMenuItem(
-                    value: 'report',
-                    enabled: enabled,
-                    child: const Text('Report'),
+                    label: Text(selected ? 'Useful selected' : 'Useful'),
                   ),
-                  if (widget.canEdit && widget.onEdit != null)
-                    PopupMenuItem(
-                      value: 'edit',
-                      enabled: enabled,
-                      child: const Text('Edit post'),
-                    ),
-                ],
-              ),
-            ],
-          ),
+                if (!feedbackCandidate)
+                  IconButton(
+                    tooltip: 'Negative feedback',
+                    onPressed: enabled ? _negativeFeedback : null,
+                    icon: const Icon(Icons.thumb_down_outlined, size: 20),
+                  ),
+                if (!feedbackCandidate)
+                  IconButton(
+                    tooltip: 'Story emotions — unavailable',
+                    onPressed: _emotions,
+                    icon: const Icon(Icons.add_reaction_outlined, size: 20),
+                  ),
+                utilityActions,
+              ],
+            ),
           if (_busy)
             const LinearProgressIndicator(semanticsLabel: 'Saving change'),
           if (_error != null)

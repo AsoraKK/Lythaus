@@ -16,17 +16,8 @@ class AuthorshipDisclosure extends StatelessWidget {
   final String classificationState;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: EdgeInsets.symmetric(
-      horizontal: context.spacing.sm,
-      vertical: context.spacing.xs,
-    ),
-    decoration: BoxDecoration(
-      border: Border(
-        left: BorderSide(color: context.colorScheme.primary, width: 2),
-      ),
-    ),
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
     child: Text(
       (label == 'Human-authored' || label == 'AI-assisted') &&
               (classificationSource == 'user_disclosure' ||
@@ -34,7 +25,7 @@ class AuthorshipDisclosure extends StatelessWidget {
                       classificationState == 'confirmed'))
           ? '${classificationSource == 'user_disclosure' ? 'Author declaration' : 'Assessment'}: $label'
           : 'Authorship: Under review',
-      style: context.textTheme.labelMedium,
+      style: context.textTheme.bodySmall,
     ),
   );
 }

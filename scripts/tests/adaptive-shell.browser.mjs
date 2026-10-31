@@ -32,7 +32,7 @@ const browser = await ({ chromium, webkit }[engine]).launch({ headless: true });
 const results = [];
 const scenarios = [];
 const snapshot = page => page.evaluate(() => JSON.parse(window.lythausNavigationSnapshot()));
-const nav = (page, name) => page.getByRole('button', { name: new RegExp(`^${name}(?:$|\\s+Tab)`) });
+const nav = (page, name) => page.getByRole('button', { name: new RegExp(`^${name}(?:$|\\s)`) });
 const waitForTwoFrames = page => page.evaluate(() => new Promise(resolve =>
   requestAnimationFrame(() => requestAnimationFrame(resolve))));
 try {
@@ -81,10 +81,15 @@ try {
         await page.setViewportSize({ width, height: 960 });
         await page.waitForTimeout(150);
         assert.deepEqual(await snapshot(page), initial, 'Resize preserves controller, text, selection and focus');
-        await nav(page, 'Discover').click();
+        if (width === 1024 && scale === 1) {
+          const notifications = await nav(page, 'Notifications').boundingBox();
+          assert.ok(notifications && notifications.height < 80,
+            'The compact navigation label fits on one line');
+        }
+        await nav(page, 'Feed').click();
         await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
         assert.equal((await snapshot(page)).focused, false, 'Hidden composer cannot keep focus');
-        await nav(page, 'Create').click();
+        await nav(page, 'Create').first().click();
         await field.waitFor();
         await page.waitForFunction(() => JSON.parse(window.lythausNavigationSnapshot()).focused);
         assert.deepEqual(await snapshot(page), initial, 'Tab return preserves controller, text, selection and focus');
@@ -94,7 +99,7 @@ try {
         await page.screenshot({ path: path.join(output, filename) });
         results.push({ engine, theme, scale, width, filename, state: await snapshot(page) });
       }
-      const discover = nav(page, 'Discover');
+      const discover = nav(page, 'Feed');
       for (let i = 0; i < 40; i++) {
         await page.keyboard.press('Tab');
         await waitForTwoFrames(page);
@@ -103,7 +108,7 @@ try {
       assert.ok(await discover.evaluate(element => element === document.activeElement), 'Tab reaches navigation');
       await page.keyboard.press('Enter');
       await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
-      await nav(page, 'Create').click();
+      await nav(page, 'Create').first().click();
       await field.waitFor();
       await page.evaluate(() => window.lythausNavigationSignOut());
       await page.setViewportSize({ width: 320, height: 960 });

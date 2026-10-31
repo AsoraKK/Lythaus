@@ -64,242 +64,265 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ReadingPane(
       child: Scaffold(
         appBar: AppBar(title: const Text('Settings')),
-        body: ListView(
-          padding: const EdgeInsets.all(Spacing.md),
-          children: [
-            Semantics(
-              container: true,
-              header: true,
-              child: Text(
-                'Account',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const SizedBox(height: Spacing.sm),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.security_outlined),
-              trailing: const Icon(Icons.chevron_right),
-              title: const Text('Account security'),
-              onTap: () {
-                final router = GoRouter.maybeOf(context);
-                if (router != null) {
-                  router.go(
-                    GoRouterState.of(
-                      context,
-                    ).uri.replace(path: '/settings/security').toString(),
-                  );
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AccountSecurityScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.privacy_tip_outlined),
-              trailing: const Icon(Icons.chevron_right),
-              title: const Text('Privacy and your data'),
-              subtitle: const Text(
-                'Visibility, data export, and account deletion',
-              ),
-              onTap: () {
-                final router = GoRouter.maybeOf(context);
-                if (router != null) {
-                  router.go(
-                    GoRouterState.of(
-                      context,
-                    ).uri.replace(path: '/settings/privacy').toString(),
-                  );
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const PrivacySettingsScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.notifications_outlined),
-              trailing: const Icon(Icons.chevron_right),
-              title: const Text('Notification settings'),
-              onTap: () {
-                final router = GoRouter.maybeOf(context);
-                if (router != null) {
-                  router.go(
-                    GoRouterState.of(
-                      context,
-                    ).uri.replace(path: '/settings/notifications').toString(),
-                  );
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const NotificationsSettingsScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.notifications_none),
-              trailing: const Icon(Icons.chevron_right),
-              title: const Text('Notifications'),
-              onTap: () {
-                final router = GoRouter.maybeOf(context);
-                if (router != null) {
-                  router.go('/notifications');
-                } else {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
-                  );
-                }
-              },
-            ),
-            if (currentUser != null && supportFeedbackEnabled) ...<Widget>[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.bug_report_outlined),
-                title: const Text('Report a problem'),
-                subtitle: const Text(
-                  'Send a private bug report and follow its history',
-                ),
-                onTap: () => _openSupportEntry(context, 'problem'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.lightbulb_outline),
-                title: const Text('Feedback and suggestions'),
-                subtitle: const Text(
-                  'Share a private idea and follow its history',
-                ),
-                onTap: () => _openSupportEntry(context, 'suggestion'),
-              ),
-            ],
-            const Divider(height: Spacing.xl),
-            const PresentationPreferencesSection(),
-            const Divider(height: Spacing.xl),
-            Semantics(
-              container: true,
-              header: true,
-              child: Text(
-                'Public profile',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Trust Passport visibility'),
-              subtitle: Text(
-                currentUser == null
-                    ? 'Sign in to manage what others see on your Trust Passport.'
-                    : 'Choose how your Trust Passport appears to other users.',
-              ),
-            ),
-            if (profileState?.isLoading == true)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
-                child: Semantics(
-                  liveRegion: true,
-                  label: 'Loading saved profile visibility',
-                  child: const ExcludeSemantics(
-                    child: LinearProgressIndicator(minHeight: 2),
-                  ),
-                ),
-              ),
-            if (profileState?.hasError == true) ...[
-              Semantics(
-                liveRegion: true,
-                child: const Text('Unable to load your saved visibility.'),
-              ),
-              TextButton(
-                onPressed: () => ref.invalidate(ownerProfileProvider),
-                child: const Text('Retry visibility'),
-              ),
-            ],
-            Wrap(
-              spacing: Spacing.sm,
-              runSpacing: Spacing.sm,
-              children: [
-                for (final option in const {
-                  'public_expanded': 'Public',
-                  'public_minimal': 'Minimal',
-                  'private': 'Private',
-                }.entries)
-                  ChoiceChip(
-                    label: Text(option.value),
-                    selected: selectedVisibility == option.key,
-                    onSelected: canSaveVisibility
-                        ? (selected) {
-                            if (selected) _updateTrustVisibility(option.key);
-                          }
-                        : null,
-                  ),
-              ],
-            ),
-            if (_savingTrustVisibility)
-              Semantics(
-                liveRegion: true,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: Spacing.sm),
-                  child: Text('Saving visibility…'),
-                ),
-              ),
-            const SizedBox(height: Spacing.xs),
-            Text(
-              'This controls what others see on your profile. It does not change which posts appear in your feed.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const Divider(height: Spacing.xl),
-            if (currentUser != null) ...[
+        body: ListTileTheme.merge(
+          contentPadding: EdgeInsets.zero,
+          minLeadingWidth: 20,
+          horizontalTitleGap: Spacing.sm,
+          titleTextStyle: Theme.of(context).textTheme.bodyMedium,
+          subtitleTextStyle: Theme.of(context).textTheme.bodySmall,
+          child: ListView(
+            padding: const EdgeInsets.all(Spacing.md),
+            children: [
               Semantics(
                 container: true,
                 header: true,
                 child: Text(
-                  'Experimental',
+                  'Account',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              const SizedBox(height: Spacing.sm),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.security_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                title: const Text('Account security'),
+                onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go(
+                      GoRouterState.of(
+                        context,
+                      ).uri.replace(path: '/settings/security').toString(),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AccountSecurityScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.privacy_tip_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                title: const Text('Privacy and your data'),
+                subtitle: const Text(
+                  'Visibility, data export, and account deletion',
+                ),
+                onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go(
+                      GoRouterState.of(
+                        context,
+                      ).uri.replace(path: '/settings/privacy').toString(),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PrivacySettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: Spacing.xl),
+              Semantics(
+                container: true,
+                header: true,
+                child: Text(
+                  'Activity and alerts',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.image_search_outlined),
-                title: const Text('Private authenticity alpha'),
-                subtitle: const Text(
-                  'Availability depends on your approved access.',
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AuthenticityPrivateAlphaScreen(),
-                  ),
-                ),
-              ),
-              const Divider(height: Spacing.xl),
-            ],
-            ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('Help and support'),
-              subtitle: const Text('Guidance, account help and policies'),
-              onTap: () async {
-                try {
-                  if (await launchUrl(Uri.https('lythaus.co', '/help'))) return;
-                } catch (_) {}
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Help is available at lythaus.co/help.'),
+                leading: const Icon(Icons.notifications_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                title: const Text('Notification settings'),
+                onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go(
+                      GoRouterState.of(
+                        context,
+                      ).uri.replace(path: '/settings/notifications').toString(),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationsSettingsScreen(),
                     ),
                   );
-                }
-              },
-            ),
-          ],
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.notifications_none),
+                trailing: const Icon(Icons.chevron_right),
+                title: const Text('Notifications'),
+                onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go('/notifications');
+                  } else {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  }
+                },
+              ),
+              if (currentUser != null && supportFeedbackEnabled) ...<Widget>[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.bug_report_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  title: const Text('Report a problem'),
+                  subtitle: const Text(
+                    'Send a private bug report and follow its history',
+                  ),
+                  onTap: () => _openSupportEntry(context, 'problem'),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.lightbulb_outline),
+                  trailing: const Icon(Icons.chevron_right),
+                  title: const Text('Feedback and suggestions'),
+                  subtitle: const Text(
+                    'Share a private idea and follow its history',
+                  ),
+                  onTap: () => _openSupportEntry(context, 'suggestion'),
+                ),
+              ],
+              const Divider(height: Spacing.xl),
+              const PresentationPreferencesSection(),
+              const Divider(height: Spacing.xl),
+              Semantics(
+                container: true,
+                header: true,
+                child: Text(
+                  'Public profile',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Trust Passport visibility'),
+                subtitle: Text(
+                  currentUser == null
+                      ? 'Sign in to manage what others see on your Trust Passport.'
+                      : 'Choose how your Trust Passport appears to other users.',
+                ),
+              ),
+              if (profileState?.isLoading == true)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+                  child: Semantics(
+                    liveRegion: true,
+                    label: 'Loading saved profile visibility',
+                    child: const ExcludeSemantics(
+                      child: LinearProgressIndicator(minHeight: 2),
+                    ),
+                  ),
+                ),
+              if (profileState?.hasError == true) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: const Text('Unable to load your saved visibility.'),
+                ),
+                TextButton(
+                  onPressed: () => ref.invalidate(ownerProfileProvider),
+                  child: const Text('Retry visibility'),
+                ),
+              ],
+              Wrap(
+                spacing: Spacing.sm,
+                runSpacing: Spacing.sm,
+                children: [
+                  for (final option in const {
+                    'public_expanded': 'Public',
+                    'public_minimal': 'Minimal',
+                    'private': 'Private',
+                  }.entries)
+                    ChoiceChip(
+                      label: Text(option.value),
+                      selected: selectedVisibility == option.key,
+                      onSelected: canSaveVisibility
+                          ? (selected) {
+                              if (selected) _updateTrustVisibility(option.key);
+                            }
+                          : null,
+                    ),
+                ],
+              ),
+              if (_savingTrustVisibility)
+                Semantics(
+                  liveRegion: true,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: Spacing.sm),
+                    child: Text('Saving visibility…'),
+                  ),
+                ),
+              const SizedBox(height: Spacing.xs),
+              Text(
+                'This controls what others see on your profile. It does not change which posts appear in your feed.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const Divider(height: Spacing.xl),
+              if (currentUser != null) ...[
+                Semantics(
+                  container: true,
+                  header: true,
+                  child: Text(
+                    'Experimental',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.image_search_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  title: const Text('Private authenticity alpha'),
+                  subtitle: const Text(
+                    'Availability depends on your approved access.',
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AuthenticityPrivateAlphaScreen(),
+                    ),
+                  ),
+                ),
+                const Divider(height: Spacing.xl),
+              ],
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.help_outline),
+                trailing: const Icon(Icons.open_in_new, size: 20),
+                title: const Text('Help and support'),
+                subtitle: const Text('Guidance, account help and policies'),
+                onTap: () async {
+                  try {
+                    if (await launchUrl(Uri.https('lythaus.co', '/help'))) {
+                      return;
+                    }
+                  } catch (_) {}
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Help is available at lythaus.co/help.'),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

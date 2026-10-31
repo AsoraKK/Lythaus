@@ -122,6 +122,34 @@ Future<ProviderContainer> _open(
 }
 
 void main() {
+  testWidgets(
+    'editor explains visibility and validates while retaining edits',
+    (tester) async {
+      final adapter = _Adapter((options) async => _saved(options));
+      await _open(tester, adapter);
+      expect(
+        find.textContaining('may be visible to others after review'),
+        findsOneWidget,
+      );
+      expect(find.text('Unsaved changes'), findsNothing);
+      await tester.enterText(find.byType(TextFormField).first, 'ＦＵＣＫ');
+      await tester.pump();
+      expect(
+        find.text('Please choose a different display name'),
+        findsOneWidget,
+      );
+      expect(find.text('Unsaved changes'), findsOneWidget);
+      expect(adapter.requests, isEmpty);
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Synthetic name',
+      );
+      await tester.pump();
+      expect(find.text('Please choose a different display name'), findsNothing);
+      expect(find.text('Unsaved changes'), findsOneWidget);
+    },
+  );
+
   testWidgets('profile edits refresh all owner and public projections', (
     tester,
   ) async {
