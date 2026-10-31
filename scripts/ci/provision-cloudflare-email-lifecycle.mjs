@@ -11,7 +11,11 @@ const LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
 const LIFECYCLE_DLQ = 'lythaus-email-lifecycle-dlq-dev';
 const SENDING_DOMAIN = 'mail.lythaus.co';
 const SUBSCRIPTION_NAME = 'lythaus-email-lifecycle-mail-lythaus-co';
-let verifyExisting = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
+// A read-only release may demand the same exact infrastructure without
+// selecting an owner-testing deployment or its recovery exception.
+const verifyOnly = process.argv.slice(2).includes('--verify-existing');
+if (process.argv.slice(2).some(argument => argument !== '--verify-existing')) throw new Error('unsupported_email_lifecycle_argument');
+let verifyExisting = process.env.OWNER_TESTING_DEPLOYMENT === 'true' || verifyOnly;
 const REQUIRED_EVENTS = [
   'message.delivered',
   'message.deferred',

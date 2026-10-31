@@ -1,0 +1,68 @@
+name: App-only eligibility validation
+
+on:
+  pull_request:
+    paths:
+      - '.fvmrc'
+      - '.github/actions/**'
+      - '.github/workflows/**'
+      - 'api/openapi/**'
+      - 'apps/lythaus-public-api/**'
+      - 'apps/lythaus-admin-api/**'
+      - 'apps/lythaus-jobs/**'
+      - 'apps/lythaus-auth-acceptance-coordinator/**'
+      - 'assets/**'
+      - 'database/planetscale/migrations/**'
+      - 'infrastructure/**'
+      - 'integration_test/**'
+      - 'lib/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'scripts/**'
+      - 'test/**'
+      - 'web/**'
+  push:
+    branches: [main]
+    paths:
+      - '.fvmrc'
+      - '.github/actions/**'
+      - '.github/workflows/**'
+      - 'api/openapi/**'
+      - 'apps/lythaus-public-api/**'
+      - 'apps/lythaus-admin-api/**'
+      - 'apps/lythaus-jobs/**'
+      - 'apps/lythaus-auth-acceptance-coordinator/**'
+      - 'assets/**'
+      - 'database/planetscale/migrations/**'
+      - 'infrastructure/**'
+      - 'integration_test/**'
+      - 'lib/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'scripts/**'
+      - 'test/**'
+      - 'web/**'
+
+permissions:
+  contents: read
+
+jobs:
+  eligibility-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit
+      - run: node --test scripts/tests/app-only-eligibility.test.mjs scripts/tests/app-only-acceptance.test.mjs scripts/tests/app-only-keeper.test.mjs scripts/tests/owner-testing-auth-scope.test.mjs scripts/tests/cloudflare-email-lifecycle-contract.test.mjs scripts/tests/app-only-release-locks.test.mjs scripts/tests/app-only-workflow.test.mjs scripts/tests/app-only-auth-network-policy.test.mjs scripts/tests/app-only-artifact-evidence.test.mjs scripts/tests/verify-extract-app-artifact.test.mjs scripts/tests/app-only-auth-browser.test.mjs scripts/tests/app-only-pages-rollback.test.mjs scripts/tests/app-only-release-inventory.test.mjs scripts/tests/app-only-release-evidence.test.mjs scripts/tests/app-only-prior-release.test.mjs scripts/tests/app-only-production-smoke.test.mjs scripts/tests/app-only-finalize.test.mjs scripts/tests/prepare-app-only-release.test.mjs scripts/tests/resolve-prior-canonical-run.test.mjs scripts/tests/app-only-manifest-env.test.mjs scripts/tests/production-release-governance.test.mjs scripts/tests/release-manifest.test.mjs scripts/tests/capture-app-only-worker-state.test.mjs scripts/tests/capture-app-only-pages-state.test.mjs
+      - run: node --test scripts/tests/verify-pages-deployment-scope.test.mjs scripts/tests/app-only-pages-serving-rollback.test.mjs scripts/tests/adr003-disposable-evidence.test.mjs
+      - run: node --check scripts/ci/app-only-auth-browser.mjs
+      - run: node --check scripts/ci/recheck-app-only-serving-proof.mjs
+      - run: node --test scripts/tests/app-pages-serving-proof.test.mjs scripts/tests/app-only-workflow.test.mjs

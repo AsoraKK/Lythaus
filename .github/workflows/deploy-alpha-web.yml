@@ -105,6 +105,16 @@ on:
         required: false
         default: false
         type: boolean
+      app_only_preparation_json:
+        description: Exact protected app-only preparation from the canonical transaction
+        required: false
+        default: ''
+        type: string
+      release_mode:
+        description: Canonical caller's release mode; app-only is accepted only from production-release.yml
+        required: false
+        default: automatic
+        type: string
     outputs:
       pages_deployment_id:
         description: Exact Pages deployment identifier selected for the release SHA
@@ -126,11 +136,26 @@ permissions:
   actions: read
   contents: read
 
+# Direct production deployments of lythaus-web share the canonical release
+# lock. A reusable child called by that workflow uses a per-run group because
+# its caller already holds the lock. Preview targets and other projects remain
+# independently runnable.
+concurrency:
+  group: >-
+    ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository)
+        && format('lythaus-alpha-web-delegated-{0}', github.run_id)
+        || (inputs.target_environment == 'production' && inputs.pages_project == 'lythaus-web'
+            && 'lythaus-canonical-production-release')
+        || format('lythaus-alpha-web-{0}', github.run_id) }}
+  cancel-in-progress: false
+
 jobs:
   deploy-and-smoke:
     runs-on: ubuntu-latest
     environment: ${{ inputs.target_environment == 'production' && 'production' || inputs.target_environment }}
     timeout-minutes: 35
+    env:
+      RELEASE_MODE: ${{ inputs.release_mode || '' }}
     outputs:
       pages_deployment_id: ${{ steps.pages_evidence.outputs.deployment_id }}
       pages_deployment_url: ${{ steps.pages_evidence.outputs.deployment_url }}
@@ -154,6 +179,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           CI_RUN_ID: ${{ inputs.ci_run_id }}
+          APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && inputs.target_environment == 'production' }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release_sha must be a full commit SHA"; exit 1; }
@@ -165,12 +191,23 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
 
-          ARTIFACTS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/artifacts")
-          WEB_DIGEST=$(jq -r '.artifacts[] | select(.name == "flutter-web-release") | .digest' <<<"$ARTIFACTS_JSON")
-          test -n "$WEB_DIGEST" && test "$WEB_DIGEST" != "null"
-          mkdir -p downloaded/web
-          gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name flutter-web-release --dir downloaded/web
+          if [[ "${RELEASE_MODE:-}" == 'app_only' ]]; then
+            test "$APP_ONLY_CANONICAL" = 'true' || { echo 'Unverified app-only workflow context.' >&2; exit 1; }
+            # This branch is derived from the canonical dispatch, not a
+            # reusable-workflow input. Hash the downloaded ZIP and deploy the
+            # very bytes that passed safe extraction.
+            node scripts/ci/verify-extract-app-artifact.mjs > "$RUNNER_TEMP/app-only-web-artifact.json"
+            WEB_DIGEST="$(jq -er '.archiveDigest' "$RUNNER_TEMP/app-only-web-artifact.json")"
+            mkdir -p downloaded
+            mv "$RUNNER_TEMP/verified-app-only-artifact" downloaded/web
+          else
+            ARTIFACTS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/artifacts")
+            WEB_DIGEST=$(jq -r '.artifacts[] | select(.name == "flutter-web-release") | .digest' <<<"$ARTIFACTS_JSON")
+            test -n "$WEB_DIGEST" && test "$WEB_DIGEST" != "null"
+            mkdir -p downloaded/web
+            gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --name flutter-web-release --dir downloaded/web
+          fi
           test -f downloaded/web/index.html
           test -f downloaded/web/_headers
           test -f downloaded/web/_redirects
@@ -206,7 +243,36 @@ jobs:
           export CODEQL_RUN_ID DEPENDENCY_REVIEW_RUN_ID SECRET_SCAN_RUN_ID HISTORICAL_RECONCILIATION_RUN_ID
           node scripts/ci/verify-exact-release-evidence.mjs
 
-      - name: Require fresh recovery before production Pages activation
+      - name: Recheck app-only acceptance and live dependencies immediately before activation
+        env:
+          APP_ONLY_PREPARATION_JSON: ${{ inputs.app_only_preparation_json }}
+          APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && inputs.target_environment == 'production' }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          LYTHAUS_WEB_PAGES_BRANCH: ${{ vars.LYTHAUS_WEB_PAGES_BRANCH }}
+          LYTHAUS_ADMIN_PAGES_PROJECT: ${{ vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
+          PAGES_BRANCH: ${{ inputs.pages_branch }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+          GH_TOKEN: ${{ github.token }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${RELEASE_MODE:-}" == app_only ]]; then
+            test "$APP_ONLY_CANONICAL" = true
+            test "$LYTHAUS_WEB_PAGES_BRANCH" = "$PAGES_BRANCH"
+            export RELEASE_MODE=app_only
+            PREVIOUS_PRODUCTION_SHA="$(jq -er '.previousProductionSha' <<<"$APP_ONLY_PREPARATION_JSON")"
+            PREVIOUS_PRODUCTION_RUN_ID="$(jq -er '.previousRunId' <<<"$APP_ONLY_PREPARATION_JSON")"
+            export PREVIOUS_PRODUCTION_SHA PREVIOUS_PRODUCTION_RUN_ID
+            node scripts/ci/recheck-app-only-release.mjs
+          fi
+
+      - name: Require fresh protected native recovery evidence
         if: inputs.target_environment == 'production'
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -215,8 +281,27 @@ jobs:
           PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+        shell: bash
         run: node scripts/ci/verify-production-recovery-readiness.mjs
+      - name: Recheck app-only Pages serving evidence
+        if: inputs.target_environment == 'production' && github.event_name == 'workflow_dispatch' && inputs.release_mode == 'app_only'
+        env:
+          APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && inputs.target_environment == 'production' }}
+          APP_ONLY_PREPARATION_JSON: ${{ inputs.app_only_preparation_json }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LYTHAUS_WEB_PAGES_BRANCH: ${{ vars.LYTHAUS_WEB_PAGES_BRANCH }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_MODE: app_only
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${RELEASE_MODE:-}" == app_only ]]; then
+            test "$APP_ONLY_CANONICAL" = true
+            node scripts/ci/recheck-app-only-serving-proof.mjs
+          fi
       - name: Deploy immutable Pages artifact
+        id: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -226,24 +311,46 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx --yes wrangler@4.123.0 pages deploy downloaded/web \
-            --project-name "$PAGES_PROJECT" \
-            --branch "$PAGES_BRANCH" \
-            --commit-hash "$RELEASE_SHA" \
-            --commit-dirty=false
+          if [[ "${RELEASE_MODE:-}" == 'app_only' ]]; then
+            npx --yes wrangler@4.123.0 pages deploy downloaded/web \
+              --project-name "$PAGES_PROJECT" \
+              --branch "$PAGES_BRANCH" \
+              --commit-hash "$RELEASE_SHA" \
+              --commit-dirty=false | tee "$RUNNER_TEMP/alpha-web-deploy-output.txt"
+            deployment_url="$(node scripts/ci/extract-pages-deployment-url.mjs "$PAGES_PROJECT" "$RUNNER_TEMP/alpha-web-deploy-output.txt")"
+            echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          else
+            npx --yes wrangler@4.123.0 pages deploy downloaded/web \
+              --project-name "$PAGES_PROJECT" \
+              --branch "$PAGES_BRANCH" \
+              --commit-hash "$RELEASE_SHA" \
+              --commit-dirty=false
+          fi
 
       - name: Verify exact Pages deployment evidence
         id: pages_evidence
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && inputs.target_environment == 'production' }}
+          APP_ONLY_PREPARATION_JSON: ${{ inputs.app_only_preparation_json }}
+          RELEASE_MODE: ${{ inputs.release_mode || '' }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           PAGES_PROJECT: ${{ inputs.pages_project }}
           PAGES_BRANCH: ${{ inputs.pages_branch }}
+          PAGES_ENVIRONMENT: ${{ inputs.target_environment == 'production' && 'production' || 'preview' }}
+          PAGES_EXPECTED_DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
           PAGES_DEPLOYMENT_EVIDENCE_OUTPUT: alpha-web-pages-deployment-evidence.json
         run: |
           set -euo pipefail
           node scripts/cloudflare/verify-pages-deployment.mjs
+          if [[ "${RELEASE_MODE:-}" == 'app_only' ]]; then
+            jq -e --arg branch "$PAGES_BRANCH" --arg sha "$RELEASE_SHA" '
+              .project == "lythaus-web" and .environment == "production" and .branch == $branch and .commitSha == $sha
+              and (.deploymentId | test("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"))
+              and (.deploymentUrl | test("^https://[a-z0-9-]+\\.lythaus-web\\.pages\\.dev$"))
+            ' alpha-web-pages-deployment-evidence.json >/dev/null
+          fi
           {
             echo "deployment_id=$(jq -r '.deploymentId' alpha-web-pages-deployment-evidence.json)"
             echo "deployment_url=$(jq -r '.deploymentUrl' alpha-web-pages-deployment-evidence.json)"

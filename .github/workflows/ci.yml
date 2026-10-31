@@ -476,6 +476,10 @@ jobs:
         run: node scripts/check-auth-flutter-coverage.mjs
       - name: Install authentication test browsers
         run: npx playwright install --with-deps chromium webkit
+      - name: Verify app-only browser acceptance against a synthetic API
+        env:
+          APP_ONLY_AUTH_SYNTHETIC_ARTIFACT: ${{ github.workspace }}/build/web
+        run: node --test --test-timeout=120000 scripts/tests/app-only-auth.browser.mjs
       - name: Build live reload gate Flutter fixture
         run: flutter build web --debug --no-pub --no-wasm-dry-run --no-web-resources-cdn --target test/browser/web_release_gate_entry.dart --output build/web-release-gate-fixture
       - name: Verify compiled Flutter reload gate and bridge

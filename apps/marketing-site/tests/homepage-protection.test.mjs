@@ -131,9 +131,9 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
 }
 const reviewedToolingSecurityPatches = {
   'follow-redirects': {
-    version: '1.16.1',
-    resolved: 'https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz',
-    integrity: 'sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==',
+    version: '1.16.2',
+    resolved: 'https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.2.tgz',
+    integrity: 'sha512-/kVP2U8z596Ia0gwFrwyIeo74ta5aVmSeU1FfAUMAmcEP5EP7zydmag3SLiN64NaRKef3lxsq7i/g7ltJQDGow==',
     dev: true,
     funding: [{ type: 'individual', url: 'https://github.com/sponsors/RubenVerborgh' }],
     license: 'MIT',
@@ -659,6 +659,9 @@ test('reviewed tooling patches reject a different version, registry URL or integ
       assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /must use the exact reviewed security patch/);
     }
   }
+  const vulnerable = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  vulnerable.packages['node_modules/follow-redirects'].version = '1.16.1';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(vulnerable), /follow-redirects must use the exact reviewed security patch/);
 });
 
 test('source-map security patch rejects changed metadata and unrelated dependencies', () => {

@@ -29,7 +29,7 @@ test('owner testing cannot bootstrap encryption keys or touch coordinator keys',
   assert.throws(() => assertOwnerTestingScopedKeys(coordinator,true), /deferred_coordinator/);
 });
 
-function runProvider(script, scenario, args = []) {
+function runProvider(script, scenario, args = [], ownerTesting = true) {
   const directory = mkdtempSync(path.join(tmpdir(),'lythaus-owner-scope-'));
   const output = path.join(directory,'evidence.json');
   const calls = path.join(directory,'calls.jsonl');
@@ -66,7 +66,7 @@ function runProvider(script, scenario, args = []) {
     };
   `;
   const result = spawnSync(process.execPath,['--import',`data:text/javascript,${encodeURIComponent(fixture)}`,script,...args],{
-    encoding:'utf8', timeout:10000, env:{ ...process.env, OWNER_TESTING_DEPLOYMENT:'true',
+    encoding:'utf8', timeout:10000, env:{ ...process.env, OWNER_TESTING_DEPLOYMENT:ownerTesting ? 'true' : 'false',
       CLOUDFLARE_API_TOKEN:'synthetic-only', CLOUDFLARE_ACCOUNT_ID:'e5b7ae46e04698f507b7e4b3d4ef1af0',
       CLOUDFLARE_ZONE_ID:'7bc572c8b7cd3c00be9c655176c29382',
       TURNSTILE_SECRET_FILE:path.join(directory,'synthetic-secret.json'), TURNSTILE_EVIDENCE_PATH:output,
@@ -80,6 +80,16 @@ function runProvider(script, scenario, args = []) {
     return { status:result.status, stderr:result.stderr, requests, ...(result.status===0?{evidence:JSON.parse(readFileSync(output,'utf8'))}:{}) };
   } finally { rmSync(directory,{recursive:true,force:true}); }
 }
+
+test('explicit read-only email lifecycle verification is independent of owner testing and never writes', () => {
+  const good = runProvider('scripts/ci/provision-cloudflare-email-lifecycle.mjs', 'matching', ['--verify-existing'], false);
+  assert.equal(good.status, 0, good.stderr);
+  assert.equal(good.evidence.infrastructureMode, 'verify_existing');
+  for (const scenario of ['missing-queue', 'missing-subscription', 'disabled-subscription', 'events-drift']) {
+    const bad = runProvider('scripts/ci/provision-cloudflare-email-lifecycle.mjs', scenario, ['--verify-existing'], false);
+    assert.notEqual(bad.status, 0);
+  }
+});
 
 test('owner testing verifies an existing Turnstile widget without provider mutation', () => {
   const result=runProvider('scripts/ci/prepare-owner-testing-turnstile.mjs','matching',['ensure']);
