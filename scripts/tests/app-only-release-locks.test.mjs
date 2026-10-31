@@ -26,8 +26,15 @@ test('direct production lythaus-web deploys serialize with canonical release; de
 
 test('the canonical app-only artifact path cannot fall back to unverified download', () => {
   const web = workflow('deploy-alpha-web');
-  assert.match(web, /APP_ONLY_REQUESTED=.*GITHUB_EVENT_PATH.*event\.inputs\?\.release_mode === "app_only"/);
+  const canonical = workflow('production-release');
+  const appOnly = workflow('canonical-app-only-release');
+  const manualInputs = web.slice(web.indexOf('  workflow_dispatch:'), web.indexOf('  workflow_call:'));
+  assert.doesNotMatch(manualInputs, /^\s+release_mode:/m, 'direct dispatch cannot request the app-only mode');
+  assert.match(web, /release_mode:[\s\S]*?Canonical caller's release mode/);
+  assert.match(canonical, /uses: \.\/\.github\/workflows\/deploy-alpha-web\.yml[\s\S]*?release_mode: \$\{\{ inputs\.release_mode \}\}/);
+  assert.match(appOnly, /uses: \.\/\.github\/workflows\/deploy-alpha-web\.yml[\s\S]*?release_mode: app_only/);
+  assert.match(web, /RELEASE_MODE: \$\{\{ inputs\.release_mode \|\| '' \}\}/);
   assert.match(web, /APP_ONLY_CANONICAL:.*github\.workflow_ref.*production-release\.yml@refs\/heads\/main.*inputs\.target_environment == 'production'/);
-  assert.match(web, /if \[\[ "\$APP_ONLY_REQUESTED" == 'true' \]\]; then[\s\S]*?test "\$APP_ONLY_CANONICAL" = 'true'[\s\S]*?verify-extract-app-artifact\.mjs[\s\S]*?else[\s\S]*?gh run download/);
+  assert.match(web, /if \[\[ "\$\{RELEASE_MODE:-\}" == 'app_only' \]\]; then[\s\S]*?test "\$APP_ONLY_CANONICAL" = 'true'[\s\S]*?verify-extract-app-artifact\.mjs[\s\S]*?else[\s\S]*?gh run download/);
   assert.match(web, /verify-pages-deployment\.mjs[\s\S]*?\.environment == "production"[\s\S]*?\.deploymentId \| test\([\s\S]*?\.deploymentUrl \| test\([\s\S]*?deployment_id=/);
 });
