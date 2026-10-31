@@ -226,11 +226,17 @@ test('both scoped migration and persistent release gates use protected exception
     assert.ok(!pages.slice(0, pages.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
   }
   const webPages = fs.readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
-  const webRecovery = webPages.slice(webPages.indexOf('- name: Verify full-stack recovery or canonical app-only Pages scope'),
-    webPages.indexOf('- name: Require proven app Pages serving identity'));
-  assert.match(webRecovery, /app_only_requested.*release_mode === "app_only"/);
-  assert.match(webRecovery, /APP_ONLY_CANONICAL/);
-  assert.match(webRecovery, /else[\s\S]*?node scripts\/ci\/verify-production-recovery-readiness\.mjs/);
-  assert.ok(webPages.indexOf('Verify full-stack recovery or canonical app-only Pages scope') < webPages.indexOf('Deploy immutable Pages artifact'));
+  const webRecovery = webPages.slice(webPages.indexOf('- name: Require fresh protected native recovery evidence'),
+    webPages.indexOf('- name: Recheck app-only Pages serving evidence'));
+  assert.match(webRecovery, /if: inputs\.target_environment == 'production'/);
+  assert.match(webRecovery, /node scripts\/ci\/verify-production-recovery-readiness\.mjs/);
+  assert.doesNotMatch(webRecovery, /app_only_requested/);
+  const appOnlyServing = webPages.slice(webPages.indexOf('- name: Recheck app-only Pages serving evidence'),
+    webPages.indexOf('- name: Deploy immutable Pages artifact'));
+  assert.match(appOnlyServing, /inputs\.release_mode == 'app_only'/);
+  assert.match(appOnlyServing, /APP_ONLY_CANONICAL/);
+  assert.match(appOnlyServing, /node scripts\/ci\/recheck-app-only-serving-proof\.mjs/);
+  assert.ok(webPages.indexOf('Require fresh protected native recovery evidence') < webPages.indexOf('Recheck app-only Pages serving evidence'));
+  assert.ok(webPages.indexOf('Recheck app-only Pages serving evidence') < webPages.indexOf('Deploy immutable Pages artifact'));
   assert.ok(!webPages.slice(0, webPages.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
 });
