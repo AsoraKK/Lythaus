@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
 const retiredBrand = ['as', 'ora'].join('');
+const canonicalRepositoryReference = /(?<![A-Za-z0-9_.-])AsoraKK\/Lythaus(?![A-Za-z0-9_.-])/g;
 const retiredProvider = ['az', 'ure'].join('');
 const retiredDatabase = ['cos', 'mos'].join('');
 const retiredClassifier = ['hi', 've'].join('');
@@ -100,7 +101,7 @@ for (const relative of scannedFiles) {
 
   for (const rule of forbidden) {
     const activeContents = rule.name === 'retired brand'
-      ? contents.replaceAll('https://github.com/AsoraKK/Lythaus/', 'https://github.com/CANONICAL_REPOSITORY/')
+      ? contents.replaceAll(canonicalRepositoryReference, 'CANONICAL_REPOSITORY')
       : contents;
     if (rule.pattern.test(activeContents)) {
       failures.push(`${normalized}: ${rule.name} appears in active content`);

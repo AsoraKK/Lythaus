@@ -340,6 +340,8 @@ test('active runtimes have an explicit retired-provider dependency scan', () => 
   const script = fs.readFileSync(path.join(root, 'scripts/validate-no-retired-provider-dependencies.mjs'), 'utf8');
   const allowlist = JSON.parse(fs.readFileSync(path.join(root, 'scripts/retired-reference-allowlist.json'), 'utf8'));
   assert.match(script, /retiredBrand/);
+  assert.match(script, /canonicalRepositoryReference/);
+  assert.match(script, /replaceAll\(canonicalRepositoryReference, 'CANONICAL_REPOSITORY'\)/);
   assert.match(script, /retiredProvider/);
   assert.match(script, /retiredDatabase/);
   assert.match(script, /retiredClassifier/);

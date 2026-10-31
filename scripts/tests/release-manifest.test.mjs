@@ -5,9 +5,42 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
+import { classifyRelease } from '../release/release-classification.mjs';
 
 const root = process.cwd();
 const releaseSha = '0123456789abcdef0123456789abcdef01234567';
+
+test('app-only manifest preserves all source changes and fails closed without real bound evidence', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-app-only-manifest-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const output = path.join(directory, 'release-manifest.json');
+  const previous = 'f'.repeat(40);
+  const classification = classifyRelease({ changedFiles: ['lib/main.dart', 'apps/lythaus-public-api/src/index.ts'],
+    baseSha: previous, forceAuthCritical: true });
+  const env = { ...process.env, RELEASE_SHA: releaseSha, PREVIOUS_PRODUCTION_SHA: previous,
+    APP_ONLY_RELEASE: 'true', RELEASE_CLASS: classification.releaseClass, FORCE_AUTH_CRITICAL: 'true',
+    CHANGED_FILES_JSON: JSON.stringify(classification.changedFiles), CHANGED_COMPONENTS_JSON: JSON.stringify(classification.changedComponents),
+    REUSED_COMPONENTS_JSON: JSON.stringify(classification.reusedComponents),
+    LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true', CI: 'false' };
+  execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], { env, stdio: 'pipe' });
+  const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.deepEqual(manifest.changedComponents, classification.changedComponents);
+  assert.deepEqual(manifest.deployment.changedComponents, ['flutter-web']);
+  assert.ok(manifest.deployment.sourceChangesNotDeployed.includes('public'));
+  assert.equal(manifest.components.public.status, 'REUSED_PRODUCTION');
+  assert.equal(manifest.components['flutter-web'].status, 'NEW_CANDIDATE');
+  assert.equal(manifest.productionStatus, 'NO-GO');
+  assert.equal(manifest.productionStatusScope, 'APP_ONLY_DEPLOYMENT_ONLY');
+  assert.ok(manifest.evidence.unknowns.some(value => value.includes('App-only artifact, real-browser')));
+  assert.ok(manifest.evidence.platformLimitations.some(value => value.includes('not a byte-for-byte check')));
+  assert.ok(manifest.evidence.platformLimitations.some(value => value.includes('does not certify the full stack')));
+  execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], {
+    env: { ...env, FORCE_AUTH_CRITICAL: 'false' }, stdio: 'pipe',
+  });
+  const invalid = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.equal(invalid.productionStatus, 'NO-GO');
+  assert.ok(invalid.evidence.unknowns.some(value => value.includes('full auth-critical certification')));
+});
 
 test('release manifest records partial provider evidence without inventing live state', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-release-manifest-'));
@@ -21,6 +54,7 @@ test('release manifest records partial provider evidence without inventing live 
   assert.equal(manifest.schemaVersion, 'lythaus-release-manifest-v2');
   assert.equal(manifest.status, 'NO-GO');
   assert.equal(manifest.productionStatus, 'NO-GO');
+  assert.equal(manifest.productionStatusScope, 'CANONICAL_RELEASE');
   assert.equal(manifest.repository.releaseSha, releaseSha);
   assert.equal(manifest.github.nativeBranchProtectionStatus, 'ACTIVE');
   assert.equal(manifest.github.releaseGovernanceCompensatingControls, false);
@@ -73,6 +107,7 @@ test('post-0021 manifest keeps independent recovery deferred and blocks public r
   assert.equal(manifest.planetscale.latestMigration, '0021_media_quarantine_cleanup.sql');
   assert.equal(manifest.status, 'NO-GO');
   assert.equal(manifest.recovery.independentRecoveryStatus, 'DEFERRED_BY_OWNER_EXCEPTION');
+  assert.equal(manifest.productionStatusScope, 'OWNER_TESTING');
   assert.equal(manifest.recovery.requiredAfter0021, true);
   assert.deepEqual(manifest.recovery.publicReleaseBlockers, ['independent_recovery_destination']);
   assert.ok(manifest.evidence.unknowns.some(value => value.includes('Independent recovery remains DEFERRED_BY_OWNER_EXCEPTION')));
