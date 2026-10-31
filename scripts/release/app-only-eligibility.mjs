@@ -15,7 +15,9 @@ export const REVIEWED_APP_INPUTS = Object.freeze({
   'cloudflare/pages-release.sh': ['100644', 'blob', '3f2a7d2e3fe8a39a53531684557768444d4d9070'],
   integration_test: ['040000', 'tree', 'b26618289337c2c20d8e0001b3f86a9fce0b92ce'],
   lib: ['040000', 'tree', 'c0a15b3e25515f95ccf83f24a89bb0f40634218f'],
-  'package-lock.json': ['100644', 'blob', 'dd9d70a13e5c690e34affb0bce61050df7b234d0'],
+  // PR #1133's reviewed follow-redirects fix updates only its version, registry
+  // URL, and integrity in the root lockfile; the test below freezes all other bytes.
+  'package-lock.json': ['100644', 'blob', 'c2f497fda82aee9ed291c179748ba5c0b0f7459c'],
   'package.json': ['100644', 'blob', '56032df99fe8e2ccc9b1b0820a438735ca6e6350'],
   'pubspec.lock': ['100644', 'blob', '38517b80c20777cbb116aea81ae3e4f9b380d1c6'],
   'pubspec.yaml': ['100644', 'blob', '9016eba614b27a323240a6ab86d30293ce273765'],

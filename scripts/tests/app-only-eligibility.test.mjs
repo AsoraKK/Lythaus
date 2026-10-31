@@ -40,6 +40,29 @@ test('reviewed input inventory accepts exact blob, tree, and mode identities', (
   assert.ok(Object.isFrozen(REVIEWED_APP_INPUTS.lib));
 });
 
+test('reviewed root lock changes only follow-redirects to the approved 1.16.2 artifact', () => {
+  const baseSha = 'fee93bdb60e782507d8f27b6811b536d4fe14422';
+  const baseLock = JSON.parse(execFileSync('git', ['show', `${baseSha}:package-lock.json`], { encoding: 'utf8' }));
+  const actualLock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  const expectedLock = structuredClone(baseLock);
+  const path = 'node_modules/follow-redirects';
+  const entry = expectedLock.packages[path];
+  assert.equal(entry.version, '1.16.1');
+  assert.equal(entry.resolved, 'https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz');
+  assert.equal(entry.integrity, 'sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==');
+  Object.assign(entry, {
+    version: '1.16.2',
+    resolved: 'https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.2.tgz',
+    integrity: 'sha512-/kVP2U8z596Ia0gwFrwyIeo74ta5aVmSeU1FfAUMAmcEP5EP7zydmag3SLiN64NaRKef3lxsq7i/g7ltJQDGow==',
+  });
+
+  // Deep equality against the full base lock makes every unrelated lockfile
+  // change fail, even if a caller attempted to replace the reviewed blob pin.
+  assert.deepEqual(actualLock, expectedLock);
+  const actualBlob = execFileSync('git', ['hash-object', 'package-lock.json'], { encoding: 'utf8' }).trim();
+  assert.equal(actualBlob, REVIEWED_APP_INPUTS['package-lock.json'][2]);
+});
+
 test('the pinned CI successor only adds the synthetic app-only browser regression', () => {
   const predecessor = execFileSync('git', ['show', 'fee93bdb60e782507d8f27b6811b536d4fe14422:.github/workflows/ci.yml'], { encoding: 'utf8' });
   const current = readFileSync('.github/workflows/ci.yml', 'utf8');
