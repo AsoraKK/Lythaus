@@ -36,9 +36,10 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   // Exact comment hooks independently reviewed at 211f0e064b501ec6ed680c891ee36bd3e38d8a41.
-  ['apps/lythaus-jobs/src/index.ts', '9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12'],
+  // PR #1127 adds independently reviewed, default-off feedback and privacy hooks.
+  ['apps/lythaus-jobs/src/index.ts', '1145049fc3d6d1f5afbf9754c4f8d949245caa70'],
   // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', 'aacfbb522f8387a72db133fa8c5384dcf9d4e2f2'],
+  ['apps/lythaus-public-api/src/index.ts', '36635cfd97bcedcb047bfed4f3c2de3b95a4e70d'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -1173,6 +1174,42 @@ test('comment entrypoint allocations reject predecessor blobs and unauthorized v
       }).trim();
       assert.notEqual(altered, current);
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, altered), assert.AssertionError);
+    }
+  }
+});
+
+test('feedback allocation rejects predecessor blobs and missing default-off or privacy hooks', () => {
+  const disabledGate = "        if (env.CONTRIBUTION_FEEDBACK_ENABLED !== 'true') {\n"
+    + "          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });\n"
+    + '        }\n';
+  const cases = [
+    ['apps/lythaus-public-api/src/index.ts', 'aacfbb522f8387a72db133fa8c5384dcf9d4e2f2', [
+      ['remove read default-off gate', disabledGate, 0, 2],
+      ['remove write default-off gate', disabledGate, 1, 2],
+    ]],
+    ['apps/lythaus-jobs/src/index.ts', '9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12', [
+      ['remove deletion hook', 'await purgeContributionFeedback(client, subjectId);', 0, 1],
+      ['remove export hook', 'const contributionFeedback = await transaction(this.env.DB_JOBS_FRESH, client => exportContributionFeedback(client, subjectId));', 0, 1],
+      ['remove feedback from passport', '...passport, accountActivityMeasurement, contributionFeedback,', 0, 1],
+    ]],
+  ];
+  for (const [filename, previous, mutations] of cases) {
+    const source = readFileSync(path.join(root, filename), 'utf8');
+    const current = git('hash-object', `--path=${filename}`, filename);
+    assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, current));
+    assert.notEqual(previous, current);
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previous), assert.AssertionError);
+    for (const [description, needle, occurrence, expectedCount] of mutations) {
+      assert.equal(source.split(needle).length - 1, expectedCount, description);
+      let at = -1;
+      for (let i = 0; i <= occurrence; i++) at = source.indexOf(needle, at + 1);
+      assert.ok(at >= 0, description);
+      const mutated = source.slice(0, at) + source.slice(at + needle.length);
+      const blob = execFileSync('git', ['hash-object', '--stdin'], {
+        cwd: root, encoding: 'utf8', input: mutated,
+      }).trim();
+      assert.notEqual(blob, current, description);
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, blob), assert.AssertionError, description);
     }
   }
 });

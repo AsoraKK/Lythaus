@@ -22,6 +22,9 @@ import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/feed/application/owner_content_repository.dart';
 import 'package:lythaus/state/providers/feed_providers.dart' as live;
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
+import 'package:lythaus/features/reactions/domain/contribution_feedback.dart';
+import 'package:lythaus/features/reactions/presentation/contribution_feedback_controls.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({
@@ -391,14 +394,23 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       _PostMedia(mediaUrls: post.mediaUrls!),
                     ],
                     const SizedBox(height: 12),
-                    // ── Reaction Bar (Phase 2) ──
-                    ReactionBar(
-                      contentId: post.id,
-                      authorUserId: post.authorId,
-                      initialSummary: ReactionSummary(
-                        myReactionType: post.viewerReaction,
+                    if (ref.watch(contributionFeedbackCandidateProvider) &&
+                        post.moderationState != 'under_review')
+                      ContributionFeedbackControls(
+                        target: FeedbackTarget(
+                          FeedbackTargetType.post,
+                          post.id,
+                        ),
+                        authorId: post.authorId,
+                      )
+                    else
+                      ReactionBar(
+                        contentId: post.id,
+                        authorUserId: post.authorId,
+                        initialSummary: ReactionSummary(
+                          myReactionType: post.viewerReaction,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 12),
                     TrustStripRow(
                       compact: true,

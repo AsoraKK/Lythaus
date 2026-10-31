@@ -96,6 +96,7 @@ class ContentMutationRegistry extends ChangeNotifier {
   bool _isReady = true;
   bool storageUnavailable = false;
   bool _disposed = false;
+  bool _notificationQueued = false;
 
   int get sessionEpoch => _epoch;
   int get pendingJournalOperations => _pendingJournalOperations;
@@ -122,7 +123,19 @@ class ContentMutationRegistry extends ChangeNotifier {
   String _storageKey(String actor) =>
       'lythaus.content-recovery.v1.${sha256.convert(utf8.encode(actor))}';
   void _changed() {
-    if (!_disposed) notifyListeners();
+    if (_disposed) return;
+    if (BindingBase.debugBindingType() != null &&
+        SchedulerBinding.instance.schedulerPhase ==
+            SchedulerPhase.persistentCallbacks) {
+      if (_notificationQueued) return;
+      _notificationQueued = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _notificationQueued = false;
+        if (!_disposed) notifyListeners();
+      });
+      return;
+    }
+    notifyListeners();
   }
 
   Future<T> _queue<T>(Future<T> Function() action) {
@@ -468,11 +481,12 @@ class ContentMutationRegistry extends ChangeNotifier {
   Future<void> finishDurable(
     ContentMutationAttempt attempt, {
     bool uncertain = false,
+    bool confirmed = false,
     OwnedContent? receipt,
     bool deleted = false,
   }) async {
     // A rejection on a retry cannot establish the earlier request's outcome.
-    if (attempt.replaying && receipt == null) uncertain = true;
+    if (attempt.replaying && receipt == null && !confirmed) uncertain = true;
     if (attempt._issuedEpoch != _epoch) return;
     final actor = _actor;
     final epoch = _epoch;

@@ -65,6 +65,18 @@ tags:
   - name: Waitlist
     description: Private beta waitlist registration.
 paths:
+  /feedback/post/{targetId}:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1post~1{targetId}'
+  /feedback/post/{targetId}/quality:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1post~1{targetId}~1quality'
+  /feedback/post/{targetId}/emotion:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1post~1{targetId}~1emotion'
+  /feedback/comment/{targetId}:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1comment~1{targetId}'
+  /feedback/comment/{targetId}/quality:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1comment~1{targetId}~1quality'
+  /feedback/comment/{targetId}/emotion:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1comment~1{targetId}~1emotion'
   /authenticity/cases:
     $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases'
   /authenticity/cases/{caseId}:

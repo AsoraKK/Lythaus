@@ -123,6 +123,14 @@ import 'package:lythaus_api_client/src/model/community_appeal_withdrawal.dart';
 import 'package:lythaus_api_client/src/model/community_ballot_request.dart';
 import 'package:lythaus_api_client/src/model/community_ballot_response.dart';
 import 'package:lythaus_api_client/src/model/community_own_ballot.dart';
+import 'package:lythaus_api_client/src/model/contribution_emotion.dart';
+import 'package:lythaus_api_client/src/model/contribution_emotion_counts.dart';
+import 'package:lythaus_api_client/src/model/contribution_feedback_change.dart';
+import 'package:lythaus_api_client/src/model/contribution_feedback_error.dart';
+import 'package:lythaus_api_client/src/model/contribution_feedback_summary.dart';
+import 'package:lythaus_api_client/src/model/contribution_feedback_target.dart';
+import 'package:lythaus_api_client/src/model/contribution_quality.dart';
+import 'package:lythaus_api_client/src/model/contribution_quality_counts.dart';
 import 'package:lythaus_api_client/src/model/create_post_request.dart';
 import 'package:lythaus_api_client/src/model/cursor_page.dart';
 import 'package:lythaus_api_client/src/model/custom_feed.dart';
@@ -140,6 +148,7 @@ import 'package:lythaus_api_client/src/model/email_session_response.dart';
 import 'package:lythaus_api_client/src/model/email_verification_request.dart';
 import 'package:lythaus_api_client/src/model/email_verification_required_response.dart';
 import 'package:lythaus_api_client/src/model/email_verification_response.dart';
+import 'package:lythaus_api_client/src/model/emotion_feedback_request.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
 import 'package:lythaus_api_client/src/model/error_response.dart';
 import 'package:lythaus_api_client/src/model/error_response_error.dart';
@@ -248,6 +257,7 @@ import 'package:lythaus_api_client/src/model/product_integrity_public_profile_us
 import 'package:lythaus_api_client/src/model/public_authorship.dart';
 import 'package:lythaus_api_client/src/model/public_authorship_label.dart';
 import 'package:lythaus_api_client/src/model/public_message.dart';
+import 'package:lythaus_api_client/src/model/quality_feedback_request.dart';
 import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
 import 'package:lythaus_api_client/src/model/reaction_counts.dart';
 import 'package:lythaus_api_client/src/model/reaction_delete_response.dart';
@@ -423,6 +433,14 @@ part 'serializers.g.dart';
   CommunityBallotRequest,
   CommunityBallotResponse,
   CommunityOwnBallot,
+  ContributionEmotion,
+  ContributionEmotionCounts,
+  ContributionFeedbackChange,
+  ContributionFeedbackError,
+  ContributionFeedbackSummary,
+  ContributionFeedbackTarget,
+  ContributionQuality,
+  ContributionQualityCounts,
   CreatePostRequest,
   CursorPage,$CursorPage,
   CustomFeed,
@@ -440,6 +458,7 @@ part 'serializers.g.dart';
   EmailVerificationRequest,
   EmailVerificationRequiredResponse,
   EmailVerificationResponse,
+  EmotionFeedbackRequest,
   Error,
   ErrorResponse,
   ErrorResponseError,
@@ -548,6 +567,7 @@ part 'serializers.g.dart';
   PublicAuthorship,
   PublicAuthorshipLabel,
   PublicMessage,
+  QualityFeedbackRequest,
   RateLimitError,
   ReactionCounts,
   ReactionDeleteResponse,
