@@ -1,0 +1,73 @@
+name: Disposable ADR-003 content acceptance
+
+on:
+  workflow_call:
+    inputs:
+      release_sha: { required: true, type: string }
+      source_sha: { required: true, type: string }
+      worker_version: { required: false, default: '', type: string }
+      binding: { required: true, type: string }
+    outputs:
+      receipt: { value: '${{ jobs.fixture.outputs.receipt }}' }
+
+permissions:
+  contents: read
+
+jobs:
+  fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lythaus_auth_test_post_control
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lythaus_auth_test_post_control"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    outputs:
+      receipt: ${{ steps.receipt.outputs.receipt }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      FIXTURE_SOURCE_SHA: ${{ inputs.source_sha }}
+      FIXTURE_WORKER_VERSION: ${{ inputs.worker_version }}
+      FIXTURE_BINDING: ${{ inputs.binding }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact candidate and ancestral Worker source
+        run: |
+          set -euo pipefail
+          [[ "$FIXTURE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git merge-base --is-ancestor "$FIXTURE_SOURCE_SHA" "$RELEASE_SHA"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_sha }}
+          path: fixture-source
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Run reviewed cases against captured source in a disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C fixture-source rev-parse HEAD)" = "$FIXTURE_SOURCE_SHA"
+          cp apps/lythaus-public-api/tests/adr003-disposable-content.workerd.mjs fixture-source/apps/lythaus-public-api/tests/
+          cp scripts/ci/run-publication-pg17.mjs fixture-source/scripts/ci/run-publication-pg17.mjs
+          cd fixture-source
+          npm ci --ignore-scripts --no-audit
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" GITHUB_ACTIONS=true \
+            PLANETSCALE_PG17_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control \
+            node scripts/ci/run-publication-pg17.mjs --adr003-content
+      - name: Bind successful disposable cases to their Worker source
+        id: receipt
+        run: node scripts/ci/emit-adr003-fixture-receipt.mjs

@@ -220,9 +220,17 @@ test('both scoped migration and persistent release gates use protected exception
   assert.ok(workers.indexOf('Reverify fresh recovery and bounded owner exception before activation') < workers.indexOf('Activate exact candidate Worker versions'));
   assert.ok(!workers.slice(0, workers.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
   for (const [file, activation] of [['deploy-marketing.yml', 'Deploy exact marketing artifact'],
-    ['deploy-alpha-web.yml', 'Deploy immutable Pages artifact'], ['deploy-control-panel.yml', 'Deploy exact control-panel artifact']]) {
+    ['deploy-control-panel.yml', 'Deploy exact control-panel artifact']]) {
     const pages = fs.readFileSync(`.github/workflows/${file}`, 'utf8');
     assert.ok(pages.indexOf('Require fresh recovery before production Pages activation') < pages.indexOf(activation));
     assert.ok(!pages.slice(0, pages.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
   }
+  const webPages = fs.readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
+  const webRecovery = webPages.slice(webPages.indexOf('- name: Verify full-stack recovery or canonical app-only Pages scope'),
+    webPages.indexOf('- name: Require proven app Pages serving identity'));
+  assert.match(webRecovery, /app_only_requested.*release_mode === "app_only"/);
+  assert.match(webRecovery, /APP_ONLY_CANONICAL/);
+  assert.match(webRecovery, /else[\s\S]*?node scripts\/ci\/verify-production-recovery-readiness\.mjs/);
+  assert.ok(webPages.indexOf('Verify full-stack recovery or canonical app-only Pages scope') < webPages.indexOf('Deploy immutable Pages artifact'));
+  assert.ok(!webPages.slice(0, webPages.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
 });

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { ContentFixtureTargetBlocked, requireLocalContentFixtureTarget } from './acceptance-content-target.mjs';
 import { randomUUID } from 'node:crypto';
 import { parseRealEmailAcceptanceEvidence } from './real-email-acceptance-evidence.mjs';
+import { hasDisposableReceipt, validateDisposableContentEvidence } from './adr003-disposable-evidence.mjs';
 
 const apiBase = required('ADR003_API_BASE_URL').replace(/\/$/, '');
 if (!apiBase.endsWith('/api')) throw new Error('ADR003_API_BASE_URL must end with /api');
@@ -33,6 +34,36 @@ let refreshToken = '';
 let replacementRefreshToken = '';
 let postId = '';
 let cachedAuthAcceptanceEvidence = null;
+let cachedDisposableContentEvidence = null;
+
+function disposableContentCase(id) {
+  let event;
+  try { event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')); }
+  catch {
+    if (process.env.RELEASE_MODE === 'app_only') throw new BlockedCase('disposable_content_context_invalid');
+    return false;
+  }
+  if (event?.inputs?.release_mode !== 'app_only') return false;
+  try {
+    if (!hasDisposableReceipt(process.env)) throw new Error('receipt missing');
+  } catch { throw new BlockedCase('disposable_content_evidence_required'); }
+  if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_REPOSITORY !== 'AsoraKK/Lythaus'
+    || process.env.GITHUB_REF !== 'refs/heads/main' || process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch'
+    || process.env.GITHUB_REF_PROTECTED !== 'true'
+    || process.env.GITHUB_WORKFLOW_REF !== 'AsoraKK/Lythaus/.github/workflows/production-release.yml@refs/heads/main') {
+    throw new BlockedCase('disposable_content_context_invalid');
+  }
+  try {
+    if (event?.inputs?.release_sha !== required('RELEASE_SHA')
+      || ![true, 'true'].includes(event?.inputs?.confirm_production)) throw new Error('unconfirmed dispatch');
+    cachedDisposableContentEvidence ??= validateDisposableContentEvidence(
+      JSON.parse(fs.readFileSync(process.env.ADR003_CONTENT_EVIDENCE_PATH, 'utf8')),
+      { releaseSha: required('RELEASE_SHA'), sourceSha: candidateSourceSha, versionId: candidateWorkerVersionId,
+        runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT });
+    if (!cachedDisposableContentEvidence.cases.some(item => item.id === id)) throw new Error('case missing');
+  } catch { throw new BlockedCase('disposable_content_evidence_invalid'); }
+  return true;
+}
 
 class BlockedCase extends Error {
   constructor(code) {
@@ -288,6 +319,7 @@ async function writeEvidence(databaseReport) {
     authAcceptance,
     destructiveAccountDeletion: process.env.ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION === 'true' ? 'REQUESTED' : 'NOT_RUN',
     cases: results,
+    ...(cachedDisposableContentEvidence ? { disposableContent: cachedDisposableContentEvidence } : {}),
   };
   if (evidencePath) fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   return evidence;
@@ -395,6 +427,7 @@ await runCase('A08', async () => {
 });
 
 await runCase('A11', () => runAuthenticatedCase(async () => {
+  if (disposableContentCase('A11')) return { acceptanceNote: 'disposable_content_fixture' };
   requireLocalContentFixtureTarget(apiBase);
   const read = await requestJson('/api/users/me', { headers: bearer() });
   expectStatus(read, [200], 'profile_read');
@@ -408,6 +441,7 @@ await runCase('A11', () => runAuthenticatedCase(async () => {
 }));
 
 await runCase('A12', () => runAuthenticatedCase(async () => {
+  if (disposableContentCase('A12')) return { acceptanceNote: 'disposable_content_fixture' };
   requireLocalContentFixtureTarget(apiBase);
   const result = await requestJson('/api/posts', {
     method: 'POST',
@@ -422,6 +456,7 @@ await runCase('A12', () => runAuthenticatedCase(async () => {
 }));
 
 await runCase('A13', () => runAuthenticatedCase(async () => {
+  if (disposableContentCase('A13')) return { acceptanceNote: 'disposable_content_fixture' };
   requireLocalContentFixtureTarget(apiBase);
   expect(Boolean(postId), 'moderation_target_missing');
   const result = await requestJson('/api/flags', {

@@ -1,0 +1,383 @@
+name: Canonical app-only release transaction
+
+on:
+  workflow_call:
+    inputs:
+      release_sha: { required: true, type: string }
+      previous_production_sha: { required: true, type: string }
+      previous_production_run_id: { required: true, type: string }
+      ci_run_id: { required: true, type: string }
+      acceptance_run_id: { required: false, default: '', type: string }
+      app_pages_serving_proof_json: { required: true, type: string }
+      web_pages_branch: { required: true, type: string }
+      admin_pages_project: { required: true, type: string }
+    outputs:
+      status: { value: '${{ jobs.finalize.outputs.status }}' }
+      evidence_json: { value: '${{ jobs.finalize.outputs.evidence_json }}' }
+      smoke_json: { value: '${{ jobs.finalize.outputs.smoke_json }}' }
+      preparation_json: { value: '${{ jobs.prepare.outputs.preparation_json }}' }
+      acceptance_run_id: { value: '${{ jobs.prepare.outputs.acceptance_run_id }}' }
+      acceptance_expires_at: { value: '${{ jobs.prepare.outputs.acceptance_expires_at }}' }
+      acceptance_dependencies_json: { value: '${{ jobs.prepare.outputs.acceptance_dependencies_json }}' }
+      rollback_status: { value: '${{ jobs.finalize.outputs.rollback_status }}' }
+      release_state: { value: '${{ jobs.finalize.outputs.release_state }}' }
+      history_json: { value: '${{ jobs.finalize.outputs.history_json }}' }
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  capture_fixture_source:
+    name: Capture exact serving Public Worker source
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    outputs:
+      source_sha: ${{ steps.capture.outputs.source_sha }}
+      version_id: ${{ steps.capture.outputs.version_id }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - id: capture
+        run: node scripts/ci/capture-adr003-fixture-source.mjs
+
+  disposable_content:
+    name: Verify A11-A13 on isolated source and PG17
+    needs: capture_fixture_source
+    uses: ./.github/workflows/adr003-disposable-content.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      source_sha: ${{ needs.capture_fixture_source.outputs.source_sha }}
+      worker_version: ${{ needs.capture_fixture_source.outputs.version_id }}
+      binding: version
+
+  prepare:
+    name: Verify unchanged dependencies and real acceptance
+    needs: [capture_fixture_source, disposable_content]
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 45
+    outputs:
+      preparation_json: ${{ steps.export.outputs.preparation_json }}
+      browser_json: ${{ steps.export.outputs.browser_json }}
+      jobs_probe_json: ${{ steps.export.outputs.jobs_probe_json }}
+      history_json: ${{ steps.export.outputs.history_json }}
+      acceptance_run_id: ${{ steps.export.outputs.acceptance_run_id }}
+      acceptance_expires_at: ${{ steps.export.outputs.acceptance_expires_at }}
+      acceptance_dependencies_json: ${{ steps.export.outputs.acceptance_dependencies_json }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
+      PREVIOUS_PRODUCTION_RUN_ID: ${{ inputs.previous_production_run_id }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+      ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+      RELEASE_MODE: app_only
+      LYTHAUS_WEB_PAGES_BRANCH: ${{ inputs.web_pages_branch }}
+      LYTHAUS_ADMIN_PAGES_PROJECT: ${{ inputs.admin_pages_project }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
+      PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+      PLANETSCALE_ORGANIZATION: lythaus
+      PLANETSCALE_DATABASE: lythaus-core
+      PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+      PSCALE_BRANCH_NAME: main
+      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+      EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+      EXPECTED_DATABASE_SCHEMA_VERSION: 0021_media_quarantine_cleanup.sql
+      PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
+      PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
+      PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
+      ADR003_CONTENT_RECEIPT: ${{ needs.disposable_content.outputs.receipt }}
+      APP_PAGES_SERVING_PROOF_JSON: ${{ inputs.app_pages_serving_proof_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Record canonical preflight
+        run: node scripts/ci/transition-release-state.mjs PREFLIGHT
+      - name: Verify static production and read-only provider prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CLOUDFLARE_ENVIRONMENT=production RELEASE_CLASS=AUTH_CRITICAL_RELEASE OWNER_TESTING_DEPLOYMENT=false
+          npm run validate:native-workers
+          npm run validate:native-scope:production
+          npm run validate:production-gates:predeploy
+          npm run validate:planetscale-migrations
+          npm run validate:planetscale-extensions
+          npm run validate:no-retired-provider-dependencies
+          npm run validate:ai-gateway-paths
+          node scripts/cloudflare/waitlist-turnstile.mjs resolve
+          export CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT="$RUNNER_TEMP/app-only-email-lifecycle.json"
+          node scripts/ci/provision-cloudflare-email-lifecycle.mjs --verify-existing
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs
+          echo 'HYPERDRIVE_VERIFIED_MAIN=true' >> "$GITHUB_ENV"
+      - name: Record verified infrastructure
+        run: node scripts/ci/transition-release-state.mjs INFRASTRUCTURE_VERIFIED
+      - name: Capture exact baseline, artifact and protected Keeper run
+        run: node scripts/ci/prepare-app-only-release.mjs
+      - name: Consume the one-use serving proof before deployment
+        id: serving_proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          proof_artifact="$(jq -er '.proofArtifactName' "$RUNNER_TEMP/app-only-release/preparation.json")"
+          [[ "$proof_artifact" =~ ^lythaus-app-only-pages-serving-[0-9a-f]{64}$ ]]
+          echo "artifact_name=$proof_artifact" >> "$GITHUB_OUTPUT"
+      - name: Preserve the consumed serving-proof receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.serving_proof.outputs.artifact_name }}
+          path: ${{ runner.temp }}/app-only-release/serving-proof-consumption.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Bind candidate values to the captured run
+        shell: bash
+        run: |
+          set -euo pipefail
+          prep="$RUNNER_TEMP/app-only-release/preparation.json"
+          jq -e '.keeper.status == "completed"' "$prep" >/dev/null
+          jq -e --argjson receipt "$ADR003_CONTENT_RECEIPT" '
+            .workerCapture.workers.public.sourceSha == $receipt.workerSourceSha
+            and .workerCapture.workers.public.versionId == $receipt.workerVersionId' "$prep" >/dev/null
+          printf '%s\n' "$ADR003_CONTENT_RECEIPT" > "$RUNNER_TEMP/adr003-disposable-content.json"
+          echo "ADR003_CONTENT_EVIDENCE_PATH=$RUNNER_TEMP/adr003-disposable-content.json" >> "$GITHUB_ENV"
+          for component in public admin jobs coordinator; do
+            upper="${component^^}"
+            version="$(jq -er --arg c "$component" '.workerCapture.workers[$c].versionId' "$prep")"
+            source="$(jq -er --arg c "$component" '.workerCapture.workers[$c].sourceSha' "$prep")"
+            echo "${upper}_WORKER_VERSION_ID=$version" >> "$GITHUB_ENV"
+            echo "${upper}_WORKER_SOURCE_SHA=$source" >> "$GITHUB_ENV"
+            jq -c --arg c "$component" '.workerCapture.workers[$c] | {versions:[{version_id:.versionId,percentage:100}]}' "$prep" > "$RUNNER_TEMP/${component}-before.json"
+            jq -c --arg c "$component" '.workerCapture.workers[$c] | [{id:.versionId,source_sha:.sourceSha,created_on:.createdAt}]' "$prep" > "$RUNNER_TEMP/${component}-versions.json"
+          done
+          {
+            echo "AUTH_ACCEPTANCE_RUN_ID=$(jq -er '.keeper.acceptanceRunId' "$prep")"
+            echo "AUTH_ACCEPTANCE_EXPIRES_AT=$(jq -er '.keeper.expiresAt' "$prep")"
+            echo "ADR003_CANDIDATE_SOURCE_SHA=$(jq -er '.keeper.candidate.sourceReleaseSha' "$prep")"
+            echo "ADR003_CANDIDATE_UPLOADED_AT=$(jq -er '.keeper.candidate.uploadedAt' "$prep")"
+            echo "ADR003_CANDIDATE_STAGED_AT=$(jq -er '.keeper.candidate.stagedAt' "$prep")"
+            echo "AUTH_ACCEPTANCE_DEPENDENCIES_JSON=$(jq -c '.context.dependencies' "$prep")"
+          } >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs CANDIDATE_READY
+      - name: Require full real authentication acceptance
+        run: node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_REQUIRED
+      - name: Verify exact reused Worker readiness
+        env:
+          EXPECTED_DATABASE_TARGET: main
+          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
+          REQUIRE_BUDGET_MIGRATION: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for component in public admin jobs; do
+            upper="${component^^}"
+            case "$component" in
+              public) worker=lythaus-public-api-development ;;
+              admin) worker=lythaus-admin-api-development ;;
+              jobs) worker=lythaus-jobs-development ;;
+            esac
+            version_var="${upper}_WORKER_VERSION_ID"
+            source_var="${upper}_WORKER_SOURCE_SHA"
+            export PRODUCTION_WORKER_SCOPE="$worker" PRODUCTION_WORKER_VERSION_ID="${!version_var}" EXPECTED_WORKER_SOURCE_SHA="${!source_var}"
+            export PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH="$RUNNER_TEMP/${component}-before.json"
+            export PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH="$RUNNER_TEMP/${component}-versions.json"
+            export PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH="$RUNNER_TEMP/public-before.json"
+            export PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH="$RUNNER_TEMP/public-versions.json"
+            export PRODUCTION_WORKER_EVIDENCE_PATH="$RUNNER_TEMP/${component}-probe.json"
+            node scripts/ci/probe-production-workers.mjs
+            jq -e '.status == "pass"' "$PRODUCTION_WORKER_EVIDENCE_PATH" >/dev/null
+          done
+      - name: Collect existing protected human authentication evidence
+        env:
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: https://admin.lythaus.co/api/admin/production-auth-acceptance/observer
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/auth-acceptance-observation.json
+          ADR003_WORKER_NAME: lythaus-public-api-development
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ADR003_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID" ADR003_ACCEPTANCE_RUN_ID="$AUTH_ACCEPTANCE_RUN_ID"
+          export ADR003_CANDIDATE_DEPENDENCIES_JSON="$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
+          node scripts/ci/collect-auth-acceptance-evidence.mjs
+          jq -e '.status == "PASSED"' "$ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH" >/dev/null
+      - name: Run unchanged ADR-003 authenticated acceptance
+        env:
+          ADR003_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
+          ADR003_WORKER_NAME: lythaus-public-api-development
+          ADR003_DATABASE_READINESS_EVIDENCE_PATH: ${{ runner.temp }}/public-probe.json
+          ADR003_WEB_HEALTH_URL: ${{ vars.ADR003_WEB_HEALTH_URL }}
+          ADR003_WEB_ORIGIN: ${{ vars.ADR003_WEB_ORIGIN }}
+          ADR003_EVIDENCE_PATH: ${{ runner.temp }}/adr003-acceptance.json
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/auth-acceptance-observation.json
+          ADR003_WORKER_VERSIONS_JSON: ${{ vars.ADR003_WORKER_VERSIONS_JSON }}
+          ADR003_HYPERDRIVE_IDS_JSON: ${{ vars.ADR003_HYPERDRIVE_IDS_JSON }}
+          ADR003_GUEST_ACCEPTED: ${{ vars.ADR003_GUEST_ACCEPTED }}
+          ADR003_MOBILE_EMAIL_ACCEPTED: ${{ vars.ADR003_MOBILE_EMAIL_ACCEPTED }}
+          ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION: 'false'
+          EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
+          ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
+          ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_base="${ADR003_API_BASE_URL%/}"
+          test -n "$api_base"
+          if [[ "$api_base" != */api ]]; then api_base="$api_base/api"; fi
+          export ADR003_API_BASE_URL="$api_base" ADR003_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
+          export ADR003_ACCEPTANCE_RUN_ID="$AUTH_ACCEPTANCE_RUN_ID" ADR003_CANDIDATE_DEPENDENCIES_JSON="$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
+          npm run acceptance:adr003
+          jq -e '.status == "PASSED"' "$ADR003_EVIDENCE_PATH" >/dev/null
+          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_PASSED
+      - name: Verify the built app against the authorized real test account
+        env:
+          CODEX_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
+          CODEX_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/ci/app-only-browser-acceptance.mjs
+      - name: Recheck live compatibility and captured app baseline
+        env:
+          RELEASE_CLASS: AUTH_CRITICAL_RELEASE
+          OWNER_TESTING_DEPLOYMENT: 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DATABASE_IDENTITY_VERIFIED=true BUDGET_ENFORCEMENT_VERIFIED=true AUTHENTICATED_ACCEPTANCE_PROVEN=true
+          npm run validate:production-gates:final
+          node scripts/ci/recheck-app-only-release.mjs
+      - name: Export bound sanitized preparation
+        id: export
+        shell: bash
+        run: |
+          set -euo pipefail
+          prep="$RUNNER_TEMP/app-only-release/preparation.json"
+          {
+            echo "preparation_json=$(jq -c . "$prep")"
+            echo "browser_json=$(jq -c . "$RUNNER_TEMP/app-only-release/browser.json")"
+            echo "jobs_probe_json=$(jq -c . "$RUNNER_TEMP/jobs-probe.json")"
+            echo "history_json=$RELEASE_STATE_HISTORY_JSON"
+            echo "acceptance_run_id=$AUTH_ACCEPTANCE_RUN_ID"
+            echo "acceptance_expires_at=$AUTH_ACCEPTANCE_EXPIRES_AT"
+            echo "acceptance_dependencies_json=$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
+          } >> "$GITHUB_OUTPUT"
+      - name: Preserve sanitized preparation and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: app-only-preparation-${{ inputs.release_sha }}
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/app-only-release/preparation.json
+            ${{ runner.temp }}/app-only-release/browser.json
+            ${{ runner.temp }}/auth-acceptance-observation.json
+            ${{ runner.temp }}/adr003-acceptance.json
+            ${{ runner.temp }}/adr003-disposable-content.json
+            ${{ runner.temp }}/public-probe.json
+            ${{ runner.temp }}/admin-probe.json
+            ${{ runner.temp }}/jobs-probe.json
+
+  web:
+    name: Deploy the verified Flutter artifact
+    needs: prepare
+    uses: ./.github/workflows/deploy-alpha-web.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      target_environment: production
+      source_evidence_verified: true
+      owner_testing_deployment: false
+      owner_testing_recovery_exception: false
+      pages_project: lythaus-web
+      pages_branch: ${{ inputs.web_pages_branch }}
+      web_base_url: https://app.lythaus.co
+      api_base_url: https://api.lythaus.co/api
+      admin_api_url: https://admin-api.lythaus.co
+      ci_run_id: ${{ inputs.ci_run_id }}
+      app_only_preparation_json: ${{ needs.prepare.outputs.preparation_json }}
+    secrets: inherit
+
+  finalize:
+    name: Verify or safely roll back the app deployment
+    needs: [prepare, web]
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    outputs:
+      status: ${{ steps.finalize.outputs.status }}
+      evidence_json: ${{ steps.finalize.outputs.evidence_json }}
+      smoke_json: ${{ steps.finalize.outputs.smoke_json }}
+      rollback_status: ${{ steps.finalize.outputs.rollback_status }}
+      release_state: ${{ steps.finalize.outputs.release_state }}
+      history_json: ${{ steps.finalize.outputs.history_json }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
+      PREVIOUS_PRODUCTION_RUN_ID: ${{ inputs.previous_production_run_id }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+      RELEASE_MODE: app_only
+      APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && github.ref_protected && github.event_name == 'workflow_dispatch' }}
+      LYTHAUS_WEB_PAGES_BRANCH: ${{ inputs.web_pages_branch }}
+      LYTHAUS_ADMIN_PAGES_PROJECT: ${{ inputs.admin_pages_project }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      APP_ONLY_PREPARATION_JSON: ${{ needs.prepare.outputs.preparation_json }}
+      APP_PAGES_SERVING_PROOF_JSON: ${{ inputs.app_pages_serving_proof_json }}
+      APP_ONLY_BROWSER_JSON: ${{ needs.prepare.outputs.browser_json }}
+      APP_ONLY_JOBS_PROBE_JSON: ${{ needs.prepare.outputs.jobs_probe_json }}
+      APP_ONLY_HISTORY_JSON: ${{ needs.prepare.outputs.history_json }}
+      APP_ONLY_DEPLOYMENT_STATUS: ${{ needs.web.result }}
+      APP_ONLY_DEPLOYMENT_PROJECT: ${{ needs.web.outputs.pages_project }}
+      APP_ONLY_DEPLOYMENT_BRANCH: ${{ needs.web.outputs.pages_branch }}
+      APP_ONLY_DEPLOYMENT_SHA: ${{ needs.web.outputs.deployed_sha }}
+      APP_ONLY_DEPLOYMENT_ID: ${{ needs.web.outputs.pages_deployment_id }}
+      APP_ONLY_DEPLOYMENT_URL: ${{ needs.web.outputs.pages_deployment_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Check live surfaces and bind any rollback to the exact Pages deployment
+        id: finalize
+        run: node scripts/ci/finalize-app-only-release.mjs
+      - name: Preserve sanitized finalization evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: app-only-finalization-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/app-only-finalization
+          if-no-files-found: ignore
