@@ -32,15 +32,10 @@ on:
         description: Successful historical branch reconciliation run ID for the exact release SHA
         required: true
         type: string
-      acceptance_run_id:
-        description: Existing exact-candidate production-auth acceptance run to resume
+      release_resume_context_json:
+        description: Optional JSON continuation data with acceptance_run_id and/or app_pages_serving_proof_json
         required: false
-        default: ''
-        type: string
-      app_pages_serving_proof_json:
-        description: Fresh Cloudflare dashboard evidence for app.lythaus.co, bound to the prior manifest and this release (app_only only)
-        required: false
-        default: ''
+        default: '{}'
         type: string
       release_mode:
         description: Select the canonical release mode; owner testing remains uncertified
@@ -368,7 +363,7 @@ jobs:
         if: (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception')
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
-          ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          ACCEPTANCE_RUN_ID: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
           CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
           OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
         shell: bash
@@ -600,6 +595,7 @@ jobs:
     uses: ./.github/workflows/deploy-alpha-web.yml
     with:
       release_sha: ${{ inputs.release_sha }}
+      release_mode: ${{ inputs.release_mode }}
       target_environment: production
       source_evidence_verified: true
       owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
@@ -639,7 +635,7 @@ jobs:
     uses: ./.github/workflows/native-workers-deploy.yml
     with:
       release_sha: ${{ inputs.release_sha }}
-      acceptance_run_id: ${{ inputs.acceptance_run_id }}
+      acceptance_run_id: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
       previous_production_sha: ${{ inputs.previous_production_sha }}
       source_evidence_verified: true
       force_auth_critical: ${{ inputs.release_mode != 'automatic' }}
@@ -662,8 +658,8 @@ jobs:
       previous_production_sha: ${{ inputs.previous_production_sha }}
       previous_production_run_id: ${{ needs.preflight.outputs.previous_production_run_id }}
       ci_run_id: ${{ inputs.ci_run_id }}
-      acceptance_run_id: ${{ inputs.acceptance_run_id }}
-      app_pages_serving_proof_json: ${{ inputs.app_pages_serving_proof_json }}
+      acceptance_run_id: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
+      app_pages_serving_proof_json: ${{ fromJSON(inputs.release_resume_context_json).app_pages_serving_proof_json || '' }}
       web_pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
       admin_pages_project: ${{ needs.preflight.outputs.admin_pages_project }}
     secrets: inherit

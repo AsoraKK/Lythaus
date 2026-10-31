@@ -12,6 +12,7 @@ import { assertAppOnlyPriorRelease } from '../release/app-only-prior-release.mjs
 import { prepareFixtureBoundKeeper } from './adr003-disposable-evidence.mjs';
 import { assertAppPagesServingProofNotReplayed, createAppPagesPriorReleaseBinding,
   validateAppPagesServingProof, writeAppPagesServingProofConsumption } from '../release/app-pages-serving-proof.mjs';
+import { productionReleaseResumeContextFromEvent } from '../release/production-release-resume-context.mjs';
 
 export function assertCanonicalContext(env) {
   assertMainDispatchAccountContext(env);
@@ -26,11 +27,12 @@ export function assertCanonicalContext(env) {
   let event;
   try { event = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH, 'utf8')); }
   catch { throw new Error('app-only dispatch event is unavailable'); }
-  if (env.GITHUB_REF_PROTECTED !== 'true' || event?.inputs?.release_mode !== 'app_only'
-    || event.inputs.release_sha !== env.RELEASE_SHA || event.inputs.previous_production_sha !== env.PREVIOUS_PRODUCTION_SHA
-    || event.inputs.ci_run_id !== env.CI_RUN_ID
-    || event.inputs.app_pages_serving_proof_json !== env.APP_PAGES_SERVING_PROOF_JSON
-    || ![true, 'true'].includes(event.inputs.confirm_production)) {
+  const dispatch = productionReleaseResumeContextFromEvent(event);
+  if (env.GITHUB_REF_PROTECTED !== 'true' || dispatch.releaseMode !== 'app_only'
+    || dispatch.releaseSha !== env.RELEASE_SHA || dispatch.previousProductionSha !== env.PREVIOUS_PRODUCTION_SHA
+    || dispatch.ciRunId !== env.CI_RUN_ID
+    || dispatch.appPagesServingProofJson !== env.APP_PAGES_SERVING_PROOF_JSON
+    || ![true, 'true'].includes(dispatch.confirmProduction)) {
     throw new Error('app-only dispatch is not the confirmed protected release');
   }
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();

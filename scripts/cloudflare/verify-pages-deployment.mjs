@@ -3,6 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { normalizePagesSnapshot } from '../release/app-only-eligibility.mjs';
 import { validateAppPagesServingProof, verifyAppPagesServingProofReceipt } from '../release/app-pages-serving-proof.mjs';
+import { productionReleaseResumeContextFromEvent } from '../release/production-release-resume-context.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA = /^[0-9a-f]{40}$/;
@@ -20,26 +21,26 @@ export function appOnlyServingProofContextFromEnvironment(env = process.env) {
     if (env.RELEASE_MODE === 'app_only') throw new Error('app-only serving proof dispatch mode differs');
     return undefined;
   }
+  const dispatch = productionReleaseResumeContextFromEvent(event);
   if (env.GITHUB_ACTIONS !== 'true' || env.GITHUB_REPOSITORY !== 'AsoraKK/Lythaus'
     || env.GITHUB_REF !== 'refs/heads/main' || env.GITHUB_EVENT_NAME !== 'workflow_dispatch'
     || env.GITHUB_WORKFLOW_REF !== 'AsoraKK/Lythaus/.github/workflows/production-release.yml@refs/heads/main'
     || env.GITHUB_REF_PROTECTED !== 'true' || env.APP_ONLY_CANONICAL !== 'true'
     || env.RELEASE_MODE !== 'app_only' || env.PAGES_ENVIRONMENT !== 'production'
     || env.PAGES_PROJECT !== 'lythaus-web' || env.PAGES_BRANCH !== 'main'
-    || event.inputs.release_sha !== env.RELEASE_SHA
-    || typeof event.inputs.app_pages_serving_proof_json !== 'string'
-    || event.inputs.app_pages_serving_proof_json.length > 20000) {
+    || dispatch.releaseSha !== env.RELEASE_SHA
+    || dispatch.appPagesServingProofJson === '') {
     throw new Error('app-only Pages serving proof requires the protected canonical release context');
   }
   let preparation, rawProof;
   try {
     preparation = JSON.parse(env.APP_ONLY_PREPARATION_JSON);
-    rawProof = JSON.parse(event.inputs.app_pages_serving_proof_json);
+    rawProof = JSON.parse(dispatch.appPagesServingProofJson);
   } catch { throw new Error('app-only Pages serving proof input invalid'); }
   const receipt = preparation?.servingProof;
   if (preparation?.schemaVersion !== 'lythaus-app-only-preparation-v1' || preparation.releaseSha !== env.RELEASE_SHA
     || preparation.runId !== env.GITHUB_RUN_ID || preparation.runAttempt !== env.GITHUB_RUN_ATTEMPT
-    || preparation.previousProductionSha !== event.inputs.previous_production_sha
+    || preparation.previousProductionSha !== dispatch.previousProductionSha
     || !/^[1-9][0-9]*$/.test(preparation.previousRunId ?? '') || !receipt) {
     throw new Error('app-only Pages serving proof preparation differs');
   }

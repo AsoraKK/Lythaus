@@ -45,7 +45,7 @@ function prepared(directory) {
   const eventPath = path.join(directory, 'event.json');
   writeFileSync(eventPath, JSON.stringify({ inputs: { release_mode: 'app_only', release_sha: candidate.commitSha,
     previous_production_sha: before.commitSha, ci_run_id: '456', confirm_production: 'true',
-    app_pages_serving_proof_json: JSON.stringify(rawProof) } }));
+    release_resume_context_json: JSON.stringify({ app_pages_serving_proof_json: JSON.stringify(rawProof) }) } }));
   const env = { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REF: 'refs/heads/main',
     GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_EVENT_PATH: eventPath, GITHUB_REF_PROTECTED: 'true',
     GITHUB_ACTOR: 'tester', GITHUB_RUN_ID: '12345', GITHUB_RUN_ATTEMPT: '1', RUNNER_TEMP: directory,

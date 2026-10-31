@@ -110,6 +110,11 @@ on:
         required: false
         default: ''
         type: string
+      release_mode:
+        description: Canonical caller's release mode; app-only is accepted only from production-release.yml
+        required: false
+        default: automatic
+        type: string
     outputs:
       pages_deployment_id:
         description: Exact Pages deployment identifier selected for the release SHA
@@ -149,6 +154,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.target_environment == 'production' && 'production' || inputs.target_environment }}
     timeout-minutes: 35
+    env:
+      RELEASE_MODE: ${{ inputs.release_mode || '' }}
     outputs:
       pages_deployment_id: ${{ steps.pages_evidence.outputs.deployment_id }}
       pages_deployment_url: ${{ steps.pages_evidence.outputs.deployment_url }}
@@ -184,8 +191,7 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
 
-          APP_ONLY_REQUESTED="$(node -e 'const fs = require("node:fs"); const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")); process.stdout.write(event.inputs?.release_mode === "app_only" ? "true" : "false");')"
-          if [[ "$APP_ONLY_REQUESTED" == 'true' ]]; then
+          if [[ "${RELEASE_MODE:-}" == 'app_only' ]]; then
             test "$APP_ONLY_CANONICAL" = 'true' || { echo 'Unverified app-only workflow context.' >&2; exit 1; }
             # This branch is derived from the canonical dispatch, not a
             # reusable-workflow input. Hash the downloaded ZIP and deploy the
@@ -256,13 +262,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          requested="$(node -e 'const fs = require("node:fs"); const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")); process.stdout.write(event.inputs?.release_mode === "app_only" ? "true" : "false");')"
-          if [[ "$requested" == true ]]; then
+          if [[ "${RELEASE_MODE:-}" == app_only ]]; then
             test "$APP_ONLY_CANONICAL" = true
             test "$LYTHAUS_WEB_PAGES_BRANCH" = "$PAGES_BRANCH"
             export RELEASE_MODE=app_only
-            export PREVIOUS_PRODUCTION_SHA="$(jq -er '.previousProductionSha' <<<"$APP_ONLY_PREPARATION_JSON")"
-            export PREVIOUS_PRODUCTION_RUN_ID="$(jq -er '.previousRunId' <<<"$APP_ONLY_PREPARATION_JSON")"
+            PREVIOUS_PRODUCTION_SHA="$(jq -er '.previousProductionSha' <<<"$APP_ONLY_PREPARATION_JSON")"
+            PREVIOUS_PRODUCTION_RUN_ID="$(jq -er '.previousRunId' <<<"$APP_ONLY_PREPARATION_JSON")"
+            export PREVIOUS_PRODUCTION_SHA PREVIOUS_PRODUCTION_RUN_ID
             node scripts/ci/recheck-app-only-release.mjs
           fi
 
@@ -278,7 +284,7 @@ jobs:
         shell: bash
         run: node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Recheck app-only Pages serving evidence
-        if: inputs.target_environment == 'production' && github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'app_only'
+        if: inputs.target_environment == 'production' && github.event_name == 'workflow_dispatch' && inputs.release_mode == 'app_only'
         env:
           APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && inputs.target_environment == 'production' }}
           APP_ONLY_PREPARATION_JSON: ${{ inputs.app_only_preparation_json }}
@@ -290,8 +296,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          requested="$(node -e 'const fs = require("node:fs"); const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")); process.stdout.write(event.inputs?.release_mode === "app_only" ? "true" : "false");')"
-          if [[ "$requested" == true ]]; then
+          if [[ "${RELEASE_MODE:-}" == app_only ]]; then
             test "$APP_ONLY_CANONICAL" = true
             node scripts/ci/recheck-app-only-serving-proof.mjs
           fi
@@ -306,8 +311,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          APP_ONLY_REQUESTED="$(node -e 'const fs = require("node:fs"); const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")); process.stdout.write(event.inputs?.release_mode === "app_only" ? "true" : "false");')"
-          if [[ "$APP_ONLY_REQUESTED" == 'true' ]]; then
+          if [[ "${RELEASE_MODE:-}" == 'app_only' ]]; then
             npx --yes wrangler@4.123.0 pages deploy downloaded/web \
               --project-name "$PAGES_PROJECT" \
               --branch "$PAGES_BRANCH" \
@@ -330,7 +334,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           APP_ONLY_CANONICAL: ${{ github.workflow_ref == format('{0}/.github/workflows/production-release.yml@refs/heads/main', github.repository) && inputs.target_environment == 'production' }}
           APP_ONLY_PREPARATION_JSON: ${{ inputs.app_only_preparation_json }}
-          RELEASE_MODE: ${{ github.event.inputs.release_mode || '' }}
+          RELEASE_MODE: ${{ inputs.release_mode || '' }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           PAGES_PROJECT: ${{ inputs.pages_project }}
           PAGES_BRANCH: ${{ inputs.pages_branch }}
@@ -340,8 +344,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/cloudflare/verify-pages-deployment.mjs
-          APP_ONLY_REQUESTED="$(node -e 'const fs = require("node:fs"); const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")); process.stdout.write(event.inputs?.release_mode === "app_only" ? "true" : "false");')"
-          if [[ "$APP_ONLY_REQUESTED" == 'true' ]]; then
+          if [[ "${RELEASE_MODE:-}" == 'app_only' ]]; then
             jq -e --arg branch "$PAGES_BRANCH" --arg sha "$RELEASE_SHA" '
               .project == "lythaus-web" and .environment == "production" and .branch == $branch and .commitSha == $sha
               and (.deploymentId | test("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"))

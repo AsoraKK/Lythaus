@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { normalizePagesSnapshot } from '../release/app-only-eligibility.mjs';
 import { assertMainDispatchAccountContext } from './capture-app-only-worker-state.mjs';
 import { APP_PAGES_ACCOUNT_ID, validateAppPagesServingProof, verifyAppPagesServingProofReceipt } from '../release/app-pages-serving-proof.mjs';
+import { productionReleaseResumeContextFromEvent } from '../release/production-release-resume-context.mjs';
 
 export function assertRollbackProviderResponse({ response, payload, before }) {
   const wrapped = { success: true, result: { id: before.projectId, name: before.project,
@@ -127,15 +128,15 @@ export async function rollbackAppOnlyPagesDeployment({ env = process.env, prepar
   let event;
   try { event = JSON.parse(fs.readFileSync(env.GITHUB_EVENT_PATH, 'utf8')); }
   catch { throw new Error('app-only rollback dispatch event unavailable'); }
-  if (event?.inputs?.release_mode !== 'app_only' || event.inputs.release_sha !== env.RELEASE_SHA
-    || event.inputs.previous_production_sha !== env.PREVIOUS_PRODUCTION_SHA
-    || event.inputs.ci_run_id !== env.CI_RUN_ID || ![true, 'true'].includes(event.inputs.confirm_production)
-    || event.inputs.app_pages_serving_proof_json == null
-    || typeof event.inputs.app_pages_serving_proof_json !== 'string') {
+  const dispatch = productionReleaseResumeContextFromEvent(event);
+  if (dispatch.releaseMode !== 'app_only' || dispatch.releaseSha !== env.RELEASE_SHA
+    || dispatch.previousProductionSha !== env.PREVIOUS_PRODUCTION_SHA
+    || dispatch.ciRunId !== env.CI_RUN_ID || ![true, 'true'].includes(dispatch.confirmProduction)
+    || dispatch.appPagesServingProofJson === '') {
     throw new Error('app-only rollback dispatch does not match the protected preparation');
   }
   let rawProof;
-  try { rawProof = JSON.parse(event.inputs.app_pages_serving_proof_json); }
+  try { rawProof = JSON.parse(dispatch.appPagesServingProofJson); }
   catch { throw new Error('app-only rollback dashboard receipt is invalid'); }
   const proof = validateAppPagesServingProof({ proof: rawProof, snapshot: preparation.appPage,
     priorRelease: preparation.priorRelease, releaseSha: env.RELEASE_SHA,

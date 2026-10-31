@@ -309,6 +309,7 @@ jobs:
     uses: ./.github/workflows/deploy-alpha-web.yml
     with:
       release_sha: ${{ inputs.release_sha }}
+      release_mode: app_only
       target_environment: production
       source_evidence_verified: true
       owner_testing_deployment: false

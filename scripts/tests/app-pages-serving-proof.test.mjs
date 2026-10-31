@@ -7,6 +7,7 @@ import { createAppPagesPriorReleaseBinding, validateAppPagesServingProof,
   verifyAppPagesServingProofReceipt, assertAppPagesServingProofNotReplayed,
   writeAppPagesServingProofConsumption } from '../release/app-pages-serving-proof.mjs';
 import { recheckAppOnlyServingProof } from '../ci/recheck-app-only-serving-proof.mjs';
+import { productionReleaseResumeContextFromEvent } from '../release/production-release-resume-context.mjs';
 
 const accountId = 'e5b7ae46e04698f507b7e4b3d4ef1af0';
 const previousSha = 'a'.repeat(40), releaseSha = 'b'.repeat(40), previousRunId = '789';
@@ -108,7 +109,7 @@ test('the pre-deploy recheck binds the raw dispatch proof to fresh authenticated
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const eventPath = path.join(directory, 'event.json');
   writeFileSync(eventPath, JSON.stringify({ inputs: { release_mode: 'app_only', release_sha: releaseSha,
-    previous_production_sha: previousSha, app_pages_serving_proof_json: JSON.stringify(proof) } }));
+    previous_production_sha: previousSha, release_resume_context_json: JSON.stringify({ app_pages_serving_proof_json: JSON.stringify(proof) }) } }));
   const preparation = { schemaVersion: 'lythaus-app-only-preparation-v1', releaseSha,
     runId: '12345', runAttempt: '1',
     previousProductionSha: previousSha, previousRunId, appPage: snapshot, priorRelease: binding, servingProof: receipt };
@@ -133,6 +134,19 @@ test('the pre-deploy recheck binds the raw dispatch proof to fresh authenticated
     now), /app Pages baseline changed/);
   await assert.rejects(() => recheckAppOnlyServingProof(env, async () => snapshot,
     now + 31 * 60 * 1000), /stale or from the future/);
+});
+
+test('production release continuation input is bounded and accepts only the two documented fields', () => {
+  const context = productionReleaseResumeContextFromEvent({ inputs: { release_mode: 'app_only', release_sha: releaseSha,
+    previous_production_sha: previousSha, ci_run_id: '456', confirm_production: 'true',
+    release_resume_context_json: JSON.stringify({ acceptance_run_id: '789', app_pages_serving_proof_json: JSON.stringify(rawProof()) }) } });
+  assert.equal(context.acceptanceRunId, '789');
+  assert.deepEqual(JSON.parse(context.appPagesServingProofJson), rawProof());
+  assert.throws(() => productionReleaseResumeContextFromEvent({ inputs: { release_resume_context_json: '[]' } }), /fields invalid/);
+  assert.throws(() => productionReleaseResumeContextFromEvent({ inputs: { release_resume_context_json: '{broken' } }), /context invalid/);
+  assert.throws(() => productionReleaseResumeContextFromEvent({ inputs: { release_resume_context_json: JSON.stringify({ extra: true }) } }), /fields invalid/);
+  assert.throws(() => productionReleaseResumeContextFromEvent({ inputs: { release_resume_context_json: JSON.stringify({ acceptance_run_id: '0' }) } }), /identifier invalid/);
+  assert.throws(() => productionReleaseResumeContextFromEvent({ inputs: { release_resume_context_json: JSON.stringify({ app_pages_serving_proof_json: '[]' }) } }), /proof input invalid/);
 });
 
 test('proof replay inventory fails closed and the receipt names one immutable artifact', () => {

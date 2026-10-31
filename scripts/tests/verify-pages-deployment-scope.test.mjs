@@ -71,7 +71,7 @@ test('app-only dispatch context fails closed without changing non-app-only dispa
   const eventPath = path.join(directory, 'event.json');
   const { proof, preparation, context } = appOnlyFixture();
   writeFileSync(eventPath, JSON.stringify({ inputs: { release_mode: 'app_only', release_sha: releaseSha,
-    previous_production_sha: previousSha, app_pages_serving_proof_json: JSON.stringify(proof) } }));
+    previous_production_sha: previousSha, release_resume_context_json: JSON.stringify({ app_pages_serving_proof_json: JSON.stringify(proof) }) } }));
   const env = { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REF: 'refs/heads/main',
     GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_EVENT_PATH: eventPath, GITHUB_REF_PROTECTED: 'true',
     GITHUB_WORKFLOW_REF: 'AsoraKK/Lythaus/.github/workflows/production-release.yml@refs/heads/main',

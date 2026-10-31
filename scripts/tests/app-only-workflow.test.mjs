@@ -15,9 +15,11 @@ test('app-only runs behind the canonical preflight and inherits the existing rel
   assert.match(job, /uses: \.\/\.github\/workflows\/canonical-app-only-release\.yml/);
   assert.match(parent, /group: lythaus-canonical-production-release/);
   assert.match(parent, /previous_production_run_id: \$\{\{ steps\.prior_run\.outputs\.previous_production_run_id \}\}/);
-  assert.match(parent, /app_pages_serving_proof_json: \$\{\{ inputs\.app_pages_serving_proof_json \}\}/);
-  assert.doesNotMatch(section(parent, '\n  workflow_dispatch:', '\npermissions:'), /previous_production_run_id:/);
-  assert.match(section(parent, '\n  workflow_dispatch:', '\npermissions:'), /app_pages_serving_proof_json:[\s\S]*required: false/);
+  assert.match(parent, /app_pages_serving_proof_json: \$\{\{ fromJSON\(inputs\.release_resume_context_json\)\.app_pages_serving_proof_json \|\| '' \}\}/);
+  const dispatch = section(parent, '\n  workflow_dispatch:', '\npermissions:');
+  assert.doesNotMatch(dispatch, /previous_production_run_id:/);
+  assert.match(dispatch, /release_resume_context_json:[\s\S]*default: '\{\}'/);
+  assert.equal((dispatch.match(/^      [a-z0-9_]+:/gm) ?? []).length, 10, 'workflow_dispatch stays within GitHub\'s ten-input limit');
 });
 
 test('app-only transaction preserves real acceptance, live compatibility, and recovery readiness', () => {
@@ -49,8 +51,8 @@ test('app-only transaction preserves real acceptance, live compatibility, and re
   assert.doesNotMatch(parentRecovery, /if: inputs\.release_mode != 'app_only'/);
   assert.match(parent, /Upload sanitized persistent recovery readiness\s+if: always\(\)/);
   const servingGate = section(web, '- name: Recheck app-only Pages serving evidence', '- name: Deploy immutable Pages artifact');
-  assert.match(servingGate, /if: inputs\.target_environment == 'production' && github\.event_name == 'workflow_dispatch' && github\.event\.inputs\.release_mode == 'app_only'/);
-  assert.match(servingGate, /requested.*release_mode === "app_only"/);
+  assert.match(servingGate, /if: inputs\.target_environment == 'production' && github\.event_name == 'workflow_dispatch' && inputs\.release_mode == 'app_only'/);
+  assert.match(servingGate, /RELEASE_MODE.*app_only/);
   assert.match(servingGate, /node scripts\/ci\/recheck-app-only-serving-proof\.mjs/);
   assert.doesNotMatch(servingGate, /require-app-pages-serving-proof/);
   const deploymentVerification = section(web, '- name: Verify exact Pages deployment evidence', '- name: Write web deployment evidence');

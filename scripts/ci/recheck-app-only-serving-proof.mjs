@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { captureAppPages } from './capture-app-only-pages-state.mjs';
 import { assertAppPagesBaselineUnchanged } from '../release/app-only-eligibility.mjs';
 import { APP_PAGES_ACCOUNT_ID, validateAppPagesServingProof } from '../release/app-pages-serving-proof.mjs';
+import { productionReleaseResumeContextFromEvent } from '../release/production-release-resume-context.mjs';
 
 function readPreparation(env) {
   const raw = env.APP_ONLY_PREPARATION_JSON;
@@ -26,21 +27,22 @@ export async function recheckAppOnlyServingProof(env = process.env, capture = ca
   let event;
   try { event = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH, 'utf8')); }
   catch { throw new Error('app-only serving proof dispatch event unavailable'); }
-  if (event?.inputs?.release_mode !== 'app_only' || event.inputs.release_sha !== env.RELEASE_SHA
-    || typeof event.inputs.app_pages_serving_proof_json !== 'string' || event.inputs.app_pages_serving_proof_json.length > 20000) {
+  const dispatch = productionReleaseResumeContextFromEvent(event);
+  if (dispatch.releaseMode !== 'app_only' || dispatch.releaseSha !== env.RELEASE_SHA
+    || dispatch.appPagesServingProofJson === '') {
     throw new Error('app-only serving proof dispatch inputs differ');
   }
   const prepared = readPreparation(env);
   if (prepared?.schemaVersion !== 'lythaus-app-only-preparation-v1' || prepared.releaseSha !== env.RELEASE_SHA
     || prepared.runId !== env.GITHUB_RUN_ID || prepared.runAttempt !== env.GITHUB_RUN_ATTEMPT
-    || prepared.previousProductionSha !== event.inputs.previous_production_sha
+    || prepared.previousProductionSha !== dispatch.previousProductionSha
     || !/^[1-9][0-9]*$/.test(prepared.previousRunId ?? '') || !prepared.priorRelease || !prepared.servingProof) {
     throw new Error('app-only serving proof preparation is bound to a different release');
   }
   const current = await capture({ token: env.CLOUDFLARE_API_TOKEN, branch: env.LYTHAUS_WEB_PAGES_BRANCH });
   assertAppPagesBaselineUnchanged(prepared.appPage, current);
   let rawProof;
-  try { rawProof = JSON.parse(event.inputs.app_pages_serving_proof_json); }
+  try { rawProof = JSON.parse(dispatch.appPagesServingProofJson); }
   catch { throw new Error('app-only serving proof dispatch input invalid'); }
   const receipt = validateAppPagesServingProof({ proof: rawProof, snapshot: current,
     priorRelease: prepared.priorRelease, releaseSha: env.RELEASE_SHA, previousSha: prepared.previousProductionSha,
