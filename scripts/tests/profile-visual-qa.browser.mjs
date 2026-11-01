@@ -717,6 +717,9 @@ test(
           );
           await reviewNotice.waitFor();
           await reviewMessage.waitFor();
+          await page.getByText(
+            'No posts are available in this list.', { exact: false },
+          ).waitFor();
           const noticeBox = await reviewNotice.boundingBox();
           const messageBox = await reviewMessage.boundingBox();
           const bioBox = await page.getByText(owner.bio, { exact: true }).boundingBox();
