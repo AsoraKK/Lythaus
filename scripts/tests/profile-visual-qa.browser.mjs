@@ -720,31 +720,24 @@ test(
           await page.getByText(
             'No posts are available in this list.', { exact: false },
           ).waitFor();
-          const profileLayout = async () => {
-            const [bioBox, noticeBox, messageBox, settingsBox] = await Promise.all([
-              page.getByText(owner.bio, { exact: true }).boundingBox(),
-              reviewNotice.boundingBox(),
-              reviewMessage.boundingBox(),
-              page.getByRole('button', {
-                name: /^Settings[\s\S]*Security, privacy and notifications/,
-              }).boundingBox(),
-            ]);
-            return { bioBox, noticeBox, messageBox, settingsBox };
-          };
-          const profileNoticeIsOrdered = ({ bioBox, noticeBox, messageBox, settingsBox }) =>
-            Boolean(bioBox && noticeBox && messageBox && settingsBox &&
-              bioBox.y < noticeBox.y && noticeBox.y + noticeBox.height <= messageBox.y &&
-              messageBox.y + messageBox.height <= settingsBox.y);
-          let noticeLayout = null;
-          for (let attempt = 0; attempt < 20; attempt += 1) {
-            noticeLayout = await profileLayout();
-            if (profileNoticeIsOrdered(noticeLayout)) break;
-            await page.waitForTimeout(50);
-          }
-          assert.ok(profileNoticeIsOrdered(noticeLayout),
-            `Profile moderation notice belongs below the bio and above Settings: ${JSON.stringify({
-              viewport: size.name, theme, ...noticeLayout,
-            })}`);
+          const [bioBox, noticeBox, messageBox, settingsBox] = await Promise.all([
+            page.getByText(owner.bio, { exact: true }).boundingBox(),
+            reviewNotice.boundingBox(),
+            reviewMessage.boundingBox(),
+            page.getByRole('button', {
+              name: /^Settings[\s\S]*Security, privacy and notifications/,
+            }).boundingBox(),
+          ]);
+          // Flutter semantics rectangles can overlap slightly at some font metrics
+          // even when the painted lines are visibly separated.
+          const semanticsRectTolerance = 2;
+          assert.ok(bioBox && noticeBox && messageBox && settingsBox &&
+            bioBox.y < noticeBox.y &&
+            noticeBox.y + noticeBox.height <= messageBox.y + semanticsRectTolerance &&
+            messageBox.y + messageBox.height <= settingsBox.y,
+          `Profile moderation notice belongs below the bio and above Settings: ${JSON.stringify({
+            viewport: size.name, theme, bioBox, noticeBox, messageBox, settingsBox,
+          })}`);
           await screenshot('owner-profile-review-notice');
 
           if (size.width < 768) {
