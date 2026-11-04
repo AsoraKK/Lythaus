@@ -798,9 +798,16 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     const owner = await client.query<{ user_id: string; challenge_id: string }>(
       `SELECT t.user_id, t.id AS challenge_id
          FROM identity.email_verification_tokens t
-         JOIN identity.email_credentials c ON c.user_id=t.user_id
         WHERE t.token_hash = decode($1, 'base64')
-          AND c.email_lookup_hmac = decode($2, 'base64')`,
+          AND (
+            EXISTS (SELECT 1 FROM identity.email_credentials credential
+                     WHERE credential.user_id = t.user_id
+                       AND credential.email_lookup_hmac = decode($2, 'base64'))
+            OR EXISTS (SELECT 1 FROM identity.contact_emails contact
+                        WHERE contact.user_id = t.user_id
+                          AND contact.email_lookup_hmac = decode($2, 'base64')
+                          AND contact.verified_at IS NOT NULL)
+          )`,
       [tokenHash, emailLookup],
     );
     if (!owner.rows[0]) throw new Error('verification_token_invalid');
