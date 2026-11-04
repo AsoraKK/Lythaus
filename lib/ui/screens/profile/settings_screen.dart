@@ -318,7 +318,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Visit lythaus.co/contact for account help.'),
+                        content: Text(
+                          'Visit lythaus.co/contact for account help.',
+                        ),
                       ),
                     );
                   }
