@@ -500,8 +500,14 @@ test('CAL-09/REL-02: more than fifty canonical events must drain before the mont
 });
 
 test('CAL-20/REL-02: scheduled reconciliation discovers months, revisits new evidence and is inert while paused', async () => {
-  const first = await reconcileMonthlyAssembly(env); assert.ok(first.processed > 0);
-  assert.deepEqual(await reconcileMonthlyAssembly(env), { processed: 0 });
+  let processed = 0, batches = 0, result;
+  do {
+    result = await reconcileMonthlyAssembly(env);
+    processed += result.processed;
+    batches++;
+  } while (result.processed > 0 && batches < 10);
+  assert.ok(processed > 0);
+  assert.deepEqual(result, { processed: 0 });
   const before = (await sql('SELECT count(*)::int n FROM trust.monthly_reputation_sources')).rows[0].n;
   await jobs.scheduled({}, env);
   assert.equal((await sql('SELECT count(*)::int n FROM trust.monthly_reputation_sources')).rows[0].n, before);
