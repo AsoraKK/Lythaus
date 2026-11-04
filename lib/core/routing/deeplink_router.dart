@@ -33,7 +33,9 @@ class DeeplinkRouter {
         'comment' => hasId && _commentPostId(parsed) != null,
         'settings' => parsed.id == 'notifications',
         'moderation' => parsed.id == null || parsed.id == 'appeal',
-        'invite' => hasId || (parsed.query['code'] ?? '').isNotEmpty,
+        'invite' =>
+          hasId ||
+              (parsed.query['code'] ?? parsed.query['token'] ?? '').isNotEmpty,
         _ => false,
       };
       return supported ? parsed : null;
@@ -46,7 +48,8 @@ class DeeplinkRouter {
   /// Supported formats:
   /// - https://app.lythaus.co/post/{postId} - Navigate to post detail
   /// - https://app.lythaus.co/user/{userId} - Navigate to user profile
-  /// - https://app.lythaus.co/invite/{code} - Navigate to invite redemption
+  /// - https://app.lythaus.co/invite#token={code} - Create an invited account
+  /// - https://app.lythaus.co/invite/{code} - Legacy invite redemption
   /// - lythaus://post/{postId} - Native-scheme compatibility
   static Future<void> navigate(BuildContext context, String deeplink) async {
     final parsed = _supportedLink(deeplink);
@@ -85,7 +88,11 @@ class DeeplinkRouter {
         await _navigateToModeration(context, parsed);
         break;
       case 'invite':
-        await _navigateToInvite(context, id, parsed.query['code']);
+        await _navigateToInvite(
+          context,
+          id,
+          parsed.query['token'] ?? parsed.query['code'],
+        );
         break;
       default:
         debugPrint('[DeepLink] Unknown deeplink type: $type');
@@ -209,6 +216,15 @@ class _NormalizedDeepLink {
 }
 
 _NormalizedDeepLink? _normalize(Uri uri) {
+  Map<String, String> queryFor(String type) {
+    if (type != 'invite' || uri.fragment.isEmpty) return uri.queryParameters;
+    try {
+      return {...uri.queryParameters, ...Uri.splitQueryString(uri.fragment)};
+    } on FormatException {
+      return uri.queryParameters;
+    }
+  }
+
   if (uri.scheme == 'lythaus' || uri.scheme == 'lythaus') {
     final type = uri.host.trim();
     if (type.isEmpty) {
@@ -220,7 +236,7 @@ _NormalizedDeepLink? _normalize(Uri uri) {
       type: type,
       id: list.isNotEmpty ? list.first : null,
       remainingPathSegments: list.length > 1 ? list.sublist(1) : const [],
-      query: uri.queryParameters,
+      query: queryFor(type),
     );
   }
 
@@ -233,6 +249,6 @@ _NormalizedDeepLink? _normalize(Uri uri) {
     type: list.first,
     id: list.length > 1 ? list[1] : null,
     remainingPathSegments: list.length > 2 ? list.sublist(2) : const [],
-    query: uri.queryParameters,
+    query: queryFor(list.first),
   );
 }

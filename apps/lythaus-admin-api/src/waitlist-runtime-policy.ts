@@ -5,11 +5,9 @@ export interface WaitlistPageRequest {
   cursor: KeysetCursor | null;
 }
 
-export type WaitlistStatus = 'invited' | 'converted';
 export const WAITLIST_SEARCH_MAX_CANDIDATES = 1000;
 
 const WAITLIST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const WAITLIST_STATUSES = new Set<WaitlistStatus>(['invited', 'converted']);
 
 export function assertWaitlistAdminRole(role: unknown): void {
   if (role !== 'administrator' && role !== 'owner') throw new Error('admin_role_required');
@@ -29,22 +27,13 @@ export function parseWaitlistId(value: unknown): string {
   return value;
 }
 
-export function parseWaitlistStatusUpdate(input: unknown): WaitlistStatus {
+export function parseWaitlistStatusUpdate(input: unknown): never {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('invalid_waitlist_status');
-  const status = (input as { status?: unknown }).status;
-  if (typeof status !== 'string' || !WAITLIST_STATUSES.has(status as WaitlistStatus)) throw new Error('invalid_waitlist_status');
-  return status as WaitlistStatus;
+  throw new Error('waitlist_status_managed');
 }
 
-export function assertWaitlistStatusTransition(current: unknown, next: WaitlistStatus): void {
-  if (current === next) return;
-  const allowed: Record<string, readonly WaitlistStatus[]> = {
-    waiting: ['invited', 'converted'],
-    invited: ['converted'],
-    converted: [],
-    unsubscribed: [],
-  };
-  if (typeof current !== 'string' || !allowed[current]?.includes(next)) throw new Error('waitlist_status_transition_invalid');
+export function assertWaitlistStatusTransition(_current: unknown, _next: string): never {
+  throw new Error('waitlist_status_managed');
 }
 
 export function parseWaitlistRetentionHoldUpdate(input: unknown): boolean {

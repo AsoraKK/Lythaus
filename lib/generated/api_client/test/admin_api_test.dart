@@ -298,6 +298,15 @@ void main() {
       // TODO
     });
 
+    // Send a one-time signup invitation to a waitlist entry
+    //
+    // Administrator and owner roles may queue a one-time email-bound signup invitation for an eligible waiting entry. Provider acceptance advances the waitlist state; queue submission does not prove inbox delivery.
+    //
+    //Future<AdminWaitlistInvite202Response> adminWaitlistInvite(String waitlistId, String idempotencyKey, AdminWaitlistInviteRequest adminWaitlistInviteRequest) async
+    test('test adminWaitlistInvite', () async {
+      // TODO
+    });
+
     // List private beta waitlist signups
     //
     // Administrator-only PII access. Every successful view is written to the admin audit log.
@@ -325,9 +334,9 @@ void main() {
 
     // Update a waitlist signup status
     //
-    // Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+    // Status is managed by provider acceptance, signup verification, and unsubscribe. Manual updates are rejected with waitlist_status_managed.
     //
-    //Future<WaitlistStatusResponse> adminWaitlistStatusUpdate(String waitlistId, WaitlistStatusUpdate waitlistStatusUpdate) async
+    //Future adminWaitlistStatusUpdate(String waitlistId, WaitlistStatusUpdate waitlistStatusUpdate) async
     test('test adminWaitlistStatusUpdate', () async {
       // TODO
     });

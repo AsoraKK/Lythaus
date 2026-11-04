@@ -94,8 +94,11 @@ function validateExamples({
 
   const validate = ajv.compile(schema);
 
-  if (content.example !== undefined && !validate(content.example)) {
-    report(specPathKey, method, label, contentType, validate.errors);
+  if (content.example !== undefined) {
+    validateSyntheticExamples(content.example, `${specPathKey} example`);
+    if (!validate(content.example)) {
+      report(specPathKey, method, label, contentType, validate.errors);
+    }
   }
 
   const examples = content.examples || {};
@@ -104,8 +107,47 @@ function validateExamples({
     if (exampleValue === undefined) {
       continue;
     }
+    validateSyntheticExamples(exampleValue, `${specPathKey}#${exampleKey}`);
     if (!validate(exampleValue)) {
       report(`${specPathKey}#${exampleKey}`, method, label, contentType, validate.errors);
+    }
+  }
+}
+
+function validateSyntheticExamples(value: unknown, location: string) {
+  if (typeof value === 'string') {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+    const isSyntheticUuid = /^00000000-0000-4000-8000-[0-9a-f]{12}$/i.test(value);
+    if (isUuid && !isSyntheticUuid) {
+      errors += 1;
+      console.error(`OpenAPI UUID example is not marked synthetic at ${location}`);
+    }
+
+    const isTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value);
+    if (isTimestamp && !value.startsWith('2000-01-')) {
+      errors += 1;
+      console.error(`OpenAPI timestamp example is not marked synthetic at ${location}`);
+    }
+    return;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+
+  for (const [key, fieldValue] of Object.entries(value as Record<string, unknown>)) {
+    if (key === 'password' || key === 'accessToken' || key === 'refreshToken' || key === 'turnstileToken') {
+      if (typeof fieldValue !== 'string' || !fieldValue.startsWith('SYNTHETIC-EXAMPLE-ONLY-')) {
+        errors += 1;
+        console.error(`Credential-shaped OpenAPI example is not marked synthetic at ${location}/${key}`);
+      }
+      continue;
+    }
+
+    if (Array.isArray(fieldValue)) {
+      fieldValue.forEach((entry, index) => validateSyntheticExamples(entry, `${location}/${key}[${index}]`));
+    } else {
+      validateSyntheticExamples(fieldValue, `${location}/${key}`);
     }
   }
 }

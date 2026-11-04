@@ -7,6 +7,7 @@ import { TRANSACTIONAL_EMAIL_DISPATCH_TYPE, verifyTransactionalEmailDispatchMess
 
 export interface TransactionalEmailRelayEnv extends EnvBindings {
   DB_JOBS_FRESH: HyperdriveBinding;
+  SUPPORT_REPLY_TO_EMAIL?: string;
 }
 
 type EmailDatabase = { query: typeof query; transaction: typeof transaction };
@@ -92,9 +93,12 @@ async function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail)
       token: envelope.token,
       verificationBaseUrl: env.EMAIL_VERIFICATION_BASE_URL,
       resetBaseUrl: env.EMAIL_PASSWORD_RESET_BASE_URL,
+      inviteBaseUrl: env.EMAIL_INVITE_BASE_URL,
+      waitlistInvite: row.template_version === 'waitlist-v1',
       acceptanceLinkBaseUrl: env.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL,
       acceptanceContext: envelope.acceptanceContext,
       environment: env.ENVIRONMENT,
+      supportReplyToEmail: env.SUPPORT_REPLY_TO_EMAIL,
     });
     return { ...message, to: envelope.to };
   });
@@ -114,6 +118,7 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
     try {
       const delivery = await withDeliveryDeadline(env.EMAIL.send({
         to: message.to,
+        ...(message.replyTo ? { replyTo: message.replyTo } : {}),
         from: { email: env.EMAIL_FROM, name: 'Lythaus' },
         subject: message.subject,
         html: message.html,
@@ -135,7 +140,7 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
     response = await fetch(env.EMAIL_PROVIDER_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
-      body: JSON.stringify({ from: env.EMAIL_FROM, to: message.to, subject: message.subject, html: message.html, text: message.text }),
+      body: JSON.stringify({ from: env.EMAIL_FROM, to: message.to, ...(message.replyTo ? { replyTo: message.replyTo } : {}), subject: message.subject, html: message.html, text: message.text }),
       signal: AbortSignal.timeout(20_000),
     });
   } catch {
@@ -203,7 +208,22 @@ async function markEmailFailure(client: DatabaseClient, row: ClaimedEmail, error
   );
 }
 
-export async function lockDeliverableEmail(client: DatabaseClient, id: string, userId: string | null): Promise<boolean> {
+export async function lockDeliverableEmail(client: DatabaseClient, id: string, userId: string | null, waitlistInviteSchemaEnabled = false): Promise<boolean> {
+  if (waitlistInviteSchemaEnabled) {
+    // Waitlist invitations use a second authorization boundary. Lock the
+    // waitlist row first so restriction changes and dispatch share one order.
+    const waitlistInvite = await client.query<{ found: boolean; deliverable: boolean }>(
+      `SELECT found, deliverable FROM marketing.lock_waitlist_invite_delivery($1)`, [id]);
+    const inviteState = waitlistInvite.rows[0];
+    if (waitlistInvite.rowCount !== 1 || typeof inviteState?.found !== 'boolean' || typeof inviteState.deliverable !== 'boolean'
+      || (!inviteState.found && inviteState.deliverable)) throw new Error('email_waitlist_authorization_unavailable');
+    if (inviteState.found && !inviteState.deliverable) {
+      await client.query(`UPDATE system.transactional_email_outbox SET state='cancelled', terminal_at=now(), updated_at=now(),
+        delivery_envelope_ciphertext=NULL, delivery_envelope_encryption_key_version=NULL
+        WHERE id=$1 AND state IN ('queued','processing')`, [id]);
+      return false;
+    }
+  }
   if (userId) await lockAuthDelivery(client, userId);
   const result = await client.query<{ valid: boolean }>(
     `SELECT state='processing' AND user_id IS NOT NULL AND (
@@ -224,7 +244,7 @@ export async function lockDeliverableEmail(client: DatabaseClient, id: string, u
 
 async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: ClaimedEmail, database: EmailDatabase): Promise<void> {
   await database.transaction(env.DB_JOBS_FRESH, async client => {
-  if (!await lockDeliverableEmail(client, row.id, row.user_id)) return;
+  if (!await lockDeliverableEmail(client, row.id, row.user_id, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true')) return;
   let message: TransactionalEmailMessage;
   try {
     message = await messageForRow(env, row);

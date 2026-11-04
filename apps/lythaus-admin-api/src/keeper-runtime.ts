@@ -2,8 +2,8 @@ import { query, transaction, type DatabaseClient, type HyperdriveBinding } from 
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { encodeCursor } from '@lythaus/contracts';
 import { json } from '@lythaus/observability';
-import { encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
-import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, requireWaitlistEncryptionKey } from './waitlist-runtime-policy.ts';
+import { decryptField, encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
+import { assertWaitlistAdminRole, parseWaitlistId, requireWaitlistEncryptionKey } from './waitlist-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import {
   adminUserPageRequest,
@@ -88,26 +88,44 @@ function requireIdempotencyKey(request: Request): string {
 
 type IdempotencyPayload = { state?: string; body?: Record<string, unknown> } & Record<string, unknown>;
 
-async function claimKeeperIdempotency(client: DatabaseClient, scope: string, key: string, actorId: string): Promise<Record<string, unknown> | null> {
+export async function claimKeeperIdempotency(client: DatabaseClient, scope: string, key: string, actorId: string): Promise<Record<string, unknown> | null> {
   const claimed = await client.query<{ response: IdempotencyPayload }>(
     `INSERT INTO system.idempotency_keys (scope, key, actor_id, response)
      VALUES ($1, $2, $3, '{"state":"processing"}'::jsonb)
      ON CONFLICT (scope, key) DO NOTHING
      RETURNING response`, [scope, key, actorId]);
   if (claimed.rowCount === 1) return null;
-  const existing = await client.query<{ actor_id: string | null; response: IdempotencyPayload }>(
-    `SELECT actor_id, response FROM system.idempotency_keys WHERE scope = $1 AND key = $2`, [scope, key]);
+  const existing = await client.query<{ actor_id: string | null; response: IdempotencyPayload; processing_expired: boolean }>(
+    `SELECT actor_id, response, created_at <= now() - interval '5 minutes' AS processing_expired
+       FROM system.idempotency_keys WHERE scope = $1 AND key = $2 FOR UPDATE`, [scope, key]);
   if (!existing.rows[0] || existing.rows[0].actor_id !== actorId) throw new Error('idempotency_key_reused');
-  if (existing.rows[0].response.state === 'processing') throw new Error('idempotency_in_progress');
+  if (existing.rows[0].response.state === 'processing') {
+    if (!scope.startsWith('admin.waitlist.invite:') || !existing.rows[0].processing_expired) throw new Error('idempotency_in_progress');
+    const quarantined = await client.query(
+      `UPDATE system.idempotency_keys
+          SET response = '{"state":"outcome_unknown"}'::jsonb
+        WHERE scope = $1 AND key = $2 AND actor_id = $3
+          AND response ->> 'state' = 'processing'
+          AND created_at <= now() - interval '5 minutes'`, [scope, key, actorId]);
+    if (quarantined.rowCount !== 1) throw new Error('idempotency_in_progress');
+    return { state: 'outcome_unknown' };
+  }
+  if (existing.rows[0].response.state === 'outcome_unknown') return { state: 'outcome_unknown' };
   return existing.rows[0].response.body ?? existing.rows[0].response;
 }
 
-async function finalizeKeeperIdempotency(client: DatabaseClient, scope: string, key: string, actorId: string, body: Record<string, unknown>): Promise<void> {
+export async function finalizeKeeperIdempotency(client: DatabaseClient, scope: string, key: string, actorId: string, body: Record<string, unknown>): Promise<void> {
   const finalized = await client.query(
     `UPDATE system.idempotency_keys SET response = $4::jsonb
       WHERE scope = $1 AND key = $2 AND actor_id = $3 AND response ->> 'state' = 'processing'`,
     [scope, key, actorId, JSON.stringify({ state: 'completed', body })]);
-  if (finalized.rowCount !== 1) throw new Error('idempotency_finalize_failed');
+  if (finalized.rowCount !== 1) {
+    const current = await client.query<{ state: string }>(
+      `SELECT response ->> 'state' AS state FROM system.idempotency_keys
+        WHERE scope = $1 AND key = $2 AND actor_id = $3`, [scope, key, actorId]);
+    if (current.rows[0]?.state === 'outcome_unknown') throw new Error('idempotency_outcome_unknown');
+    throw new Error('idempotency_finalize_failed');
+  }
 }
 
 function mutationHeaders(correlation: string): HeadersInit {
@@ -219,6 +237,38 @@ export async function inviteAdminUser(request: Request, env: KeeperEnv, actor: A
   return json(result, { status: 201, headers: mutationHeaders(correlation) });
 }
 
+export async function inviteWaitlistContact(request: Request, env: KeeperEnv, actor: AdminActorLike, rawId: string, correlation: string): Promise<Response> {
+  requireKeeperAdmin(actor);
+  if (env.WAITLIST_INVITE_SCHEMA_ENABLED !== 'true') throw new Error('waitlist_invites_disabled');
+  const id = parseWaitlistId(rawId);
+  const key = requireIdempotencyKey(request);
+  const input = objectBody(await readBoundedJson(request));
+  rejectUnknownFields(input, ['reasonCode', 'confirmation']);
+  const reasonCode = parseReasonCode(input.reasonCode);
+  requireConfirmation(input.confirmation, `SEND WAITLIST INVITE ${id}`);
+  const scope = `admin.waitlist.invite:${id}`;
+  const replay = await transaction(env.DB_ADMIN_FRESH, client => claimKeeperIdempotency(client, scope, key, actor.userId));
+  if (replay?.state === 'outcome_unknown') throw new Error('idempotency_outcome_unknown');
+  if (replay) return json(replay, { headers: mutationHeaders(correlation) });
+
+  const { encryptionKey } = requireAuthData(env);
+  const record = await query<{ email_ciphertext: string; encryption_key_version: string; status: string; retention_hold: boolean }>(
+    env.DB_ADMIN_FRESH,
+    `SELECT email_ciphertext, encryption_key_version, status, retention_hold
+       FROM marketing.waitlist_signups WHERE id=$1`, [id]);
+  const row = record.rows[0];
+  if (!row) throw new Error('waitlist_not_found');
+  if (!['waiting', 'invited'].includes(row.status) || row.retention_hold) throw new Error('waitlist_invite_not_eligible');
+  const email = normalizeEmail(await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey));
+  const delivery = await dispatchKeeperEmail(env, request, {
+    operation: 'invite', actorId: actor.userId, correlationId: correlation,
+    reasonCode, email, waitlistId: id,
+  });
+  const result = { id, deliveryState: String(delivery.deliveryState), verificationState: 'pending_verification' };
+  await transaction(env.DB_ADMIN_FRESH, client => finalizeKeeperIdempotency(client, scope, key, actor.userId, result));
+  return json(result, { status: 202, headers: mutationHeaders(correlation) });
+}
+
 export async function resendAdminVerification(request: Request, env: KeeperEnv, actor: AdminActorLike, rawUserId: string, correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
   const input = objectBody(await readBoundedJson(request));
@@ -279,6 +329,7 @@ export async function deleteAdminUser(request: Request, env: KeeperEnv, actor: A
     await finalizeKeeperIdempotency(client, idempotencyScope, idempotencyKey, actor.userId, response);
     return response;
   });
+  if ('state' in result && result.state === 'outcome_unknown') throw new Error('idempotency_outcome_unknown');
   return json(result, { status: 202, headers: mutationHeaders(correlation) });
 }
 
@@ -365,19 +416,17 @@ export async function updateAdminWaitlistEntry(request: Request, env: KeeperEnv,
   assertWaitlistAdminRole(actor.role);
   const id = parseWaitlistId(rawId);
   const input = objectBody(await readBoundedJson(request));
-  rejectUnknownFields(input, ['status', 'source', 'reasonCode', 'confirmation']);
+  rejectUnknownFields(input, ['source', 'reasonCode', 'confirmation']);
   const reasonCode = parseReasonCode(input.reasonCode);
   requireConfirmation(input.confirmation, `UPDATE WAITLIST ${id}`);
   const source = input.source === undefined ? undefined : parseSource(input.source);
-  const status = input.status === undefined ? undefined : (typeof input.status === 'string' && ['invited', 'converted'].includes(input.status) ? input.status : (() => { throw new Error('invalid_waitlist_status'); })());
-  if (source === undefined && status === undefined) throw new Error('unknown_field');
+  if (source === undefined) throw new Error('unknown_field');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<WaitlistRecord>(`SELECT id, status, source, consent_version, created_at, updated_at, retention_hold, convert_from(email_ciphertext, 'utf8') AS email_ciphertext, encryption_key_version FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
     if (!current.rows[0]) throw new Error('waitlist_not_found');
     const row = current.rows[0];
-    if (status !== undefined) assertWaitlistStatusTransition(row.status, status as never);
-    await client.query(`UPDATE marketing.waitlist_signups SET status = COALESCE($2, status), source = COALESCE($3, source), updated_at = now(), invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END, converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END, purge_after = CASE WHEN $2 = 'converted' THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END WHERE id = $1`, [id, status ?? null, source ?? null]);
-    const after = { status: status ?? row.status, source: source ?? row.source };
+    await client.query(`UPDATE marketing.waitlist_signups SET source = $2, updated_at = now() WHERE id = $1`, [id, source]);
+    const after = { status: row.status, source };
     await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_changed', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ before: { status: row.status, source: row.source }, after })]);
     return { id, ...after };
   });
@@ -398,11 +447,12 @@ export async function deleteWaitlistEntry(request: Request, env: KeeperEnv, acto
     if (replay) return replay;
     const current = await client.query<{ status: string; retention_hold: boolean }>(`SELECT status, retention_hold FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
     if (!current.rows[0]) throw new Error('waitlist_not_found');
-    await client.query(`UPDATE marketing.waitlist_signups SET status = 'unsubscribed', unsubscribed_at = COALESCE(unsubscribed_at, now()), purge_after = CASE WHEN retention_hold THEN purge_after ELSE LEAST(purge_after, now() + interval '30 days') END, updated_at = now() WHERE id = $1`, [id]);
+    await client.query(`SELECT marketing.unsubscribe_waitlist_entry($1)`, [id]);
     const response = { id, status: 'unsubscribed', purgeBlockedByRetentionHold: current.rows[0].retention_hold };
     await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_unsubscribe_requested', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ previousStatus: current.rows[0].status, retentionHold: current.rows[0].retention_hold })]);
     await finalizeKeeperIdempotency(client, idempotencyScope, idempotencyKey, actor.userId, response);
     return response;
   });
+  if ('state' in result && result.state === 'outcome_unknown') throw new Error('idempotency_outcome_unknown');
   return json(result, { status: 202, headers: mutationHeaders(correlation) });
 }

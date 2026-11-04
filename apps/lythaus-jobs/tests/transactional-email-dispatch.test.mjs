@@ -13,7 +13,7 @@ import {
 const key=randomBytes(32).toString('base64');
 const base={ENVIRONMENT:'production',DB_JOBS_FRESH:{},TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1:key,
   EMAIL_PROVIDER_MODE:'cloudflare',EMAIL_FROM:'no-reply@mail.lythaus.test',
-  EMAIL_VERIFICATION_BASE_URL:'https://lythaus.co/verify-email',EMAIL_PASSWORD_RESET_BASE_URL:'https://lythaus.co/reset-password'};
+  EMAIL_VERIFICATION_BASE_URL:'https://lythaus.co/verify-email',EMAIL_PASSWORD_RESET_BASE_URL:'https://lythaus.co/reset-password',EMAIL_INVITE_BASE_URL:'https://app.lythaus.co/invite'};
 const message={to:'fixture@example.invalid',subject:'Fixture',text:'Synthetic fixture only',html:'<p>Synthetic fixture</p>'};
 const reply=(rows=[],rowCount=rows.length)=>({rows,rowCount});
 async function row(overrides={}) {
@@ -98,6 +98,15 @@ test('expired, superseded or missing challenges cancel without sending',async()=
   assert.match(cancelled.sql,/delivery_envelope_ciphertext=NULL/);
 });
 
+test('outbox email rendering includes only an explicitly configured Lythaus.co reply route',async()=>{
+  for (const [supportReplyToEmail, expected] of [[undefined,undefined],['kyle.kern@lythaus.co','kyle.kern@lythaus.co']]) {
+    const db=database([await row()]);let sent;
+    await relayTransactionalEmailOutbox({...base,...(supportReplyToEmail?{SUPPORT_REPLY_TO_EMAIL:supportReplyToEmail}:{}),EMAIL:{send:async value=>{sent=value;return {messageId:'synthetic-support-route'};}}},db);
+    assert.equal(sent.replyTo,expected);
+    assert.match(sent.text,/https:\/\/lythaus\.co\/contact/);
+  }
+});
+
 test('explicit transient failures retain the same envelope; unknown/permanent/exhausted failures scrub it',async()=>{
   for(const [error,attempt,state,terminal] of [
     [{code:'E_RATE_LIMIT_EXCEEDED'},1,'queued',false],
@@ -135,6 +144,23 @@ test('provider adapter distinguishes missing configuration, missing message IDs 
   assert.equal(emailProviderFailureCategory(null).category,'unknown');
   assert.equal(emailProviderFailureCategory({statusCode:503,errorCode:'E_INTERNAL_SERVER_ERROR'}).category,'transient');
   assert.equal(emailProviderFailureCategory({response:{status:400},code:'recipient@example.invalid'}).code,undefined);
+});
+
+test('transactional email sender carries only an explicitly configured .co support reply address through both adapters',async t=>{
+  const cloudflare=[];
+  const cloudflareEnv={...base,EMAIL:{send:async input=>{cloudflare.push(input);return {messageId:'synthetic-cloudflare-message'};}}};
+  await sendTransactionalEmail(cloudflareEnv,{...message,replyTo:'kyle.kern@lythaus.co'});
+  assert.equal(cloudflare[0].replyTo,'kyle.kern@lythaus.co');
+  assert.equal(cloudflare[0].to,message.to);
+
+  const original=globalThis.fetch;
+  t.after(()=>{globalThis.fetch=original;});
+  let fallbackBody;
+  globalThis.fetch=async(_url,init)=>{fallbackBody=JSON.parse(init.body);return Response.json({messageId:'synthetic-fallback-message'});};
+  await sendTransactionalEmail({...base,EMAIL_PROVIDER_MODE:'fallback',EMAIL_PROVIDER_URL:'https://fixture.invalid/send',EMAIL_PROVIDER_TOKEN:'local-fixture'},
+    {...message,replyTo:'kyle.kern@lythaus.co'});
+  assert.equal(fallbackBody.replyTo,'kyle.kern@lythaus.co');
+  assert.equal(fallbackBody.to,message.to);
 });
 
 test('just-in-time leases never claim waiting batch rows and each sweep is bounded',async()=>{

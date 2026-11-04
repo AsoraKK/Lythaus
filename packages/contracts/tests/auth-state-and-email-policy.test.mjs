@@ -60,15 +60,41 @@ test('missing or unsafe email link configuration fails closed rather than sendin
   }
 });
 
-test('invitations explain the post-verification password setup path', () => {
+test('invitation emails carry a private one-time code, signup link, expiry and support contact', () => {
   const message = renderTransactionalEmail({
     purpose: 'invite',
     token: 'secret-token',
-    verificationBaseUrl: 'https://lythaus.co/verify-email?token=',
+    waitlistInvite: true,
   });
-  assert.match(message.html, /choose your own password/);
-  assert.match(message.text, /https:\/\/lythaus\.co\/verify-email#token=secret-token/);
+  assert.match(message.html, /email address this invitation was sent to/);
+  assert.match(message.html, /expires in 7 days/);
+  assert.match(message.html, /Invitation code: <strong>secret-token<\/strong>/);
+  assert.match(message.text, /https:\/\/app\.lythaus\.co\/invite#token=secret-token/);
+  assert.match(message.text, /Lythaus Support: https:\/\/lythaus\.co\/contact/);
+  assert.equal(message.replyTo, undefined, 'Unverified support mailbox configuration must not be advertised as reply-to');
   assert.doesNotMatch(message.html, /\?token=/);
+  const shortInvite = renderTransactionalEmail({ purpose: 'invite', token: 'short-token', verificationBaseUrl: 'https://lythaus.co/verify-email?token=' });
+  assert.match(shortInvite.text, /expires in 30 minutes/);
+  assert.match(shortInvite.text, /https:\/\/lythaus\.co\/verify-email#token=short-token/);
+});
+
+test('waitlist invite links accept only the app invite route and an explicitly configured .co reply address', () => {
+  for (const inviteBaseUrl of [
+    'https://lythaus.co/invite',
+    'https://app.lythaus.co/signup',
+    'https://evil.example/invite',
+    'https://app.lythaus.co/invite?redirect=https://evil.example',
+  ]) {
+    assert.throws(() => renderTransactionalEmail({
+      purpose: 'invite', token: 'synthetic-token', waitlistInvite: true, inviteBaseUrl,
+    }), /email_link_configuration_invalid/);
+  }
+  const reset = { purpose: 'password_reset', token: 'synthetic-token', resetBaseUrl: 'https://lythaus.co/reset-password' };
+  assert.equal(renderTransactionalEmail(reset).replyTo, undefined);
+  assert.equal(renderTransactionalEmail({ ...reset, supportReplyToEmail: 'kyle.kern@lythaus.co' }).replyTo, 'kyle.kern@lythaus.co');
+  for (const supportReplyToEmail of ['support@example.test', 'support@evil.example', 'support@example.test\r\nBcc:elsewhere@example.invalid']) {
+    assert.throws(() => renderTransactionalEmail({ ...reset, supportReplyToEmail }), /support_reply_to_configuration_invalid/);
+  }
 });
 
 test('acceptance secrets and reset links use fragments, never server query parameters', () => {

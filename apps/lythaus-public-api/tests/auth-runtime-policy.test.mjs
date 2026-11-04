@@ -11,12 +11,15 @@ import {
   planEmailRegistration,
   planExistingIdempotencyRecord,
   prepareEmailAuthAttempt,
+  requiresWaitlistInvitation,
+  waitlistInvitesRequired,
   rateLimitPlan,
   requireAuthSecrets,
   requireRefreshToken,
   requireResetPassword,
   requireToken,
   requiresTurnstileVerification,
+  waitlistInviteVerificationAllowed,
 } from '../src/auth-runtime-policy.ts';
 
 const secrets = {
@@ -69,6 +72,16 @@ test('normalizes email authentication attempts and rejects unsupported modes', (
   assert.throws(() => prepareEmailAuthAttempt({ mode: 'register', email: 'person@example.test', password: 'x'.repeat(129) }), /invalid_password/);
 });
 
+test('invite-only registration blocks new public identities and keeps the private acceptance fixture explicit', () => {
+  assert.equal(waitlistInvitesRequired(undefined), false);
+  assert.equal(waitlistInvitesRequired('false'), false);
+  assert.equal(waitlistInvitesRequired('true'), true);
+  assert.equal(requiresWaitlistInvitation({ registrationPlan: 'create_account', inviteOnly: true, authenticatedAcceptance: false }), true);
+  assert.equal(requiresWaitlistInvitation({ registrationPlan: 'create_account', inviteOnly: true, authenticatedAcceptance: true }), false);
+  assert.equal(requiresWaitlistInvitation({ registrationPlan: 'create_account', inviteOnly: false, authenticatedAcceptance: false }), false);
+  assert.equal(requiresWaitlistInvitation({ registrationPlan: 'resend_verification', inviteOnly: true, authenticatedAcceptance: false }), false);
+});
+
 test('creation and login use the shared code-point fixtures without normalization', () => {
   const policy = JSON.parse(fs.readFileSync(new URL('../../../packages/contracts/fixtures/password-policy.json', import.meta.url)));
   for (const fixture of policy.cases) {
@@ -96,6 +109,61 @@ test('recovers interrupted and migrated registrations without changing verified 
   assert.equal(planEmailRegistration({ status: 'active', verifiedAt: null }), 'resend_verification');
   assert.equal(planEmailRegistration({ status: 'locked', verifiedAt: null }), 'neutral_existing_account');
   assert.equal(planEmailRegistration({ status: 'active', verifiedAt: '2026-08-26T10:00:00.000Z' }), 'neutral_existing_account');
+});
+
+test('waitlist verification is fail-closed and locks invite eligibility before account/token state', () => {
+  assert.equal(waitlistInviteVerificationAllowed({ found: false, valid: false }), true, 'non-waitlist verification keeps its existing path');
+  assert.equal(waitlistInviteVerificationAllowed({ found: true, valid: true }), true);
+  for (const evidence of [undefined, {}, { found: true, valid: false }, { found: false, valid: true }, { found: 'false', valid: false }]) {
+    assert.equal(waitlistInviteVerificationAllowed(evidence), false);
+  }
+
+  const api = fs.readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const verify = api.slice(api.indexOf('async function verifyEmail'), api.indexOf('async function refreshSession'));
+  const invitationGate = verify.indexOf('marketing.lock_waitlist_invite_for_verification');
+  const accountLock = verify.indexOf('lockRecoveryAccount(client, userId)');
+  const tokenLock = verify.indexOf('FOR UPDATE', accountLock);
+  assert.ok(invitationGate >= 0 && invitationGate < accountLock && accountLock < tokenLock,
+    'invitation state is serialized before account and verification-token locks');
+  assert.match(verify, /env\.WAITLIST_INVITE_SCHEMA_ENABLED === 'true'/);
+  assert.match(verify, /invite\.rowCount !== 1 \|\| !waitlistInviteVerificationAllowed\(invite\.rows\[0\]\)/);
+
+  const recovery = api.slice(api.indexOf('async function queueRecoveryEmail'), api.indexOf('async function emailAuth'));
+  assert.ok(recovery.indexOf('marketing.lock_waitlist_invite_for_verification') < recovery.indexOf('lockRecoveryAccount(client, userId)'),
+    'generic email recovery checks waitlist ownership before taking the account lock');
+  assert.match(recovery, /purpose === 'verification' && hasWaitlistInvite/);
+  const envelope = fs.readFileSync(new URL('../src/email-envelope-entrypoint.ts', import.meta.url), 'utf8');
+  assert.ok(envelope.indexOf('marketing.lock_waitlist_invite_for_verification') < envelope.indexOf('lockRecoveryAccount(client, userId)'),
+    'the private generic resend path checks waitlist ownership before taking the account lock');
+  assert.match(envelope, /waitlistId && env\.WAITLIST_INVITE_SCHEMA_ENABLED !== 'true'/);
+  for (const filename of ['../wrangler.jsonc', '../../lythaus-admin-api/wrangler.jsonc', '../../lythaus-jobs/wrangler.jsonc']) {
+    const config = fs.readFileSync(new URL(filename, import.meta.url), 'utf8');
+    assert.doesNotMatch(config, /WAITLIST_INVITES_REQUIRED|WAITLIST_INVITE_SCHEMA_ENABLED|EMAIL_INVITE_BASE_URL/,
+      `${filename} must not activate invitation code or schema access in the current release config`);
+  }
+
+  const migration = fs.readFileSync(new URL('../../../database/planetscale/proposals/2026-11-02-alpha-waitlist-invites.sql', import.meta.url), 'utf8');
+  const start = migration.indexOf('CREATE OR REPLACE FUNCTION marketing.lock_waitlist_invite_for_verification');
+  const end = migration.indexOf('CREATE OR REPLACE FUNCTION marketing.sync_waitlist_invite_outbox_state', start);
+  const lock = migration.slice(start, end);
+  const waitlistLock = lock.indexOf('FROM marketing.waitlist_signups w WHERE w.id = v_waitlist_id FOR UPDATE');
+  const inviteLock = lock.indexOf('FOR UPDATE OF i');
+  assert.ok(start >= 0 && end > start && waitlistLock >= 0 && waitlistLock < inviteLock,
+    'the database function locks the waitlist row before its invitation row');
+  for (const condition of [
+    'i.revoked_at IS NULL AND i.redeemed_at IS NULL',
+    'i.email_lookup_hmac = p_email_lookup_hmac',
+    "w.status IN ('waiting', 'invited') AND w.retention_hold = false",
+    "u.status = 'relink_required'",
+    't.expires_at > clock_timestamp() AND t.consumed_at IS NULL AND t.superseded_at IS NULL',
+  ]) assert.ok(lock.includes(condition), `invitation verification must check ${condition}`);
+  assert.match(lock, /WHERE i\.user_id = p_user_id/);
+  assert.match(lock, /WHERE i\.user_id = p_user_id AND i\.challenge_id = p_challenge_id/);
+  assert.match(migration, /CONSTRAINT waitlist_invites_user_unique UNIQUE \(user_id\)/);
+  const publicFunctionRevoke = migration.match(/REVOKE ALL ON FUNCTION([\s\S]*?)FROM PUBLIC;/);
+  assert.ok(publicFunctionRevoke, 'proposal revokes public execution on its security-definer functions');
+  assert.match(publicFunctionRevoke[1], /marketing\.lock_waitlist_invite_for_verification\(uuid, uuid, bytea\)/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION marketing\.lock_waitlist_invite_for_verification\(uuid, uuid, bytea\) TO lythaus_runtime/);
 });
 
 test('returns verification-required only after a valid password for pending email accounts', () => {

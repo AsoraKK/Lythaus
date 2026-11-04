@@ -13,6 +13,7 @@ part 'email_verification_request.g.dart';
 /// Properties:
 /// * [token] - Single-use opaque email-verification token.
 /// * [password] - Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized.
+/// * [email] - Must match the email address to which the one-time token was issued.
 @BuiltValue()
 abstract class EmailVerificationRequest implements Built<EmailVerificationRequest, EmailVerificationRequestBuilder> {
   /// Single-use opaque email-verification token.
@@ -22,6 +23,10 @@ abstract class EmailVerificationRequest implements Built<EmailVerificationReques
   /// Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized.
   @BuiltValueField(wireName: r'password')
   String get password;
+
+  /// Must match the email address to which the one-time token was issued.
+  @BuiltValueField(wireName: r'email')
+  String get email;
 
   EmailVerificationRequest._();
 
@@ -54,6 +59,11 @@ class _$EmailVerificationRequestSerializer implements PrimitiveSerializer<EmailV
     yield r'password';
     yield serializers.serialize(
       object.password,
+      specifiedType: const FullType(String),
+    );
+    yield r'email';
+    yield serializers.serialize(
+      object.email,
       specifiedType: const FullType(String),
     );
   }
@@ -92,6 +102,13 @@ class _$EmailVerificationRequestSerializer implements PrimitiveSerializer<EmailV
             specifiedType: const FullType(String),
           ) as String;
           result.password = valueDes;
+          break;
+        case r'email':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.email = valueDes;
           break;
         default:
           unhandled.add(key);

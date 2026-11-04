@@ -137,9 +137,14 @@ try {
       has_schema_privilege('lythaus_runtime', 'content', 'CREATE') AS runtime_content_ddl_forbidden,
       has_database_privilege('lythaus_runtime', current_database(), 'CREATE') AS runtime_database_ddl_forbidden,
       has_table_privilege('lythaus_jobs', 'content.posts', 'UPDATE') AS jobs_post_update_allowed,
+      has_schema_privilege('lythaus_jobs', 'marketing', 'USAGE') AS jobs_marketing_schema_allowed,
+      has_table_privilege('lythaus_jobs', 'marketing.waitlist_signups', 'SELECT') AS jobs_waitlist_table_read_forbidden,
       has_schema_privilege('lythaus_jobs', 'privacy', 'CREATE') AS jobs_privacy_ddl_forbidden,
       has_database_privilege('lythaus_jobs', current_database(), 'CREATE') AS jobs_database_ddl_forbidden,
       has_table_privilege('lythaus_admin', 'moderation.decisions', 'INSERT') AS admin_decision_allowed,
+      has_column_privilege('lythaus_runtime', 'system.audit_events', 'actor_id', 'INSERT') AS runtime_audit_actor_allowed,
+      has_column_privilege('lythaus_runtime', 'system.audit_events', 'target_type', 'INSERT') AS runtime_audit_target_type_allowed,
+      has_column_privilege('lythaus_runtime', 'system.audit_events', 'target_id', 'INSERT') AS runtime_audit_target_id_allowed,
       has_column_privilege('lythaus_runtime', 'marketing.waitlist_signups', 'id', 'INSERT') AS runtime_waitlist_insert_allowed,
       has_table_privilege('lythaus_runtime', 'marketing.waitlist_signups', 'SELECT') AS runtime_waitlist_read_forbidden,
       has_column_privilege('lythaus_admin', 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_waitlist_ciphertext_allowed,
@@ -149,6 +154,21 @@ try {
       has_column_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'purge_after', 'SELECT') AS privacy_waitlist_purge_allowed,
       has_table_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'DELETE') AS privacy_waitlist_delete_allowed,
       has_column_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_waitlist_ciphertext_forbidden,
+      has_column_privilege('lythaus_migrations', 'marketing.waitlist_signups', 'id', 'REFERENCES') AS migrations_waitlist_id_reference_allowed,
+      has_column_privilege('lythaus_migrations', 'identity.users', 'id', 'REFERENCES') AS migrations_users_id_reference_allowed,
+      has_column_privilege('lythaus_migrations', 'identity.email_verification_tokens', 'id', 'REFERENCES') AS migrations_verification_id_reference_allowed,
+      has_column_privilege('lythaus_migrations', 'system.transactional_email_outbox', 'id', 'REFERENCES') AS migrations_outbox_id_reference_allowed,
+      has_table_privilege('lythaus_migrations', 'marketing.waitlist_signups', 'TRIGGER') AS migrations_waitlist_trigger_allowed,
+      has_table_privilege('lythaus_migrations', 'identity.users', 'TRIGGER') AS migrations_users_trigger_allowed,
+      has_table_privilege('lythaus_migrations', 'system.transactional_email_outbox', 'TRIGGER') AS migrations_outbox_trigger_allowed,
+      has_table_privilege('lythaus_migrations', 'marketing.waitlist_signups', 'SELECT') AS migrations_waitlist_data_forbidden,
+      has_table_privilege('lythaus_migrations', 'identity.users', 'SELECT') AS migrations_user_data_forbidden,
+      has_table_privilege('lythaus_migrations', 'system.transactional_email_outbox', 'SELECT') AS migrations_outbox_data_forbidden,
+      has_table_privilege('lythaus_migrations', 'marketing.waitlist_signups', 'UPDATE') AS migrations_waitlist_mutation_forbidden,
+      has_column_privilege('lythaus_runtime', 'marketing.waitlist_signups', 'id', 'REFERENCES') AS runtime_waitlist_references_forbidden,
+      has_column_privilege('lythaus_admin', 'marketing.waitlist_signups', 'id', 'REFERENCES') AS admin_waitlist_references_forbidden,
+      has_column_privilege('lythaus_jobs', 'marketing.waitlist_signups', 'id', 'REFERENCES') AS jobs_waitlist_references_forbidden,
+      has_column_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'id', 'REFERENCES') AS privacy_waitlist_references_forbidden,
       has_table_privilege('lythaus_privacy', 'privacy.legal_holds', 'SELECT') AS privacy_legal_holds_allowed,
       has_table_privilege('lythaus_privacy', 'identity.email_credentials', 'SELECT') AS privacy_credentials_read_forbidden,
       has_schema_privilege('lythaus_migrations', 'identity', 'CREATE') AS migrations_ddl_allowed,
@@ -157,10 +177,10 @@ try {
       COALESCE((SELECT rolcreaterole FROM pg_roles WHERE rolname = 'lythaus_admin'), false) AS admin_create_role_forbidden
   `);
   const privilegeRow = privileges.rows[0];
-  for (const allowed of ['runtime_privacy_request_allowed', 'jobs_post_update_allowed', 'admin_decision_allowed', 'runtime_waitlist_insert_allowed', 'admin_waitlist_ciphertext_allowed', 'admin_waitlist_status_update_allowed', 'privacy_waitlist_purge_allowed', 'privacy_waitlist_delete_allowed', 'privacy_legal_holds_allowed', 'migrations_ddl_allowed']) {
+  for (const allowed of ['runtime_privacy_request_allowed', 'jobs_post_update_allowed', 'jobs_marketing_schema_allowed', 'admin_decision_allowed', 'runtime_audit_actor_allowed', 'runtime_audit_target_type_allowed', 'runtime_audit_target_id_allowed', 'runtime_waitlist_insert_allowed', 'admin_waitlist_ciphertext_allowed', 'admin_waitlist_status_update_allowed', 'privacy_waitlist_purge_allowed', 'privacy_waitlist_delete_allowed', 'migrations_waitlist_id_reference_allowed', 'migrations_users_id_reference_allowed', 'migrations_verification_id_reference_allowed', 'migrations_outbox_id_reference_allowed', 'migrations_waitlist_trigger_allowed', 'migrations_users_trigger_allowed', 'migrations_outbox_trigger_allowed', 'privacy_legal_holds_allowed', 'migrations_ddl_allowed']) {
     if (privilegeRow[allowed] !== true) throw new Error(`PostgreSQL 17 role contract missing allowed privilege: ${allowed}`);
   }
-  for (const forbidden of ['runtime_legal_holds_forbidden', 'runtime_waitlist_read_forbidden', 'admin_waitlist_hmac_forbidden', 'admin_waitlist_insert_forbidden', 'privacy_waitlist_ciphertext_forbidden', 'runtime_content_ddl_forbidden', 'runtime_database_ddl_forbidden', 'jobs_privacy_ddl_forbidden', 'jobs_database_ddl_forbidden', 'privacy_credentials_read_forbidden', 'runtime_create_role_forbidden', 'jobs_create_role_forbidden', 'admin_create_role_forbidden']) {
+  for (const forbidden of ['runtime_legal_holds_forbidden', 'runtime_waitlist_read_forbidden', 'jobs_waitlist_table_read_forbidden', 'admin_waitlist_hmac_forbidden', 'admin_waitlist_insert_forbidden', 'privacy_waitlist_ciphertext_forbidden', 'runtime_waitlist_references_forbidden', 'admin_waitlist_references_forbidden', 'jobs_waitlist_references_forbidden', 'privacy_waitlist_references_forbidden', 'migrations_waitlist_data_forbidden', 'migrations_user_data_forbidden', 'migrations_outbox_data_forbidden', 'migrations_waitlist_mutation_forbidden', 'runtime_content_ddl_forbidden', 'runtime_database_ddl_forbidden', 'jobs_privacy_ddl_forbidden', 'jobs_database_ddl_forbidden', 'privacy_credentials_read_forbidden', 'runtime_create_role_forbidden', 'jobs_create_role_forbidden', 'admin_create_role_forbidden']) {
     if (privilegeRow[forbidden] !== false) throw new Error(`PostgreSQL 17 role contract unexpectedly grants forbidden privilege: ${forbidden}`);
   }
 

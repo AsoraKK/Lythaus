@@ -11,6 +11,18 @@ export interface EmailAuthAttempt {
 
 export type EmailRegistrationPlan = 'create_account' | 'attach_email_credential' | 'resend_verification' | 'neutral_existing_account';
 
+export function requiresWaitlistInvitation(input: {
+  registrationPlan: EmailRegistrationPlan;
+  inviteOnly: boolean;
+  authenticatedAcceptance: boolean;
+}): boolean {
+  return input.inviteOnly && !input.authenticatedAcceptance && input.registrationPlan === 'create_account';
+}
+
+export function waitlistInvitesRequired(setting: unknown): boolean {
+  return setting === 'true';
+}
+
 export type EmailLoginPlan = 'invalid_credentials' | 'email_verification_required' | 'authenticated';
 
 export interface AuthSecrets {
@@ -47,7 +59,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'email_provider_mode_invalid', 'email_verification_required', 'export_not_configured',
   'export_cooldown_active', 'export_not_found', 'export_unavailable', 'feature_disabled',
   'idempotency_in_progress', 'idempotency_outcome_unknown',
-  'idempotency_key_conflict', 'idempotency_key_required', 'invalid_accountability_name',
+  'idempotency_key_conflict', 'idempotency_key_required', 'invite_required', 'invalid_accountability_name',
   'invalid_activity_category', 'invalid_bio', 'invalid_block', 'invalid_bookmark',
   'invalid_comment', 'invalid_comment_parent', 'invalid_credentials', 'invalid_cursor',
   'invalid_custom_feed', 'invalid_custom_feed_rule', 'invalid_custom_feed_rules',
@@ -131,6 +143,12 @@ export function planEmailRegistration(
   contactAccount: { status: string } | undefined = undefined,
 ): EmailRegistrationPlan {
   return planCanonicalRegistration({ account, contactAccount });
+}
+
+export function waitlistInviteVerificationAllowed(input: { found?: unknown; valid?: unknown } | undefined): boolean {
+  if (!input) return false;
+  if (input.found === false && input.valid === false) return true;
+  return input.found === true && input.valid === true;
 }
 
 export function planEmailLogin(

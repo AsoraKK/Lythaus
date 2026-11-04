@@ -10,5 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **token** | **String** | Single-use opaque email-verification token. |
 **password** | **String** | Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized. |
+**email** | **String** | Must match the email address to which the one-time token was issued. |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -77,6 +77,15 @@ void main() {
         ),
         isNull,
       );
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/invite',
+          user: null,
+          isGuest: false,
+          requestedUri: Uri.parse('/invite#token=SYNTHETIC-CODE'),
+        ),
+        isNull,
+      );
     },
   );
   testWidgets('auth loading/errors retain router and entered email', (

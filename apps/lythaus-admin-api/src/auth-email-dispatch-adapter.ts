@@ -1,7 +1,7 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { readBoundedJson } from './request-body-policy.ts';
 
-const SAFE_ERRORS = ['user_email_exists', 'user_not_found', 'email_already_verified', 'invalid_account_status', 'admin_role_required'];
+const SAFE_ERRORS = ['user_email_exists', 'user_not_found', 'email_already_verified', 'invalid_account_status', 'admin_role_required', 'waitlist_invite_not_eligible'];
 export async function dispatchKeeperEmail(env: EnvBindings, request: Request, input: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (!env.AUTH_EMAIL_ENVELOPE) throw new Error('auth_email_dispatch_unavailable');
   const overrides = request.headers.get('Cloudflare-Workers-Version-Overrides') ?? '';
@@ -28,7 +28,7 @@ export async function dispatchKeeperEmail(env: EnvBindings, request: Request, in
           || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(body.result.userId)
           || !['queued', 'cooldown'].includes(String(body.result.deliveryState))) throw new Error('auth_email_dispatch_unavailable');
         return { userId: body.result.userId, ...(input.operation === 'invite'
-          ? { status: 'relink_required', verificationState: 'pending_verification' }
+          ? { status: 'relink_required', verificationState: 'pending_verification', deliveryState: String(body.result.deliveryState) }
           : { deliveryState: body.result.deliveryState }) };
       })(),
       new Promise<never>((_, reject) => { deadline = setTimeout(() => { controller.abort(); reject(new Error('auth_email_dispatch_unavailable')); }, 5000); }),

@@ -18,7 +18,7 @@ import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { reopenModerationCase } from './moderation-rereview-runtime.ts';
 import { assertExpectedModerationReviewCycle } from '../../../packages/db/src/moderation-review-cycle.ts';
-import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest, WAITLIST_SEARCH_MAX_CANDIDATES } from './waitlist-runtime-policy.ts';
+import { assertWaitlistAdminRole, parseWaitlistId, parseWaitlistRetentionHoldUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest, WAITLIST_SEARCH_MAX_CANDIDATES } from './waitlist-runtime-policy.ts';
 import {
   createWaitlistEntry,
   deleteWaitlistEntry,
@@ -26,6 +26,7 @@ import {
   getAdminEmailHealth,
   getAdminUser,
   inviteAdminUser,
+  inviteWaitlistContact,
   listAdminUsers,
   patchAdminUser,
   resendAdminVerification,
@@ -42,6 +43,7 @@ interface Env extends EnvBindings {
   ACCESS_AUDIENCES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  WAITLIST_INVITE_SCHEMA_ENABLED?: string;
   SUPPORT_FEEDBACK_ENABLED?: string;
   SUPPORT_FEEDBACK_POLICY?: string;
 }
@@ -60,7 +62,7 @@ const ADMIN_ERROR_CODES = new Set([
   'overview_owner_required', 'overview_unavailable', 'overview_invalid_period',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
   'auth_data_unavailable', 'auth_email_dispatch_unavailable', 'confirmation_required',
-  'email_already_verified', 'email_change_requires_public_flow', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_key_required', 'invalid_email',
+  'email_already_verified', 'email_change_requires_public_flow', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_key_required', 'idempotency_outcome_unknown', 'invalid_email',
   'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
   'appeal_adjudication_decision_invalid', 'appeal_adjudication_locked',
   'appeal_adjudication_list_forbidden', 'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
@@ -76,7 +78,8 @@ const ADMIN_ERROR_CODES = new Set([
   'invalid_waitlist_search', 'invalid_waitlist_source', 'legal_hold_not_found',
   'moderation_case_already_resolved', 'moderation_case_not_found', 'moderation_declaration_missing',
   'moderation_case_superseded', 'rate_limit_exceeded', 'reason_code_required',
-  'profile_editing_unavailable', 'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_search_limit_exceeded', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
+  'profile_editing_unavailable', 'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_search_limit_exceeded', 'waitlist_status_transition_invalid', 'waitlist_invite_not_eligible', 'waitlist_status_managed', 'waitlist_unavailable',
+  'waitlist_invites_disabled',
 ]);
 
 function adminError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
@@ -85,12 +88,12 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
   const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable', 'overview_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
-      : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
+            : ['auth_data_unavailable', 'auth_email_dispatch_unavailable', 'waitlist_invites_disabled'].includes(exposedCode) ? 503
         : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden', 'profile_editing_unavailable'].includes(exposedCode) ? 403
           : ['appeal_profile_access_unavailable', 'appeal_resolution_unavailable', 'community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
             : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed', 'moderation_case_revision_conflict', 'moderation_case_state_conflict'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
-              : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
+              : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_outcome_unknown', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid', 'waitlist_status_managed', 'waitlist_invite_not_eligible'].includes(exposedCode) ? 409
               : exposedCode === 'waitlist_search_limit_exceeded' ? 422
                 : exposedCode === 'request_too_large' ? 413
                 : exposedCode === 'admin_mutation_content_type_invalid' ? 415
@@ -176,6 +179,7 @@ interface WaitlistRow {
   created_at: string | Date;
   cursor_timestamp: string;
   retention_hold: boolean;
+  invite_delivery_state: string;
 }
 
 export async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string, runQuery: typeof query = query): Promise<Response> {
@@ -194,12 +198,26 @@ export async function listWaitlist(request: Request, env: Env, actor: AdminActor
   if (filters.createdBefore) conditions.push(`w.created_at < ${addValue(filters.createdBefore)}::timestamptz`);
   if (page.cursor) conditions.push(`(w.created_at, w.id) < (${addValue(page.cursor.timestamp)}::timestamptz, ${addValue(page.cursor.id)}::uuid)`);
   const limitValue = addValue(filters.query ? WAITLIST_SEARCH_MAX_CANDIDATES + 1 : page.limit + 1);
+  const inviteDeliveryProjection = env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true'
+    ? `COALESCE((SELECT CASE WHEN wi.revoked_at IS NOT NULL THEN 'revoked'
+                             WHEN wi.redeemed_at IS NOT NULL OR t.consumed_at IS NOT NULL THEN 'redeemed'
+                             WHEN o.state IN ('bounced', 'complained', 'rejected') THEN o.state
+                             WHEN o.state = 'failed' AND o.provider_error_category IS DISTINCT FROM 'transient' THEN 'delivery_attention'
+                             WHEN t.expires_at <= now() AND t.superseded_at IS NULL THEN 'expired'
+                             ELSE o.state END
+                   FROM marketing.waitlist_invites wi
+                   LEFT JOIN system.transactional_email_outbox o ON o.id=wi.outbox_id
+                   LEFT JOIN identity.email_verification_tokens t ON t.id=wi.challenge_id
+                WHERE wi.waitlist_id=w.id
+                ORDER BY wi.created_at DESC LIMIT 1), 'not_invited')::text AS invite_delivery_state`
+    : `'not_invited'::text AS invite_delivery_state`;
   const [records, summaryResult] = await Promise.all([
     runQuery<WaitlistRow>(env.DB_ADMIN_FRESH,
       `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
               w.encryption_key_version, w.status, w.source, w.created_at,
               to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_timestamp,
-              w.retention_hold
+              w.retention_hold,
+              ${inviteDeliveryProjection}
          FROM marketing.waitlist_signups w
         WHERE ${conditions.join(' AND ')}
         ORDER BY w.created_at DESC, w.id DESC
@@ -224,6 +242,7 @@ export async function listWaitlist(request: Request, env: Env, actor: AdminActor
       id: row.id,
       email: searchMatch?.row.id === row.id ? searchMatch.email : await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
       status: row.status,
+      inviteDeliveryState: row.invite_delivery_state,
       source: row.source,
       createdAt: new Date(row.created_at).toISOString(),
       retentionHold: row.retention_hold,
@@ -242,6 +261,7 @@ export async function listWaitlist(request: Request, env: Env, actor: AdminActor
     }), hasSearch: Boolean(filters.query), statusFilter: filters.status, sourceFilter: filters.source })]);
   return json({
     items,
+    inviteFeatureEnabled: env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true',
     nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp, id: tail.id }) : null,
     summary: {
       totalWaiting: Number(summaryResult.rows[0]?.total_waiting ?? 0),
@@ -253,37 +273,9 @@ export async function listWaitlist(request: Request, env: Env, actor: AdminActor
 
 async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActor, rawId: string, correlation: string): Promise<Response> {
   assertWaitlistAdminRole(actor.role);
-  const id = parseWaitlistId(rawId);
-  const input = rejectUnknownFields(await readBoundedJson(request), ['status', 'reasonCode', 'confirmation']);
-  const status = parseWaitlistStatusUpdate(input);
-  const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, `UPDATE WAITLIST STATUS ${id} TO ${status.toUpperCase()}`);
-  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
-    const current = await client.query<{ status: string }>(
-      `SELECT status FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
-    if (current.rowCount !== 1) throw new Error('waitlist_not_found');
-    const previousStatus = current.rows[0].status;
-    assertWaitlistStatusTransition(previousStatus, status);
-    if (previousStatus !== status) {
-      await client.query(
-        `UPDATE marketing.waitlist_signups
-            SET status = $2,
-                updated_at = now(),
-                invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END,
-                converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END,
-                purge_after = CASE WHEN $2 = 'converted'
-                  THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END
-          WHERE id = $1`, [id, status]);
-    }
-    await client.query(
-      `INSERT INTO system.audit_events
-         (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-       VALUES ($1, $2, 'marketing.waitlist_status_changed', 'marketing.waitlist', $3,
-               $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ status, changed: previousStatus !== status })]);
-    return { id, status };
-  });
-  return json(result, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+  parseWaitlistId(rawId);
+  await readBoundedJson(request);
+  throw new Error('waitlist_status_managed');
 }
 
 async function updateWaitlistRetentionHold(request: Request, env: Env, actor: AdminActor, rawId: string, correlation: string): Promise<Response> {
@@ -1303,6 +1295,11 @@ export default {
       if (request.method === 'POST' && waitlistStatus) {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await updateWaitlistStatus(request, env, actor, waitlistStatus[1], id));
+      }
+      const waitlistInvite = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/invite$/);
+      if (request.method === 'POST' && waitlistInvite) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await inviteWaitlistContact(request, keeperEnv, actor, waitlistInvite[1], id));
       }
       const waitlistRetentionHold = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/retention-hold$/);
       if (request.method === 'POST' && waitlistRetentionHold) {

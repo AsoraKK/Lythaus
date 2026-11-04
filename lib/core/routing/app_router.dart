@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/core/routing/auth_return_location.dart';
+import 'package:lythaus/core/routing/invite_location_scrubber.dart';
 import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/home/trending_feed_screen.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
@@ -57,7 +58,8 @@ String? resolveAppRedirect({
 }) {
   final isLoggedIn = user != null || isGuest;
   final isOnLogin = matchedLocation == '/login';
-  final isOnInvite = matchedLocation.startsWith('/invite/');
+  final isOnInvite =
+      matchedLocation == '/invite' || matchedLocation.startsWith('/invite/');
   final isOnStaffModeration = matchedLocation == '/moderation';
   final canReviewModeration =
       user?.role == UserRole.moderator || user?.role == UserRole.admin;
@@ -143,6 +145,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // open deep-links and the invite code is never lost by an auth wall.
       GoRoute(
         name: AppRoutes.invite,
+        path: '/invite',
+        builder: (context, state) {
+          final stateCode = _inviteTokenFromFragment(state.uri.fragment);
+          final browserCode = inviteCodeFromBrowserLocation();
+          final pendingCode = ref.read(pendingInviteCodeProvider);
+          return InviteRedeemScreen(
+            inviteCode: stateCode ?? browserCode ?? pendingCode,
+          );
+        },
+      ),
+      GoRoute(
+        name: 'invite-legacy',
         path: '/invite/:code',
         builder: (context, state) =>
             InviteRedeemScreen(inviteCode: state.pathParameters['code']),
@@ -281,3 +295,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   });
   return router;
 });
+
+String? _inviteTokenFromFragment(String fragment) {
+  if (fragment.isEmpty) return null;
+  try {
+    final parameters = Uri.splitQueryString(fragment);
+    final token = parameters['token'];
+    return token == null || token.isEmpty ? null : token;
+  } on FormatException {
+    return null;
+  }
+}

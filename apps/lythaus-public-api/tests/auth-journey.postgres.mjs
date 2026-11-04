@@ -28,21 +28,29 @@ async function withClient(work, role) {
   finally { await client.end(); }
 }
 const sql = (text, values) => withClient(client => client.query(text, values));
+const inviteSchemaInstalled = Boolean((await sql("SELECT to_regclass('marketing.waitlist_invites') AS invite_table")).rows[0]?.invite_table);
 const databaseErrors = [];
+function safeDatabaseError(error) {
+  const safeReason = typeof error.message === 'string' && /^(?:permission denied for (?:table|schema|sequence) [a-zA-Z0-9_.]+|permission denied for column "[a-zA-Z0-9_.]+" of relation "[a-zA-Z0-9_.]+"|must be owner of relation "[a-zA-Z0-9_.]+")$/.test(error.message)
+    ? error.message : undefined;
+  return { code: error.code,
+    constraint: typeof error.constraint === 'string' && /^[a-zA-Z0-9_-]{1,120}$/.test(error.constraint) ? error.constraint : undefined,
+    reason: safeReason };
+}
 mock.module('@lythaus/db', { namedExports: { ...database,
   query: (binding, text, values) => withClient(client => client.query(text, values), binding.role).catch(error=>{
-    databaseErrors.push({code:error.code,reason:/^[a-zA-Z0-9_:-]{1,120}$/.test(error.message)?error.message:undefined});throw error;
+    databaseErrors.push(safeDatabaseError(error));throw error;
   }),
   transaction: (binding, work) => withClient(async client => {
     await client.query('BEGIN');
     try { const result = await work(client); await client.query('COMMIT'); return result; }
-    catch(error) { await client.query('ROLLBACK'); databaseErrors.push({ code:error.code, constraint:error.constraint,
-      reason:/^[a-zA-Z0-9_:-]{1,120}$/.test(error.message)?error.message:undefined }); throw error; }
+    catch(error) { await client.query('ROLLBACK'); databaseErrors.push(safeDatabaseError(error)); throw error; }
   }, binding.role),
 } });
 const logs = [];
 mock.module('@lythaus/observability', { namedExports: { ...telemetry, logEvent: event => logs.push(event) } });
 const { default: worker } = await import('../src/index.ts');
+const { handleEmailEnvelope } = await import('../src/email-envelope-entrypoint.ts');
 mock.module('../../lythaus-auth-acceptance-coordinator/src/access-policy.ts', { namedExports: {
   accessSubject: async request => {
     if (request.headers.get('cf-access-jwt-assertion') !== 'local-synthetic-human') throw new Error('access_required');
@@ -55,7 +63,7 @@ const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: 
 const keyId = 'local-auth-fixture';
 const publicJwk = { ...await exportJWK(publicKey), kid: keyId, use: 'sig', alg: 'ES256' };
 const env = {
-  ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
+  ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', WAITLIST_INVITES_REQUIRED: 'false',
   CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
   WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-local-test' },
   DB_APP_FRESH: {role:'lythaus_runtime'}, DB_JOBS_FRESH: {role:'lythaus_jobs'},
@@ -102,6 +110,82 @@ async function expectStatus(response, expected) {
   return body;
 }
 
+test('public registration requires an invitation before creating a new identity', async () => {
+  fixtureIp = '2001:db8::' + randomBytes(2).toString('hex');
+  const email = 'synthetic-invite-required-' + uuidv7() + '@example.invalid';
+  env.WAITLIST_INVITES_REQUIRED = 'true';
+  try {
+    const body = await expectStatus(await request('email', {
+      mode: 'register', email, password: 'synthetic invite only passphrase', turnstileToken: 'account_signup',
+    }), 400);
+    assert.equal(body.error, 'invite_required');
+    const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
+    assert.equal((await sql("SELECT count(*)::int AS count FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')", [lookup])).rows[0].count, 0);
+    assert.equal((await sql('SELECT count(*)::int AS count FROM system.transactional_email_outbox WHERE correlation_id=$1', [body.correlationId])).rows[0].count, 0);
+  } finally {
+    env.WAITLIST_INVITES_REQUIRED = 'false';
+  }
+});
+
+test('disposable PostgreSQL plus the actual HTTP verification handler redeems an issued email-bound invite once', { skip: !inviteSchemaInstalled }, async () => {
+  const email = `synthetic-alpha-invite-${uuidv7()}@example.invalid`;
+  const password = 'synthetic alpha invite owner passphrase';
+  const actorId = uuidv7();
+  const waitlistId = uuidv7();
+  const emailLookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
+  const encryptedEmail = await encryptField(email, env.PII_ENCRYPTION_KEY_V1, 'v1');
+  await sql("INSERT INTO identity.users(id,status,display_name) VALUES($1,'active','Synthetic invite admin')", [actorId]);
+  await sql('INSERT INTO identity.admin_memberships(user_id,access_subject_hmac,role,active) VALUES($1,decode($2,\'base64\'),\'administrator\',true)',
+    [actorId, randomBytes(32).toString('base64')]);
+  await sql(`INSERT INTO marketing.waitlist_signups
+    (id,email_lookup_hmac,email_ciphertext,encryption_key_version,status,source,consent_version)
+    VALUES($1,decode($2,'base64'),convert_to($3,'utf8'),'v1','waiting','synthetic-test','waitlist-v1')`,
+    [waitlistId,emailLookup,encryptedEmail.ciphertext]);
+
+  const oldSchemaFlag = env.WAITLIST_INVITE_SCHEMA_ENABLED;
+  const oldInviteOnly = env.WAITLIST_INVITES_REQUIRED;
+  const oldProvider = env.EMAIL;
+  const mailboxStart = mailbox.length;
+  env.WAITLIST_INVITE_SCHEMA_ENABLED = 'true';
+  env.WAITLIST_INVITES_REQUIRED = 'true';
+  try {
+    const issued = await handleEmailEnvelope(new Request('https://api.lythaus.test/keeper-email', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ operation: 'invite', actorId, correlationId: uuidv7(), reasonCode: 'ALPHA_INVITE', email, waitlistId }),
+    }), env);
+    const issueBody = await issued.json();
+    assert.equal(issued.status, 200, `${JSON.stringify(issueBody)}; database errors ${JSON.stringify(databaseErrors)}`);
+    assert.equal(issueBody.result.deliveryState, 'queued');
+
+    await relayTransactionalEmailOutbox(env);
+    const inviteEmail = mailbox.slice(mailboxStart).find(message => message.to === email && message.subject === 'Your Lythaus invitation');
+    assert.ok(inviteEmail, 'the local provider stub captured the invite email');
+    const token = tokenOf(inviteEmail);
+    const invited = (await sql(`SELECT id FROM identity.users WHERE id=(
+      SELECT user_id FROM marketing.waitlist_invites WHERE waitlist_id=$1)`, [waitlistId])).rows[0];
+    assert.ok(invited?.id);
+
+    const wrongEmail = await request('email/verify', { token, email: 'other@example.invalid', password });
+    assert.equal((await expectStatus(wrongEmail, 400)).error, 'verification_token_invalid');
+    assert.equal((await sql(`SELECT consumed_at FROM identity.email_verification_tokens WHERE token_hash=decode($1,'base64')`,
+      [hashAuthToken(token, 'verification')])).rows[0].consumed_at, null);
+
+    const verified = await expectStatus(await request('email/verify', { token, email, password }), 200);
+    assert.deepEqual(verified, { state: 'verified' });
+    const account = (await sql(`SELECT u.status,c.verified_at IS NOT NULL AS email_verified,
+      i.redeemed_at IS NOT NULL AS invite_redeemed,w.status AS waitlist_status
+      FROM identity.users u JOIN identity.email_credentials c ON c.user_id=u.id
+      JOIN marketing.waitlist_invites i ON i.user_id=u.id
+      JOIN marketing.waitlist_signups w ON w.id=i.waitlist_id WHERE u.id=$1`, [invited.id])).rows[0];
+    assert.deepEqual(account, { status: 'active', email_verified: true, invite_redeemed: true, waitlist_status: 'converted' });
+    assert.equal((await expectStatus(await request('email/verify', { token, email, password }), 400)).error, 'verification_token_invalid');
+  } finally {
+    env.WAITLIST_INVITE_SCHEMA_ENABLED = oldSchemaFlag;
+    env.WAITLIST_INVITES_REQUIRED = oldInviteOnly;
+    env.EMAIL = oldProvider;
+  }
+});
+
 test('real PostgreSQL + real API handler: signup, mailbox-owned setup, cookie session, reset and revocation', async t => {
   const email = `synthetic-${uuidv7()}@example.invalid`;
   const preregisteredPassword = 'synthetic attacker passphrase';
@@ -142,10 +226,11 @@ test('real PostgreSQL + real API handler: signup, mailbox-owned setup, cookie se
   assert.deepEqual(providerRow,{state:'provider_accepted',delivery_envelope_ciphertext:null});
   await withClient(client => applyTransactionalEmailLifecycle(client,{eventType:'message.delivered',messageId:initial.messageId}));
   await expectStatus(await request(`email/verify?token=${token}`,undefined),404);
-  await expectStatus(await request('email/verify',{token,password:'too short'}),400);
+  await expectStatus(await request('email/verify',{token,email,password:'too short'}),400);
+  await expectStatus(await request('email/verify',{token,email:'wrong@example.invalid',password}),400);
   assert.equal((await sql("SELECT consumed_at FROM identity.email_verification_tokens WHERE token_hash=decode($1,'base64')",[hashAuthToken(token,'verification')])).rows[0].consumed_at,null);
-  await expectStatus(await request('email/verify',{token,password}),200);
-  await expectStatus(await request('email/verify',{token,password}),400);
+  await expectStatus(await request('email/verify',{token,email,password}),200);
+  await expectStatus(await request('email/verify',{token,email,password}),400);
   await expectStatus(await request('email',{mode:'login',email,password:preregisteredPassword}),401);
   const login = await request('email',{mode:'login',email,password},{headers:{origin:'https://app.lythaus.test','x-lythaus-auth-transport':'cookie-v1'}});
   const session = await expectStatus(login,200);
@@ -259,9 +344,9 @@ test('next-day resend and duplicate signup retain identity and create fresh veri
   const delivered=mailbox.filter(message=>message.to===email);
   assert.equal(delivered.length,2,'Only a fresh valid intent is sent, once');
   assert.notEqual(tokenOf(delivered[1]),tokenOf(original));
-  await expectStatus(await request('email/verify',{token:tokenOf(original),password}),400);
-  await expectStatus(await request('email/verify',{token:tokenOf(delivered[1]),password}),200);
-  await expectStatus(await request('email/verify',{token:tokenOf(delivered[1]),password}),400);
+  await expectStatus(await request('email/verify',{token:tokenOf(original),email,password}),400);
+  await expectStatus(await request('email/verify',{token:tokenOf(delivered[1]),email,password}),200);
+  await expectStatus(await request('email/verify',{token:tokenOf(delivered[1]),email,password}),400);
   await expectStatus(await request('email',resend),202);
   await expectStatus(await request('email',signup),202);
   assert.equal((await sql('SELECT count(*)::int n FROM system.transactional_email_outbox WHERE user_id=$1',[id])).rows[0].n,3,'A verified account receives a neutral response without another verification email');
@@ -330,9 +415,9 @@ test('real handler idempotency, concurrent registration and resend preserve iden
   await relayTransactionalEmailOutbox(env);
   const second=mailbox.filter(message=>message.to===email).at(-1);
   assert.notEqual(second.messageId,first.messageId);
-  await expectStatus(await request('email/verify',{token:tokenOf(first),password}),400);
-  await expectStatus(await request('email/verify',{token:tokenOf(second),password}),200);
-  await expectStatus(await request('email/verify',{token:tokenOf(second),password}),400);
+  await expectStatus(await request('email/verify',{token:tokenOf(first),email,password}),400);
+  await expectStatus(await request('email/verify',{token:tokenOf(second),email,password}),200);
+  await expectStatus(await request('email/verify',{token:tokenOf(second),email,password}),400);
   const login=await expectStatus(await request('email',{mode:'login',email,password}),200);
   assert.equal((await expectStatus(await request('userinfo',undefined,{access:login.accessToken}),200)).id,id);
   const persisted=(await sql('SELECT response FROM system.idempotency_keys WHERE key=$1',[key])).rows[0].response;
@@ -357,7 +442,7 @@ test('legacy mailbox setup preserves the original user and restricted/unknown in
   const mail=mailbox.find(message=>message.to===email);
   assert.ok(mail.subject.includes('Verify'));
   const password='synthetic recovered passphrase';
-  await expectStatus(await request('email/verify',{token:tokenOf(mail),password}),200);
+  await expectStatus(await request('email/verify',{token:tokenOf(mail),email,password}),200);
   const login=await expectStatus(await request('email',{mode:'login',email,password}),200);
   assert.equal((await expectStatus(await request('userinfo',undefined,{access:login.accessToken}),200)).id,id);
   for(const olderPassword of ['olderpass12!','olderpass123!','olderpass1234!']) {

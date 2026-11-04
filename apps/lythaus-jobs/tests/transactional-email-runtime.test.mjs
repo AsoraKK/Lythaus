@@ -7,12 +7,62 @@ import { createTransactionalEmailDispatchMessage } from '../../../packages/secur
 
 import {
   applyTransactionalEmailLifecycle,
+  lockDeliverableEmail,
   emailProviderFailureCategory,
   authorizedEmailLifecycleRequest,
   parseTransactionalEmailLifecycleQueueEvent,
   summarizeTransactionalEmailDeliveryEvidence,
   processEmailLifecycleQueue,
 } from '../src/transactional-email-runtime.ts';
+
+test('legacy email delivery does not query the optional waitlist schema while its flag is off', async () => {
+  const statements = [];
+  const client = { query: async (sql, values) => {
+    statements.push({ sql, values });
+    return { rows: [{ valid: true }], rowCount: 1 };
+  } };
+  assert.equal(await lockDeliverableEmail(client, '01900000-0000-7000-8000-000000000001', null), true);
+  assert.equal(statements.length, 1);
+  assert.doesNotMatch(statements[0].sql, /waitlist_invites|lock_waitlist_invite_delivery/);
+});
+
+test('enabled waitlist delivery requires a complete authorization result and cancels restricted invites', async () => {
+  const statements = [];
+  const client = { query: async (sql, values) => {
+    statements.push({ sql, values });
+    if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: false, deliverable: false }], rowCount: 1 };
+    if (sql.includes('pg_advisory_xact_lock')) return { rows: [], rowCount: 1 };
+    return { rows: [{ valid: true }], rowCount: 1 };
+  } };
+  assert.equal(await lockDeliverableEmail(client, '01900000-0000-7000-8000-000000000002', '01900000-0000-7000-8000-000000000022', true), true);
+  assert.match(statements[0].sql, /lock_waitlist_invite_delivery/);
+  assert.match(statements[1].sql, /pg_advisory_xact_lock/);
+  assert.doesNotMatch(statements.at(-1).sql, /marketing\.waitlist_invites/);
+  assert.deepEqual(statements.at(-1).values, ['01900000-0000-7000-8000-000000000002', '01900000-0000-7000-8000-000000000022']);
+
+  const linked = [];
+  assert.equal(await lockDeliverableEmail({ query: async (sql, values) => {
+    linked.push({ sql, values });
+    if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: true, deliverable: true }], rowCount: 1 };
+    if (sql.includes('pg_advisory_xact_lock')) return { rows: [], rowCount: 1 };
+    return { rows: [{ valid: true }], rowCount: 1 };
+  } }, '01900000-0000-7000-8000-000000000005', '01900000-0000-7000-8000-000000000055', true), true);
+  assert.doesNotMatch(linked.at(-1).sql, /marketing\.waitlist_invites/);
+  assert.equal(linked.some(({ sql }) => sql.includes('SELECT found, deliverable FROM marketing.lock_waitlist_invite_delivery')), true);
+
+  await assert.rejects(lockDeliverableEmail({ query: async () => ({ rows: [], rowCount: 0 }) },
+    '01900000-0000-7000-8000-000000000003', null, true), /email_waitlist_authorization_unavailable/);
+
+  const cancelled = [];
+  const blocked = await lockDeliverableEmail({ query: async sql => {
+    cancelled.push(sql);
+    if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: true, deliverable: false }], rowCount: 1 };
+    return { rows: [], rowCount: 1 };
+  } }, '01900000-0000-7000-8000-000000000004', null, true);
+  assert.equal(blocked, false);
+  assert.equal(cancelled.some(sql => sql.includes("SET state='cancelled'")), true);
+  assert.equal(cancelled.some(sql => sql.includes(' AS valid')), false);
+});
 
 test('mixed25-message burst reconciles lifecycle before slow sends and bounds provider/database concurrency', { timeout: 5000 }, async () => {
   const key = randomBytes(32).toString('base64');
@@ -59,7 +109,7 @@ test('mixed25-message burst reconciles lifecycle before slow sends and bounds pr
     try { return await connection(() => work({ query })); } finally { activeTransactions--; }
   } };
   const env = { DB_JOBS_FRESH: {}, TRANSACTIONAL_EMAIL_DISPATCH_ENABLED: 'true', TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1: key,
-    EMAIL_PROVIDER_MODE: 'cloudflare', EMAIL_FROM: 'no-reply@mail.lythaus.test', EMAIL_VERIFICATION_BASE_URL: 'https://lythaus.co/verify-email',
+    EMAIL_PROVIDER_MODE: 'cloudflare', EMAIL_FROM: 'no-reply@mail.lythaus.test', EMAIL_VERIFICATION_BASE_URL: 'https://lythaus.co/verify-email', EMAIL_INVITE_BASE_URL: 'https://app.lythaus.co/invite',
     EMAIL: { send: async () => {
       const number = ++sends;
       activeSends++; maxSends = Math.max(maxSends, activeSends);

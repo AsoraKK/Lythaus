@@ -46,6 +46,7 @@ Method | HTTP request | Description
 [**adminUsersTierUpdate**](AdminApi.md#adminuserstierupdate) | **POST** /admin/users/{userId}/tier | Update subscription tier
 [**adminWaitlistCreate**](AdminApi.md#adminwaitlistcreate) | **POST** /admin/waitlist | Add a waitlist signup
 [**adminWaitlistDelete**](AdminApi.md#adminwaitlistdelete) | **DELETE** /admin/waitlist/{waitlistId} | Retire a waitlist signup
+[**adminWaitlistInvite**](AdminApi.md#adminwaitlistinvite) | **POST** /admin/waitlist/{waitlistId}/invite | Send a one-time signup invitation to a waitlist entry
 [**adminWaitlistList**](AdminApi.md#adminwaitlistlist) | **GET** /admin/waitlist | List private beta waitlist signups
 [**adminWaitlistPatch**](AdminApi.md#adminwaitlistpatch) | **PATCH** /admin/waitlist/{waitlistId} | Edit a waitlist signup
 [**adminWaitlistRetentionHoldUpdate**](AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
@@ -1790,6 +1791,57 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **adminWaitlistInvite**
+> AdminWaitlistInvite202Response adminWaitlistInvite(waitlistId, idempotencyKey, adminWaitlistInviteRequest)
+
+Send a one-time signup invitation to a waitlist entry
+
+Administrator and owner roles may queue a one-time email-bound signup invitation for an eligible waiting entry. Provider acceptance advances the waitlist state; queue submission does not prove inbox delivery.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String waitlistId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final AdminWaitlistInviteRequest adminWaitlistInviteRequest = ; // AdminWaitlistInviteRequest |
+
+try {
+    final response = api.adminWaitlistInvite(waitlistId, idempotencyKey, adminWaitlistInviteRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminWaitlistInvite: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **waitlistId** | **String**|  |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+ **adminWaitlistInviteRequest** | [**AdminWaitlistInviteRequest**](AdminWaitlistInviteRequest.md)|  |
+
+### Return type
+
+[**AdminWaitlistInvite202Response**](AdminWaitlistInvite202Response.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **adminWaitlistList**
 > WaitlistAdminResponse adminWaitlistList(cursor, limit)
 
@@ -1936,11 +1988,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminWaitlistStatusUpdate**
-> WaitlistStatusResponse adminWaitlistStatusUpdate(waitlistId, waitlistStatusUpdate)
+> adminWaitlistStatusUpdate(waitlistId, waitlistStatusUpdate)
 
 Update a waitlist signup status
 
-Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+Status is managed by provider acceptance, signup verification, and unsubscribe. Manual updates are rejected with waitlist_status_managed.
 
 ### Example
 ```dart
@@ -1955,8 +2007,7 @@ final String waitlistId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final WaitlistStatusUpdate waitlistStatusUpdate = ; // WaitlistStatusUpdate |
 
 try {
-    final response = api.adminWaitlistStatusUpdate(waitlistId, waitlistStatusUpdate);
-    print(response);
+    api.adminWaitlistStatusUpdate(waitlistId, waitlistStatusUpdate);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminWaitlistStatusUpdate: $e\n');
 }
@@ -1971,7 +2022,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**WaitlistStatusResponse**](WaitlistStatusResponse.md)
+void (empty response body)
 
 ### Authorization
 

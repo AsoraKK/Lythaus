@@ -376,6 +376,23 @@ test('runtime grant template includes system schema access for rate limiting', a
   assert.match(grants, /GRANT SELECT ON system\.schema_migrations TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;/);
   assert.match(grants, /GRANT SELECT ON feed\.discovery_candidates TO lythaus_runtime;/);
   assert.match(grants, /GRANT SELECT, INSERT, UPDATE ON system\.rate_limit_windows TO lythaus_runtime;/);
+  assert.match(grants, /GRANT INSERT \(actor_id, target_type, target_id\) ON system\.audit_events TO lythaus_runtime;/);
+  assert.match(grants, /GRANT USAGE ON SCHEMA marketing TO lythaus_jobs;/);
+});
+
+test('migration role receives only the referenced primary-key privileges needed by the invite proposal', async () => {
+  const grants = await (await import('node:fs/promises')).readFile('database/planetscale/grants/roles.sql', 'utf8');
+  assert.match(grants, /GRANT REFERENCES \(id\) ON TABLE marketing\.waitlist_signups,\s*identity\.users,\s*identity\.email_verification_tokens,\s*system\.transactional_email_outbox\s+TO lythaus_migrations;/);
+  assert.doesNotMatch(grants, /GRANT REFERENCES ON TABLE marketing\.waitlist_signups TO lythaus_migrations/);
+  assert.doesNotMatch(grants, /GRANT REFERENCES \(id\)[\s\S]{0,200}TO lythaus_(runtime|admin|jobs|privacy)/);
+  assert.match(grants, /GRANT TRIGGER ON TABLE marketing\.waitlist_signups,\s*identity\.users,\s*system\.transactional_email_outbox\s+TO lythaus_migrations;/);
+  assert.doesNotMatch(grants, /GRANT (?:SELECT|INSERT|UPDATE|DELETE) ON TABLE identity\.users TO lythaus_migrations/);
+  assert.match(grants, /IF EXISTS \(SELECT 1 FROM pg_roles WHERE rolname = 'lythaus_waitlist_invite_function_owner'/);
+  assert.match(grants, /GRANT SELECT \(id, status\), UPDATE \(id\) ON identity\.users TO lythaus_waitlist_invite_function_owner/);
+  assert.match(grants, /GRANT USAGE ON SCHEMA marketing TO lythaus_waitlist_invite_function_owner/);
+  assert.doesNotMatch(grants, /GRANT USAGE, CREATE ON SCHEMA marketing TO lythaus_waitlist_invite_function_owner/);
+  assert.match(grants, /REVOKE CREATE ON SCHEMA marketing FROM lythaus_waitlist_invite_function_owner/);
+  assert.doesNotMatch(grants, /GRANT SELECT ON identity\.users TO lythaus_waitlist_invite_function_owner/);
 });
 
 test('production Hyperdrive gate requires the canonical runtime identity without exposing it', async () => {

@@ -19,6 +19,8 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
 
       <form class="auth-form" data-email-verification-form data-api-base-url={publicApiBaseUrl} novalidate>
         <div class="auth-fields" data-email-verification-fields>
+          <label for="verification-email">Invited email address</label>
+          <input id="verification-email" name="email" type="email" autocomplete="email" maxlength="320" required />
           <label for="verification-password">Set your password</label>
           <input id="verification-password" name="password" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
           <p class="auth-field-note" id="verification-password-note">Choose 15–128 characters. This becomes your account password. Spaces, Unicode, paste, and password managers are supported.</p>
@@ -39,6 +41,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
     if (form instanceof HTMLElement) {
       const button = form.querySelector('[data-email-verification-submit]');
       const password = form.querySelector('#verification-password');
+      const email = form.querySelector('#verification-email');
       const status = form.querySelector('[data-email-verification-status]');
       const signInLink = form.querySelector('[data-email-verification-signin]');
       const resendLink = form.querySelector('[data-email-verification-resend]');
@@ -63,6 +66,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
           password.value = '';
           password.disabled = true;
         }
+        if (email instanceof HTMLInputElement) email.disabled = true;
         if (fields instanceof HTMLElement) fields.hidden = true;
         if (button instanceof HTMLButtonElement) button.disabled = true;
         showLink(resendLink);
@@ -79,6 +83,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
           password.value = '';
           password.disabled = !token;
         }
+        if (email instanceof HTMLInputElement) email.disabled = !token;
         if (button instanceof HTMLButtonElement) {
           button.disabled = !token;
           button.textContent = 'Verify email and finish setup';
@@ -94,7 +99,13 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (isSubmitting || !token || !(button instanceof HTMLButtonElement)) return;
-        if (!(password instanceof HTMLInputElement)) return;
+        if (!(password instanceof HTMLInputElement) || !(email instanceof HTMLInputElement)) return;
+        if (!email.validity.valid) {
+          email.setAttribute('aria-invalid', 'true');
+          setStatus('Enter the email address this verification was sent to.', 'error');
+          return;
+        }
+        email.removeAttribute('aria-invalid');
         if (!acceptsPassword(password.value, 'creation')) {
           password.setAttribute('aria-invalid', 'true');
           setStatus('Use a password between 15 and 128 characters.', 'error');
@@ -110,7 +121,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
           const response = await authFetch(`${apiBaseUrl}/api/auth/email/verify`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ token, password: password.value }),
+            body: JSON.stringify({ token, password: password.value, email: email.value }),
             cache: 'no-store',
             credentials: 'omit',
             referrerPolicy: 'no-referrer',

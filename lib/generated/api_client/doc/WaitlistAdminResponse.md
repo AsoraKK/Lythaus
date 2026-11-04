@@ -9,6 +9,7 @@ import 'package:lythaus_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **items** | [**BuiltList&lt;WaitlistAdminItem&gt;**](WaitlistAdminItem.md) |  |
+**inviteFeatureEnabled** | **bool** | Whether the invitation schema and send flow are enabled for this admin environment. |
 **nextCursor** | **String** |  |
 **summary** | [**WaitlistAdminResponseSummary**](WaitlistAdminResponseSummary.md) |  |
 

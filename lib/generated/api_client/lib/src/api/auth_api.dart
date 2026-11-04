@@ -36,7 +36,7 @@ class AuthApi {
   const AuthApi(this._dio, this._serializers);
 
   /// Register, sign in, or resend email verification
-  /// Registers an email account, signs in a verified account, or resends a verification message. Registration requires a Turnstile token when the production bot-protection gate is enabled.
+  /// Registers an email account, signs in a verified account, or resends a verification message. New account creation is invite-only; an invitation code is entered at signup and is bound to the invited email. Registration requires a Turnstile token when the production bot-protection gate is enabled.
   ///
   /// Parameters:
   /// * [emailAuthRequest]

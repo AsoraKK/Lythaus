@@ -109,6 +109,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/admin/waitlist/{waitlistId}', method: 'patch', worker: 'admin', dispatcherNeedle: 'const waitlistEntry =' },
   { path: '/admin/waitlist/{waitlistId}', method: 'delete', worker: 'admin', dispatcherNeedle: 'const waitlistEntry =' },
   { path: '/admin/waitlist/{waitlistId}/status', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistStatus =' },
+  { path: '/admin/waitlist/{waitlistId}/invite', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistInvite =' },
   { path: '/admin/waitlist/{waitlistId}/retention-hold', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistRetentionHold =' },
   { path: '/admin/auth/summary', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/auth/summary'" },
   { path: '/admin/email-health', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/email-health'" },
@@ -198,18 +199,25 @@ describe('product-integrity OpenAPI parity', () => {
     expect(spec.components.schemas.WaitlistAdminItem.required).toContain('retentionHold');
 
     for (const path of [
-      '/admin/waitlist/{waitlistId}/status',
+      '/admin/waitlist/{waitlistId}/invite',
       '/admin/waitlist/{waitlistId}/retention-hold',
     ]) {
       const operation = spec.paths[path].post;
       expect(operation.security).toEqual([{ cloudflareAccess: [] }]);
-      expect(operation.responses['200'].headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
+      const success = path.endsWith('/invite') ? operation.responses['202'] : operation.responses['200'];
+      expect(success.headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
       expect(Object.keys(operation.responses)).toEqual(expect.arrayContaining(['400', '401', '403', '404', '413', '429', '503']));
     }
 
-    expect(spec.paths['/admin/waitlist/{waitlistId}/status'].post.responses['409']).toBeDefined();
+    const statusUpdate = spec.paths['/admin/waitlist/{waitlistId}/status'].post;
+    expect(statusUpdate.security).toEqual([{ cloudflareAccess: [] }]);
+    expect(statusUpdate.deprecated).toBe(true);
+    expect(statusUpdate.responses['409']).toBeDefined();
+    expect(statusUpdate.responses['200']).toBeUndefined();
     expect(spec.components.schemas.WaitlistStatusUpdate.required).toEqual(['status', 'reasonCode', 'confirmation']);
     expect(spec.components.schemas.WaitlistRetentionHoldUpdate.required).toEqual(['active', 'reasonCode', 'confirmation']);
+    expect(spec.paths['/admin/waitlist/{waitlistId}/invite'].post.requestBody.content['application/json'].schema.required)
+      .toEqual(['reasonCode', 'confirmation']);
   });
 
   test('retired duplicate product-integrity routes are absent', () => {
