@@ -334,7 +334,7 @@ test('REL-02: assembly, immutable source and outbox commit atomically and retry 
 test('SEC-01/03/16: ordinary email verification succeeds with the monthly feature disabled and earns no quarterly points', async () => {
   const userId = await person(), tokenId = uuidv7(), token = randomBytes(32).toString('base64url');
   const email = `synthetic-monthly-${uuidv7()}@example.invalid`, hmacKey = randomBytes(32).toString('base64');
-  const lookup = hmacLookup(email, hmacKey);
+  const lookup = Buffer.from(hmacLookup(email, hmacKey), 'base64');
   await sql(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
     VALUES ($1, convert_to('synthetic-encrypted-contact', 'utf8'), $2, 'v1', 'email')`, [userId, lookup]);
   await sql(`INSERT INTO identity.email_credentials
@@ -365,7 +365,7 @@ test('SEC-01/03/16: ordinary email verification succeeds with the monthly featur
 test('SEC-01/03/16: enabled current monthly policy captures safe email evidence and revokes it on binding change', async () => {
   const userId = await person(), tokenId = uuidv7(), token = randomBytes(32).toString('base64url');
   const email = `synthetic-monthly-${uuidv7()}@example.invalid`, hmacKey = randomBytes(32).toString('base64');
-  const lookup = hmacLookup(email, hmacKey);
+  const lookup = Buffer.from(hmacLookup(email, hmacKey), 'base64');
   await sql(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
     VALUES ($1, convert_to('synthetic-encrypted-contact', 'utf8'), $2, 'v1', 'email')`, [userId, lookup]);
   await sql(`INSERT INTO identity.email_credentials
