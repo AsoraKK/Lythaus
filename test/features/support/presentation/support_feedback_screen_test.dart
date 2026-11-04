@@ -576,7 +576,7 @@ void main() {
 
       await tester.drag(find.byType(ListView), const Offset(0, 1200));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Feedback and suggestions').first);
+      await tester.tap(find.text('Help improve Lythaus').first);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('What would you improve?'),
@@ -722,7 +722,7 @@ void main() {
         'Old account unsent draft',
       );
       clients.first.deferNextList = true;
-      await tester.tap(find.text('Feedback and suggestions').first);
+      await tester.tap(find.text('Help improve Lythaus').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard and switch'));
       await tester.pump();
@@ -769,7 +769,7 @@ void main() {
     expect(client.listedKinds, <String>['problem']);
 
     client.failNextList = true;
-    await tester.tap(find.text('Feedback and suggestions').first);
+    await tester.tap(find.text('Help improve Lythaus').first);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Retry history'),
@@ -1328,7 +1328,7 @@ void main() {
       );
       await tester.drag(find.byType(ListView), const Offset(0, 2000));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Feedback and suggestions').first);
+      await tester.tap(find.text('Help improve Lythaus').first);
       await tester.pumpAndSettle();
       expect(client.listedKinds.last, 'suggestion');
       expect(
@@ -1405,7 +1405,7 @@ void main() {
       'Unsent private problem title',
     );
 
-    await tester.tap(find.text('Feedback and suggestions'));
+    await tester.tap(find.text('Help improve Lythaus'));
     await tester.pumpAndSettle();
     expect(find.text('Switch request type?'), findsOneWidget);
     await tester.tap(find.text('Stay with draft'));
@@ -1416,7 +1416,7 @@ void main() {
     );
     expect(find.text('Report a problem'), findsNWidgets(2));
 
-    await tester.tap(find.text('Feedback and suggestions'));
+    await tester.tap(find.text('Help improve Lythaus'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Discard and switch'));
     await tester.pumpAndSettle();
@@ -1445,14 +1445,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('performance'), findsOneWidget);
 
-      await tester.tap(find.text('Feedback and suggestions'));
+      await tester.tap(find.text('Help improve Lythaus'));
       await tester.pumpAndSettle();
       expect(find.text('Switch request type?'), findsOneWidget);
       await tester.tap(find.text('Stay with draft'));
       await tester.pumpAndSettle();
       expect(find.text('performance'), findsOneWidget);
 
-      await tester.tap(find.text('Feedback and suggestions'));
+      await tester.tap(find.text('Help improve Lythaus'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard and switch'));
       await tester.pumpAndSettle();
@@ -1506,7 +1506,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Report a problem'), findsNWidgets(2));
-    expect(find.text('Feedback and suggestions'), findsOneWidget);
+    expect(find.text('Help improve Lythaus'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
