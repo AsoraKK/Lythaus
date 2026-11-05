@@ -1,0 +1,259 @@
+{
+  "schemaVersion": "lythaus-wp007f-confirmation-results-v1",
+  "inputManifestSha256": "3ef81fab74b7c05046f312a5f59dde9bf218e510ffa699d86441fcde6f715c62",
+  "scoreBlind": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "thresholdsFrozenBeforeConfirmation": true,
+  "results": [
+    {
+      "detectorId": "SPAI_C512",
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "thresholdSource": "development pooled CAMERA_DEV + DIGITAL_DEV at target 1%",
+      "frozenThreshold": 1.0,
+      "syntheticConfirmRecall": {
+        "count": 81,
+        "total": 100,
+        "rate": 0.81,
+        "wilson95": [
+          0.722212,
+          0.874852
+        ]
+      },
+      "cameraConfirmFpr": {
+        "count": 2,
+        "total": 50,
+        "rate": 0.04,
+        "wilson95": [
+          0.011039,
+          0.134601
+        ]
+      },
+      "digitalConfirmFpr": {
+        "count": 0,
+        "total": 23,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.143117
+        ]
+      },
+      "overallConfirmFpr": {
+        "count": 2,
+        "total": 73,
+        "rate": 0.027397,
+        "wilson95": [
+          0.007546,
+          0.094501
+        ]
+      },
+      "syntheticScore": {
+        "count": 100,
+        "median": 1.0,
+        "iqr": [
+          1.0,
+          1.0
+        ],
+        "min": 0.04889,
+        "max": 1.0
+      },
+      "cameraScore": {
+        "count": 50,
+        "median": 0.148077,
+        "iqr": [
+          1e-06,
+          0.759873
+        ],
+        "min": 0.0,
+        "max": 1.0
+      },
+      "digitalScore": {
+        "count": 23,
+        "median": 0.0,
+        "iqr": [
+          0.0,
+          0.0
+        ],
+        "min": 0.0,
+        "max": 1.2e-05
+      },
+      "runtimeSeconds": {
+        "count": 173,
+        "median": 2.567469,
+        "iqr": [
+          2.512992,
+          3.379934
+        ],
+        "min": 2.052609,
+        "max": 10.498698
+      },
+      "recordCount": 173
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "thresholdSource": "development pooled CAMERA_DEV + DIGITAL_DEV at target 1%",
+      "frozenThreshold": 0.543838277,
+      "syntheticConfirmRecall": {
+        "count": 10,
+        "total": 100,
+        "rate": 0.1,
+        "wilson95": [
+          0.055229,
+          0.174366
+        ]
+      },
+      "cameraConfirmFpr": {
+        "count": 1,
+        "total": 50,
+        "rate": 0.02,
+        "wilson95": [
+          0.003539,
+          0.104954
+        ]
+      },
+      "digitalConfirmFpr": {
+        "count": 0,
+        "total": 23,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.143117
+        ]
+      },
+      "overallConfirmFpr": {
+        "count": 1,
+        "total": 73,
+        "rate": 0.013699,
+        "wilson95": [
+          0.002422,
+          0.073597
+        ]
+      },
+      "syntheticScore": {
+        "count": 100,
+        "median": 0.010016,
+        "iqr": [
+          0.001027,
+          0.077902
+        ],
+        "min": 6e-06,
+        "max": 0.995643
+      },
+      "cameraScore": {
+        "count": 50,
+        "median": 0.000557,
+        "iqr": [
+          0.000134,
+          0.004824
+        ],
+        "min": 4e-06,
+        "max": 0.929366
+      },
+      "digitalScore": {
+        "count": 23,
+        "median": 0.000931,
+        "iqr": [
+          2.6e-05,
+          0.003576
+        ],
+        "min": 7e-06,
+        "max": 0.022302
+      },
+      "runtimeSeconds": {
+        "count": 173,
+        "median": 1.625119,
+        "iqr": [
+          1.134414,
+          1.701122
+        ],
+        "min": 0.810847,
+        "max": 7.271082
+      },
+      "recordCount": 173
+    },
+    {
+      "detectorId": "RINE",
+      "checkpointSha256": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "thresholdSource": "development pooled CAMERA_DEV + DIGITAL_DEV at target 1%",
+      "frozenThreshold": 0.890092938,
+      "syntheticConfirmRecall": {
+        "count": 56,
+        "total": 100,
+        "rate": 0.56,
+        "wilson95": [
+          0.462281,
+          0.65328
+        ]
+      },
+      "cameraConfirmFpr": {
+        "count": 2,
+        "total": 50,
+        "rate": 0.04,
+        "wilson95": [
+          0.011039,
+          0.134601
+        ]
+      },
+      "digitalConfirmFpr": {
+        "count": 0,
+        "total": 23,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.143117
+        ]
+      },
+      "overallConfirmFpr": {
+        "count": 2,
+        "total": 73,
+        "rate": 0.027397,
+        "wilson95": [
+          0.007546,
+          0.094501
+        ]
+      },
+      "syntheticScore": {
+        "count": 100,
+        "median": 0.93207,
+        "iqr": [
+          0.674856,
+          0.995308
+        ],
+        "min": 0.146539,
+        "max": 0.999998
+      },
+      "cameraScore": {
+        "count": 50,
+        "median": 0.42219,
+        "iqr": [
+          0.352939,
+          0.633424
+        ],
+        "min": 0.142372,
+        "max": 0.932861
+      },
+      "digitalScore": {
+        "count": 23,
+        "median": 0.306013,
+        "iqr": [
+          0.276641,
+          0.3264
+        ],
+        "min": 0.23835,
+        "max": 0.367802
+      },
+      "runtimeSeconds": {
+        "count": 173,
+        "median": 1.678271,
+        "iqr": [
+          1.180442,
+          2.21208
+        ],
+        "min": 0.782094,
+        "max": 6.969755
+      },
+      "recordCount": 173
+    }
+  ]
+}

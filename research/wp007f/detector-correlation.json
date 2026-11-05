@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "lythaus-wp007f-detector-correlation-v1",
+  "inputManifestSha256": "3ef81fab74b7c05046f312a5f59dde9bf218e510ffa699d86441fcde6f715c62",
+  "scoreBlind": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "population": "DDB_DETECTOR_DEV + CAMERA_DEV + DIGITAL_DEV shared sample IDs",
+  "pairs": [
+    {
+      "leftDetectorId": "RINE",
+      "rightDetectorId": "SPAI_C512",
+      "pearson": 0.586114,
+      "spearman": 0.596764,
+      "sampleCount": 348
+    },
+    {
+      "leftDetectorId": "RINE",
+      "rightDetectorId": "UNIVERSAL_FAKE_DETECT",
+      "pearson": 0.136974,
+      "spearman": 0.322751,
+      "sampleCount": 348
+    },
+    {
+      "leftDetectorId": "SPAI_C512",
+      "rightDetectorId": "UNIVERSAL_FAKE_DETECT",
+      "pearson": 0.188151,
+      "spearman": 0.298639,
+      "sampleCount": 348
+    }
+  ],
+  "correlationGroups": {
+    "CLIP_GENERATIVE": {
+      "members": [
+        "UNIVERSAL_FAKE_DETECT",
+        "RINE"
+      ],
+      "independence": "NOT_INDEPENDENT"
+    }
+  },
+  "manifestRoleCounts": {
+    "CAMERA_CONFIRM": 50,
+    "CAMERA_DEV": 100,
+    "DDB_DETECTOR_CONFIRM": 100,
+    "DDB_DETECTOR_DEV": 200,
+    "DIGITAL_CONFIRM": 23,
+    "DIGITAL_DEV": 48
+  }
+}

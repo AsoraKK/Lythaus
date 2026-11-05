@@ -1,0 +1,635 @@
+{
+  "alphaPolicyVersion": "lythaus-authenticity-alpha-policy-v1",
+  "baseSha": "611b0b006a5ea66ef1f7369255a6e3f19951a6e7",
+  "compilerVersion": "lythaus-synthetic-evidence-compiler-v1",
+  "correlationGroups": {
+    "CLIP_GENERATIVE": {
+      "capPoints": 35,
+      "independence": "CORRELATED_NOT_TWO_INDEPENDENT_FAMILIES",
+      "members": [
+        "UNIVERSAL_FAKE_DETECT",
+        "RINE"
+      ]
+    },
+    "SPAI_SPECTRAL": {
+      "capPoints": 35,
+      "members": [
+        "SPAI_C512"
+      ]
+    }
+  },
+  "defaultMode": "SHADOW",
+  "detectorContractVersion": "lythaus-authenticity-detectors-v1",
+  "detectors": [
+    {
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "confirmationMetricsAtFrozenDevelopmentThreshold": {
+        "cameraFpr": {
+          "count": 2,
+          "rate": 0.04,
+          "total": 50,
+          "wilson95": [
+            0.011039,
+            0.134601
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "rate": 0.0,
+          "total": 23,
+          "wilson95": [
+            0.0,
+            0.143117
+          ]
+        },
+        "overallNegativeFpr": {
+          "count": 2,
+          "rate": 0.027397,
+          "total": 73,
+          "wilson95": [
+            0.007546,
+            0.094501
+          ]
+        },
+        "syntheticRecall": {
+          "count": 81,
+          "rate": 0.81,
+          "total": 100,
+          "wilson95": [
+            0.722212,
+            0.874852
+          ]
+        }
+      },
+      "deploymentRights": "NOT_CONFIRMED_FOR_PRODUCT_DEPLOYMENT",
+      "detectorId": "SPAI_C512",
+      "developmentActionMetrics": {
+        "cameraFpr": {
+          "count": 6,
+          "rate": 0.06,
+          "total": 100,
+          "wilson95": [
+            0.027786,
+            0.124768
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "rate": 0.0,
+          "total": 48,
+          "wilson95": [
+            0.0,
+            0.0741
+          ]
+        },
+        "overallNegativeFpr": {
+          "count": 6,
+          "rate": 0.040541,
+          "total": 148,
+          "wilson95": [
+            0.01871,
+            0.085619
+          ]
+        },
+        "syntheticRecall": {
+          "count": 154,
+          "rate": 0.77,
+          "total": 200,
+          "wilson95": [
+            0.706917,
+            0.822907
+          ]
+        }
+      },
+      "developmentActionPointTargetOverallFpr": 0.01,
+      "developmentActionThreshold": 1.0,
+      "profileVersion": "wp007f-spai_c512-calibration-v1",
+      "qualificationClass": "QUALIFIED_SUPPORT_ONLY",
+      "runtimeSeconds": {
+        "count": 173,
+        "iqr": [
+          2.512992,
+          3.379934
+        ],
+        "max": 10.498698,
+        "median": 2.567469,
+        "min": 2.052609
+      },
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "shortcutAudit": {
+        "nonCameraConfounding": "HIGH",
+        "overallShortcutRisk": "HIGH",
+        "sourceDatasetShortcutRisk": "HIGH"
+      }
+    },
+    {
+      "checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "confirmationMetricsAtFrozenDevelopmentThreshold": {
+        "cameraFpr": {
+          "count": 1,
+          "rate": 0.02,
+          "total": 50,
+          "wilson95": [
+            0.003539,
+            0.104954
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "rate": 0.0,
+          "total": 23,
+          "wilson95": [
+            0.0,
+            0.143117
+          ]
+        },
+        "overallNegativeFpr": {
+          "count": 1,
+          "rate": 0.013699,
+          "total": 73,
+          "wilson95": [
+            0.002422,
+            0.073597
+          ]
+        },
+        "syntheticRecall": {
+          "count": 10,
+          "rate": 0.1,
+          "total": 100,
+          "wilson95": [
+            0.055229,
+            0.174366
+          ]
+        }
+      },
+      "deploymentRights": "NOT_CONFIRMED_FOR_PRODUCT_DEPLOYMENT",
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "developmentActionMetrics": {
+        "cameraFpr": {
+          "count": 2,
+          "rate": 0.02,
+          "total": 100,
+          "wilson95": [
+            0.005502,
+            0.070012
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "rate": 0.0,
+          "total": 48,
+          "wilson95": [
+            0.0,
+            0.0741
+          ]
+        },
+        "overallNegativeFpr": {
+          "count": 2,
+          "rate": 0.013514,
+          "total": 148,
+          "wilson95": [
+            0.003714,
+            0.047929
+          ]
+        },
+        "syntheticRecall": {
+          "count": 19,
+          "rate": 0.095,
+          "total": 200,
+          "wilson95": [
+            0.061663,
+            0.143602
+          ]
+        }
+      },
+      "developmentActionPointTargetOverallFpr": 0.01,
+      "developmentActionThreshold": 0.543838277,
+      "profileVersion": "wp007f-universal_fake_detect-calibration-v1",
+      "qualificationClass": "SHADOW_ONLY",
+      "runtimeSeconds": {
+        "count": 173,
+        "iqr": [
+          1.134414,
+          1.701122
+        ],
+        "max": 7.271082,
+        "median": 1.625119,
+        "min": 0.810847
+      },
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "shortcutAudit": {
+        "nonCameraConfounding": "LOW",
+        "overallShortcutRisk": "HIGH",
+        "sourceDatasetShortcutRisk": "LOW"
+      }
+    },
+    {
+      "checkpointSha256": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "confirmationMetricsAtFrozenDevelopmentThreshold": {
+        "cameraFpr": {
+          "count": 2,
+          "rate": 0.04,
+          "total": 50,
+          "wilson95": [
+            0.011039,
+            0.134601
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "rate": 0.0,
+          "total": 23,
+          "wilson95": [
+            0.0,
+            0.143117
+          ]
+        },
+        "overallNegativeFpr": {
+          "count": 2,
+          "rate": 0.027397,
+          "total": 73,
+          "wilson95": [
+            0.007546,
+            0.094501
+          ]
+        },
+        "syntheticRecall": {
+          "count": 56,
+          "rate": 0.56,
+          "total": 100,
+          "wilson95": [
+            0.462281,
+            0.65328
+          ]
+        }
+      },
+      "deploymentRights": "NOT_CONFIRMED_FOR_PRODUCT_DEPLOYMENT",
+      "detectorId": "RINE",
+      "developmentActionMetrics": {
+        "cameraFpr": {
+          "count": 2,
+          "rate": 0.02,
+          "total": 100,
+          "wilson95": [
+            0.005502,
+            0.070012
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "rate": 0.0,
+          "total": 48,
+          "wilson95": [
+            0.0,
+            0.0741
+          ]
+        },
+        "overallNegativeFpr": {
+          "count": 2,
+          "rate": 0.013514,
+          "total": 148,
+          "wilson95": [
+            0.003714,
+            0.047929
+          ]
+        },
+        "syntheticRecall": {
+          "count": 102,
+          "rate": 0.51,
+          "total": 200,
+          "wilson95": [
+            0.441186,
+            0.578437
+          ]
+        }
+      },
+      "developmentActionPointTargetOverallFpr": 0.01,
+      "developmentActionThreshold": 0.890092938,
+      "profileVersion": "wp007f-rine-calibration-v1",
+      "qualificationClass": "QUALIFIED_SUPPORT_ONLY",
+      "runtimeSeconds": {
+        "count": 173,
+        "iqr": [
+          1.180442,
+          2.21208
+        ],
+        "max": 6.969755,
+        "median": 1.678271,
+        "min": 0.782094
+      },
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "shortcutAudit": {
+        "nonCameraConfounding": "MODERATE",
+        "overallShortcutRisk": "HIGH",
+        "sourceDatasetShortcutRisk": "MODERATE"
+      }
+    }
+  ],
+  "finalExamGate": {
+    "flux1GeneratorFamily": "FLUX.1",
+    "flux2RemainsSealed": true,
+    "noPostExamTuning": true,
+    "oneTimeFlux1Only": true,
+    "requiresThisFreeze": true
+  },
+  "flux1PixelAccessBeforeFinalExam": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "flux2ReserveFreezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054",
+  "fusionMetrics": [
+    {
+      "cameraFpr": {
+        "count": 6,
+        "rate": 0.06,
+        "total": 100,
+        "wilson95": [
+          0.027786,
+          0.124768
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 48,
+        "wilson95": [
+          0.0,
+          0.0741
+        ]
+      },
+      "overallNegativeFpr": {
+        "count": 6,
+        "rate": 0.040541,
+        "total": 148,
+        "wilson95": [
+          0.01871,
+          0.085619
+        ]
+      },
+      "rule": "SPAI_ONLY",
+      "stage": "dev",
+      "syntheticRecall": {
+        "count": 154,
+        "rate": 0.77,
+        "total": 200,
+        "wilson95": [
+          0.706917,
+          0.822907
+        ]
+      },
+      "thresholds": {
+        "RINE": 0.890092938,
+        "SPAI_C512": 1.0,
+        "UNIVERSAL_FAKE_DETECT": 0.543838277
+      }
+    },
+    {
+      "cameraFpr": {
+        "count": 4,
+        "rate": 0.04,
+        "total": 100,
+        "wilson95": [
+          0.015663,
+          0.098371
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 48,
+        "wilson95": [
+          0.0,
+          0.0741
+        ]
+      },
+      "overallNegativeFpr": {
+        "count": 4,
+        "rate": 0.027027,
+        "total": 148,
+        "wilson95": [
+          0.010559,
+          0.067426
+        ]
+      },
+      "rule": "CLIP_GROUP_ANY",
+      "stage": "dev",
+      "syntheticRecall": {
+        "count": 113,
+        "rate": 0.565,
+        "total": 200,
+        "wilson95": [
+          0.495707,
+          0.631843
+        ]
+      },
+      "thresholds": {
+        "RINE": 0.890092938,
+        "SPAI_C512": 1.0,
+        "UNIVERSAL_FAKE_DETECT": 0.543838277
+      }
+    },
+    {
+      "cameraFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 100,
+        "wilson95": [
+          0.0,
+          0.036993
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 48,
+        "wilson95": [
+          0.0,
+          0.0741
+        ]
+      },
+      "overallNegativeFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 148,
+        "wilson95": [
+          0.0,
+          0.025299
+        ]
+      },
+      "rule": "SPAI_AND_UFD",
+      "stage": "dev",
+      "syntheticRecall": {
+        "count": 16,
+        "rate": 0.08,
+        "total": 200,
+        "wilson95": [
+          0.049841,
+          0.125989
+        ]
+      },
+      "thresholds": {
+        "RINE": 0.890092938,
+        "SPAI_C512": 1.0,
+        "UNIVERSAL_FAKE_DETECT": 0.543838277
+      }
+    },
+    {
+      "cameraFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 100,
+        "wilson95": [
+          0.0,
+          0.036993
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 48,
+        "wilson95": [
+          0.0,
+          0.0741
+        ]
+      },
+      "overallNegativeFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 148,
+        "wilson95": [
+          0.0,
+          0.025299
+        ]
+      },
+      "rule": "SPAI_AND_RINE",
+      "stage": "dev",
+      "syntheticRecall": {
+        "count": 82,
+        "rate": 0.41,
+        "total": 200,
+        "wilson95": [
+          0.344157,
+          0.479235
+        ]
+      },
+      "thresholds": {
+        "RINE": 0.890092938,
+        "SPAI_C512": 1.0,
+        "UNIVERSAL_FAKE_DETECT": 0.543838277
+      }
+    },
+    {
+      "cameraFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 100,
+        "wilson95": [
+          0.0,
+          0.036993
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 48,
+        "wilson95": [
+          0.0,
+          0.0741
+        ]
+      },
+      "overallNegativeFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 148,
+        "wilson95": [
+          0.0,
+          0.025299
+        ]
+      },
+      "rule": "SPAI_AND_ANY_CLIP",
+      "stage": "dev",
+      "syntheticRecall": {
+        "count": 90,
+        "rate": 0.45,
+        "total": 200,
+        "wilson95": [
+          0.382641,
+          0.519244
+        ]
+      },
+      "thresholds": {
+        "RINE": 0.890092938,
+        "SPAI_C512": 1.0,
+        "UNIVERSAL_FAKE_DETECT": 0.543838277
+      }
+    },
+    {
+      "cameraFpr": {
+        "count": 1,
+        "rate": 0.02,
+        "total": 50,
+        "wilson95": [
+          0.003539,
+          0.104954
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "rate": 0.0,
+        "total": 23,
+        "wilson95": [
+          0.0,
+          0.143117
+        ]
+      },
+      "overallNegativeFpr": {
+        "count": 1,
+        "rate": 0.013699,
+        "total": 73,
+        "wilson95": [
+          0.002422,
+          0.073597
+        ]
+      },
+      "rule": "SPAI_AND_ANY_CLIP",
+      "stage": "confirm",
+      "syntheticRecall": {
+        "count": 52,
+        "rate": 0.52,
+        "total": 100,
+        "wilson95": [
+          0.423166,
+          0.615354
+        ]
+      },
+      "thresholds": {
+        "RINE": 0.890092938,
+        "SPAI_C512": 1.0,
+        "UNIVERSAL_FAKE_DETECT": 0.543838277
+      }
+    }
+  ],
+  "fusionRule": {
+    "aiGeneratedRule": "VERY_HIGH synthetic evidence from at least two distinct evidence families, or reliable explicit synthetic provenance plus corroborating detector evidence",
+    "cameraSyntheticAxesIndependent": true,
+    "gptOssAdvisoryOnly": true,
+    "moderationExcluded": true,
+    "moondreamAdvisoryOnly": true,
+    "numericScore": "sum of capped correlation-group contributions; lead calibrated strength plus 0.15 bounded corroboration within each group",
+    "singleDetectorRule": "single detector evidence cannot independently trigger AI-generated; route to Under review"
+  },
+  "holdoutFreezeSha256": "b1be6115a6ed3cb5d72c5ad3e90575ededbb4c969bd2bb248ec2806da32885c4",
+  "nuisanceAuditArtifact": "nuisance-audit.json",
+  "operatingCurveArtifact": "operating-curves.json",
+  "rightsBoundary": "Research evaluation completed; product deployment requires separate checkpoint/underlying CLIP terms review and authenticated infrastructure pricing/access.",
+  "schemaVersion": "lythaus-wp007f-alpha-calibration-freeze-v1",
+  "scoreBlindBeforeFinalExam": true,
+  "security": {
+    "absolutePrivatePathsStored": false,
+    "enforcementAuthority": "NONE",
+    "rawImageBytesStored": false,
+    "secretsStored": false
+  },
+  "transformationArtifact": "transformation-results.json",
+  "transformationResult": "MIXED_SMALL_N_FIXED_AUDIT",
+  "workPackage": "WP007F"
+}

@@ -14,6 +14,8 @@
     "./wp006e": "./src/wp006e.ts",
     "./wp007a": "./src/wp007a.ts",
     "./wp007ah": "./src/wp007ah.ts",
-    "./wp007d": "./src/wp007d.ts"
+    "./wp007d": "./src/wp007d.ts",
+    "./detectors": "./src/detectors.ts",
+    "./alpha": "./src/alpha.ts"
   }
 }
