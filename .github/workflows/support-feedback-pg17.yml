@@ -34,6 +34,9 @@ on:
       - 'packages/contracts/tests/support-feedback.test.mjs'
       - 'packages/db/src/support-feedback*.ts'
       - 'packages/db/tests/support-feedback*.mjs'
+      - 'packages/db/src/monthly-suggestion-evidence.ts'
+      - 'packages/db/tests/monthly-suggestion-evidence*.mjs'
+      - 'database/planetscale/proposals/support-feedback.canonical.sql'
 
 permissions:
   contents: read
@@ -80,6 +83,15 @@ jobs:
         env:
           SUPPORT_LOCAL_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_support_test?sslmode=disable
         run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-jobs/tests/support-workflows.postgres.mjs
+      - name: Validate canonical suggestion observations without earning activation
+        env:
+          SUPPORT_LOCAL_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_support_test?sslmode=disable
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-suggestion-evidence.ts'
+          --test packages/db/tests/monthly-suggestion-evidence.test.mjs
+          packages/db/tests/support-feedback-canonical.postgres.mjs
 
   owner-console:
     runs-on: ubuntu-latest
