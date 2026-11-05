@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { parse } from 'yaml';
 import { prepare, execute, recover, validateRecord, clonePayload, digest, FLAG, TARGETS,
-  versionProjection } from '../release/jobs-session-lifecycle.mjs';
+  versionProjection, fail, sanitizedLifecycleFailure, withDiagnosticComponent } from '../release/jobs-session-lifecycle.mjs';
 import { boundedJson, createApi, workflowGate, assertSharedWorkerLock, workerSettingsProjection, main, REPO } from '../ci/jobs-session-executor.mjs';
 
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -95,7 +95,7 @@ function wireFixture() {
         env: { SYNTHETIC_BINDING: { type: 'plain_text' } }, limits: { cpu_ms: 30 }, logpush: false,
         observability: { enabled: true }, placement: { mode: 'smart' }, tail_consumers: [] } };
   }
-  f.control = { rejectRestore: false, rejectProbe: false, afterDeployment: () => {} };
+  f.control = { rejectRestore: false, rejectProbe: false, afterDeployment: () => {}, afterUpload: () => {} };
   f.requests = [];
   f.fetchImpl = async (input, init) => {
       const url = new URL(input);
@@ -133,6 +133,7 @@ function wireFixture() {
         if (init.method === 'GET') return Response.json({ success: true,
           result: [...owners[component]].filter(value => value in f.versions).map(value => f.versions[value]), result_info: { total_pages: 1 } });
         const result = await state.createCandidate(component, JSON.parse(init.body));
+        f.control.afterUpload(f.versions[result.id]);
         owners[component].add(result.id); f.settings[component].updated_on = tick();
         return response(result);
       }
@@ -146,6 +147,118 @@ function wireFixture() {
   f.api = createApi({ cloudflareToken: 'synthetic cf', githubToken: 'synthetic gh', readinessToken: 'synthetic readiness', runId: '1234', fetchImpl: f.fetchImpl });
   return f;
 }
+
+const reconciliationFields = ['created', 'deleted', 'info', 'removable_entries', 'renamed',
+  'transfer_pending', 'transferred', 'updated', 'warnings'];
+const emptyReconciliation = () => Object.fromEntries(reconciliationFields.map(key => [key, []]));
+function documentedExports(f) {
+  for (const version of Object.values(f.versions)) {
+    version.exports = { default: { type: 'worker', cache: { enabled: false } }, Admin: { type: 'worker' } };
+    version.exports_reconciliation = emptyReconciliation();
+  }
+  if (f.control) f.control.afterUpload = version => {
+    // GET can omit the documented default even when upload explicitly sets it.
+    for (const entry of Object.values(version.exports)) delete entry.state;
+    version.exports_reconciliation = emptyReconciliation();
+  };
+  return f;
+}
+test('documented omitted Worker state and empty reconciliation hash and clone identically to explicit created', () => {
+  const f = documentedExports(fixture());
+  const omitted = f.versions[id(1)];
+  const original = JSON.stringify(omitted);
+  const explicit = structuredClone(omitted);
+  for (const entry of Object.values(explicit.exports)) entry.state = 'created';
+  delete explicit.exports_reconciliation;
+  assert.equal(digest(versionProjection(omitted)), digest(versionProjection(explicit)));
+  const payload = clonePayload(omitted, 'synthetic marker');
+  assert.equal(payload.exports.default.state, 'created');
+  assert.equal(payload.exports.Admin.state, 'created');
+  assert.equal(Object.hasOwn(payload, 'exports_reconciliation'), false);
+  assert.equal(JSON.stringify(omitted), original, 'Normalization must not mutate input evidence');
+  explicit.exports.default.cache.enabled = true;
+  assert.notEqual(digest(versionProjection(omitted)), digest(versionProjection(explicit)), 'Cache remains version-bound');
+});
+test('documented export API round-trip succeeds once and deletes owned diagnostic clones', async () => {
+  const f = await prepared(documentedExports(wireFixture()));
+  const result = await run(f);
+  assert.equal(result.status, 'observed');
+  assert.equal(result.restoration.status, 'restored_verified');
+  assert.equal(Object.keys(f.versions).length, 2);
+  assert.equal(f.calls.filter(value => value === 'probe').length, 1);
+  for (const component of Object.keys(TARGETS)) assert.deepEqual(f.active[component].versions,
+    [{ version_id: f.expected[component].versionId, percentage: 100 }]);
+});
+test('documented exports retain cleanup parity after probe failure and independent restoration recovery', async () => {
+  const f = await prepared(documentedExports(wireFixture()));
+  f.control.rejectProbe = true;
+  f.control.rejectRestore = true;
+  const result = await run(f);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.restoration.workers.public, 'restoration_unverified');
+  assert.equal(result.restoration.workers.jobs, 'restored_verified');
+  assert.deepEqual(result.restoration.diagnostics.public, { diagnosticCode: 'request_unavailable', component: 'public', predicate: 'request_unavailable' });
+  f.control.rejectRestore = false;
+  assert.equal((await recover({ api: f.api, record: f.record })).status, 'restored_verified');
+  assert.equal(Object.keys(f.versions).length, 2);
+  assert.equal(f.calls.filter(value => value === 'probe').length, 1);
+});
+const deniedExportCases = [
+  ['null exports', version => { version.exports = null; }, 'worker_exports_shape'],
+  ['array exports', version => { version.exports = []; }, 'worker_exports_shape'],
+  ['unknown export type', version => { version.exports.default.type = 'unknown'; }, 'worker_export_type'],
+  ['omitted DO state', version => { version.exports.default = { type: 'durable-object', storage: 'sqlite' }; }, 'worker_export_type'],
+  ['created DO state', version => { version.exports.default = { type: 'durable-object', storage: 'sqlite', state: 'created' }; }, 'worker_export_type'],
+  ['null Worker state', version => { version.exports.default.state = null; }, 'worker_export_state'],
+  ['undefined Worker state', version => { version.exports.default.state = undefined; }, 'worker_export_state'],
+  ['deleted Worker state', version => { version.exports.default.state = 'deleted'; }, 'worker_export_state'],
+  ['renamed Worker state', version => { version.exports.default.state = 'renamed'; }, 'worker_export_state'],
+  ['transferred Worker state', version => { version.exports.default.state = 'transferred'; }, 'worker_export_state'],
+  ['worker lifecycle field', version => { version.exports.default.renamed_to = 'private name sentinel'; }, 'worker_export_fields'],
+  ['unknown worker field', version => { version.exports.default.private_field = 'private payload sentinel'; }, 'worker_export_fields'],
+  ['malformed cache', version => { version.exports.default.cache = { enabled: 'false' }; }, 'worker_export_cache'],
+  ['extra cache field', version => { version.exports.default.cache.private_field = 'private cache sentinel'; }, 'worker_export_cache'],
+  ['null reconciliation', version => { version.exports_reconciliation = null; }, 'exports_reconciliation_shape'],
+  ['array reconciliation', version => { version.exports_reconciliation = []; }, 'exports_reconciliation_shape'],
+  ['unknown reconciliation field', version => { version.exports_reconciliation.private_field = []; }, 'exports_reconciliation_fields'],
+  ['wrong reconciliation type', version => { version.exports_reconciliation.created = {}; }, 'exports_reconciliation_shape'],
+  ['assets', version => { version.assets = { jwt: 'private jwt sentinel' }; }, 'unsupported_assets'],
+  ['containers', version => { version.containers = [{ class_name: 'private class sentinel' }]; }, 'unsupported_containers'],
+  ['migration', version => { version.migrations = { new_tag: 'private tag sentinel' }; }, 'unsupported_migrations'],
+  ['migration tag', version => { version.migration_tag = 'private tag sentinel'; }, 'unsupported_migration_tag'],
+  ['unknown version field', version => { version.private_field = 'private version sentinel'; }, 'version_shape'],
+  ...reconciliationFields.map(key => [`nonempty ${key}`, version => { version.exports_reconciliation[key] = ['private entry sentinel']; }, 'exports_reconciliation_nonempty']),
+];
+for (const [label, alter, predicate] of deniedExportCases) {
+  test(`export preparation rejects ${label} with fixed component/predicate and zero writes`, async () => {
+    const f = documentedExports(fixture());
+    alter(f.versions[id(2)]);
+    let error;
+    try { await prepared(f); } catch (failure) { error = failure; }
+    assert(error);
+    assert.deepEqual(sanitizedLifecycleFailure(error), { diagnosticCode: 'version_capability_unavailable', component: 'jobs', predicate });
+    assert.deepEqual(mutations(f.calls), []);
+    assert(!JSON.stringify(sanitizedLifecycleFailure(error)).includes('private'));
+  });
+}
+test('post-prepare malformed export is fail-closed with fixed diagnostics and no publication request', async () => {
+  const f = await prepared(documentedExports(fixture()));
+  f.versions[id(1)].exports.default.state = 'deleted';
+  const result = await run(f);
+  assert.equal(result.status, 'failed');
+  assert.deepEqual(result.failure, { diagnosticCode: 'version_capability_unavailable', component: 'public', predicate: 'worker_export_state' });
+  assert.deepEqual(mutations(f.calls), []);
+});
+test('sanitized failure fields cannot be spoofed by raw provider errors, messages or throwing getters', async () => {
+  const provider = new Proxy(new Error('private token/password/module sentinel'), { get() { throw new Error('private getter sentinel'); } });
+  assert.deepEqual(sanitizedLifecycleFailure(provider), { diagnosticCode: 'executor_unavailable', component: null, predicate: 'operation_unavailable' });
+  let tagged;
+  try { await withDiagnosticComponent('jobs', () => { throw provider; }); } catch (error) { tagged = error; }
+  assert.deepEqual(sanitizedLifecycleFailure(tagged), { diagnosticCode: 'executor_unavailable', component: 'jobs', predicate: 'operation_unavailable' });
+  let injected;
+  try { fail('private code sentinel', 'private predicate sentinel'); } catch (error) { injected = error; }
+  assert.deepEqual(sanitizedLifecycleFailure(injected), { diagnosticCode: 'executor_unavailable', component: null, predicate: 'operation_unavailable' });
+});
 
 test('real HTTP adapter lifecycle tolerates advancing Worker update/deployment timestamps and verifies deletion', async () => {
   const f = await prepared(wireFixture());

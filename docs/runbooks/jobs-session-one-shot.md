@@ -97,6 +97,15 @@ Recovery dispatches do not consume or repeat the SQL probe.
 
 ## Review and local validation
 
+Named Worker exports with omitted state are normalized to their documented
+created state for both hashing and cloning. Only known correctly typed empty
+reconciliation arrays are tolerated as read metadata; unknown/nonempty/DO/
+storage/lifecycle/migration/assets/container evidence remains rejected. See
+[the normalization review packet](../testing/jobs-session-export-normalization-20261014.md).
+Future failures emit fixed component/predicate codes, with no raw provider data.
+These source fixes do not identify the actual failed predicate in live run
+38537907844 and do not authorize another live attempt.
+
 Run Node 22 with:
 
 ```text
