@@ -48,13 +48,12 @@ test('requires only the PII decryption key and emits PII-free audit metadata', (
 test('validates status changes, UUIDs and retention holds without accepting arbitrary input', () => {
   assert.equal(parseWaitlistId(cursor.id), cursor.id);
   assert.throws(() => parseWaitlistId('not-a-uuid'), /invalid_waitlist_id/);
-  assert.equal(parseWaitlistStatusUpdate({ status: 'invited' }), 'invited');
-  assert.throws(() => parseWaitlistStatusUpdate({ status: 'unsubscribed' }), /invalid_waitlist_status/);
-  assert.throws(() => parseWaitlistStatusUpdate({ status: 'waiting' }), /invalid_waitlist_status/);
-  assert.doesNotThrow(() => assertWaitlistStatusTransition('waiting', 'invited'));
-  assert.doesNotThrow(() => assertWaitlistStatusTransition('invited', 'converted'));
-  assert.throws(() => assertWaitlistStatusTransition('waiting', 'unsubscribed'), /waitlist_status_transition_invalid/);
-  assert.throws(() => assertWaitlistStatusTransition('converted', 'invited'), /waitlist_status_transition_invalid/);
+  assert.throws(() => parseWaitlistStatusUpdate({ status: 'invited' }), /waitlist_status_managed/);
+  assert.throws(() => parseWaitlistStatusUpdate({ status: 'converted' }), /waitlist_status_managed/);
+  assert.throws(() => parseWaitlistStatusUpdate({ status: 'unsubscribed' }), /waitlist_status_managed/);
+  assert.throws(() => parseWaitlistStatusUpdate({ status: 'waiting' }), /waitlist_status_managed/);
+  assert.throws(() => assertWaitlistStatusTransition('waiting', 'invited'), /waitlist_status_managed/);
+  assert.throws(() => assertWaitlistStatusTransition('invited', 'converted'), /waitlist_status_managed/);
   assert.equal(parseWaitlistRetentionHoldUpdate({ active: true }), true);
   assert.throws(() => parseWaitlistRetentionHoldUpdate({ active: 'true' }), /invalid_waitlist_retention_hold/);
 });

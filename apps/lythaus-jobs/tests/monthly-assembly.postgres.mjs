@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import * as database from '@lythaus/db';
 import { exportPKCS8, generateKeyPair } from 'jose';
-import { uuidv7, hashAuthToken } from '@lythaus/security';
+import { uuidv7, hashAuthToken, hmacLookup } from '@lythaus/security';
 import { MONTHLY_REPUTATION_POLICY_VERSION as policy, MONTHLY_REPUTATION_CATALOGUE_HASH as hash } from '@lythaus/contracts';
 import { PROPOSED_WEEKLY_EARNING_RULES as weekly } from '../../../packages/contracts/src/monthly-earning-policy.ts';
 import { PROPOSED_MONTHLY_MAINTENANCE_RULES as maintenance } from '../../../packages/contracts/src/monthly-maintenance-policy.ts';
@@ -333,7 +333,8 @@ test('REL-02: assembly, immutable source and outbox commit atomically and retry 
 
 test('SEC-01/03/16: ordinary email verification succeeds with the monthly feature disabled and earns no quarterly points', async () => {
   const userId = await person(), tokenId = uuidv7(), token = randomBytes(32).toString('base64url');
-  const lookup = randomBytes(32);
+  const email = `synthetic-monthly-${uuidv7()}@example.invalid`, hmacKey = randomBytes(32).toString('base64');
+  const lookup = Buffer.from(hmacLookup(email, hmacKey), 'base64');
   await sql(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
     VALUES ($1, convert_to('synthetic-encrypted-contact', 'utf8'), $2, 'v1', 'email')`, [userId, lookup]);
   await sql(`INSERT INTO identity.email_credentials
@@ -345,10 +346,10 @@ test('SEC-01/03/16: ordinary email verification succeeds with the monthly featur
   const apiEnv = { ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
     DB_APP_FRESH: runtimeBinding, MONTHLY_REPUTATION_MAINTENANCE_RULES: maintenance.version,
     AUTH_PASSWORD_PEPPER_V1: randomBytes(32).toString('base64'), PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
-    PII_HMAC_KEY_V1: randomBytes(32).toString('base64'), JWT_KEY_ID: 'synthetic-maintenance', JWT_PRIVATE_KEY: await exportPKCS8(privateKey) };
+    PII_HMAC_KEY_V1: hmacKey, JWT_KEY_ID: 'synthetic-maintenance', JWT_PRIVATE_KEY: await exportPKCS8(privateKey) };
   const password = 'synthetic monthly verification passphrase';
   const call = () => worker.fetch(new Request('https://api.lythaus.test/api/auth/email/verify', { method: 'POST',
-    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password }) }), apiEnv);
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password, email }) }), apiEnv);
   await sql('UPDATE system.feature_flags SET enabled = false WHERE flag_key = $1', [flag]);
   const response = await call(); assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
   const observed = (await sql('SELECT facts, performed_at FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rows;
@@ -363,7 +364,8 @@ test('SEC-01/03/16: ordinary email verification succeeds with the monthly featur
 
 test('SEC-01/03/16: enabled current monthly policy captures safe email evidence and revokes it on binding change', async () => {
   const userId = await person(), tokenId = uuidv7(), token = randomBytes(32).toString('base64url');
-  const lookup = randomBytes(32);
+  const email = `synthetic-monthly-${uuidv7()}@example.invalid`, hmacKey = randomBytes(32).toString('base64');
+  const lookup = Buffer.from(hmacLookup(email, hmacKey), 'base64');
   await sql(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
     VALUES ($1, convert_to('synthetic-encrypted-contact', 'utf8'), $2, 'v1', 'email')`, [userId, lookup]);
   await sql(`INSERT INTO identity.email_credentials
@@ -375,10 +377,10 @@ test('SEC-01/03/16: enabled current monthly policy captures safe email evidence 
   const apiEnv = { ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
     DB_APP_FRESH: runtimeBinding, MONTHLY_REPUTATION_MAINTENANCE_RULES: maintenance.version,
     AUTH_PASSWORD_PEPPER_V1: randomBytes(32).toString('base64'), PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
-    PII_HMAC_KEY_V1: randomBytes(32).toString('base64'), JWT_KEY_ID: 'synthetic-maintenance', JWT_PRIVATE_KEY: await exportPKCS8(privateKey) };
+    PII_HMAC_KEY_V1: hmacKey, JWT_KEY_ID: 'synthetic-maintenance', JWT_PRIVATE_KEY: await exportPKCS8(privateKey) };
   const password = 'synthetic monthly verification passphrase';
   const call = () => worker.fetch(new Request('https://api.lythaus.test/api/auth/email/verify', { method: 'POST',
-    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password }) }), apiEnv);
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password, email }) }), apiEnv);
   await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]);
   assert.deepEqual((await sql('SELECT enabled, policy_version FROM system.feature_flags WHERE flag_key = $1', [flag])).rows[0],
     { enabled: true, policy_version: policy });
@@ -498,8 +500,14 @@ test('CAL-09/REL-02: more than fifty canonical events must drain before the mont
 });
 
 test('CAL-20/REL-02: scheduled reconciliation discovers months, revisits new evidence and is inert while paused', async () => {
-  const first = await reconcileMonthlyAssembly(env); assert.ok(first.processed > 0);
-  assert.deepEqual(await reconcileMonthlyAssembly(env), { processed: 0 });
+  let processed = 0, batches = 0, result;
+  do {
+    result = await reconcileMonthlyAssembly(env);
+    processed += result.processed;
+    batches++;
+  } while (result.processed > 0 && batches < 10);
+  assert.ok(processed > 0);
+  assert.deepEqual(result, { processed: 0 });
   const before = (await sql('SELECT count(*)::int n FROM trust.monthly_reputation_sources')).rows[0].n;
   await jobs.scheduled({}, env);
   assert.equal((await sql('SELECT count(*)::int n FROM trust.monthly_reputation_sources')).rows[0].n, before);

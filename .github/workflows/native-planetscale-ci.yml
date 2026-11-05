@@ -19,6 +19,11 @@ on:
       - 'apps/lythaus-admin-api/src/account-support-runtime.ts'
       - 'apps/lythaus-admin-api/src/overview-*.ts'
       - 'apps/lythaus-public-api/tests/*.postgres.mjs'
+      - 'apps/lythaus-public-api/tests/auth-journey.postgres.mjs'
+      - 'apps/lythaus-public-api/tests/waitlist-invite-schema.test.mjs'
+      - 'scripts/ci/run-alpha-waitlist-invite-proposal-pg17.mjs'
+      - 'scripts/tests/alpha-waitlist-invite-proposal.postgres.mjs'
+      - 'scripts/tests/alpha-waitlist-invite-cleanup.postgres.mjs'
       - 'apps/lythaus-public-api/tests/native-postgres-workflow-fixture.mjs'
       - 'apps/lythaus-public-api/tests/native-postgres-worker-fixture.mjs'
       - 'apps/lythaus-public-api/tests/privacy-postgres-target*.mjs'
@@ -120,6 +125,16 @@ jobs:
           npm ci --ignore-scripts
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
+      - name: Enforce alpha waitlist invite CI source contract
+        run: node --test apps/lythaus-public-api/tests/waitlist-invite-schema.test.mjs
+      - name: Exercise alpha waitlist invite proposal on isolated PostgreSQL 17
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: node --experimental-strip-types --experimental-test-module-mocks scripts/ci/run-alpha-waitlist-invite-proposal-pg17.mjs --http-only
+      - name: Verify invite fixture preserves PostgreSQL roles and ACLs
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: node scripts/tests/alpha-waitlist-invite-cleanup.postgres.mjs
       - name: Apply and verify complete PostgreSQL 17 baseline
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

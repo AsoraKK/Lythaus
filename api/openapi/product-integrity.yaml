@@ -1107,7 +1107,6 @@ components:
       additionalProperties: false
       required: [reasonCode, confirmation]
       properties:
-        status: { type: string, enum: [invited, converted, unsubscribed] }
         source: { type: string, maxLength: 120 }
         reasonCode: { type: string, pattern: '^[A-Z0-9_.:-]{2,80}$' }
         confirmation: { type: string, enum: ['UPDATE WAITLIST'] }
@@ -1153,11 +1152,12 @@ components:
     WaitlistAdminItem:
       type: object
       additionalProperties: false
-      required: [id, email, status, source, createdAt, retentionHold]
+      required: [id, email, status, inviteDeliveryState, source, createdAt, retentionHold]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email, maxLength: 320 }
         status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
+        inviteDeliveryState: { type: string, enum: [not_invited, queued, processing, provider_accepted, delivered, deferred, bounced, rejected, failed, delivery_attention, cancelled, complained, revoked, redeemed, expired] }
         source: { type: string }
         createdAt: { type: string, format: date-time }
         invitedAt: { type: string, format: date-time, nullable: true }
@@ -1176,11 +1176,14 @@ components:
     WaitlistAdminResponse:
       type: object
       additionalProperties: false
-      required: [items, nextCursor, summary]
+      required: [items, nextCursor, summary, inviteFeatureEnabled]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/WaitlistAdminItem' }
+        inviteFeatureEnabled:
+          type: boolean
+          description: Whether the invitation schema and send flow are enabled for this admin environment.
         nextCursor:
           type: string
           nullable: true
@@ -1333,7 +1336,7 @@ components:
     EmailVerificationRequest:
       type: object
       additionalProperties: false
-      required: [token, password]
+      required: [token, password, email]
       properties:
         token:
           type: string
@@ -1347,6 +1350,12 @@ components:
           maxLength: 128
           writeOnly: true
           description: Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized.
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          writeOnly: true
+          description: Must match the email address to which the one-time token was issued.
     EmailVerificationResponse:
       type: object
       description: Private verification result. The response contains no user or email identifier.
@@ -1556,7 +1565,8 @@ paths:
     post:
       operationId: adminWaitlistStatusUpdate
       summary: Update a waitlist signup status
-      description: Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+      deprecated: true
+      description: Status is managed by provider acceptance, signup verification, and unsubscribe. Manual updates are rejected with waitlist_status_managed.
       tags: [Admin]
       security:
         - cloudflareAccess: []
@@ -1572,15 +1582,6 @@ paths:
             schema:
               $ref: '#/components/schemas/WaitlistStatusUpdate'
       responses:
-        '200':
-          description: Waitlist status recorded.
-          headers:
-            Cache-Control:
-              schema: { type: string, enum: ['private, no-store'] }
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WaitlistStatusResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1590,13 +1591,68 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Waitlist status is managed by the system.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '413':
           $ref: '#/components/responses/RequestTooLarge'
         '429':
           $ref: '#/components/responses/SafetyLimited'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /admin/waitlist/{waitlistId}/invite:
+    servers:
+      - url: https://admin.lythaus.co/api
+    post:
+      operationId: adminWaitlistInvite
+      summary: Send a one-time signup invitation to a waitlist entry
+      description: Administrator and owner roles may queue a one-time email-bound signup invitation for an eligible waiting entry. Provider acceptance advances the waitlist state; queue submission does not prove inbox delivery.
+      tags: [Admin]
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - name: waitlistId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/requiredIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reasonCode, confirmation]
+              properties:
+                reasonCode: { type: string, pattern: '^[A-Z0-9_.:-]{2,80}$' }
+                confirmation: { type: string, description: Type SEND WAITLIST INVITE followed by the waitlist UUID. }
+      responses:
+        '202':
+          description: A one-time invitation was queued.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: ['private, no-store'] }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [id, deliveryState, verificationState]
+                properties:
+                  id: { type: string, format: uuid }
+                  deliveryState: { type: string, enum: [queued, cooldown] }
+                  verificationState: { type: string, enum: [pending_verification] }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '413': { $ref: '#/components/responses/RequestTooLarge' }
+        '429': { $ref: '#/components/responses/SafetyLimited' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /admin/waitlist/{waitlistId}/retention-hold:
     servers:
       - url: https://admin.lythaus.co/api
@@ -2053,7 +2109,7 @@ paths:
               examples:
                 resolved:
                   value:
-                    appealId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    appealId: "00000000-0000-4000-8000-000000000004"
                     status: resolved
                     reviewerPanelDecision: uphold
                     finalDecision: uphold
@@ -2459,7 +2515,7 @@ paths:
               standard:
                 summary: Appeal a resolved post or comment case
                 value:
-                  caseId: 018b27d4-6e1e-7bd3-bb5a-98f24bb968c2
+                  caseId: "00000000-0000-4000-8000-000000000003"
                   statement: I believe this decision should be reviewed because the context was misunderstood.
       responses:
         '409':
@@ -2474,7 +2530,7 @@ paths:
                 created:
                   summary: Appeal accepted for independent assignment
                   value:
-                    appealId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    appealId: "00000000-0000-4000-8000-000000000004"
                     state: open
                     riskClass: standard
                     policyVersion: appeals-v1.0.0
@@ -2552,8 +2608,8 @@ paths:
                 recorded:
                   summary: Immutable reviewer vote recorded
                   value:
-                    voteId: 018b27d4-8a9c-7d9e-bf0e-9bf93c3fce43
-                    appealId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    voteId: "00000000-0000-4000-8000-000000000005"
+                    appealId: "00000000-0000-4000-8000-000000000004"
                     decision: overturn
                     locked: true
         '201':
@@ -3308,8 +3364,8 @@ paths:
                   summary: Authenticated personal feed page
                   value:
                     items:
-                      - id: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
-                        authorId: 018b27d4-5b3b-73e3-bf77-bf7bb9530f22
+                      - id: "00000000-0000-4000-8000-000000000001"
+                        authorId: "00000000-0000-4000-8000-000000000002"
                         body: A disclosed human-authored post.
                         declaredCreationMode: human
                         visibility: public
@@ -3318,7 +3374,7 @@ paths:
                         reactionCounts:
                           like: 1
                         viewerReaction: like
-                        createdAt: '2026-08-10T09:00:00Z'
+                        createdAt: "2000-01-03T00:00:00Z"
                     nextCursor: null
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -3909,7 +3965,7 @@ paths:
               spam:
                 value:
                   contentType: post
-                  contentId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
+                  contentId: "00000000-0000-4000-8000-000000000006"
                   reasonCode: spam
       responses:
         '409':
@@ -3923,7 +3979,7 @@ paths:
               examples:
                 accepted:
                   value:
-                    flagId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c
+                    flagId: "00000000-0000-4000-8000-000000000008"
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

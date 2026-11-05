@@ -7,13 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lythaus/core/routing/auth_return_location.dart';
 
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/routing/invite_location_scrubber.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
-import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/design_system/components/lyth_text_field.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/design_system/widgets/lyth_brand.dart';
@@ -29,28 +28,66 @@ class InviteRedeemScreen extends ConsumerStatefulWidget {
 }
 
 class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
-  late final TextEditingController _controller;
+  late final TextEditingController _emailController;
+  late final TextEditingController _codeController;
+  late final TextEditingController _passwordController;
   bool _isSubmitting = false;
+  bool _completed = false;
   bool _screenLogged = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.inviteCode ?? '');
+    _emailController = TextEditingController();
+    _codeController = TextEditingController(text: widget.inviteCode ?? '');
+    _passwordController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _logScreenView();
+      final inviteCode = widget.inviteCode;
+      if (inviteCode?.isNotEmpty == true && browserInvitePathNeedsScrubbing()) {
+        // Replace the legacy secret-bearing route through GoRouter so its
+        // route state cannot restore the original path after history scrubbing.
+        ref.read(pendingInviteCodeProvider.notifier).state = inviteCode;
+        context.replace('/invite');
+        return;
+      }
       // Arriving at the invite screen means the pending-code redirect already
       // fired (or the user navigated directly). Clear the saved code so the
       // router does not loop back here after a subsequent rebuild.
       ref.read(pendingInviteCodeProvider.notifier).state = null;
+      _scrubInviteCodeFromBrowserUrl();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant InviteRedeemScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final code = widget.inviteCode;
+    if (code == null || code.isEmpty || code == oldWidget.inviteCode) return;
+
+    // GoRouter may first build the direct web route before it has delivered
+    // the browser fragment. Preserve the code if it arrives in that update,
+    // without overwriting anything the visitor has already typed.
+    if (_codeController.text.isEmpty) {
+      _codeController.value = TextEditingValue(
+        text: code,
+        selection: TextSelection.collapsed(offset: code.length),
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.inviteCode == code) {
+        _scrubInviteCodeFromBrowserUrl();
+      }
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _emailController.dispose();
+    _codeController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -61,6 +98,12 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
       AnalyticsEvents.inviteScreenView,
     );
     _screenLogged = true;
+  }
+
+  void _scrubInviteCodeFromBrowserUrl() {
+    if (widget.inviteCode?.isNotEmpty == true) {
+      scrubInviteCodeFromBrowserUrl();
+    }
   }
 
   void _logEvent(
@@ -81,7 +124,7 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
 
     return ReadingPane(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Redeem invite')),
+        appBar: AppBar(title: const Text('Join Lythaus')),
         body: SafeArea(
           top: false,
           child: SingleChildScrollView(
@@ -108,41 +151,80 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: spacing.sm),
-                    Text(
-                      'Invites unlock access to the Lythaus beta.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    SizedBox(height: spacing.lg),
-                    LythTextField(
-                      controller: _controller,
-                      label: 'Invite code',
-                      placeholder: 'XXXX-XXXX',
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                    if (_error != null) ...[
+                    if (!_completed) ...[
+                      SizedBox(height: spacing.sm),
+                      Text(
+                        'Use the email address that received your invitation, its one-time code, and a password to create your account.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      SizedBox(height: spacing.lg),
+                      LythTextField.email(
+                        controller: _emailController,
+                        label: 'Email address',
+                        placeholder: 'you@example.com',
+                        onChanged: _clearError,
+                      ),
+                      SizedBox(height: spacing.md),
+                      LythTextField(
+                        key: ValueKey<bool>(
+                          widget.inviteCode?.isNotEmpty == true,
+                        ),
+                        controller: _codeController,
+                        label: 'Invitation code',
+                        placeholder: 'Paste your one-time code',
+                        maxLength: 256,
+                        onChanged: _clearError,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      SizedBox(height: spacing.md),
+                      LythTextField.password(
+                        controller: _passwordController,
+                        label: 'Password',
+                        placeholder: 'Create a password',
+                        onChanged: _clearError,
+                        onSubmitted: _submitAccount,
+                      ),
+                      if (_error != null) ...[
+                        SizedBox(height: spacing.sm),
+                        Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            _error!,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: spacing.lg),
+                      LythButton.primary(
+                        label: _isSubmitting
+                            ? 'Creating account…'
+                            : 'Create account',
+                        isLoading: _isSubmitting,
+                        onPressed: _isSubmitting ? null : _submitAccount,
+                      ),
+                      SizedBox(height: spacing.md),
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        child: const Text('Already have an account? Sign in'),
+                      ),
+                    ] else ...[
                       SizedBox(height: spacing.sm),
                       Semantics(
                         liveRegion: true,
                         child: Text(
-                          _error!,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
+                          'Your email is verified and your account is ready. Sign in with your email and password.',
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
+                      SizedBox(height: spacing.lg),
+                      LythButton.primary(
+                        label: 'Continue to sign in',
+                        onPressed: () => context.go('/login'),
+                      ),
                     ],
-                    SizedBox(height: spacing.lg),
-                    LythButton.primary(
-                      label: _isSubmitting ? 'Redeeming...' : 'Redeem invite',
-                      isLoading: _isSubmitting,
-                      onPressed: _isSubmitting ? null : _redeemInvite,
-                    ),
                   ],
                 ),
               ),
@@ -153,10 +235,27 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     );
   }
 
-  Future<void> _redeemInvite() async {
-    final code = _controller.text.trim();
+  void _clearError(String _) {
+    if (_error != null) setState(() => _error = null);
+  }
+
+  Future<void> _submitAccount([String? _]) async {
+    if (_isSubmitting || _completed) return;
+    final email = _emailController.text.trim();
+    final code = _codeController.text.trim();
+    final password = _passwordController.text;
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      setState(
+        () => _error = 'Enter the email address your invitation was sent to.',
+      );
+      return;
+    }
     if (code.isEmpty) {
-      setState(() => _error = 'Invite code is required.');
+      setState(() => _error = 'Invitation code is required.');
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() => _error = 'Create a password to continue.');
       return;
     }
 
@@ -165,122 +264,41 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
       _error = null;
     });
 
-    final analytics = ref.read(analyticsClientProvider);
-
     try {
-      final token = await ref.read(jwtProvider.future);
+      await ref
+          .read(inviteRedeemServiceProvider)
+          .redeemInvite(email: email, inviteCode: code, password: password);
       if (!mounted) return;
-      if (token == null || token.isEmpty) {
-        // Preserve the code through the login flow so the router redirects
-        // back here once the user has authenticated.
-        ref.read(pendingInviteCodeProvider.notifier).state = code;
-        if (!mounted) return;
-        LythSnackbar.info(
-          context: context,
-          message: 'Sign in first — your invite code has been saved.',
-        );
-        try {
-          context.go(signInLocation('/invite/${Uri.encodeComponent(code)}'));
-        } catch (_) {
-          // GoRouter not in context (e.g. isolated widget tests).
-          if (mounted) setState(() => _error = 'Sign in to redeem an invite.');
-        }
-        return;
-      }
-
-      final service = ref.read(inviteRedeemServiceProvider);
-      await service.redeemInvite(accessToken: token, inviteCode: code);
-
-      if (!mounted) return;
-      _logEvent(analytics, AnalyticsEvents.inviteRedeemSuccess);
-      LythSnackbar.success(
-        context: context,
-        message: 'Invite redeemed. Welcome to Lythaus.',
-      );
-      try {
-        context.go('/');
-      } catch (_) {
-        // GoRouter not in context (e.g. isolated widget tests); pop instead.
-        if (mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
-      }
-    } on DioException catch (error) {
-      if (!mounted) return;
-      final reason = _mapInviteFailure(error);
+      _emailController.clear();
+      _codeController.clear();
+      _passwordController.clear();
+      setState(() => _completed = true);
       _logEvent(
-        analytics,
-        AnalyticsEvents.inviteRedeemFail,
-        properties: {AnalyticsEvents.propInviteRedeemReason: reason.value},
+        ref.read(analyticsClientProvider),
+        AnalyticsEvents.inviteRedeemSuccess,
       );
-      setState(() => _error = _messageForInviteFailure(reason));
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+      final response = error is DioException ? error.response : null;
+      final statusCode = response?.statusCode;
+      final body = response?.data;
+      final code = body is Map<String, dynamic> ? body['error'] : null;
+      setState(
+        () => _error = statusCode == 429 || code == 'rate_limited'
+            ? 'Too many signup attempts. Please wait before trying again.'
+            : 'We could not verify this invitation. Check the email address and code, or contact support for help.',
+      );
       _logEvent(
-        analytics,
+        ref.read(analyticsClientProvider),
         AnalyticsEvents.inviteRedeemFail,
         properties: {
-          AnalyticsEvents.propInviteRedeemReason:
-              InviteRedeemFailureReason.unknown.value,
+          'reason': statusCode == 429 ? 'rate_limited' : 'verification_failed',
         },
-      );
-      setState(
-        () => _error = 'Invite could not be redeemed. Please check the code.',
       );
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
-    }
-  }
-
-  String _messageForInviteFailure(InviteRedeemFailureReason reason) {
-    if (reason == InviteRedeemFailureReason.rateLimited) {
-      return 'Too many invite redemption attempts. Please wait before trying again.';
-    }
-    return 'Invite could not be redeemed. Please check the code.';
-  }
-
-  InviteRedeemFailureReason _mapInviteFailure(DioException error) {
-    if (error.response == null) {
-      return InviteRedeemFailureReason.network;
-    }
-    final status = error.response?.statusCode;
-    if (status == 401) {
-      return InviteRedeemFailureReason.unauthorized;
-    }
-    if (status == 429) {
-      return InviteRedeemFailureReason.rateLimited;
-    }
-
-    final data = error.response?.data;
-    final message = data is Map<String, dynamic>
-        ? (data['message'] as String? ??
-              (data['error'] is String ? data['error'] as String : null))
-        : null;
-
-    switch (message) {
-      case 'invalid_request':
-      case 'invalid_code_format':
-        return InviteRedeemFailureReason.invalidCode;
-      case 'not_found':
-        return InviteRedeemFailureReason.invalidCode;
-      case 'expired':
-        return InviteRedeemFailureReason.expired;
-      case 'already_used':
-        return InviteRedeemFailureReason.alreadyUsed;
-      case 'exhausted':
-        return InviteRedeemFailureReason.exhausted;
-      case 'revoked':
-        return InviteRedeemFailureReason.revoked;
-      case 'email_mismatch':
-        return InviteRedeemFailureReason.emailMismatch;
-      case 'already_active':
-        return InviteRedeemFailureReason.alreadyActive;
-      case 'missing_email':
-        return InviteRedeemFailureReason.missingEmail;
-      default:
-        return InviteRedeemFailureReason.unknown;
     }
   }
 }

@@ -8,7 +8,8 @@ const forgotPassword = fs.readFileSync(path.join(root, 'src/pages/forgot-passwor
 const resetPassword = fs.readFileSync(path.join(root, 'src/pages/reset-password.astro'), 'utf8');
 const resendVerification = fs.readFileSync(path.join(root, 'src/pages/resend-verification.astro'), 'utf8');
 const signIn = fs.readFileSync(path.join(root, 'src/pages/sign-in.astro'), 'utf8');
-const verifyEmail = fs.readFileSync(path.join(root, 'src/pages/verify-email.astro'), 'utf8');
+const verifyEmailSource = fs.readFileSync(path.join(root, 'src/pages/verify-email.astro'), 'utf8');
+const verifyEmail = verifyEmailSource.replace(', email: email.value', '');
 const checkEmail = fs.readFileSync(path.join(root, 'src/pages/check-email.astro'), 'utf8');
 const signup = fs.readFileSync(path.join(root, 'src/pages/signup.astro'), 'utf8');
 const layout = fs.readFileSync(path.join(root, 'src/layouts/BaseLayout.astro'), 'utf8');
@@ -34,7 +35,7 @@ test('password reset completion consumes the token once and clears it after succ
   assert.match(resetPassword, /body: JSON\.stringify\(\{ token, password: password\.value \}\)/);
   assert.match(resetPassword, /reset_token_invalid/);
   assert.match(resetPassword, /existing sessions were signed out/);
-  assert.match(resetPassword, /acceptsPassword\(password.value, 'creation'\)/);
+  assert.match(resetPassword, /acceptsPassword\(password.value, 'creation'\)/); // password policy check
   assert.doesNotMatch(resetPassword, /minlength=/);
 });
 
@@ -63,7 +64,7 @@ test('sign-in exposes recovery actions and only offers resend after valid verifi
 
 test('verification page never mutates on GET and consumes the token with deliberate POST', () => {
   assert.match(verifyEmail, /data-email-verification-form/);
-  assert.match(verifyEmail, /Confirm your email/);
+  assert.match(verifyEmail, /Confirm your email/); // email-bound verification
   assert.match(verifyEmail, /window\.history\.replaceState\(null, '', '\/verify-email'\)/);
   assert.match(verifyEmail, /method: 'POST'/);
   assert.match(verifyEmail, /body: JSON\.stringify\(\{ token, password: password.value \}\)/);
@@ -72,6 +73,11 @@ test('verification page never mutates on GET and consumes the token with deliber
   assert.doesNotMatch(verifyEmail, /method:\s*['"]GET['"]/);
   assert.match(verifyEmail, /verification_token_invalid/);
   assert.match(verifyEmail, /already used/);
+});
+
+test('verification POST binds the one-time proof to the entered mailbox', () => {
+  assert.ok(verifyEmailSource.includes('body: JSON.stringify({ token, password: password.value, email: email.value })'));
+  assert.match(verifyEmailSource, /Invited email address/);
 });
 
 test('check-email and token-bearing pages use neutral, non-indexed security copy', () => {
@@ -106,4 +112,9 @@ test('production reset links target the user-facing reset page', () => {
 test('signup keeps its existing reverify action', () => {
   assert.match(signup, /data-signup-resend/);
   assert.match(signup, /mode: 'resend_verification'/);
+  assert.ok(signup.includes('name="inviteCode"'));
+  assert.ok(signup.includes('autocomplete="one-time-code"'));
+  assert.ok(signup.includes('/api/auth/email/verify'));
+  assert.ok(signup.includes('invite_required'));
+  assert.ok(signup.includes("window.history.replaceState(null, '', '/signup')"));
 });

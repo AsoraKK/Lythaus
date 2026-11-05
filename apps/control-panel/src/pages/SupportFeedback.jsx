@@ -7,7 +7,7 @@ import './support-feedback.css';
 
 const KINDS = [
   { path: 'problems', label: 'Problem reports', kind: 'problem' },
-  { path: 'suggestions', label: 'Suggestions', kind: 'suggestion' },
+  { path: 'suggestions', label: 'Help improve Lythaus', kind: 'suggestion' },
 ];
 
 function readable(value) {
@@ -237,13 +237,13 @@ function SupportFeedback() {
     {access === 'unavailable' ? <div className="notice error" role="alert">{error || 'Support requests are currently unavailable. No action was confirmed.'}</div> : null}
     {access === 'ready' ? <>
       <div className="support-kind-tabs" role="group" aria-label="Support queue">
-        {KINDS.map(item => <button key={item.kind} type="button" disabled={busy} aria-pressed={kind === item.kind} className={kind === item.kind ? 'selected' : ''} onClick={() => selectKind(item.kind)}>{item.label}</button>)}
+        {KINDS.map(item => <button key={item.kind} type="button" disabled={busy} aria-pressed={kind === item.kind} className={`${kind === item.kind ? 'selected' : ''} ${item.kind === 'suggestion' ? 'support-kind-tab--suggestion' : ''}`} onClick={() => selectKind(item.kind)}>{item.label}</button>)}
       </div>
       {error ? <div className="notice error" role="alert">{error}</div> : null}
       {status ? <div className="notice" role="status">{status}</div> : null}
       <div className="support-layout">
         <LythCard variant="panel" className="support-queue">
-          <div className="support-panel-heading"><h2>{kind === 'problem' ? 'Problem reports' : 'Suggestions'}</h2><LythButton variant="secondary" disabled={loadingQueue} onClick={() => loadQueue(kind)}>Refresh</LythButton></div>
+          <div className="support-panel-heading"><h2>{kind === 'problem' ? 'Problem reports' : 'Help improve Lythaus'}</h2><LythButton variant="secondary" disabled={loadingQueue} onClick={() => loadQueue(kind)}>Refresh</LythButton></div>
           {loadingQueue ? <p role="status">Loading private queue…</p> : null}
           {!loadingQueue && !queue.length && !error ? <p className="muted">No {kind === 'problem' ? 'problem reports' : 'suggestions'} in this queue.</p> : null}
           <ol className="support-queue-list">

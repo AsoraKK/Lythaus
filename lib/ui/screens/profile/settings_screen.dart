@@ -191,9 +191,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.lightbulb_outline),
+                  leading: Icon(
+                    Icons.lightbulb_outline,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   trailing: const Icon(Icons.chevron_right),
-                  title: const Text('Feedback and suggestions'),
+                  title: const Text('Help improve Lythaus'),
                   subtitle: const Text(
                     'Share a private idea and follow its history',
                   ),
@@ -308,14 +311,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: const Text('Guidance, account help and policies'),
                 onTap: () async {
                   try {
-                    if (await launchUrl(Uri.https('lythaus.co', '/help'))) {
+                    if (await launchUrl(Uri.https('lythaus.co', '/contact'))) {
                       return;
                     }
                   } catch (_) {}
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Help is available at lythaus.co/help.'),
+                        content: Text(
+                          'Visit lythaus.co/contact for account help.',
+                        ),
                       ),
                     );
                   }

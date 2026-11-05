@@ -51,6 +51,8 @@ import 'package:lythaus_api_client/src/model/admin_user_mutation_response.dart';
 import 'package:lythaus_api_client/src/model/admin_user_page.dart';
 import 'package:lythaus_api_client/src/model/admin_user_profile_patch.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_create.dart';
+import 'package:lythaus_api_client/src/model/admin_waitlist_invite202_response.dart';
+import 'package:lythaus_api_client/src/model/admin_waitlist_invite_request.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_patch.dart';
 import 'package:lythaus_api_client/src/model/alpha_action.dart';
 import 'package:lythaus_api_client/src/model/alpha_admin_case.dart';
@@ -361,6 +363,8 @@ part 'serializers.g.dart';
   AdminUserPage,
   AdminUserProfilePatch,
   AdminWaitlistCreate,
+  AdminWaitlistInvite202Response,
+  AdminWaitlistInviteRequest,
   AdminWaitlistPatch,
   AlphaAction,
   AlphaAdminCase,

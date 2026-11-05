@@ -12,16 +12,11 @@ part 'admin_waitlist_patch.g.dart';
 /// AdminWaitlistPatch
 ///
 /// Properties:
-/// * [status]
 /// * [source_]
 /// * [reasonCode]
 /// * [confirmation]
 @BuiltValue()
 abstract class AdminWaitlistPatch implements Built<AdminWaitlistPatch, AdminWaitlistPatchBuilder> {
-  @BuiltValueField(wireName: r'status')
-  AdminWaitlistPatchStatusEnum? get status;
-  // enum statusEnum {  invited,  converted,  unsubscribed,  };
-
   @BuiltValueField(wireName: r'source')
   String? get source_;
 
@@ -55,13 +50,6 @@ class _$AdminWaitlistPatchSerializer implements PrimitiveSerializer<AdminWaitlis
     AdminWaitlistPatch object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    if (object.status != null) {
-      yield r'status';
-      yield serializers.serialize(
-        object.status,
-        specifiedType: const FullType(AdminWaitlistPatchStatusEnum),
-      );
-    }
     if (object.source_ != null) {
       yield r'source';
       yield serializers.serialize(
@@ -102,13 +90,6 @@ class _$AdminWaitlistPatchSerializer implements PrimitiveSerializer<AdminWaitlis
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminWaitlistPatchStatusEnum),
-          ) as AdminWaitlistPatchStatusEnum;
-          result.status = valueDes;
-          break;
         case r'source':
           final valueDes = serializers.deserialize(
             value,
@@ -157,23 +138,6 @@ class _$AdminWaitlistPatchSerializer implements PrimitiveSerializer<AdminWaitlis
     );
     return result.build();
   }
-}
-
-class AdminWaitlistPatchStatusEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireName: r'invited')
-  static const AdminWaitlistPatchStatusEnum invited = _$adminWaitlistPatchStatusEnum_invited;
-  @BuiltValueEnumConst(wireName: r'converted')
-  static const AdminWaitlistPatchStatusEnum converted = _$adminWaitlistPatchStatusEnum_converted;
-  @BuiltValueEnumConst(wireName: r'unsubscribed')
-  static const AdminWaitlistPatchStatusEnum unsubscribed = _$adminWaitlistPatchStatusEnum_unsubscribed;
-
-  static Serializer<AdminWaitlistPatchStatusEnum> get serializer => _$adminWaitlistPatchStatusEnumSerializer;
-
-  const AdminWaitlistPatchStatusEnum._(String name): super(name);
-
-  static BuiltSet<AdminWaitlistPatchStatusEnum> get values => _$adminWaitlistPatchStatusEnumValues;
-  static AdminWaitlistPatchStatusEnum valueOf(String name) => _$adminWaitlistPatchStatusEnumValueOf(name);
 }
 
 class AdminWaitlistPatchConfirmationEnum extends EnumClass {

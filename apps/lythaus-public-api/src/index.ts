@@ -10,7 +10,7 @@ import { MAX_IMAGE_BYTES } from '@lythaus/media';
 import { parseStandardUpload, verifyStandardUploadBytes, UploadIntegrityError, readBoundedRequestBody } from '../../../packages/media/src/standard-upload.ts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyLoginPassword, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
+import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification, requiresWaitlistInvitation, waitlistInvitesRequired, waitlistInviteVerificationAllowed } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { handleOwnerContentRead } from './owner-content-reader.ts';
 import { handleBetaApi } from './authenticity-beta.ts';
@@ -20,7 +20,7 @@ import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
 import { handleActivityMeasurement } from './activity-measurement-handler.ts';
 import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
-import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
+import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, hasWaitlistInviteForVerification, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason, waitlistInviteSchemaInstalled } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -451,12 +451,18 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
   let outboxId: string | undefined;
   const outcome = await transaction(env.DB_APP_FRESH, client => persistRecoveryIntake(client, correlationId(request), async () => {
     const userId = await findRecoveryUser(client, lookup);
+    let hasWaitlistInvite = false;
+    if (userId) {
+      const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+      if (inviteSchemaPresent) hasWaitlistInvite = await hasWaitlistInviteForVerification(client, userId);
+    }
     const account = userId ? await lockRecoveryAccount(client, userId) : undefined;
     const plan = recoveryPlan(account);
     if (!account || plan === 'suppressed') return plan;
     if (plan === 'support_required') return `support_required:${recoverySupportReason(account)}`;
     if (intent === 'verification' && plan === 'reset_password') return 'suppressed';
     const purpose = plan === 'credential_setup' ? 'verification' : 'password_reset';
+    if (purpose === 'verification' && hasWaitlistInvite) return 'suppressed';
     const table = purpose === 'verification' ? 'identity.email_verification_tokens' : 'identity.password_reset_tokens';
     const pending = await client.query(
       `SELECT id FROM ${table} WHERE user_id=$1 AND consumed_at IS NULL AND superseded_at IS NULL
@@ -531,6 +537,13 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     if (registrationPlan === 'neutral_existing_account') {
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
+    // Public registration is invite-only. The private production-auth
+    // acceptance harness is the sole coordinator-bound exception.
+    if (requiresWaitlistInvitation({
+      registrationPlan,
+      inviteOnly: waitlistInvitesRequired(env.WAITLIST_INVITES_REQUIRED),
+      authenticatedAcceptance: acceptance !== undefined,
+    })) throw new Error('invite_required');
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
     const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
     const verificationToken = randomToken(32);
@@ -763,21 +776,48 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
   await acceptanceContext(request, env);
   const url = new URL(request.url);
   if (request.method !== 'POST') throw new Error('method_not_allowed');
-  const input = await readJson<{ token?: string; password?: string }>(request, 8 * 1024);
+  const input = await readJson<{ token?: string; password?: string; email?: string }>(request, 8 * 1024);
   const token = requireToken(url.searchParams.get('token') ?? input.token, 'verification_token_invalid');
   if (input.password === undefined) throw new Error('password_setup_required');
-  const password = await requireUncompromisedPassword(input.password);
   const secrets = requireAuthSecrets(env);
+  let emailLookup: string;
+  try { emailLookup = hmacLookup(normalizeEmailAddress(input.email), secrets.hmacKey); }
+  catch { throw new Error('verification_token_invalid'); }
+  await enforceRateLimit(request, env, 'auth-address:email_verify', 10, emailLookup);
+  const password = await requireUncompromisedPassword(input.password);
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const tokenHash = hashAuthToken(token, 'verification');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    const owner = await client.query<{ user_id: string }>(
-      `SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64')`,
-      [tokenHash],
+    const owner = await client.query<{ user_id: string; challenge_id: string }>(
+      `SELECT t.user_id, t.id AS challenge_id
+         FROM identity.email_verification_tokens t
+        WHERE t.token_hash = decode($1, 'base64')
+          AND (
+            EXISTS (SELECT 1 FROM identity.email_credentials credential
+                     WHERE credential.user_id = t.user_id
+                       AND credential.email_lookup_hmac = decode($2, 'base64'))
+            OR EXISTS (SELECT 1 FROM identity.contact_emails contact
+                        WHERE contact.user_id = t.user_id
+                          AND contact.email_lookup_hmac = decode($2, 'base64')
+                          AND contact.verified_at IS NOT NULL)
+          )`,
+      [tokenHash, emailLookup],
     );
     if (!owner.rows[0]) throw new Error('verification_token_invalid');
     const userId = owner.rows[0].user_id;
+    const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+    if (inviteSchemaPresent) {
+      if (await hasWaitlistInviteForVerification(client, userId)) {
+        const invite = await client.query<{ found: boolean; valid: boolean }>(
+          `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, $2, decode($3, 'base64'))`,
+          [userId, owner.rows[0].challenge_id, emailLookup],
+        );
+        if (invite.rowCount !== 1 || invite.rows[0]?.found !== true || invite.rows[0]?.valid !== true) {
+          throw new Error('verification_token_invalid');
+        }
+      }
+    }
     const account = await lockRecoveryAccount(client, userId);
     if (!account || recoveryPlan(account) !== 'credential_setup') throw new Error('verification_token_invalid');
     const found = await client.query<{ id: string }>(

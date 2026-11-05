@@ -32,14 +32,15 @@ const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const textReviewScript = 'node scripts/ci/run-text-review-tests.mjs';
 const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
+const allocatedWaitlistInviteTests = 'apps/lythaus-public-api/tests/waitlist-invite-schema.test.mjs apps/lythaus-admin-api/tests/waitlist-runtime-policy.test.mjs apps/lythaus-admin-api/tests/auth-email-dispatch.test.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   // Exact comment hooks independently reviewed at 211f0e064b501ec6ed680c891ee36bd3e38d8a41.
   // PR #1127 adds independently reviewed, default-off feedback and privacy hooks.
   ['apps/lythaus-jobs/src/index.ts', '1145049fc3d6d1f5afbf9754c4f8d949245caa70'],
-  // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', '36635cfd97bcedcb047bfed4f3c2de3b95a4e70d'],
+  // The alpha waitlist verification gate stays on one exact API source revision.
+  ['apps/lythaus-public-api/src/index.ts', 'e4a357138325564a334d69b7f6781b1563be4bdc'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -55,13 +56,13 @@ function assertAllocatedJobsDiagnosticFile(filename, blob) {
 }
 function assertOnlyAllocatedJobsDiagnosticRegistration(before, after) {
   const script = 'test:native-architecture';
-  const expected = `${before.scripts[script]} ${nativeModerationWorkerdTest} ${allocatedJobsDiagnosticTests}`;
-  assert.equal(after.scripts[script], expected, 'Only the exact two allocated Jobs diagnostic tests may follow native moderation');
+  const expected = `${before.scripts[script]} ${nativeModerationWorkerdTest} ${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests}`;
+  assert.equal(after.scripts[script], expected, 'Only the exact allocated Jobs and waitlist invite tests may follow native moderation');
   for (const filename of allocatedJobsDiagnosticFiles.keys()) {
     assertAllocatedJobsDiagnosticFile(filename, git('hash-object', `--path=${filename}`, filename));
   }
   const normalized = structuredClone(after);
-  normalized.scripts[script] = expected.slice(0, -(` ${allocatedJobsDiagnosticTests}`).length);
+  normalized.scripts[script] = expected.slice(0, -(` ${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests}`).length);
   assertOnlyReviewedNativeModerationTestRegistration(before, normalized);
 }
 function assertOnlyReviewedWaitlistWorkerLock(source, frozen) {
@@ -460,11 +461,19 @@ function replaceExactText(source, before, after, label) {
 }
 
 export function assertOnlyHostedDevelopmentRemoval(source, frozen) {
-  assert.deepEqual(JSON.parse(source).env, {}, 'Only the explicit empty hosted environment guard is permitted');
+  const actual = JSON.parse(source);
+  assert.deepEqual(actual.env, {}, 'Only the explicit empty hosted environment guard is permitted');
+  assert.equal(Object.hasOwn(actual.vars ?? {}, 'WAITLIST_INVITES_REQUIRED'), false,
+    'Invite-only registration must remain absent until its separate activation');
+  assert.equal(Object.hasOwn(actual.vars ?? {}, 'WAITLIST_INVITE_SCHEMA_ENABLED'), false,
+    'Invite schema access must remain absent until its separately approved migration');
+  assert.equal(Object.hasOwn(actual.vars ?? {}, 'EMAIL_INVITE_BASE_URL'), false,
+    'Invite email delivery configuration must remain absent until activation');
   const marker = frozen.indexOf('  "env": {');
   assert.ok(marker > 0, 'Historical hosted development block must be present');
-  assert.equal(source.trim(), `${frozen.slice(0, marker)}  "env": {}\n}`,
-    'Only hosted development removal is permitted; all production configuration remains exact');
+  const expected = JSON.parse(`${frozen.slice(0, marker)}  "env": {}\n}`);
+  assert.deepEqual(actual, expected,
+    'Only hosted development removal is permitted; all other configuration remains exact');
 }
 
 export function assertHomepageFrozen() {
@@ -916,8 +925,13 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
   assert.deepEqual([...authRepairPaths].filter(filename => filename.startsWith('apps/marketing-site/')), ['apps/marketing-site/package.json']);
   const before = git('show', `${upstreamBaselineSha}:apps/lythaus-public-api/src/index.ts`);
   const after = readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
-  const waitlistLines = source => source.split(/\r?\n/).filter(line => /waitlist/i.test(line));
-  assert.deepEqual(waitlistLines(after), waitlistLines(before));
+  const publicWaitlistContract = source => ({
+    routeHandler: source.match(/const waitlistRoute = createWaitlistRouteHandler\(\{[\s\S]*?\n\}\);/)?.[0],
+    dispatch: source.split(/\r?\n/).filter(line => /url\.pathname === '\/api\/waitlist'/.test(line)),
+    imports: source.split(/\r?\n/).filter(line => line.includes("from './waitlist-handler.ts'") || line.includes("from './waitlist-runtime-policy.ts'")),
+  });
+  assert.deepEqual(publicWaitlistContract(after), publicWaitlistContract(before),
+    'Invite-only signup must not alter the existing public waitlist handler, dependencies, or route dispatch');
   for (const file of ['apps/lythaus-public-api/src/waitlist-runtime-policy.ts', 'apps/lythaus-public-api/tests/waitlist-handler-invariants.test.mjs']) {
     assert.equal(readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').trim(), git('show', `${baselineSha}:${file}`));
   }
@@ -961,9 +975,11 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
   const bindings = readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n');
   const dispatchBindings = '  TRANSACTIONAL_EMAIL_DISPATCH_QUEUE?: Queue;\n  TRANSACTIONAL_EMAIL_DISPATCH_ENABLED?: string;\n';
   assert.equal(bindings.split(dispatchBindings).length, 2, 'Dispatch may add only the exact optional Queue and opt-in declarations');
-  assert.equal(bindings.replace(dispatchBindings, '')
+  const inviteBindings = '  EMAIL_INVITE_BASE_URL?: string;\n  WAITLIST_INVITES_REQUIRED?: string;\n  WAITLIST_INVITE_SCHEMA_ENABLED?: string;\n';
+  assert.equal(bindings.split(inviteBindings).length, 2, 'Invite support may add only the exact base URL and fail-closed schema/required flags');
+  assert.equal(bindings.replace(dispatchBindings, '').replace(inviteBindings, '')
     .replace('  AUTH_EMAIL_ENVELOPE?: ServiceBinding;\n', '').trim(), git('show', `${upstreamBaselineSha}:${bindingFile}`),
-  'Only the private Admin auth binding and exact optional dispatch declarations may change');
+  'Only the private Admin auth binding plus exact optional dispatch and invite declarations may change');
   assert.equal(readFileSync(path.join(root, 'apps/lythaus-public-api/src/worker.ts'), 'utf8').replace(/\r\n/g, '\n').trim(), `import { WorkerEntrypoint } from 'cloudflare:workers';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { handleEmailEnvelope } from './email-envelope-entrypoint.ts';
@@ -1027,6 +1043,8 @@ for (const [label, mutate] of [
   ['changed production bucket', source => source.replaceAll('lythaus-media-approved-dev', 'lythaus-fixture-unapproved')],
   ['restored hosted alias', source => source.replace('"env": {}', '"env": {"development": {"name": "lythaus-public-api-development"}}')],
   ['removed env guard', source => source.replace(',\n  "env": {}', '')],
+  ['enabled invite requirement', source => { const config = JSON.parse(source); config.vars.WAITLIST_INVITES_REQUIRED = 'true'; return JSON.stringify(config, null, 2); }],
+  ['enabled uninstalled invite schema', source => { const config = JSON.parse(source); config.vars.WAITLIST_INVITE_SCHEMA_ENABLED = 'true'; return JSON.stringify(config, null, 2); }],
 ]) {
   test(`deployment isolation freeze rejects ${label}`, () => {
     const file = 'apps/lythaus-public-api/wrangler.jsonc';
@@ -1101,12 +1119,17 @@ test('allocated Jobs registration rejects missing reordered duplicate extra comm
   const before = { scripts: { 'test:native-architecture': 'node --test scripts/tests/native-architecture.test.mjs',
     'marketing:test': 'node --test apps/marketing-site/tests/*.test.mjs' }, dependencies: { astro: '5.0.0' } };
   const after = structuredClone(before);
-  after.scripts['test:native-architecture'] += ` ${nativeModerationWorkerdTest} ${allocatedJobsDiagnosticTests}`;
+  after.scripts['test:native-architecture'] += ` ${nativeModerationWorkerdTest} ${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests}`;
   assert.doesNotThrow(() => assertOnlyAllocatedJobsDiagnosticRegistration(structuredClone(before), after));
   const paths = allocatedJobsDiagnosticTests.split(' ');
   for (const suffix of ['', paths[0], paths.toReversed().join(' '),
     allocatedJobsDiagnosticTests + ' ' + paths[0], allocatedJobsDiagnosticTests + ' --skip-cleanup',
-    allocatedJobsDiagnosticTests + ' scripts/tests/unreviewed.test.mjs']) {
+    allocatedJobsDiagnosticTests + ' scripts/tests/unreviewed.test.mjs',
+    `${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests.split(' ')[0]}`,
+    `${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests.split(' ').toReversed().join(' ')}`,
+    `${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests} ${allocatedWaitlistInviteTests.split(' ')[0]}`,
+    `${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests} --skip-cleanup`,
+    `${allocatedJobsDiagnosticTests} ${allocatedWaitlistInviteTests} scripts/tests/unreviewed.test.mjs`]) {
     const changed = structuredClone(after);
     changed.scripts['test:native-architecture'] = `${before.scripts['test:native-architecture']} ${nativeModerationWorkerdTest}${suffix ? ' ' + suffix : ''}`;
     assert.throws(() => assertOnlyAllocatedJobsDiagnosticRegistration(structuredClone(before), changed), assert.AssertionError);
@@ -1126,9 +1149,13 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     assert.notEqual(changed, expected);
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
     if (filename === 'apps/lythaus-public-api/src/index.ts') {
-      const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
-      assert.notEqual(previousPublicApiBlob, expected, 'The reviewed membership and private media retry bytes replace the previous exact allocation');
-      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
+      for (const previousPublicApiBlob of [
+        '36635cfd97bcedcb047bfed4f3c2de3b95a4e70d',
+        '5ca637b72d241d89df5178bec6f0f730aafe41cd',
+      ]) {
+        assert.notEqual(previousPublicApiBlob, expected, 'Only the exact combined API revision is allocated');
+        assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
+      }
     }
     if (filename.endsWith('/index.ts')) {
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, git('rev-parse', `4b32a00cde7a940ec7fcc4134368bda80d78f699:${filename}`)), assert.AssertionError);

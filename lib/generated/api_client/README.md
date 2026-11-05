@@ -110,6 +110,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersTierUpdate**](doc/AdminApi.md#adminuserstierupdate) | **POST** /admin/users/{userId}/tier | Update subscription tier
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistCreate**](doc/AdminApi.md#adminwaitlistcreate) | **POST** /admin/waitlist | Add a waitlist signup
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistDelete**](doc/AdminApi.md#adminwaitlistdelete) | **DELETE** /admin/waitlist/{waitlistId} | Retire a waitlist signup
+[*AdminApi*](doc/AdminApi.md) | [**adminWaitlistInvite**](doc/AdminApi.md#adminwaitlistinvite) | **POST** /admin/waitlist/{waitlistId}/invite | Send a one-time signup invitation to a waitlist entry
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistList**](doc/AdminApi.md#adminwaitlistlist) | **GET** /admin/waitlist | List private beta waitlist signups
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistPatch**](doc/AdminApi.md#adminwaitlistpatch) | **PATCH** /admin/waitlist/{waitlistId} | Edit a waitlist signup
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistRetentionHoldUpdate**](doc/AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
@@ -318,6 +319,8 @@ Class | Method | HTTP request | Description
  - [AdminUserPage](doc/AdminUserPage.md)
  - [AdminUserProfilePatch](doc/AdminUserProfilePatch.md)
  - [AdminWaitlistCreate](doc/AdminWaitlistCreate.md)
+ - [AdminWaitlistInvite202Response](doc/AdminWaitlistInvite202Response.md)
+ - [AdminWaitlistInviteRequest](doc/AdminWaitlistInviteRequest.md)
  - [AdminWaitlistPatch](doc/AdminWaitlistPatch.md)
  - [AlphaAction](doc/AlphaAction.md)
  - [AlphaAdminCase](doc/AlphaAdminCase.md)

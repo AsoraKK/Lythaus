@@ -27,7 +27,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   static const _pageSize = 20;
   static const _labels = <String, String>{
     'problem': 'Report a problem',
-    'suggestion': 'Feedback and suggestions',
+    'suggestion': 'Help improve Lythaus',
   };
 
   final _title = TextEditingController();
@@ -170,7 +170,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                   ),
                   ButtonSegment<String>(
                     value: 'suggestion',
-                    label: Text('Feedback and suggestions'),
+                    label: Text('Help improve Lythaus'),
                     icon: Icon(Icons.lightbulb_outline),
                   ),
                 ],

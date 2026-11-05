@@ -22,6 +22,11 @@ void main() {
       // TODO
     });
 
+    // String inviteDeliveryState
+    test('to test the property `inviteDeliveryState`', () async {
+      // TODO
+    });
+
     // String source_
     test('to test the property `source_`', () async {
       // TODO

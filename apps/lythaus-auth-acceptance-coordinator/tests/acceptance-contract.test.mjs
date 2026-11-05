@@ -114,3 +114,10 @@ test('candidate registration binds only a production-acceptance identity to its 
   assert.match(controlPanel, /\['register', 'resend', 'reset'\]\.includes\(path\)/);
   assert.match(controlPanel, /Email lifecycle/);
 });
+
+test('verification acceptance submits the private run-bound email to the candidate API', () => {
+  assert.ok(coordinator.includes("const body = purpose === 'verification'"));
+  assert.ok(coordinator.includes("email: await runEmail(env, run, observed.body.flow === 'initial' ? 'primary' : 'resend')"));
+  assert.ok(coordinator.includes("const email = await runEmail(env, run, 'resend');"));
+  assert.ok(coordinator.includes("{ token, email, password: randomToken(32) }"));
+});

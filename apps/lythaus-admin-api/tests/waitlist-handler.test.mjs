@@ -19,7 +19,7 @@ function result(rows = [], rowCount = rows.length) {
 }
 
 function row(id, createdAt, ciphertext) {
-  return { id, email_ciphertext: ciphertext, encryption_key_version: 'v1', status: 'waiting', source: 'lythaus.co', created_at: createdAt, cursor_timestamp: createdAt.replace(/(\.\d{3})Z$/u, (_match, milliseconds) => `${milliseconds}000Z`), retention_hold: false };
+  return { id, email_ciphertext: ciphertext, encryption_key_version: 'v1', status: 'waiting', source: 'lythaus.co', created_at: createdAt, cursor_timestamp: createdAt.replace(/(\.\d{3})Z$/u, (_match, milliseconds) => `${milliseconds}000Z`), retention_hold: false, invite_delivery_state: 'not_invited' };
 }
 
 mock.module('@lythaus/db', { cache: true, namedExports: {
@@ -104,7 +104,8 @@ test('authorized waitlist handler decrypts, paginates, audits and returns only a
   assert.equal(first.status, 200);
   assert.equal(first.headers.get('cache-control'), 'private, no-store');
   const firstBody = await first.json();
-  assert.deepEqual(firstBody.items, [{ id: WAITLIST_ID, email: 'first@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-14T10:00:00.000Z', retentionHold: false }]);
+  assert.equal(firstBody.inviteFeatureEnabled, false);
+  assert.deepEqual(firstBody.items, [{ id: WAITLIST_ID, email: 'first@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-14T10:00:00.000Z', retentionHold: false, inviteDeliveryState: 'not_invited' }]);
   assert.ok(firstBody.nextCursor);
   assert.equal(JSON.stringify(firstBody).includes('ciphertext'), false);
   assert.equal(JSON.stringify(firstBody).includes('hmac'), false);
@@ -112,11 +113,25 @@ test('authorized waitlist handler decrypts, paginates, audits and returns only a
   assert.equal(state.auditWrites.length, 1);
   assert.deepEqual(JSON.parse(state.auditWrites[0].values[3]), { returnedRowCount: 1, requestedLimit: 1, hasCursor: false, hasMore: true, hasSearch: false, statusFilter: null, sourceFilter: null });
   assert.equal(JSON.stringify(state.auditWrites[0]).includes('first@example.com'), false);
+  const listQuery = state.queries.find(entry => entry.sql.includes('SELECT w.id, convert_from(w.email_ciphertext'));
+  assert.doesNotMatch(listQuery.sql, /marketing\.waitlist_invites|transactional_email_outbox/,
+    'The default-off path must not reference the invitation schema before it is installed');
   const second = await worker.fetch(request(`/api/admin/waitlist?limit=1&cursor=${encodeURIComponent(firstBody.nextCursor)}`), env());
   assert.equal(second.status, 200);
   const secondBody = await second.json();
   assert.equal(secondBody.items[0].id, SECOND_WAITLIST_ID);
   assert.equal(secondBody.nextCursor, null);
+});
+
+test('enabled invitation status query is opt-in and exposes the enabled capability', async () => {
+  resetState();
+  const enabled = { ...env(), WAITLIST_INVITE_SCHEMA_ENABLED: 'true' };
+  const response = await worker.fetch(request(), enabled);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).inviteFeatureEnabled, true);
+  const listQuery = state.queries.find(entry => entry.sql.includes('SELECT w.id, convert_from(w.email_ciphertext'));
+  assert.match(listQuery.sql, /marketing\.waitlist_invites/);
+  assert.match(listQuery.sql, /system\.transactional_email_outbox/);
 });
 
 test('exact email search scans a bounded filtered page and returns no identity relation', async () => {
@@ -155,6 +170,20 @@ test('waitlist mutation handler rejects cross-origin and non-JSON requests befor
   assert.equal(state.transactionCalls, 0);
 });
 
+test('waitlist invite send is closed while its schema flag is off and writes no invitation state', async () => {
+  resetState();
+  const path = `/api/admin/waitlist/${WAITLIST_ID}/invite`;
+  const response = await worker.fetch(request(path, {
+    method: 'POST',
+    headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json', 'idempotency-key': 'waitlist-invite-test-001' },
+    body: JSON.stringify({ reasonCode: 'ALPHA_INVITE', confirmation: `SEND WAITLIST INVITE ${WAITLIST_ID}` }),
+  }), env());
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, 'waitlist_invites_disabled');
+  assert.equal(state.transactionCalls, 0);
+  assert.equal(state.queries.some(entry => /waitlist_invites|transactional_email_outbox/.test(entry.sql)), false);
+});
+
 test('waitlist unsubscribe cannot bypass the retention-aware purge-request route', async () => {
   resetState();
   const path = `/api/admin/waitlist/${WAITLIST_ID}/status`;
@@ -163,7 +192,7 @@ test('waitlist unsubscribe cannot bypass the retention-aware purge-request route
     headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json' },
     body: JSON.stringify({ status: 'unsubscribed', reasonCode: 'RETENTION_REVIEW', confirmation: `UNSUBSCRIBE AND REQUEST PURGE ${WAITLIST_ID}` }),
   }), env());
-  assert.equal(response.status, 400);
-  assert.equal((await response.json()).error, 'invalid_waitlist_status');
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error, 'waitlist_status_managed');
   assert.equal(state.transactionCalls, 0);
 });
