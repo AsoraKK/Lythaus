@@ -208,12 +208,34 @@ async function markEmailFailure(client: DatabaseClient, row: ClaimedEmail, error
   );
 }
 
-export async function lockDeliverableEmail(client: DatabaseClient, id: string, userId: string | null, waitlistInviteSchemaEnabled = false): Promise<boolean> {
-  if (waitlistInviteSchemaEnabled) {
+export async function lockDeliverableEmail(
+  client: DatabaseClient,
+  id: string,
+  userId: string | null,
+  waitlistInviteSchemaEnabled = false,
+  purpose: TransactionalEmailPurpose = 'verification',
+): Promise<boolean> {
+  const schema = await client.query<{ invites_present: boolean; delivery_lock_present: boolean }>(
+    `SELECT pg_catalog.to_regclass('marketing.waitlist_invites') IS NOT NULL AS invites_present,
+            pg_catalog.to_regprocedure('marketing.lock_waitlist_invite_delivery(uuid,uuid,text)') IS NOT NULL AS delivery_lock_present`,
+  );
+  const schemaState = schema.rows[0];
+  if (schema.rowCount !== 1 || typeof schemaState?.invites_present !== 'boolean'
+    || typeof schemaState.delivery_lock_present !== 'boolean') {
+    throw new Error('email_waitlist_authorization_unavailable');
+  }
+  const inviteSchemaPresent = schemaState.invites_present && schemaState.delivery_lock_present;
+  if ((schemaState.invites_present || schemaState.delivery_lock_present) && !inviteSchemaPresent) {
+    throw new Error('email_waitlist_authorization_unavailable');
+  }
+  if (waitlistInviteSchemaEnabled && !inviteSchemaPresent) {
+    throw new Error('email_waitlist_authorization_unavailable');
+  }
+  if (inviteSchemaPresent) {
     // Waitlist invitations use a second authorization boundary. Lock the
     // waitlist row first so restriction changes and dispatch share one order.
     const waitlistInvite = await client.query<{ found: boolean; deliverable: boolean }>(
-      `SELECT found, deliverable FROM marketing.lock_waitlist_invite_delivery($1)`, [id]);
+      `SELECT found, deliverable FROM marketing.lock_waitlist_invite_delivery($1, $2, $3)`, [id, userId, purpose]);
     const inviteState = waitlistInvite.rows[0];
     if (waitlistInvite.rowCount !== 1 || typeof inviteState?.found !== 'boolean' || typeof inviteState.deliverable !== 'boolean'
       || (!inviteState.found && inviteState.deliverable)) throw new Error('email_waitlist_authorization_unavailable');
@@ -244,7 +266,7 @@ export async function lockDeliverableEmail(client: DatabaseClient, id: string, u
 
 async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: ClaimedEmail, database: EmailDatabase): Promise<void> {
   await database.transaction(env.DB_JOBS_FRESH, async client => {
-  if (!await lockDeliverableEmail(client, row.id, row.user_id, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true')) return;
+  if (!await lockDeliverableEmail(client, row.id, row.user_id, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true', row.purpose)) return;
   let message: TransactionalEmailMessage;
   try {
     message = await messageForRow(env, row);

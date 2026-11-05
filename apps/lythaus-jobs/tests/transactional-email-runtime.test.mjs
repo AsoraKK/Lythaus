@@ -15,40 +15,49 @@ import {
   processEmailLifecycleQueue,
 } from '../src/transactional-email-runtime.ts';
 
-test('legacy email delivery does not query the optional waitlist schema while its flag is off', async () => {
+test('legacy email delivery remains available when the optional waitlist schema is absent and its flag is off', async () => {
   const statements = [];
   const client = { query: async (sql, values) => {
     statements.push({ sql, values });
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: false, delivery_lock_present: false }], rowCount: 1 };
     return { rows: [{ valid: true }], rowCount: 1 };
   } };
   assert.equal(await lockDeliverableEmail(client, '01900000-0000-7000-8000-000000000001', null), true);
-  assert.equal(statements.length, 1);
-  assert.doesNotMatch(statements[0].sql, /waitlist_invites|lock_waitlist_invite_delivery/);
+  assert.equal(statements.length, 2);
+  assert.match(statements[0].sql, /to_regclass/);
+  assert.doesNotMatch(statements.slice(1).map(({ sql }) => sql).join('\n'), /lock_waitlist_invite_delivery/);
 });
 
 test('enabled waitlist delivery requires a complete authorization result and cancels restricted invites', async () => {
   const statements = [];
   const client = { query: async (sql, values) => {
     statements.push({ sql, values });
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: true, delivery_lock_present: true }], rowCount: 1 };
     if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: false, deliverable: false }], rowCount: 1 };
     if (sql.includes('pg_advisory_xact_lock')) return { rows: [], rowCount: 1 };
     return { rows: [{ valid: true }], rowCount: 1 };
   } };
   assert.equal(await lockDeliverableEmail(client, '01900000-0000-7000-8000-000000000002', '01900000-0000-7000-8000-000000000022', true), true);
-  assert.match(statements[0].sql, /lock_waitlist_invite_delivery/);
-  assert.match(statements[1].sql, /pg_advisory_xact_lock/);
+  assert.match(statements[1].sql, /lock_waitlist_invite_delivery/);
+  assert.match(statements[2].sql, /pg_advisory_xact_lock/);
   assert.doesNotMatch(statements.at(-1).sql, /marketing\.waitlist_invites/);
   assert.deepEqual(statements.at(-1).values, ['01900000-0000-7000-8000-000000000002', '01900000-0000-7000-8000-000000000022']);
 
   const linked = [];
   assert.equal(await lockDeliverableEmail({ query: async (sql, values) => {
     linked.push({ sql, values });
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: true, delivery_lock_present: true }], rowCount: 1 };
     if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: true, deliverable: true }], rowCount: 1 };
     if (sql.includes('pg_advisory_xact_lock')) return { rows: [], rowCount: 1 };
     return { rows: [{ valid: true }], rowCount: 1 };
-  } }, '01900000-0000-7000-8000-000000000005', '01900000-0000-7000-8000-000000000055', true), true);
+  } }, '01900000-0000-7000-8000-000000000005', '01900000-0000-7000-8000-000000000055', true, 'invite'), true);
   assert.doesNotMatch(linked.at(-1).sql, /marketing\.waitlist_invites/);
   assert.equal(linked.some(({ sql }) => sql.includes('SELECT found, deliverable FROM marketing.lock_waitlist_invite_delivery')), true);
+  assert.deepEqual(linked[1].values, [
+    '01900000-0000-7000-8000-000000000005',
+    '01900000-0000-7000-8000-000000000055',
+    'invite',
+  ]);
 
   await assert.rejects(lockDeliverableEmail({ query: async () => ({ rows: [], rowCount: 0 }) },
     '01900000-0000-7000-8000-000000000003', null, true), /email_waitlist_authorization_unavailable/);
@@ -56,12 +65,47 @@ test('enabled waitlist delivery requires a complete authorization result and can
   const cancelled = [];
   const blocked = await lockDeliverableEmail({ query: async sql => {
     cancelled.push(sql);
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: true, delivery_lock_present: true }], rowCount: 1 };
     if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: true, deliverable: false }], rowCount: 1 };
     return { rows: [], rowCount: 1 };
   } }, '01900000-0000-7000-8000-000000000004', null, true);
   assert.equal(blocked, false);
   assert.equal(cancelled.some(sql => sql.includes("SET state='cancelled'")), true);
   assert.equal(cancelled.some(sql => sql.includes(' AS valid')), false);
+});
+
+test('installed waitlist delivery authorization is enforced even with its operational flag off', async () => {
+  const statements = [];
+  const blocked = await lockDeliverableEmail({ query: async sql => {
+    statements.push(sql);
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: true, delivery_lock_present: true }], rowCount: 1 };
+    if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: true, deliverable: false }], rowCount: 1 };
+    return { rows: [], rowCount: 1 };
+  } }, '01900000-0000-7000-8000-000000000006', '01900000-0000-7000-8000-000000000066', false);
+  assert.equal(blocked, false);
+  assert.match(statements[1], /lock_waitlist_invite_delivery/);
+  assert.ok(statements.some(sql => sql.includes("SET state='cancelled'")));
+
+  await assert.rejects(lockDeliverableEmail({ query: async sql => sql.includes('to_regclass')
+    ? { rows: [{ invites_present: true, delivery_lock_present: false }], rowCount: 1 }
+    : { rows: [], rowCount: 0 } }, '01900000-0000-7000-8000-000000000007', null, false),
+  /email_waitlist_authorization_unavailable/, 'a partial invite schema fails closed while the flag is off');
+});
+
+test('installed invitation lock receives the claimed purpose so unrelated recovery mail stays separate', async () => {
+  const statements = [];
+  assert.equal(await lockDeliverableEmail({ query: async (sql, values) => {
+    statements.push({ sql, values });
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: true, delivery_lock_present: true }], rowCount: 1 };
+    if (sql.includes('lock_waitlist_invite_delivery')) return { rows: [{ found: false, deliverable: false }], rowCount: 1 };
+    if (sql.includes('pg_advisory_xact_lock')) return { rows: [], rowCount: 1 };
+    return { rows: [{ valid: true }], rowCount: 1 };
+  } }, '01900000-0000-7000-8000-000000000008', '01900000-0000-7000-8000-000000000088', false, 'password_reset'), true);
+  assert.deepEqual(statements[1].values, [
+    '01900000-0000-7000-8000-000000000008',
+    '01900000-0000-7000-8000-000000000088',
+    'password_reset',
+  ]);
 });
 
 test('mixed25-message burst reconciles lifecycle before slow sends and bounds provider/database concurrency', { timeout: 5000 }, async () => {
@@ -88,6 +132,7 @@ test('mixed25-message burst reconciles lifecycle before slow sends and bounds pr
     body: { type: `cf.email.sending.message.${event}`, payload: { messageId: `synthetic-${event}` } }, acknowledged: 0,
     ack() { this.acknowledged++; }, retry() { assert.fail('Matched lifecycle must not retry'); } });
   const query = async (sql, values = []) => {
+    if (sql.includes('to_regclass')) return { rows: [{ invites_present: false, delivery_lock_present: false }], rowCount: 1 };
     if (sql.includes('WITH claimable')) {
       const row = pending.get(values[1]);
       pending.delete(values[1]);

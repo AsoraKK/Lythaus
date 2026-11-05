@@ -106,9 +106,10 @@ BEGIN
   IF NOT FOUND THEN RETURN v_status = 'waiting'; END IF;
   RETURN v_user_status = 'relink_required' AND v_existing.credential_lookup = encode(p_email_lookup_hmac, 'base64')
     AND v_existing.revoked_at IS NULL AND v_existing.redeemed_at IS NULL
-    AND v_existing.consumed_at IS NULL AND v_existing.superseded_at IS NULL
+    AND v_existing.consumed_at IS NULL
     AND v_existing.outbox_state NOT IN ('bounced', 'complained', 'rejected')
-    AND ((v_existing.expires_at <= clock_timestamp() AND v_existing.outbox_state <> 'failed')
+    AND ((v_existing.superseded_at IS NOT NULL AND v_existing.outbox_state <> 'failed')
+      OR (v_existing.expires_at <= clock_timestamp() AND v_existing.outbox_state <> 'failed')
       OR (v_existing.outbox_state = 'failed' AND v_existing.provider_error_category = 'transient'));
 END
 $$;
@@ -144,9 +145,10 @@ BEGIN
    WHERE i.waitlist_id = p_waitlist_id AND i.email_lookup_hmac = p_email_lookup_hmac
      AND i.user_id = v_user_id
      AND i.revoked_at IS NULL AND i.redeemed_at IS NULL
-     AND t.consumed_at IS NULL AND t.superseded_at IS NULL
+     AND t.consumed_at IS NULL
      AND o.state NOT IN ('bounced', 'complained', 'rejected')
-     AND ((t.expires_at <= clock_timestamp() AND o.state <> 'failed')
+     AND ((t.superseded_at IS NOT NULL AND o.state <> 'failed')
+       OR (t.expires_at <= clock_timestamp() AND o.state <> 'failed')
        OR (o.state = 'failed' AND o.provider_error_category = 'transient'))
    FOR UPDATE OF i, c, t, o;
   RETURN v_user_id;
@@ -191,9 +193,10 @@ BEGIN
    FOR UPDATE OF i, t, o;
   IF FOUND THEN
     IF v_existing.user_id <> p_user_id OR v_existing.revoked_at IS NOT NULL OR v_existing.redeemed_at IS NOT NULL
-      OR v_existing.consumed_at IS NOT NULL OR v_existing.superseded_at IS NOT NULL
+      OR v_existing.consumed_at IS NOT NULL
       OR v_existing.outbox_state IN ('bounced', 'complained', 'rejected')
-      OR NOT ((v_existing.expires_at <= clock_timestamp() AND v_existing.outbox_state <> 'failed')
+      OR NOT ((v_existing.superseded_at IS NOT NULL AND v_existing.outbox_state <> 'failed')
+        OR (v_existing.expires_at <= clock_timestamp() AND v_existing.outbox_state <> 'failed')
         OR (v_existing.outbox_state = 'failed' AND v_existing.provider_error_category = 'transient')) THEN
       RETURN false;
     END IF;
@@ -219,7 +222,11 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION marketing.lock_waitlist_invite_delivery(p_outbox_id uuid)
+CREATE OR REPLACE FUNCTION marketing.lock_waitlist_invite_delivery(
+  p_outbox_id uuid,
+  p_user_id uuid,
+  p_purpose text
+)
 RETURNS TABLE(found boolean, deliverable boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -229,6 +236,26 @@ DECLARE
   v_waitlist_id uuid;
   v_ok boolean := false;
 BEGIN
+  IF p_purpose = 'verification' AND p_user_id IS NOT NULL THEN
+    -- Precheck without locking so ordinary accounts do not add a user-row lock
+    -- ahead of the shared auth-delivery advisory lock.
+    SELECT i.waitlist_id INTO v_waitlist_id
+      FROM marketing.waitlist_invites i WHERE i.user_id = p_user_id;
+    IF FOUND THEN
+      -- Serialize a linked legacy message against verification and invite
+      -- reissue with the account -> waitlist -> invite lock order.
+      PERFORM 1 FROM identity.users u WHERE u.id = p_user_id FOR UPDATE;
+      IF NOT FOUND THEN RETURN QUERY SELECT false, false; RETURN; END IF;
+      SELECT i.waitlist_id INTO v_waitlist_id
+        FROM marketing.waitlist_invites i WHERE i.user_id = p_user_id;
+      IF FOUND THEN
+        PERFORM 1 FROM marketing.waitlist_signups w WHERE w.id = v_waitlist_id FOR UPDATE;
+        PERFORM 1 FROM marketing.waitlist_invites i WHERE i.user_id = p_user_id FOR UPDATE;
+        RETURN QUERY SELECT true, false; RETURN;
+      END IF;
+    END IF;
+  END IF;
+
   SELECT i.waitlist_id INTO v_waitlist_id
     FROM marketing.waitlist_invites i WHERE i.outbox_id = p_outbox_id;
   IF NOT FOUND THEN RETURN QUERY SELECT false, false; RETURN; END IF;
@@ -422,7 +449,7 @@ REVOKE ALL ON FUNCTION
   marketing.waitlist_invite_eligible(uuid, bytea),
   marketing.waitlist_invite_reissue_user(uuid, bytea),
   marketing.bind_waitlist_invite(uuid, uuid, uuid, uuid, bytea, uuid, uuid),
-  marketing.lock_waitlist_invite_delivery(uuid),
+  marketing.lock_waitlist_invite_delivery(uuid, uuid, text),
   marketing.lock_waitlist_invite_for_verification(uuid, uuid, bytea),
   marketing.sync_waitlist_invite_outbox_state(),
   marketing.sync_waitlist_invite_account_state(),
@@ -434,7 +461,7 @@ FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION marketing.waitlist_invite_eligible(uuid, bytea) TO lythaus_runtime;
 GRANT EXECUTE ON FUNCTION marketing.waitlist_invite_reissue_user(uuid, bytea) TO lythaus_runtime;
 GRANT EXECUTE ON FUNCTION marketing.bind_waitlist_invite(uuid, uuid, uuid, uuid, bytea, uuid, uuid) TO lythaus_runtime;
-GRANT EXECUTE ON FUNCTION marketing.lock_waitlist_invite_delivery(uuid) TO lythaus_jobs;
+GRANT EXECUTE ON FUNCTION marketing.lock_waitlist_invite_delivery(uuid, uuid, text) TO lythaus_jobs;
 GRANT EXECUTE ON FUNCTION marketing.lock_waitlist_invite_for_verification(uuid, uuid, bytea) TO lythaus_runtime;
 GRANT EXECUTE ON FUNCTION marketing.unsubscribe_waitlist_entry(uuid) TO lythaus_admin;
 
@@ -446,7 +473,7 @@ GRANT SELECT, INSERT, UPDATE ON marketing.waitlist_invites TO lythaus_waitlist_i
 ALTER FUNCTION marketing.waitlist_invite_eligible(uuid, bytea) OWNER TO lythaus_waitlist_invite_function_owner;
 ALTER FUNCTION marketing.waitlist_invite_reissue_user(uuid, bytea) OWNER TO lythaus_waitlist_invite_function_owner;
 ALTER FUNCTION marketing.bind_waitlist_invite(uuid, uuid, uuid, uuid, bytea, uuid, uuid) OWNER TO lythaus_waitlist_invite_function_owner;
-ALTER FUNCTION marketing.lock_waitlist_invite_delivery(uuid) OWNER TO lythaus_waitlist_invite_function_owner;
+ALTER FUNCTION marketing.lock_waitlist_invite_delivery(uuid, uuid, text) OWNER TO lythaus_waitlist_invite_function_owner;
 ALTER FUNCTION marketing.lock_waitlist_invite_for_verification(uuid, uuid, bytea) OWNER TO lythaus_waitlist_invite_function_owner;
 ALTER FUNCTION marketing.sync_waitlist_invite_outbox_state() OWNER TO lythaus_waitlist_invite_function_owner;
 ALTER FUNCTION marketing.sync_waitlist_invite_account_state() OWNER TO lythaus_waitlist_invite_function_owner;

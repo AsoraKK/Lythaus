@@ -4,7 +4,7 @@ import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { decryptField, encryptField, hashAuthToken, hashPassword, hmacLookup, randomToken, uuidv7 } from '@lythaus/security';
 import { readBoundedJson } from './request-body-runtime.ts';
 import { normalizeEmailAddress } from './auth-runtime-policy.ts';
-import { claimRegistrationAddress, lockRecoveryAccount, recoveryPlan } from './auth-recovery-policy.ts';
+import { claimRegistrationAddress, hasWaitlistInviteForVerification, lockRecoveryAccount, recoveryPlan, waitlistInviteSchemaInstalled } from './auth-recovery-policy.ts';
 import { handleAccountSupportLookup } from './account-support-entrypoint.ts';
 
 /** Private Admin service capability. Never attached to the public router. */
@@ -65,14 +65,9 @@ export async function handleEmailEnvelope(request: Request, env: EnvBindings, ru
             VALUES($1,convert_to($2,'utf8'),decode($3,'base64'),'v1','email')`, [userId,encrypted.ciphertext,lookup]);
         }
       } else {
-        if (env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true') {
-          const invite = await client.query<{ found: boolean; valid: boolean }>(
-            `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, NULL, decode('', 'base64'))`,
-            [userId],
-          );
-          if (invite.rowCount !== 1 || invite.rows[0]?.found !== false || invite.rows[0]?.valid !== false) {
-            throw new Error('waitlist_invite_not_eligible');
-          }
+        const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+        if (inviteSchemaPresent && await hasWaitlistInviteForVerification(client, userId)) {
+          throw new Error('waitlist_invite_not_eligible');
         }
         const account = await lockRecoveryAccount(client, userId);
         if (!account) throw new Error('user_not_found');

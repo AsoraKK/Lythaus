@@ -120,22 +120,31 @@ test('waitlist verification is fail-closed and locks invite eligibility before a
 
   const api = fs.readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
   const verify = api.slice(api.indexOf('async function verifyEmail'), api.indexOf('async function refreshSession'));
-  const invitationGate = verify.indexOf('marketing.lock_waitlist_invite_for_verification');
+  const schemaPresenceCheck = verify.indexOf('waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED');
+  const invitationGate = verify.indexOf('hasWaitlistInviteForVerification(client, userId)');
   const accountLock = verify.indexOf('lockRecoveryAccount(client, userId)');
   const tokenLock = verify.indexOf('FOR UPDATE', accountLock);
-  assert.ok(invitationGate >= 0 && invitationGate < accountLock && accountLock < tokenLock,
-    'invitation state is serialized before account and verification-token locks');
+  assert.ok(schemaPresenceCheck >= 0 && invitationGate > schemaPresenceCheck && invitationGate < accountLock && accountLock < tokenLock,
+    'installed invitation state is checked before account and verification-token locks');
   assert.match(verify, /env\.WAITLIST_INVITE_SCHEMA_ENABLED === 'true'/);
-  assert.match(verify, /invite\.rowCount !== 1 \|\| !waitlistInviteVerificationAllowed\(invite\.rows\[0\]\)/);
+  assert.match(verify, /invite\.rowCount !== 1 \|\| invite\.rows\[0\]\?\.found !== true \|\| invite\.rows\[0\]\?\.valid !== true/);
 
   const recovery = api.slice(api.indexOf('async function queueRecoveryEmail'), api.indexOf('async function emailAuth'));
-  assert.ok(recovery.indexOf('marketing.lock_waitlist_invite_for_verification') < recovery.indexOf('lockRecoveryAccount(client, userId)'),
-    'generic email recovery checks waitlist ownership before taking the account lock');
+  assert.ok(recovery.indexOf('waitlistInviteSchemaInstalled') < recovery.indexOf('hasWaitlistInviteForVerification')
+    && recovery.indexOf('hasWaitlistInviteForVerification') < recovery.indexOf('lockRecoveryAccount(client, userId)'),
+  'generic email recovery checks installed waitlist ownership before taking the account lock');
   assert.match(recovery, /purpose === 'verification' && hasWaitlistInvite/);
   const envelope = fs.readFileSync(new URL('../src/email-envelope-entrypoint.ts', import.meta.url), 'utf8');
-  assert.ok(envelope.indexOf('marketing.lock_waitlist_invite_for_verification') < envelope.indexOf('lockRecoveryAccount(client, userId)'),
-    'the private generic resend path checks waitlist ownership before taking the account lock');
+  const envelopeResend = envelope.slice(envelope.indexOf('const result = await runTransaction'));
+  assert.ok(envelopeResend.indexOf('waitlistInviteSchemaInstalled') < envelopeResend.indexOf('hasWaitlistInviteForVerification')
+    && envelopeResend.indexOf('hasWaitlistInviteForVerification') < envelopeResend.indexOf('lockRecoveryAccount(client, userId)'),
+  'the private generic resend path checks installed waitlist ownership before taking the account lock');
   assert.match(envelope, /waitlistId && env\.WAITLIST_INVITE_SCHEMA_ENABLED !== 'true'/);
+  const recoveryPolicy = fs.readFileSync(new URL('../src/auth-recovery-policy.ts', import.meta.url), 'utf8');
+  assert.match(recoveryPolicy, /to_regclass\('marketing\.waitlist_invites'\)/);
+  assert.match(recoveryPolicy, /to_regprocedure\('marketing\.lock_waitlist_invite_for_verification\(uuid,uuid,bytea\)'\)/);
+  assert.match(recoveryPolicy, /if \(required && !installed\) throw new Error\('waitlist_invite_state_unavailable'\)/);
+  assert.match(recoveryPolicy, /if \(result\.rowCount !== 1[\s\S]*?return invite\.found/);
   for (const filename of ['../wrangler.jsonc', '../../lythaus-admin-api/wrangler.jsonc', '../../lythaus-jobs/wrangler.jsonc']) {
     const config = fs.readFileSync(new URL(filename, import.meta.url), 'utf8');
     assert.doesNotMatch(config, /WAITLIST_INVITES_REQUIRED|WAITLIST_INVITE_SCHEMA_ENABLED|EMAIL_INVITE_BASE_URL/,

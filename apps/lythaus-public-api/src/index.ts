@@ -20,7 +20,7 @@ import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
 import { handleActivityMeasurement } from './activity-measurement-handler.ts';
 import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
-import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
+import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, hasWaitlistInviteForVerification, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason, waitlistInviteSchemaInstalled } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -452,15 +452,9 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
   const outcome = await transaction(env.DB_APP_FRESH, client => persistRecoveryIntake(client, correlationId(request), async () => {
     const userId = await findRecoveryUser(client, lookup);
     let hasWaitlistInvite = false;
-    if (userId && env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true') {
-      const invite = await client.query<{ found: boolean; valid: boolean }>(
-        `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, NULL, decode('', 'base64'))`,
-        [userId],
-      );
-      if (invite.rowCount !== 1 || typeof invite.rows[0]?.found !== 'boolean' || typeof invite.rows[0]?.valid !== 'boolean') {
-        throw new Error('waitlist_invite_state_unavailable');
-      }
-      hasWaitlistInvite = invite.rows[0].found;
+    if (userId) {
+      const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+      if (inviteSchemaPresent) hasWaitlistInvite = await hasWaitlistInviteForVerification(client, userId);
     }
     const account = userId ? await lockRecoveryAccount(client, userId) : undefined;
     const plan = recoveryPlan(account);
@@ -812,13 +806,16 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     );
     if (!owner.rows[0]) throw new Error('verification_token_invalid');
     const userId = owner.rows[0].user_id;
-    if (env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true') {
-      const invite = await client.query<{ found: boolean; valid: boolean }>(
-        `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, $2, decode($3, 'base64'))`,
-        [userId, owner.rows[0].challenge_id, emailLookup],
-      );
-      if (invite.rowCount !== 1 || !waitlistInviteVerificationAllowed(invite.rows[0])) {
-        throw new Error('verification_token_invalid');
+    const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+    if (inviteSchemaPresent) {
+      if (await hasWaitlistInviteForVerification(client, userId)) {
+        const invite = await client.query<{ found: boolean; valid: boolean }>(
+          `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, $2, decode($3, 'base64'))`,
+          [userId, owner.rows[0].challenge_id, emailLookup],
+        );
+        if (invite.rowCount !== 1 || invite.rows[0]?.found !== true || invite.rows[0]?.valid !== true) {
+          throw new Error('verification_token_invalid');
+        }
       }
     }
     const account = await lockRecoveryAccount(client, userId);

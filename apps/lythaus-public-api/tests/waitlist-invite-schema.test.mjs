@@ -144,7 +144,7 @@ test('hard deletion revokes the invitation and preserves a non-identifying denia
   assert.match(verifier, /RETURN QUERY SELECT true, COALESCE\(v_valid, false\)/);
 });
 
-test('reissue eligibility is limited to expired or known-transient failed invites, never suppression or uncertain acceptance', () => {
+test('reissue eligibility covers expiry, known-transient failure, and safe recovery of a superseded invite', () => {
   const eligible = schema.match(/CREATE OR REPLACE FUNCTION marketing\.waitlist_invite_eligible\([\s\S]*?\n\$\$;/)?.[0];
   const binder = schema.match(/CREATE OR REPLACE FUNCTION marketing\.bind_waitlist_invite\([\s\S]*?\n\$\$;/)?.[0];
   const reissueUser = schema.match(/CREATE OR REPLACE FUNCTION marketing\.waitlist_invite_reissue_user\([\s\S]*?\n\$\$;/)?.[0];
@@ -170,15 +170,30 @@ test('reissue eligibility is limited to expired or known-transient failed invite
   assert.ok(reissueUser.indexOf('SELECT u.status') < reissueUser.indexOf('PERFORM 1 FROM marketing.waitlist_signups'));
   const deliveryLock = schema.match(/CREATE OR REPLACE FUNCTION marketing\.lock_waitlist_invite_delivery\([\s\S]*?\n\$\$;/)?.[0];
   assert.ok(deliveryLock);
+  assert.match(deliveryLock, /p_purpose = 'verification' AND p_user_id IS NOT NULL/);
+  assert.match(deliveryLock, /WHERE i\.user_id = p_user_id/);
+  assert.ok(deliveryLock.indexOf('SELECT i.waitlist_id INTO v_waitlist_id')
+    < deliveryLock.indexOf('PERFORM 1 FROM identity.users u WHERE u.id = p_user_id FOR UPDATE'),
+  'noninvite verification does not acquire an account lock before checking invite linkage');
+  assert.ok(deliveryLock.indexOf('PERFORM 1 FROM identity.users u WHERE u.id = p_user_id FOR UPDATE')
+    < deliveryLock.indexOf('PERFORM 1 FROM marketing.waitlist_signups w WHERE w.id = v_waitlist_id FOR UPDATE'),
+  'invite-linked generic delivery uses the user-to-waitlist lock order');
+  assert.match(eligible, /v_existing\.superseded_at IS NOT NULL AND v_existing\.outbox_state <> 'failed'/,
+    'a nonconsumed superseded invite can be replaced by a new admin-issued challenge');
+  assert.match(reissueUser, /t\.superseded_at IS NOT NULL AND o\.state <> 'failed'/);
+  assert.match(binder, /v_existing\.superseded_at IS NOT NULL AND v_existing\.outbox_state <> 'failed'/);
+  assert.match(binder, /v_existing\.revoked_at IS NOT NULL OR v_existing\.redeemed_at IS NOT NULL/);
+  assert.match(binder, /v_existing\.consumed_at IS NOT NULL/);
   assert.match(deliveryLock, /w\.status IN \('waiting', 'invited'\)/);
   assert.match(deliveryLock, /i\.revoked_at IS NULL AND i\.redeemed_at IS NULL/);
   assert.match(deliveryLock, /t\.expires_at > clock_timestamp\(\) AND t\.consumed_at IS NULL AND t\.superseded_at IS NULL/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION marketing\.waitlist_invite_reissue_user\(uuid, bytea\) TO lythaus_runtime/);
-  assert.match(schema, /GRANT EXECUTE ON FUNCTION marketing\.lock_waitlist_invite_delivery\(uuid\) TO lythaus_jobs/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION marketing\.lock_waitlist_invite_delivery\(uuid, uuid, text\) TO lythaus_jobs/);
   assert.doesNotMatch(schema, /GRANT SELECT ON marketing\.waitlist_invites TO lythaus_jobs/);
   assert.match(dispatch, /marketing\.waitlist_invite_reissue_user\(\$1, decode\(\$2, 'base64'\)\)/);
   assert.doesNotMatch(dispatch, /FROM marketing\.waitlist_invites/);
-  assert.match(jobsRuntime, /marketing\.lock_waitlist_invite_delivery\(\$1\)/);
+  assert.match(jobsRuntime, /marketing\.lock_waitlist_invite_delivery\(\$1, \$2, \$3\)/);
+  assert.match(jobsRuntime, /to_regprocedure\('marketing\.lock_waitlist_invite_delivery\(uuid,uuid,text\)'\)/);
   assert.doesNotMatch(jobsRuntime, /FROM marketing\.waitlist_invites|NOT EXISTS\s*\(SELECT[^)]*marketing\.waitlist_invites/s);
   assert.doesNotMatch(schema, /REVOKE UPDATE \(status, invited_at, converted_at\) ON marketing\.waitlist_signups FROM lythaus_admin/);
 });
