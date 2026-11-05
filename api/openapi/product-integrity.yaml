@@ -1157,7 +1157,7 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email, maxLength: 320 }
         status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
-        inviteDeliveryState: { type: string, enum: [not_invited, queued, processing, provider_accepted, delivered, deferred, bounced, rejected, failed, delivery_attention, cancelled, complained] }
+        inviteDeliveryState: { type: string, enum: [not_invited, queued, processing, provider_accepted, delivered, deferred, bounced, rejected, failed, delivery_attention, cancelled, complained, revoked, redeemed, expired] }
         source: { type: string }
         createdAt: { type: string, format: date-time }
         invitedAt: { type: string, format: date-time, nullable: true }

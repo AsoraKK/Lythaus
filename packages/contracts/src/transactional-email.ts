@@ -170,8 +170,12 @@ export function renderTransactionalEmail(input: {
       ? `Enter the email address this invitation was sent to, the invitation code below, and a password to finish setup. This code expires in ${input.waitlistInvite ? '7 days' : '30 minutes'} and can be used once.`
       : 'Confirm your email and choose your own password to finish setup. This link expires in 30 minutes and can be used once.';
   const unsolicited = 'If you did not request this, do not confirm it. You can ignore this message. Never share this link, code, or your password.';
-  const signature = '<p>Lythaus Support · <a href="https://lythaus.co/contact">lythaus.co/contact</a></p>';
-  const textSignature = 'Lythaus Support: https://lythaus.co/contact';
+  const signature = input.purpose === 'verification'
+    ? '<p>Thanks,<br>Kyle<br>kyle.kern@lythaus.co<br><a href="https://lythaus.co/contact">Lythaus Support</a></p>'
+    : '<p>Lythaus Support · <a href="https://lythaus.co/contact">lythaus.co/contact</a></p>';
+  const textSignature = input.purpose === 'verification'
+    ? 'Thanks,\nKyle\nkyle.kern@lythaus.co\nLythaus Support: https://lythaus.co/contact'
+    : 'Lythaus Support: https://lythaus.co/contact';
   const inviteCode = input.purpose === 'invite' ? `<p>Invitation code: <strong>${input.token}</strong></p>` : '';
   const inviteCodeText = input.purpose === 'invite' ? `\nInvitation code: ${input.token}` : '';
   return {

@@ -38,7 +38,7 @@ abstract class WaitlistAdminItem implements Built<WaitlistAdminItem, WaitlistAdm
 
   @BuiltValueField(wireName: r'inviteDeliveryState')
   WaitlistAdminItemInviteDeliveryStateEnum get inviteDeliveryState;
-  // enum inviteDeliveryStateEnum {  not_invited,  queued,  processing,  provider_accepted,  delivered,  deferred,  bounced,  rejected,  failed,  delivery_attention,  cancelled,  complained,  };
+  // enum inviteDeliveryStateEnum {  not_invited,  queued,  processing,  provider_accepted,  delivered,  deferred,  bounced,  rejected,  failed,  delivery_attention,  cancelled,  complained,  revoked,  redeemed,  expired,  };
 
   @BuiltValueField(wireName: r'source')
   String get source_;
@@ -326,6 +326,12 @@ class WaitlistAdminItemInviteDeliveryStateEnum extends EnumClass {
   static const WaitlistAdminItemInviteDeliveryStateEnum cancelled = _$waitlistAdminItemInviteDeliveryStateEnum_cancelled;
   @BuiltValueEnumConst(wireName: r'complained')
   static const WaitlistAdminItemInviteDeliveryStateEnum complained = _$waitlistAdminItemInviteDeliveryStateEnum_complained;
+  @BuiltValueEnumConst(wireName: r'revoked')
+  static const WaitlistAdminItemInviteDeliveryStateEnum revoked = _$waitlistAdminItemInviteDeliveryStateEnum_revoked;
+  @BuiltValueEnumConst(wireName: r'redeemed')
+  static const WaitlistAdminItemInviteDeliveryStateEnum redeemed = _$waitlistAdminItemInviteDeliveryStateEnum_redeemed;
+  @BuiltValueEnumConst(wireName: r'expired')
+  static const WaitlistAdminItemInviteDeliveryStateEnum expired = _$waitlistAdminItemInviteDeliveryStateEnum_expired;
 
   static Serializer<WaitlistAdminItemInviteDeliveryStateEnum> get serializer => _$waitlistAdminItemInviteDeliveryStateEnumSerializer;
 

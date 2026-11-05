@@ -19599,7 +19599,10 @@
               "failed",
               "delivery_attention",
               "cancelled",
-              "complained"
+              "complained",
+              "revoked",
+              "redeemed",
+              "expired"
             ]
           },
           "source": {

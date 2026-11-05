@@ -167,18 +167,54 @@ test('disposable PostgreSQL plus the actual HTTP verification handler redeems an
 
     const wrongEmail = await request('email/verify', { token, email: 'other@example.invalid', password });
     assert.equal((await expectStatus(wrongEmail, 400)).error, 'verification_token_invalid');
+    const originalTokenHash = hashAuthToken(token, 'verification');
     assert.equal((await sql(`SELECT consumed_at FROM identity.email_verification_tokens WHERE token_hash=decode($1,'base64')`,
-      [hashAuthToken(token, 'verification')])).rows[0].consumed_at, null);
+      [originalTokenHash])).rows[0].consumed_at, null);
 
-    const verified = await expectStatus(await request('email/verify', { token, email, password }), 200);
-    assert.deepEqual(verified, { state: 'verified' });
+    await sql(`UPDATE identity.email_verification_tokens
+      SET expires_at=now()-interval '1 second' WHERE token_hash=decode($1,'base64')`, [originalTokenHash]);
+    const expired = await request('email/verify', { token, email, password });
+    assert.equal((await expectStatus(expired, 400)).error, 'verification_token_invalid');
+    assert.deepEqual((await sql(`SELECT consumed_at, superseded_at
+      FROM identity.email_verification_tokens WHERE token_hash=decode($1,'base64')`, [originalTokenHash])).rows[0],
+      { consumed_at: null, superseded_at: null }, 'An expired invite cannot be consumed by verification');
+
+    const reissued = await handleEmailEnvelope(new Request('https://api.lythaus.test/keeper-email', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ operation: 'invite', actorId, correlationId: uuidv7(), reasonCode: 'ALPHA_INVITE', email, waitlistId }),
+    }), env);
+    const reissueBody = await reissued.json();
+    assert.equal(reissued.status, 200, `${JSON.stringify(reissueBody)}; database errors ${JSON.stringify(databaseErrors)}`);
+    assert.equal(reissueBody.result.deliveryState, 'queued');
+    await relayTransactionalEmailOutbox(env);
+    const replacementEmail = mailbox.slice(mailboxStart).find(message =>
+      message.to === email && message.subject === 'Your Lythaus invitation' && message.messageId !== inviteEmail.messageId);
+    assert.ok(replacementEmail, 'The expired invitation was reissued through the local email provider stub');
+    const replacementToken = tokenOf(replacementEmail);
+    assert.notEqual(replacementToken, token);
+    assert.equal((await sql(`SELECT superseded_at IS NOT NULL AS superseded
+      FROM identity.email_verification_tokens WHERE token_hash=decode($1,'base64')`, [originalTokenHash])).rows[0].superseded, true);
+
+    const concurrentResponses = await Promise.all([
+      request('email/verify', { token: replacementToken, email, password }),
+      request('email/verify', { token: replacementToken, email, password }),
+    ]);
+    const concurrentOutcomes = await Promise.all(concurrentResponses.map(async response => ({
+      status: response.status,
+      body: await response.json(),
+      cacheControl: response.headers.get('cache-control'),
+    })));
+    assert.deepEqual(concurrentOutcomes.map(outcome => outcome.status).sort(), [200, 400]);
+    assert.ok(concurrentOutcomes.every(outcome => /no-store/.test(outcome.cacheControl ?? '')));
+    assert.deepEqual(concurrentOutcomes.find(outcome => outcome.status === 200)?.body, { state: 'verified' });
+    assert.equal(concurrentOutcomes.find(outcome => outcome.status === 400)?.body.error, 'verification_token_invalid');
     const account = (await sql(`SELECT u.status,c.verified_at IS NOT NULL AS email_verified,
       i.redeemed_at IS NOT NULL AS invite_redeemed,w.status AS waitlist_status
       FROM identity.users u JOIN identity.email_credentials c ON c.user_id=u.id
       JOIN marketing.waitlist_invites i ON i.user_id=u.id
       JOIN marketing.waitlist_signups w ON w.id=i.waitlist_id WHERE u.id=$1`, [invited.id])).rows[0];
     assert.deepEqual(account, { status: 'active', email_verified: true, invite_redeemed: true, waitlist_status: 'converted' });
-    assert.equal((await expectStatus(await request('email/verify', { token, email, password }), 400)).error, 'verification_token_invalid');
+    assert.equal((await expectStatus(await request('email/verify', { token: replacementToken, email, password }), 400)).error, 'verification_token_invalid');
   } finally {
     env.WAITLIST_INVITE_SCHEMA_ENABLED = oldSchemaFlag;
     env.WAITLIST_INVITES_REQUIRED = oldInviteOnly;

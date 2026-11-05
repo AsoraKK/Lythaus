@@ -8,6 +8,52 @@ const jobsRuntime = fs.readFileSync(new URL('../../lythaus-jobs/src/transactiona
 const grants = fs.readFileSync(new URL('../../../database/planetscale/grants/roles.sql', import.meta.url), 'utf8');
 const authJourney = fs.readFileSync(new URL('./auth-journey.postgres.mjs', import.meta.url), 'utf8');
 const pgRunner = fs.readFileSync(new URL('../../../scripts/ci/run-alpha-waitlist-invite-proposal-pg17.mjs', import.meta.url), 'utf8');
+const cleanupRegression = fs.readFileSync(new URL('../../../scripts/tests/alpha-waitlist-invite-cleanup.postgres.mjs', import.meta.url), 'utf8');
+const nativeWorkflow = fs.readFileSync(new URL('../../../.github/workflows/native-planetscale-ci.yml', import.meta.url), 'utf8');
+
+test('native PostgreSQL CI runs the invite proposal fixture for every relevant source change', () => {
+  const pathsStart = nativeWorkflow.indexOf('  pull_request:\n    paths:\n');
+  const pathsEnd = nativeWorkflow.indexOf('\n\npermissions:', pathsStart);
+  assert.notEqual(pathsStart, -1, 'native PostgreSQL CI has a pull_request path filter');
+  assert.ok(pathsEnd > pathsStart, 'the pull_request path filter is bounded before job configuration');
+  const pathFilter = nativeWorkflow.slice(pathsStart, pathsEnd);
+  for (const path of [
+    'database/planetscale/**',
+    'apps/lythaus-public-api/tests/auth-journey.postgres.mjs',
+    'apps/lythaus-public-api/tests/waitlist-invite-schema.test.mjs',
+    'scripts/ci/run-alpha-waitlist-invite-proposal-pg17.mjs',
+    'scripts/tests/alpha-waitlist-invite-proposal.postgres.mjs',
+    'scripts/tests/alpha-waitlist-invite-cleanup.postgres.mjs',
+  ]) {
+    assert.ok(pathFilter.includes(`- '${path}'`), `native PostgreSQL CI path filter includes ${path}`);
+  }
+
+  const sourceContractStep = nativeWorkflow.slice(
+    nativeWorkflow.indexOf('- name: Enforce alpha waitlist invite CI source contract'),
+    nativeWorkflow.indexOf('- name:', nativeWorkflow.indexOf('- name: Enforce alpha waitlist invite CI source contract') + 1),
+  );
+  assert.ok(sourceContractStep.includes('node --test apps/lythaus-public-api/tests/waitlist-invite-schema.test.mjs'));
+  assert.ok(nativeWorkflow.indexOf('- name: Validate repository contracts') < nativeWorkflow.indexOf('- name: Enforce alpha waitlist invite CI source contract'));
+
+  const proposalStepStart = nativeWorkflow.indexOf('- name: Exercise alpha waitlist invite proposal on isolated PostgreSQL 17');
+  const proposalStepEnd = nativeWorkflow.indexOf('- name:', proposalStepStart + 1);
+  assert.ok(proposalStepStart >= 0, 'native PostgreSQL CI runs the invite proposal fixture');
+  const proposalStep = nativeWorkflow.slice(proposalStepStart, proposalStepEnd);
+  assert.ok(proposalStep.includes('PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres'));
+  assert.doesNotMatch(proposalStep, /postgresql:\/\/postgres:postgres@127\.0\.0\.1:5432\/postgres\?/);
+  assert.equal(
+    proposalStep.match(/^\s*run: (.+)$/m)?.[1],
+    'node --experimental-strip-types --experimental-test-module-mocks scripts/ci/run-alpha-waitlist-invite-proposal-pg17.mjs --http-only',
+  );
+  assert.ok(pgRunner.includes("const baselineOnly = args[0] === '--baseline-only';"));
+  assert.ok(pgRunner.includes("if (!baselineOnly) {"), 'the invite proposal suite runs in the CI runner mode');
+  assert.ok(pgRunner.includes('scripts/tests/alpha-waitlist-invite-proposal.postgres.mjs'));
+  assert.match(pgRunner, /if \(!baselineOnly\) \{\s*await run\(\[[\s\S]*?'scripts\/tests\/alpha-waitlist-invite-proposal\.postgres\.mjs'\], localUrl\);\s*\}/);
+  assert.ok(pgRunner.includes("if (args[0] === '--http-only') authArgs.push('--test-name-pattern=disposable PostgreSQL plus the actual HTTP verification handler');"));
+
+  const baselineStepStart = nativeWorkflow.indexOf('- name: Apply and verify complete PostgreSQL 17 baseline');
+  assert.ok(baselineStepStart > proposalStepStart, 'the isolated invite fixture runs before the shared baseline check');
+});
 
 test('accepted invitation remains eligible for its email-bound verification', () => {
   const verifier = schema.match(/CREATE OR REPLACE FUNCTION marketing\.lock_waitlist_invite_for_verification\([\s\S]*?\n\$\$;/)?.[0];
@@ -51,11 +97,35 @@ test('the disposable PostgreSQL auth journey exercises the actual invite verific
   assert.match(authJourney, /invite_redeemed/);
 });
 
-test('the disposable invite runner reports owned database and role cleanup failures', () => {
+test('the disposable invite runner restores control-database grants and distinguishes test from cleanup results', () => {
   assert.match(pgRunner, /cleanupErrors\.push\('database'\)/);
-  assert.match(pgRunner, /cleanupErrors\.push\('function_owner_role'\)/);
-  assert.match(pgRunner, /invite_proposal_pg17_cleanup_failed/);
-  assert.doesNotMatch(pgRunner, /catch\(\(\)\s*=>\s*undefined\)/);
+  assert.match(grants, /GRANT CONNECT ON DATABASE postgres TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy, lythaus_migrations/);
+  assert.match(pgRunner, /async function databaseAclSnapshot\(client\)/);
+  assert.match(pgRunner, /acl_entry\.privilege_type IN \('CONNECT', 'CREATE'\)/);
+  assert.match(pgRunner, /async function restoreDatabaseAcl\(client, before\)/);
+  assert.match(pgRunner, /WITH GRANT OPTION/);
+  assert.match(pgRunner, /databaseAclBefore = await databaseAclSnapshot\(control\)/);
+  assert.match(pgRunner, /await restoreDatabaseAcl\(control, databaseAclBefore\)/);
+  assert.match(pgRunner, /ownerMembershipGranted && rolesAfter\.has\(owner\)/);
+  assert.match(pgRunner, /ownerMembershipGranted = true/);
+  assert.doesNotMatch(pgRunner, /if \(rolesAfter\.has\(owner\) && rolesAfter\.has\('lythaus_migrations'\)\)/);
+  assert.match(pgRunner, /if \(rolesBefore\.has\(role\)\) continue;[\s\S]*?rolesCreatedByFixture\.add\(role\)/);
+  assert.match(pgRunner, /rolesCreatedByFixture\.add\(owner\)/);
+  assert.doesNotMatch(pgRunner, /for \(const role of rolesAfter\)[\s\S]*?rolesCreatedByFixture\.add\(role\)/);
+  assert.match(pgRunner, /LYTHAUS_INVITE_PG17_TEST_FAIL_AFTER/);
+  assert.match(cleanupRegression, /WITH GRANT OPTION/);
+  assert.match(cleanupRegression, /early owner-collision abort/);
+  assert.match(cleanupRegression, /failure after ACL-mutating validator/);
+  assert.match(cleanupRegression, /failure after fixture-owned role and membership creation/);
+  assert.match(pgRunner, /tests=\$\{testResult\} cleanup=passed/);
+  assert.match(pgRunner, /invite_proposal_pg17_cleanup_failed:tests_passed/);
+
+  const cleanupStepStart = nativeWorkflow.indexOf('- name: Verify invite fixture preserves PostgreSQL roles and ACLs');
+  const cleanupStepEnd = nativeWorkflow.indexOf('- name:', cleanupStepStart + 1);
+  const cleanupStep = nativeWorkflow.slice(cleanupStepStart, cleanupStepEnd);
+  assert.ok(cleanupStepStart > 0, 'native PostgreSQL CI runs the exact-state cleanup regression');
+  assert.ok(cleanupStep.includes('PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres'));
+  assert.ok(cleanupStep.includes('node scripts/tests/alpha-waitlist-invite-cleanup.postgres.mjs'));
 });
 
 test('hard deletion revokes the invitation and preserves a non-identifying denial tombstone', () => {

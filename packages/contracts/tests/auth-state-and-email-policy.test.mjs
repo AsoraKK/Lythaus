@@ -70,12 +70,28 @@ test('invitation emails carry a private one-time code, signup link, expiry and s
   assert.match(message.html, /expires in 7 days/);
   assert.match(message.html, /Invitation code: <strong>secret-token<\/strong>/);
   assert.match(message.text, /https:\/\/app\.lythaus\.co\/invite#token=secret-token/);
+  assert.match(message.html, /Lythaus Support · <a href="https:\/\/lythaus\.co\/contact">lythaus\.co\/contact<\/a>/);
+  assert.match(message.text, /Lythaus Support: https:\/\/lythaus\.co\/contact/);
+  assert.doesNotMatch(message.html, /Kyle|kyle\.kern@lythaus\.co/);
+  assert.doesNotMatch(message.text, /Kyle|kyle\.kern@lythaus\.co/);
   assert.match(message.text, /Lythaus Support: https:\/\/lythaus\.co\/contact/);
   assert.equal(message.replyTo, undefined, 'Unverified support mailbox configuration must not be advertised as reply-to');
   assert.doesNotMatch(message.html, /\?token=/);
   const shortInvite = renderTransactionalEmail({ purpose: 'invite', token: 'short-token', verificationBaseUrl: 'https://lythaus.co/verify-email?token=' });
   assert.match(shortInvite.text, /expires in 30 minutes/);
   assert.match(shortInvite.text, /https:\/\/lythaus\.co\/verify-email#token=short-token/);
+});
+
+test('verification email carries Kyle’s signature and support link without setting reply-to', () => {
+  const message = renderTransactionalEmail({
+    purpose: 'verification',
+    token: 'synthetic-verification-token',
+    verificationBaseUrl: 'https://lythaus.co/verify-email?token=',
+  });
+  assert.match(message.html, /Thanks,<br>Kyle<br>kyle\.kern@lythaus\.co/);
+  assert.match(message.html, /href="https:\/\/lythaus\.co\/contact">Lythaus Support/);
+  assert.match(message.text, /Thanks,\nKyle\nkyle\.kern@lythaus\.co\nLythaus Support: https:\/\/lythaus\.co\/contact/);
+  assert.equal(message.replyTo, undefined, 'The signature does not configure an unverified reply route');
 });
 
 test('waitlist invite links accept only the app invite route and an explicitly configured .co reply address', () => {
@@ -90,7 +106,17 @@ test('waitlist invite links accept only the app invite route and an explicitly c
     }), /email_link_configuration_invalid/);
   }
   const reset = { purpose: 'password_reset', token: 'synthetic-token', resetBaseUrl: 'https://lythaus.co/reset-password' };
-  assert.equal(renderTransactionalEmail(reset).replyTo, undefined);
+  const resetMessage = renderTransactionalEmail(reset);
+  assert.equal(resetMessage.replyTo, undefined);
+  assert.match(resetMessage.html, /Lythaus Support · <a href="https:\/\/lythaus\.co\/contact">lythaus\.co\/contact<\/a>/);
+  assert.match(resetMessage.text, /^Reset your Lythaus password[\s\S]*Lythaus Support: https:\/\/lythaus\.co\/contact$/);
+  assert.doesNotMatch(resetMessage.html, /Kyle|kyle\.kern@lythaus\.co/);
+  const emailChange = renderTransactionalEmail({ purpose: 'email_change', token: 'synthetic-token', verificationBaseUrl: 'https://lythaus.co/signup' });
+  assert.match(emailChange.html, /Lythaus Support · <a href="https:\/\/lythaus\.co\/contact">lythaus\.co\/contact<\/a>/);
+  assert.doesNotMatch(emailChange.text, /Kyle|kyle\.kern@lythaus\.co/);
+  const passwordChanged = renderTransactionalEmail({ purpose: 'password_changed', token: '' });
+  assert.match(passwordChanged.html, /Lythaus Support · <a href="https:\/\/lythaus\.co\/contact">lythaus\.co\/contact<\/a>/);
+  assert.doesNotMatch(passwordChanged.text, /Kyle|kyle\.kern@lythaus\.co/);
   assert.equal(renderTransactionalEmail({ ...reset, supportReplyToEmail: 'kyle.kern@lythaus.co' }).replyTo, 'kyle.kern@lythaus.co');
   for (const supportReplyToEmail of ['support@example.test', 'support@evil.example', 'support@example.test\r\nBcc:elsewhere@example.invalid']) {
     assert.throws(() => renderTransactionalEmail({ ...reset, supportReplyToEmail }), /support_reply_to_configuration_invalid/);

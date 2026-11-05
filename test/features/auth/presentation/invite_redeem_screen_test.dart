@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -112,6 +114,48 @@ void main() {
     );
     expect(find.text('SYNTHETIC-INVITE'), findsNothing);
     expect(find.text('synthetic-password-123'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ignores duplicate submission while invite redemption is pending', (
+    tester,
+  ) async {
+    final service = _InviteService();
+    final pending = Completer<void>();
+    await _pump(tester, service);
+    when(
+      () => service.redeemInvite(
+        email: any(named: 'email'),
+        inviteCode: any(named: 'inviteCode'),
+        password: any(named: 'password'),
+      ),
+    ).thenAnswer((_) => pending.future);
+    await _enterAccountDetails(tester);
+
+    await tester.tap(find.byType(LythButton));
+    await tester.pump();
+    expect(tester.widget<LythButton>(find.byType(LythButton)).isLoading, isTrue);
+
+    // A keyboard submit can still arrive while the button is disabled. The
+    // screen-level guard must prevent a second API request in that window.
+    tester.widget<TextField>(find.byType(TextField).at(2)).onSubmitted?.call('');
+    await tester.pump();
+    verify(
+      () => service.redeemInvite(
+        email: 'tester@example.invalid',
+        inviteCode: 'SYNTHETIC-INVITE',
+        password: 'synthetic-password-123',
+      ),
+    ).called(1);
+
+    pending.complete();
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Your email is verified and your account is ready. Sign in with your email and password.',
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
