@@ -14,7 +14,7 @@ class LythausSideNavigation extends StatelessWidget {
     required this.extended,
   });
 
-  /// Selected destination in Discover, Create, Profile, Rewards order.
+  /// Selected logical shell destination, including secondary actions.
   final int currentIndex;
 
   /// Receives the destination's logical index without changing route state.
@@ -33,10 +33,10 @@ class LythausSideNavigation extends StatelessWidget {
   final bool extended;
 
   static const _destinations = [
-    (Icons.explore_outlined, Icons.explore, 'Discover'),
-    (Icons.add_circle_outline, Icons.add_circle, 'Create'),
-    (Icons.person_outline, Icons.person, 'Profile'),
-    (Icons.redeem_outlined, Icons.redeem, 'Rewards'),
+    (0, Icons.home_outlined, Icons.home, 'Feed'),
+    (4, Icons.search, Icons.search, 'Search'),
+    (5, Icons.notifications_outlined, Icons.notifications, 'Notifications'),
+    (2, Icons.person_outline, Icons.person, 'Profile'),
   ];
 
   @override
@@ -46,7 +46,7 @@ class LythausSideNavigation extends StatelessWidget {
       double.infinity,
     );
     return SizedBox(
-      width: (extended ? 224 : 104) * scale,
+      width: (extended ? 224 : 136) * scale,
       child: SafeArea(
         child: FocusTraversalGroup(
           child: LayoutBuilder(
@@ -80,19 +80,34 @@ class LythausSideNavigation extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              for (final entry in _destinations.indexed)
+                              for (final entry in _destinations)
                                 _item(
                                   context,
-                                  label: entry.$2.$3,
+                                  label: entry.$4,
                                   icon: currentIndex == entry.$1
-                                      ? entry.$2.$2
-                                      : entry.$2.$1,
+                                      ? entry.$3
+                                      : entry.$2,
                                   selected: currentIndex == entry.$1,
                                   onPressed: () =>
                                       onDestinationSelected(entry.$1),
                                 ),
                             ],
                           ),
+                        ),
+                        const Divider(height: 24),
+                        _item(
+                          context,
+                          label: 'Create',
+                          icon: Icons.add_circle_outline,
+                          selected: currentIndex == 1,
+                          onPressed: () => onDestinationSelected(1),
+                        ),
+                        _item(
+                          context,
+                          label: 'Rewards',
+                          icon: Icons.redeem_outlined,
+                          selected: currentIndex == 3,
+                          onPressed: () => onDestinationSelected(3),
                         ),
                         const SizedBox(height: 24),
                         const Spacer(),

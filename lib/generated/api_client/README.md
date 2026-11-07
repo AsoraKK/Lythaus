@@ -110,6 +110,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersTierUpdate**](doc/AdminApi.md#adminuserstierupdate) | **POST** /admin/users/{userId}/tier | Update subscription tier
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistCreate**](doc/AdminApi.md#adminwaitlistcreate) | **POST** /admin/waitlist | Add a waitlist signup
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistDelete**](doc/AdminApi.md#adminwaitlistdelete) | **DELETE** /admin/waitlist/{waitlistId} | Retire a waitlist signup
+[*AdminApi*](doc/AdminApi.md) | [**adminWaitlistInvite**](doc/AdminApi.md#adminwaitlistinvite) | **POST** /admin/waitlist/{waitlistId}/invite | Send a one-time signup invitation to a waitlist entry
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistList**](doc/AdminApi.md#adminwaitlistlist) | **GET** /admin/waitlist | List private beta waitlist signups
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistPatch**](doc/AdminApi.md#adminwaitlistpatch) | **PATCH** /admin/waitlist/{waitlistId} | Edit a waitlist signup
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistRetentionHoldUpdate**](doc/AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
@@ -227,6 +228,12 @@ Class | Method | HTTP request | Description
 [*PrivacyApi*](doc/PrivacyApi.md) | [**storageUsageGet**](doc/PrivacyApi.md#storageusageget) | **GET** /storage/usage | Get the authenticated user&#39;s private storage ledger
 [*PrivacyApi*](doc/PrivacyApi.md) | [**usersMeRegionUpdate**](doc/PrivacyApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
 [*PrivacyApi*](doc/PrivacyApi.md) | [**usersMeRetentionUpdate**](doc/PrivacyApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
+[*ReactionsApi*](doc/ReactionsApi.md) | [**commentContributionEmotionSet**](doc/ReactionsApi.md#commentcontributionemotionset) | **PUT** /feedback/comment/{targetId}/emotion | Set or remove emotion feedback on a comment
+[*ReactionsApi*](doc/ReactionsApi.md) | [**commentContributionFeedbackGet**](doc/ReactionsApi.md#commentcontributionfeedbackget) | **GET** /feedback/comment/{targetId} | Read separate quality and emotional feedback for a comment
+[*ReactionsApi*](doc/ReactionsApi.md) | [**commentContributionQualitySet**](doc/ReactionsApi.md#commentcontributionqualityset) | **PUT** /feedback/comment/{targetId}/quality | Set or remove quality feedback on a comment
+[*ReactionsApi*](doc/ReactionsApi.md) | [**postContributionEmotionSet**](doc/ReactionsApi.md#postcontributionemotionset) | **PUT** /feedback/post/{targetId}/emotion | Set or remove emotion feedback on a post
+[*ReactionsApi*](doc/ReactionsApi.md) | [**postContributionFeedbackGet**](doc/ReactionsApi.md#postcontributionfeedbackget) | **GET** /feedback/post/{targetId} | Read separate quality and emotional feedback for a post
+[*ReactionsApi*](doc/ReactionsApi.md) | [**postContributionQualitySet**](doc/ReactionsApi.md#postcontributionqualityset) | **PUT** /feedback/post/{targetId}/quality | Set or remove quality feedback on a post
 [*ReputationApi*](doc/ReputationApi.md) | [**adminMonthlyContextReview**](doc/ReputationApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
 [*ReputationApi*](doc/ReputationApi.md) | [**downloadMyMonthlyReputationReportCsv**](doc/ReputationApi.md#downloadmymonthlyreputationreportcsv) | **GET** /reputation/me/reports/monthly/{sourceMonth}/export.csv | Export my monthly reputation report as CSV
 [*ReputationApi*](doc/ReputationApi.md) | [**getMyMonthlyReputationReport**](doc/ReputationApi.md#getmymonthlyreputationreport) | **GET** /reputation/me/reports/monthly/{sourceMonth} | Read or export my monthly reputation report
@@ -312,6 +319,8 @@ Class | Method | HTTP request | Description
  - [AdminUserPage](doc/AdminUserPage.md)
  - [AdminUserProfilePatch](doc/AdminUserProfilePatch.md)
  - [AdminWaitlistCreate](doc/AdminWaitlistCreate.md)
+ - [AdminWaitlistInvite202Response](doc/AdminWaitlistInvite202Response.md)
+ - [AdminWaitlistInviteRequest](doc/AdminWaitlistInviteRequest.md)
  - [AdminWaitlistPatch](doc/AdminWaitlistPatch.md)
  - [AlphaAction](doc/AlphaAction.md)
  - [AlphaAdminCase](doc/AlphaAdminCase.md)
@@ -384,6 +393,14 @@ Class | Method | HTTP request | Description
  - [CommunityBallotRequest](doc/CommunityBallotRequest.md)
  - [CommunityBallotResponse](doc/CommunityBallotResponse.md)
  - [CommunityOwnBallot](doc/CommunityOwnBallot.md)
+ - [ContributionEmotion](doc/ContributionEmotion.md)
+ - [ContributionEmotionCounts](doc/ContributionEmotionCounts.md)
+ - [ContributionFeedbackChange](doc/ContributionFeedbackChange.md)
+ - [ContributionFeedbackError](doc/ContributionFeedbackError.md)
+ - [ContributionFeedbackSummary](doc/ContributionFeedbackSummary.md)
+ - [ContributionFeedbackTarget](doc/ContributionFeedbackTarget.md)
+ - [ContributionQuality](doc/ContributionQuality.md)
+ - [ContributionQualityCounts](doc/ContributionQualityCounts.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
  - [CursorPage](doc/CursorPage.md)
  - [CustomFeed](doc/CustomFeed.md)
@@ -401,6 +418,7 @@ Class | Method | HTTP request | Description
  - [EmailVerificationRequest](doc/EmailVerificationRequest.md)
  - [EmailVerificationRequiredResponse](doc/EmailVerificationRequiredResponse.md)
  - [EmailVerificationResponse](doc/EmailVerificationResponse.md)
+ - [EmotionFeedbackRequest](doc/EmotionFeedbackRequest.md)
  - [Error](doc/Error.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [ErrorResponseError](doc/ErrorResponseError.md)
@@ -509,6 +527,7 @@ Class | Method | HTTP request | Description
  - [PublicAuthorship](doc/PublicAuthorship.md)
  - [PublicAuthorshipLabel](doc/PublicAuthorshipLabel.md)
  - [PublicMessage](doc/PublicMessage.md)
+ - [QualityFeedbackRequest](doc/QualityFeedbackRequest.md)
  - [RateLimitError](doc/RateLimitError.md)
  - [ReactionCounts](doc/ReactionCounts.md)
  - [ReactionDeleteResponse](doc/ReactionDeleteResponse.md)

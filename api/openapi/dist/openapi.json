@@ -106,6 +106,330 @@
     }
   ],
   "paths": {
+    "/feedback/post/{targetId}": {
+      "get": {
+        "operationId": "postContributionFeedbackGet",
+        "summary": "Read separate quality and emotional feedback for a post",
+        "description": "Public visitors can read visible targets; authenticated readers receive their own values and block/mute filtered counts. Returns 404 while this feature is disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-authoritative counts and the reader's selections. Private and no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/post/{targetId}/quality": {
+      "put": {
+        "operationId": "postContributionQualitySet",
+        "summary": "Set or remove quality feedback on a post",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/post/{targetId}/emotion": {
+      "put": {
+        "operationId": "postContributionEmotionSet",
+        "summary": "Set or remove emotion feedback on a post",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmotionFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/comment/{targetId}": {
+      "get": {
+        "operationId": "commentContributionFeedbackGet",
+        "summary": "Read separate quality and emotional feedback for a comment",
+        "description": "Public visitors can read visible targets; authenticated readers receive their own values and block/mute filtered counts. Returns 404 while this feature is disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-authoritative counts and the reader's selections. Private and no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/comment/{targetId}/quality": {
+      "put": {
+        "operationId": "commentContributionQualitySet",
+        "summary": "Set or remove quality feedback on a comment",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
+    "/feedback/comment/{targetId}/emotion": {
+      "put": {
+        "operationId": "commentContributionEmotionSet",
+        "summary": "Set or remove emotion feedback on a comment",
+        "description": "Authenticated readers may set one independent value per channel and target. A null value removes that channel; feedback does not change reputation or rewards. Returns 404 while disabled.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/targetId"
+          },
+          {
+            "$ref": "#/components/parameters/feedbackIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmotionFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback was changed or was already in the requested state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionFeedbackChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "401": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "404": {
+            "$ref": "#/components/responses/FeedbackError"
+          },
+          "409": {
+            "$ref": "#/components/responses/FeedbackIdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/FeedbackError"
+          }
+        }
+      }
+    },
     "/authenticity/cases": {
       "get": {
         "operationId": "listAuthenticityBetaCases",
@@ -2770,8 +3094,8 @@
                     "value": {
                       "items": [
                         {
-                          "id": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21",
-                          "authorId": "018b27d4-5b3b-73e3-bf77-bf7bb9530f22",
+                          "id": "00000000-0000-4000-8000-000000000001",
+                          "authorId": "00000000-0000-4000-8000-000000000002",
                           "body": "A disclosed human-authored post.",
                           "declaredCreationMode": "human",
                           "visibility": "public",
@@ -2781,7 +3105,7 @@
                             "like": 1
                           },
                           "viewerReaction": "like",
-                          "createdAt": "2026-08-10T09:00:00Z"
+                          "createdAt": "2000-01-03T00:00:00Z"
                         }
                       ],
                       "nextCursor": null
@@ -2829,7 +3153,7 @@
                 "spam": {
                   "value": {
                     "contentType": "post",
-                    "contentId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
+                    "contentId": "00000000-0000-4000-8000-000000000006",
                     "reasonCode": "spam"
                   }
                 }
@@ -2848,7 +3172,7 @@
                 "examples": {
                   "accepted": {
                     "value": {
-                      "flagId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c"
+                      "flagId": "00000000-0000-4000-8000-000000000008"
                     }
                   }
                 }
@@ -3381,7 +3705,7 @@
                     "body": "Local reporting from the community meeting.",
                     "declaredCreationMode": "human",
                     "geoScope": "community",
-                    "placeId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c"
+                    "placeId": "00000000-0000-4000-8000-000000000008"
                   }
                 }
               }
@@ -3400,8 +3724,8 @@
                   "published": {
                     "summary": "Published human-authored post",
                     "value": {
-                      "id": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
-                      "authorId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1b",
+                      "id": "00000000-0000-4000-8000-000000000006",
+                      "authorId": "00000000-0000-4000-8000-000000000007",
                       "content": "Local reporting from the community meeting.",
                       "contentType": "text",
                       "visibility": "public",
@@ -3415,8 +3739,8 @@
                         "appealState": "none",
                         "labelVersion": "authorship-v1.0.0"
                       },
-                      "createdAt": "2026-08-10T09:00:00Z",
-                      "updatedAt": "2026-08-10T09:00:00Z"
+                      "createdAt": "2000-01-03T00:00:00Z",
+                      "updatedAt": "2000-01-03T00:00:00Z"
                     }
                   }
                 }
@@ -3608,7 +3932,7 @@
           }
         ],
         "summary": "Register, sign in, or resend email verification",
-        "description": "Registers an email account, signs in a verified account, or resends a verification message. Registration requires a Turnstile token when the production bot-protection gate is enabled.\n",
+        "description": "Registers an email account, signs in a verified account, or resends a verification message. New account creation is invite-only; an invitation code is entered at signup and is bound to the invited email. Registration requires a Turnstile token when the production bot-protection gate is enabled.\n",
         "tags": [
           "Auth"
         ],
@@ -3626,7 +3950,7 @@
                   "value": {
                     "mode": "login",
                     "email": "alice@example.com",
-                    "password": "correct-horse-battery-staple"
+                    "password": "SYNTHETIC-EXAMPLE-ONLY-PASSWORD-NOT-VALID"
                   }
                 },
                 "register": {
@@ -3634,8 +3958,8 @@
                   "value": {
                     "mode": "register",
                     "email": "alice@example.com",
-                    "password": "correct-horse-battery-staple",
-                    "turnstileToken": "turnstile_verified_token"
+                    "password": "SYNTHETIC-EXAMPLE-ONLY-PASSWORD-NOT-VALID",
+                    "turnstileToken": "SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"
                   }
                 },
                 "resendVerification": {
@@ -3643,7 +3967,7 @@
                   "value": {
                     "mode": "resend_verification",
                     "email": "alice@example.com",
-                    "turnstileToken": "turnstile_verified_token"
+                    "turnstileToken": "SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"
                   }
                 }
               }
@@ -3662,8 +3986,8 @@
                   "success": {
                     "summary": "Email session created",
                     "value": {
-                      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
-                      "refreshToken": "refresh_example_01K1LYTHAUS",
+                      "accessToken": "SYNTHETIC-EXAMPLE-ONLY-ACCESS-TOKEN-NOT-VALID",
+                      "refreshToken": "SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID",
                       "tokenType": "Bearer",
                       "expiresIn": 900
                     }
@@ -3695,7 +4019,7 @@
             }
           },
           "400": {
-            "description": "Invalid request",
+            "description": "Invalid request, or invite_required when no valid invitation is available for a new account.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3853,10 +4177,10 @@
                   "processing": {
                     "value": {
                       "request": {
-                        "requestId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
+                        "requestId": "00000000-0000-4000-8000-000000000006",
                         "requestType": "export",
                         "state": "processing",
-                        "acceptedAt": "2026-07-29T07:00:00Z",
+                        "acceptedAt": "2000-01-01T00:00:00Z",
                         "completedAt": null
                       }
                     }
@@ -3927,10 +4251,10 @@
                 "examples": {
                   "accepted": {
                     "value": {
-                      "requestId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
+                      "requestId": "00000000-0000-4000-8000-000000000006",
                       "requestType": "export",
                       "state": "received",
-                      "acceptedAt": "2026-07-29T07:00:00Z"
+                      "acceptedAt": "2000-01-01T00:00:00Z"
                     }
                   }
                 }
@@ -4097,7 +4421,7 @@
                 "standard": {
                   "summary": "Appeal a resolved post or comment case",
                   "value": {
-                    "caseId": "018b27d4-6e1e-7bd3-bb5a-98f24bb968c2",
+                    "caseId": "00000000-0000-4000-8000-000000000003",
                     "statement": "I believe this decision should be reviewed because the context was misunderstood."
                   }
                 }
@@ -4117,7 +4441,7 @@
                   "created": {
                     "summary": "Appeal accepted for independent assignment",
                     "value": {
-                      "appealId": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43",
+                      "appealId": "00000000-0000-4000-8000-000000000004",
                       "state": "open",
                       "riskClass": "standard",
                       "policyVersion": "appeals-v1.0.0"
@@ -4253,8 +4577,8 @@
                   "recorded": {
                     "summary": "Immutable reviewer vote recorded",
                     "value": {
-                      "voteId": "018b27d4-8a9c-7d9e-bf0e-9bf93c3fce43",
-                      "appealId": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43",
+                      "voteId": "00000000-0000-4000-8000-000000000005",
+                      "appealId": "00000000-0000-4000-8000-000000000004",
                       "decision": "overturn",
                       "locked": true
                     }
@@ -4483,7 +4807,7 @@
               "examples": {
                 "rotate": {
                   "value": {
-                    "refreshToken": "refresh_example_01K1LYTHAUS"
+                    "refreshToken": "SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID"
                   }
                 }
               }
@@ -4501,8 +4825,8 @@
                 "examples": {
                   "rotated": {
                     "value": {
-                      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.rotated",
-                      "refreshToken": "refresh_example_01K1LYTHAUS_rotated",
+                      "accessToken": "SYNTHETIC-EXAMPLE-ONLY-ACCESS-TOKEN-NOT-VALID",
+                      "refreshToken": "SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID",
                       "tokenType": "Bearer",
                       "expiresIn": 900
                     }
@@ -4666,7 +4990,7 @@
                 "request": {
                   "value": {
                     "email": "member@example.com",
-                    "turnstileToken": "turnstile-token"
+                    "turnstileToken": "SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"
                   }
                 }
               }
@@ -4881,15 +5205,15 @@
                 "examples": {
                   "authenticated": {
                     "value": {
-                      "id": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1b",
-                      "sub": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1b",
+                      "id": "00000000-0000-4000-8000-000000000007",
+                      "sub": "00000000-0000-4000-8000-000000000007",
                       "email": "member@example.com",
                       "role": "user",
                       "subscription_tier": "free",
                       "reputation_level": 0,
                       "reputation_policy_version": "reputation-v2.0.0",
-                      "created_at": "2026-08-01T09:00:00Z",
-                      "last_login_at": "2026-08-10T09:00:00Z"
+                      "created_at": "2000-01-02T00:00:00Z",
+                      "last_login_at": "2000-01-03T00:00:00Z"
                     }
                   }
                 }
@@ -6509,7 +6833,7 @@
                   "contentRevision": {
                     "value": {
                       "post": {
-                        "id": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
+                        "id": "00000000-0000-4000-8000-000000000006",
                         "body": "Corrected local reporting from the community meeting.",
                         "declaredCreationMode": "human",
                         "visibility": "public",
@@ -9312,6 +9636,136 @@
         }
       }
     },
+    "/admin/waitlist/{waitlistId}/invite": {
+      "servers": [
+        {
+          "url": "https://admin.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminWaitlistInvite",
+        "summary": "Send a one-time signup invitation to a waitlist entry",
+        "description": "Administrator and owner roles may queue a one-time email-bound signup invitation for an eligible waiting entry. Provider acceptance advances the waitlist state; queue submission does not prove inbox delivery.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "waitlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/requiredIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reasonCode",
+                  "confirmation"
+                ],
+                "properties": {
+                  "reasonCode": {
+                    "type": "string",
+                    "pattern": "^[A-Z0-9_.:-]{2,80}$"
+                  },
+                  "confirmation": {
+                    "type": "string",
+                    "description": "Type SEND WAITLIST INVITE followed by the waitlist UUID."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "A one-time invitation was queued.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "deliveryState",
+                    "verificationState"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deliveryState": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "cooldown"
+                      ]
+                    },
+                    "verificationState": {
+                      "type": "string",
+                      "enum": [
+                        "pending_verification"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/admin/waitlist/{waitlistId}/status": {
       "servers": [
         {
@@ -9321,7 +9775,8 @@
       "post": {
         "operationId": "adminWaitlistStatusUpdate",
         "summary": "Update a waitlist signup status",
-        "description": "Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.",
+        "deprecated": true,
+        "description": "Status is managed by provider acceptance, signup verification, and unsubscribe. Manual updates are rejected with waitlist_status_managed.",
         "tags": [
           "Admin"
         ],
@@ -9352,26 +9807,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "Waitlist status recorded.",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "private, no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WaitlistStatusResponse"
-                }
-              }
-            }
-          },
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
@@ -9385,7 +9820,14 @@
             "$ref": "#/components/responses/NotFound"
           },
           "409": {
-            "$ref": "#/components/responses/Conflict"
+            "description": "Waitlist status is managed by the system.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           },
           "413": {
             "$ref": "#/components/responses/RequestTooLarge"
@@ -11616,12 +12058,12 @@
                     "value": {
                       "state": "found",
                       "account": {
-                        "id": "01900000-0000-7000-8000-000000000001",
+                        "id": "00000000-0000-4000-8000-000000000009",
                         "status": "active",
                         "verificationState": "pending_verification",
                         "verifiedAt": null,
-                        "createdAt": "2026-10-01T00:00:00.000000Z",
-                        "updatedAt": "2026-10-01T00:00:00.000000Z",
+                        "createdAt": "2000-01-04T00:00:00Z",
+                        "updatedAt": "2000-01-04T00:00:00Z",
                         "deletedAt": null,
                         "lastSignInAt": null,
                         "activeSessionCount": 0,
@@ -11726,8 +12168,8 @@
                   "value": {
                     "reasonCode": "SUPPORT_REQUEST",
                     "correlationId": "synthetic-support-lookup",
-                    "since": "2026-10-01T00:00:00Z",
-                    "until": "2026-10-03T00:00:00Z"
+                    "since": "2000-01-05T00:00:00Z",
+                    "until": "2000-01-07T00:00:00Z"
                   }
                 }
               }
@@ -11750,7 +12192,7 @@
                 "example": {
                   "items": [],
                   "nextCursor": null,
-                  "snapshotAt": "2026-10-02T00:00:00.000001Z",
+                  "snapshotAt": "2000-01-06T00:00:00Z",
                   "coverage": "partial",
                   "notice": "This is partial recorded history. Events may never have been recorded or may have expired or been removed. An empty result does not prove that no activity occurred. Identity account events do not record correlation IDs.",
                   "correlationId": "synthetic-support-history"
@@ -12646,7 +13088,7 @@
                 "examples": {
                   "resolved": {
                     "value": {
-                      "appealId": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43",
+                      "appealId": "00000000-0000-4000-8000-000000000004",
                       "status": "resolved",
                       "reviewerPanelDecision": "uphold",
                       "finalDecision": "uphold",
@@ -14769,6 +15211,219 @@
           }
         }
       },
+      "ContributionFeedbackTarget": {
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "post",
+              "comment"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ContributionQuality": {
+        "type": "object",
+        "required": [
+          "counts",
+          "myValue"
+        ],
+        "properties": {
+          "counts": {
+            "type": "object",
+            "required": [
+              "like",
+              "dislike"
+            ],
+            "properties": {
+              "like": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dislike": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "myValue": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "like",
+              "dislike"
+            ]
+          }
+        }
+      },
+      "ContributionEmotion": {
+        "type": "object",
+        "required": [
+          "counts",
+          "myValue"
+        ],
+        "properties": {
+          "counts": {
+            "type": "object",
+            "required": [
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ],
+            "properties": {
+              "amused": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sad": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "angry": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "surprised": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "appreciative": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "myValue": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ]
+          }
+        }
+      },
+      "ContributionFeedbackSummary": {
+        "type": "object",
+        "required": [
+          "target",
+          "quality",
+          "emotion"
+        ],
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/ContributionFeedbackTarget"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/ContributionQuality"
+          },
+          "emotion": {
+            "$ref": "#/components/schemas/ContributionEmotion"
+          }
+        }
+      },
+      "ContributionFeedbackError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        }
+      },
+      "QualityFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "like",
+              "dislike"
+            ],
+            "description": "Null removes the current quality vote."
+          }
+        }
+      },
+      "ContributionFeedbackChange": {
+        "type": "object",
+        "required": [
+          "target",
+          "channel",
+          "value",
+          "changed"
+        ],
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/ContributionFeedbackTarget"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "quality",
+              "emotion"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "like",
+              "dislike",
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ]
+          },
+          "changed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EmotionFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "amused",
+              "sad",
+              "angry",
+              "surprised",
+              "appreciative"
+            ],
+            "description": "Null removes the current emotional reaction."
+          }
+        }
+      },
       "BetaReview": {
         "type": "object",
         "additionalProperties": false,
@@ -16031,7 +16686,8 @@
         "additionalProperties": false,
         "required": [
           "token",
-          "password"
+          "password",
+          "email"
         ],
         "properties": {
           "token": {
@@ -16047,6 +16703,13 @@
             "maxLength": 128,
             "writeOnly": true,
             "description": "Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320,
+            "writeOnly": true,
+            "description": "Must match the email address to which the one-time token was issued."
           }
         }
       },
@@ -18898,6 +19561,7 @@
           "id",
           "email",
           "status",
+          "inviteDeliveryState",
           "source",
           "createdAt",
           "retentionHold"
@@ -18919,6 +19583,26 @@
               "invited",
               "converted",
               "unsubscribed"
+            ]
+          },
+          "inviteDeliveryState": {
+            "type": "string",
+            "enum": [
+              "not_invited",
+              "queued",
+              "processing",
+              "provider_accepted",
+              "delivered",
+              "deferred",
+              "bounced",
+              "rejected",
+              "failed",
+              "delivery_attention",
+              "cancelled",
+              "complained",
+              "revoked",
+              "redeemed",
+              "expired"
             ]
           },
           "source": {
@@ -18976,7 +19660,8 @@
         "required": [
           "items",
           "nextCursor",
-          "summary"
+          "summary",
+          "inviteFeatureEnabled"
         ],
         "properties": {
           "items": {
@@ -18984,6 +19669,10 @@
             "items": {
               "$ref": "#/components/schemas/WaitlistAdminItem"
             }
+          },
+          "inviteFeatureEnabled": {
+            "type": "boolean",
+            "description": "Whether the invitation schema and send flow are enabled for this admin environment."
           },
           "nextCursor": {
             "type": "string",
@@ -19098,14 +19787,6 @@
           "confirmation"
         ],
         "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "invited",
-              "converted",
-              "unsubscribed"
-            ]
-          },
           "source": {
             "type": "string",
             "maxLength": 120
@@ -22150,6 +22831,25 @@
       }
     },
     "parameters": {
+      "targetId": {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "feedbackIdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "description": "Reuse the same key to retry an identical change safely.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"
+        }
+      },
       "AlphaCaseId": {
         "name": "caseId",
         "in": "path",
@@ -22336,6 +23036,46 @@
       }
     },
     "responses": {
+      "FeedbackError": {
+        "description": "Request rejected, target unavailable, rate limited, or feature disabled.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContributionFeedbackError"
+            }
+          }
+        }
+      },
+      "FeedbackIdempotencyConflict": {
+        "description": "The replay key conflicts, is still processing, or has an uncertain outcome.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContributionFeedbackError"
+            },
+            "examples": {
+              "keyConflict": {
+                "value": {
+                  "error": "idempotency_key_conflict",
+                  "correlationId": "synthetic"
+                }
+              },
+              "inProgress": {
+                "value": {
+                  "error": "idempotency_in_progress",
+                  "correlationId": "synthetic"
+                }
+              },
+              "outcomeUnknown": {
+                "value": {
+                  "error": "idempotency_outcome_unknown",
+                  "correlationId": "synthetic"
+                }
+              }
+            }
+          }
+        }
+      },
       "BadRequest": {
         "description": "The request could not be validated or a domain invariant prevented it.",
         "content": {

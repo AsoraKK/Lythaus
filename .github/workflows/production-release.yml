@@ -32,10 +32,10 @@ on:
         description: Successful historical branch reconciliation run ID for the exact release SHA
         required: true
         type: string
-      acceptance_run_id:
-        description: Existing exact-candidate production-auth acceptance run to resume
+      release_resume_context_json:
+        description: Optional JSON continuation data with acceptance_run_id and/or app_pages_serving_proof_json
         required: false
-        default: ''
+        default: '{}'
         type: string
       release_mode:
         description: Select the canonical release mode; owner testing remains uncertified
@@ -45,6 +45,7 @@ on:
         options:
           - automatic
           - force_auth_critical
+          - app_only
           - owner_testing
           - owner_testing_native_recovery_exception
       confirm_production:
@@ -89,6 +90,7 @@ jobs:
       force_auth_critical: ${{ steps.release_plan.outputs.force_auth_critical }}
       independent_recovery_status: ${{ steps.recovery.outputs.independent_recovery_status }}
       recovery_readiness_status: ${{ steps.recovery.outputs.recovery_readiness_status }}
+      previous_production_run_id: ${{ steps.prior_run.outputs.previous_production_run_id }}
     permissions:
       actions: read
       checks: read
@@ -332,6 +334,10 @@ jobs:
           PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
           RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/recovery-readiness.json
         run: node scripts/ci/verify-production-recovery-readiness.mjs
+      - name: Resolve the exact prior canonical run for app-only reuse
+        id: prior_run
+        if: inputs.release_mode == 'app_only'
+        run: node scripts/ci/resolve-prior-canonical-run.mjs
       - name: Upload sanitized persistent recovery readiness
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -357,7 +363,7 @@ jobs:
         if: (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception')
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
-          ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          ACCEPTANCE_RUN_ID: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
           CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
           OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
         shell: bash
@@ -567,7 +573,7 @@ jobs:
   marketing:
     name: Deploy marketing
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"marketing"')
+    if: inputs.release_mode != 'app_only' && needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"marketing"')
     uses: ./.github/workflows/deploy-marketing.yml
     with:
       release_sha: ${{ inputs.release_sha }}
@@ -585,10 +591,11 @@ jobs:
   web:
     name: Deploy Flutter web
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"flutter-web"')
+    if: inputs.release_mode != 'app_only' && needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"flutter-web"')
     uses: ./.github/workflows/deploy-alpha-web.yml
     with:
       release_sha: ${{ inputs.release_sha }}
+      release_mode: ${{ inputs.release_mode }}
       target_environment: production
       source_evidence_verified: true
       owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
@@ -606,7 +613,7 @@ jobs:
   admin:
     name: Deploy control panel
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"control-panel"')
+    if: inputs.release_mode != 'app_only' && needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"control-panel"')
     uses: ./.github/workflows/deploy-control-panel.yml
     with:
       release_sha: ${{ inputs.release_sha }}
@@ -624,11 +631,11 @@ jobs:
   workers:
     name: Deploy Workers and jobs
     needs: [preflight, provider_evidence]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    if: inputs.release_mode != 'app_only' && needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
     uses: ./.github/workflows/native-workers-deploy.yml
     with:
       release_sha: ${{ inputs.release_sha }}
-      acceptance_run_id: ${{ inputs.acceptance_run_id }}
+      acceptance_run_id: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
       previous_production_sha: ${{ inputs.previous_production_sha }}
       source_evidence_verified: true
       force_auth_critical: ${{ inputs.release_mode != 'automatic' }}
@@ -641,10 +648,26 @@ jobs:
       historical_reconciliation_run_id: ${{ inputs.historical_reconciliation_run_id }}
     secrets: inherit
 
+  app_only:
+    name: App-only transaction with unchanged Workers
+    needs: [preflight, provider_evidence]
+    if: inputs.release_mode == 'app_only' && needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    uses: ./.github/workflows/canonical-app-only-release.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      previous_production_sha: ${{ inputs.previous_production_sha }}
+      previous_production_run_id: ${{ needs.preflight.outputs.previous_production_run_id }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      acceptance_run_id: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
+      app_pages_serving_proof_json: ${{ fromJSON(inputs.release_resume_context_json).app_pages_serving_proof_json || '' }}
+      web_pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
+      admin_pages_project: ${{ needs.preflight.outputs.admin_pages_project }}
+    secrets: inherit
+
   production_smoke:
     name: Verify canonical production surfaces
     needs: [preflight, provider_evidence, marketing, web, admin, workers]
-    if: always()
+    if: ${{ always() && inputs.release_mode != 'app_only' }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
@@ -729,7 +752,7 @@ jobs:
       cancel-in-progress: false
     name: Roll back changed components after downstream failure
     needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke]
-    if: ${{ always() && needs.workers.result == 'success' && (needs.marketing.result == 'failure' || needs.marketing.result == 'cancelled' || needs.web.result == 'failure' || needs.web.result == 'cancelled' || needs.admin.result == 'failure' || needs.admin.result == 'cancelled' || needs.production_smoke.result == 'failure' || needs.production_smoke.result == 'cancelled') }}
+    if: ${{ always() && inputs.release_mode != 'app_only' && needs.workers.result == 'success' && (needs.marketing.result == 'failure' || needs.marketing.result == 'cancelled' || needs.web.result == 'failure' || needs.web.result == 'cancelled' || needs.admin.result == 'failure' || needs.admin.result == 'cancelled' || needs.production_smoke.result == 'failure' || needs.production_smoke.result == 'cancelled') }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 25
@@ -936,7 +959,7 @@ jobs:
 
   manifest:
     name: Publish canonical release manifest
-    needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke, rollback]
+    needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke, rollback, app_only]
     if: always()
     runs-on: ubuntu-latest
     environment: production
@@ -947,6 +970,9 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
       PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
+      PREVIOUS_PRODUCTION_RUN_ID: ${{ needs.preflight.outputs.previous_production_run_id }}
+      APP_ONLY_RELEASE: ${{ inputs.release_mode == 'app_only' }}
+      CLOUDFLARE_LEGACY_BRAND_ACTIVE_RESOURCES: ${{ needs.provider_evidence.outputs.cloudflare_legacy_asora_active_resources || '0' }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
       NATIVE_BRANCH_PROTECTION_STATUS: ${{ needs.preflight.outputs.native_branch_protection_status || 'ACTIVE' }}
       RELEASE_GOVERNANCE_COMPENSATING_CONTROLS: ${{ needs.preflight.outputs.release_governance_compensating_controls || 'BLOCKED' }}
@@ -1022,7 +1048,7 @@ jobs:
       COORDINATOR_WORKER_STATUS: ${{ needs.workers.outputs.coordinator_worker_status }}
       ROLLBACK_ARTIFACTS_PROVEN: ${{ needs.workers.outputs.rollback_artifacts_proven || 'false' }}
       ROLLBACK_STATE: ${{ needs.workers.outputs.rollback_state || 'UNKNOWN' }}
-      ROLLBACK_COMPONENTS_JSON: ${{ needs.rollback.outputs.rollback_components_json || needs.workers.outputs.rollback_components_json || needs.preflight.outputs.changed_components_json || '[]' }}
+      ROLLBACK_COMPONENTS_JSON: ${{ inputs.release_mode == 'app_only' && '["flutter-web"]' || needs.rollback.outputs.rollback_components_json || needs.workers.outputs.rollback_components_json || needs.preflight.outputs.changed_components_json || '[]' }}
       ROLLBACK_EVIDENCE_PATH: ${{ needs.rollback.outputs.rollback_evidence_path || '' }}
       PRODUCTION_SMOKE_MARKETING: ${{ needs.production_smoke.outputs.marketing || 'BLOCKED' }}
       PRODUCTION_SMOKE_WWW: ${{ needs.production_smoke.outputs.www || 'BLOCKED' }}
@@ -1040,9 +1066,21 @@ jobs:
       - name: Require exact manifest SHA
         shell: bash
         run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - name: Validate bound app-only manifest evidence
+        id: app_only_manifest
+        if: always() && inputs.release_mode == 'app_only'
+        env:
+          APP_ONLY_RESULT: ${{ needs.app_only.result }}
+          APP_ONLY_STATUS: ${{ needs.app_only.outputs.status }}
+          APP_ONLY_PREPARATION_JSON: ${{ needs.app_only.outputs.preparation_json }}
+          APP_ONLY_EVIDENCE_JSON: ${{ needs.app_only.outputs.evidence_json }}
+          APP_ONLY_SMOKE_JSON: ${{ needs.app_only.outputs.smoke_json }}
+          APP_ONLY_HISTORY_JSON: ${{ needs.app_only.outputs.history_json }}
+          APP_ONLY_ADMIN_PROJECT: ${{ needs.preflight.outputs.admin_pages_project }}
+        run: node scripts/ci/prepare-app-only-manifest-env.mjs
       - name: Classify upstream release failure domain
         id: upstream_failure_domain
-        if: always()
+        if: always() && inputs.release_mode != 'app_only'
         env:
           PREFLIGHT_RESULT: ${{ needs.preflight.result }}
           PROVIDER_RESULT: ${{ needs.provider_evidence.result }}
@@ -1054,9 +1092,18 @@ jobs:
           ROLLBACK_RESULT: ${{ needs.rollback.result }}
           FAILURE_DOMAIN_EVIDENCE_JSON: ${{ needs.workers.outputs.failure_domain_evidence_json || '[]' }}
         run: node scripts/ci/resolve-release-failure-domain.mjs
+      - name: Classify app-only release failure domain
+        id: app_only_failure_domain
+        if: always() && inputs.release_mode == 'app_only'
+        env:
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          PROVIDER_RESULT: ${{ needs.provider_evidence.result }}
+          APP_ONLY_RESULT: ${{ steps.app_only_manifest.outcome == 'success' && needs.app_only.result || 'failure' }}
+          APP_ONLY_STATUS: ${{ needs.app_only.outputs.status }}
+        run: node scripts/ci/resolve-app-only-failure-domain.mjs
       - name: Finalize post-activation release state
         id: verified_state
-        if: always()
+        if: always() && inputs.release_mode != 'app_only'
         env:
           RELEASE_STATE_HISTORY_JSON: ${{ needs.workers.outputs.release_state_history_json || '[]' }}
           PRODUCTION_SMOKE_RESULT: ${{ needs.production_smoke.result }}
@@ -1088,12 +1135,35 @@ jobs:
             echo 'state=BLOCKED' >> "$GITHUB_OUTPUT"
             echo 'history_json=[]' >> "$GITHUB_OUTPUT"
           fi
+      - name: Record app-only release state
+        id: app_only_state
+        if: always() && inputs.release_mode == 'app_only'
+        env:
+          APP_ONLY_RESULT: ${{ needs.app_only.result }}
+          APP_ONLY_STATUS: ${{ needs.app_only.outputs.status }}
+          APP_ONLY_RELEASE_STATE: ${{ needs.app_only.outputs.release_state }}
+          APP_ONLY_HISTORY_JSON: ${{ needs.app_only.outputs.history_json }}
+          MANIFEST_VALIDATION: ${{ steps.app_only_manifest.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$APP_ONLY_RESULT" == success && "$APP_ONLY_STATUS" == VERIFIED && "$APP_ONLY_RELEASE_STATE" == VERIFIED && "$MANIFEST_VALIDATION" == success ]] \
+            && jq -e 'type == "array" and .[-1].state == "VERIFIED"' <<<"$APP_ONLY_HISTORY_JSON" >/dev/null; then
+            echo 'state=VERIFIED' >> "$GITHUB_OUTPUT"
+            echo "history_json=$APP_ONLY_HISTORY_JSON" >> "$GITHUB_OUTPUT"
+          elif [[ "$APP_ONLY_RELEASE_STATE" == ROLLED_BACK ]] && jq -e 'type == "array" and .[-1].state == "ROLLED_BACK"' <<<"$APP_ONLY_HISTORY_JSON" >/dev/null 2>&1; then
+            echo 'state=ROLLED_BACK' >> "$GITHUB_OUTPUT"
+            echo "history_json=$APP_ONLY_HISTORY_JSON" >> "$GITHUB_OUTPUT"
+          else
+            echo 'state=BLOCKED' >> "$GITHUB_OUTPUT"
+            echo 'history_json=[]' >> "$GITHUB_OUTPUT"
+          fi
       - name: Build canonical release manifest
         if: always()
         env:
-          RELEASE_STATE: ${{ steps.verified_state.outputs.state || 'BLOCKED' }}
-          RELEASE_STATE_HISTORY_JSON: ${{ steps.verified_state.outputs.history_json || '[]' }}
-          FAILURE_DOMAIN_EVIDENCE_JSON: ${{ steps.upstream_failure_domain.outputs.failure_domain_evidence_json || needs.workers.outputs.failure_domain_evidence_json || '[]' }}
+          RELEASE_STATE: ${{ steps.app_only_state.outputs.state || steps.verified_state.outputs.state || 'BLOCKED' }}
+          RELEASE_STATE_HISTORY_JSON: ${{ steps.app_only_state.outputs.history_json || steps.verified_state.outputs.history_json || '[]' }}
+          FAILURE_DOMAIN_EVIDENCE_JSON: ${{ steps.app_only_failure_domain.outputs.failure_domain_evidence_json || steps.upstream_failure_domain.outputs.failure_domain_evidence_json || needs.workers.outputs.failure_domain_evidence_json || '[]' }}
           OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
           INDEPENDENT_RECOVERY_STATUS: ${{ needs.preflight.outputs.independent_recovery_status || 'BLOCKED' }}
           RECOVERY_READINESS_STATUS: ${{ needs.preflight.outputs.recovery_readiness_status || 'BLOCKED' }}

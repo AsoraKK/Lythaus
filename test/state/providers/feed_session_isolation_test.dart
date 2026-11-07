@@ -367,7 +367,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(find.text('Discover').last);
+      await tester.tap(find.text('Feed').last);
       await tester.pump();
       await tester.pump();
       expect(find.text('Synthetic post b-current-card'), findsOneWidget);

@@ -213,7 +213,7 @@ Dispatches by the activated policy. Monthly-policy cases await safe evidence tri
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAppealsApi();
-final AppealCreateRequest appealCreateRequest = {"caseId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","statement":"I believe this decision should be reviewed because the context was misunderstood."}; // AppealCreateRequest |
+final AppealCreateRequest appealCreateRequest = {"caseId":"00000000-0000-4000-8000-000000000003","statement":"I believe this decision should be reviewed because the context was misunderstood."}; // AppealCreateRequest |
 final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {

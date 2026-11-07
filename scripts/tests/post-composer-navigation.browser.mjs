@@ -211,7 +211,7 @@ for (const { width, mode, dark } of scenarios) test(
     await enter(page.getByRole('textbox', { name: 'Email', exact: true }), user.email);
     await enter(page.locator('input[type=password]'), 'synthetic12');
     await page.getByRole('button', { name: 'Sign in with email', exact: true }).click();
-    const create = page.getByRole('button', { name: /^Create(?:\b|$)/ });
+    const create = page.getByRole('button', { name: /^Create(?:\b|$)/ }).first();
     await create.waitFor({ timeout: 60_000 });
     await page.waitForURL(url => url.pathname === '/');
     const beforeCreate = page.url();
@@ -225,7 +225,7 @@ for (const { width, mode, dark } of scenarios) test(
       const originalPixels = frozen ? await page.screenshot({ clip: await field.boundingBox() }) : null;
       await page.goBack();
       await page.waitForURL(beforeCreate);
-      await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).first().waitFor();
+      await page.getByRole('button', { name: /^Feed(?:\b|$)/ }).first().waitFor();
       await page.goForward();
       await page.waitForURL(url => url.searchParams.get('tab') === 'create');
       await field.waitFor();
@@ -290,7 +290,7 @@ for (const { width, mode, dark } of scenarios) test(
       assert.equal(persisted.rowCount, 0);
     } else if (broken) {
       await page.waitForTimeout(2000);
-      assert.equal(await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).count(), 0);
+      assert.equal(await page.getByRole('button', { name: /^Feed(?:\b|$)/ }).count(), 0);
       assert.equal(await field.count(), 0);
     } else {
       if (mode === 'inactive') {
@@ -300,7 +300,7 @@ for (const { width, mode, dark } of scenarios) test(
         await page.getByRole('button', { name: /^Profile(?:\b|$)/ }).first().waitFor();
       } else {
         await page.waitForURL(url => url.pathname === '/' && url.searchParams.get('tab') === 'discover');
-        await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).first().waitFor();
+        await page.getByRole('button', { name: /^Feed(?:\b|$)/ }).first().waitFor();
       }
       await content('Post submitted. Publication checks are pending.').waitFor();
       await page.locator('flt-semantics').getByText(/^Choose Human-authored or AI-assisted before posting\./).first().waitFor({ state: 'hidden' });

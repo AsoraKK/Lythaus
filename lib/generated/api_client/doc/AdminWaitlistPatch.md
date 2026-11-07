@@ -8,7 +8,6 @@ import 'package:lythaus_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**status** | **String** |  | [optional]
 **source_** | **String** |  | [optional]
 **reasonCode** | **String** |  |
 **confirmation** | **String** |  |

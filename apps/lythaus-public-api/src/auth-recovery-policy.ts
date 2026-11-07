@@ -28,6 +28,34 @@ export interface RecoveryAccount {
   credential_verified: boolean;
 }
 
+export async function waitlistInviteSchemaInstalled(client: DatabaseClient, required: boolean): Promise<boolean> {
+  const result = await client.query<{ invites_present: boolean; verifier_present: boolean }>(
+    `SELECT pg_catalog.to_regclass('marketing.waitlist_invites') IS NOT NULL AS invites_present,
+            pg_catalog.to_regprocedure('marketing.lock_waitlist_invite_for_verification(uuid,uuid,bytea)') IS NOT NULL AS verifier_present`,
+  );
+  const schema = result.rows[0];
+  if (result.rowCount !== 1 || typeof schema?.invites_present !== 'boolean' || typeof schema.verifier_present !== 'boolean') {
+    throw new Error('waitlist_invite_state_unavailable');
+  }
+  const installed = schema.invites_present && schema.verifier_present;
+  if ((schema.invites_present || schema.verifier_present) && !installed) throw new Error('waitlist_invite_state_unavailable');
+  if (required && !installed) throw new Error('waitlist_invite_state_unavailable');
+  return installed;
+}
+
+export async function hasWaitlistInviteForVerification(client: DatabaseClient, userId: string): Promise<boolean> {
+  const result = await client.query<{ found: boolean; valid: boolean }>(
+    `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, NULL, decode('', 'base64'))`,
+    [userId],
+  );
+  const invite = result.rows[0];
+  if (result.rowCount !== 1 || typeof invite?.found !== 'boolean' || typeof invite.valid !== 'boolean'
+    || (invite.found === false && invite.valid !== false)) {
+    throw new Error('waitlist_invite_state_unavailable');
+  }
+  return invite.found;
+}
+
 export function recoverySupportReason(account: RecoveryAccount): string | undefined {
   if (account.protected_identity) return 'protected_administrative_identity';
   if (!account.contact_ciphertext || !account.contact_lookup) return 'missing_contact_data';

@@ -83,6 +83,7 @@ class Notification {
   final String? dismissedAt;
   final DateTime createdAt;
   final String? nativeType;
+  final String? rawEventType;
 
   const Notification({
     required this.id,
@@ -100,6 +101,7 @@ class Notification {
     this.dismissedAt,
     required this.createdAt,
     this.nativeType,
+    this.rawEventType,
   });
 
   factory Notification.fromJson(Map<String, dynamic> json, {String? ownerId}) {
@@ -128,6 +130,7 @@ class Notification {
       userId: json['userId'] as String,
       category: NotificationCategory.fromJson(json['category'] as String),
       eventType: NotificationEventType.fromJson(json['eventType'] as String),
+      rawEventType: json['eventType'] as String,
       title: json['title'] as String,
       body: json['body'] as String,
       deeplink: json['deeplink'] as String?,
@@ -142,11 +145,17 @@ class Notification {
   }
 
   Map<String, dynamic> toJson() {
+    final rawType = rawEventType;
+    final knownType =
+        rawType != null &&
+        NotificationEventType.values.any(
+          (type) => type.toJson() == rawType.toUpperCase(),
+        );
     return {
       'id': id,
       'userId': userId,
       'category': category.toJson(),
-      'eventType': eventType.toJson(),
+      'eventType': rawType != null && !knownType ? rawType : eventType.toJson(),
       'title': title,
       'body': body,
       if (deeplink != null) 'deeplink': deeplink,
@@ -194,6 +203,7 @@ class Notification {
       dismissedAt: dismissedAt ?? this.dismissedAt,
       createdAt: createdAt ?? this.createdAt,
       nativeType: nativeType,
+      rawEventType: eventType == null ? rawEventType : eventType.toJson(),
     );
   }
 }

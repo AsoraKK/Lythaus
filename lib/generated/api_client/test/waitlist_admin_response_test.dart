@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Whether the invitation schema and send flow are enabled for this admin environment.
+    // bool inviteFeatureEnabled
+    test('to test the property `inviteFeatureEnabled`', () async {
+      // TODO
+    });
+
     // String nextCursor
     test('to test the property `nextCursor`', () async {
       // TODO

@@ -19,5 +19,11 @@ void main() {
       // TODO
     });
 
+    // Must match the email address to which the one-time token was issued.
+    // String email
+    test('to test the property `email`', () async {
+      // TODO
+    });
+
   });
 }

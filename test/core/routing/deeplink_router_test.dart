@@ -45,6 +45,33 @@ void main() {
     expect(find.byType(InviteRedeemScreen), findsOneWidget);
   });
 
+  testWidgets('opens app invite fragment and prefills the one-time code', (
+    tester,
+  ) async {
+    await pumpRouterHost(tester);
+    const link = 'https://app.lythaus.co/invite#token=SYNTHETIC-INVITE';
+    expect(DeeplinkRouter.canNavigate(link), isTrue);
+
+    final context = tester.element(find.text('Home host'));
+    DeeplinkRouter.navigate(context, link);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.byType(InviteRedeemScreen), findsOneWidget);
+    expect(find.text('SYNTHETIC-INVITE'), findsOneWidget);
+  });
+
+  test('rejects invite link without an invitation token', () {
+    expect(
+      DeeplinkRouter.canNavigate('https://app.lythaus.co/invite'),
+      isFalse,
+    );
+    expect(
+      DeeplinkRouter.canNavigate('https://app.lythaus.co/invite#not-a-token'),
+      isFalse,
+    );
+  });
+
   testWidgets('unknown deep-link does not navigate', (tester) async {
     await pumpRouterHost(tester);
 

@@ -220,9 +220,23 @@ test('both scoped migration and persistent release gates use protected exception
   assert.ok(workers.indexOf('Reverify fresh recovery and bounded owner exception before activation') < workers.indexOf('Activate exact candidate Worker versions'));
   assert.ok(!workers.slice(0, workers.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
   for (const [file, activation] of [['deploy-marketing.yml', 'Deploy exact marketing artifact'],
-    ['deploy-alpha-web.yml', 'Deploy immutable Pages artifact'], ['deploy-control-panel.yml', 'Deploy exact control-panel artifact']]) {
+    ['deploy-control-panel.yml', 'Deploy exact control-panel artifact']]) {
     const pages = fs.readFileSync(`.github/workflows/${file}`, 'utf8');
     assert.ok(pages.indexOf('Require fresh recovery before production Pages activation') < pages.indexOf(activation));
     assert.ok(!pages.slice(0, pages.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
   }
+  const webPages = fs.readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
+  const webRecovery = webPages.slice(webPages.indexOf('- name: Require fresh protected native recovery evidence'),
+    webPages.indexOf('- name: Recheck app-only Pages serving evidence'));
+  assert.match(webRecovery, /if: inputs\.target_environment == 'production'/);
+  assert.match(webRecovery, /node scripts\/ci\/verify-production-recovery-readiness\.mjs/);
+  assert.doesNotMatch(webRecovery, /app_only_requested/);
+  const appOnlyServing = webPages.slice(webPages.indexOf('- name: Recheck app-only Pages serving evidence'),
+    webPages.indexOf('- name: Deploy immutable Pages artifact'));
+  assert.match(appOnlyServing, /inputs\.release_mode == 'app_only'/);
+  assert.match(appOnlyServing, /APP_ONLY_CANONICAL/);
+  assert.match(appOnlyServing, /node scripts\/ci\/recheck-app-only-serving-proof\.mjs/);
+  assert.ok(webPages.indexOf('Require fresh protected native recovery evidence') < webPages.indexOf('Recheck app-only Pages serving evidence'));
+  assert.ok(webPages.indexOf('Recheck app-only Pages serving evidence') < webPages.indexOf('Deploy immutable Pages artifact'));
+  assert.ok(!webPages.slice(0, webPages.indexOf('  workflow_call:')).includes('owner_testing_recovery_exception'));
 });

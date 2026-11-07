@@ -23,6 +23,9 @@ test('signup page exposes the real production email registration flow', () => {
   assert.match(signup, /autocomplete="new-password"/);
   assert.match(signup, /acceptsPassword\(password.value, 'creation'\)/);
   assert.match(signup, /queued or is on its way/);
+  assert.ok(signup.includes('Invitation code'));
+  assert.ok(signup.includes('the email shows when it expires'));
+  assert.ok(signup.includes("hasInviteCode ? '/api/auth/email/verify'"));
   assert.doesNotMatch(signup, /This email is already registered/);
   assert.doesNotMatch(signup, /CLOUDFLARE_API_TOKEN|TURNSTILE_SECRET_KEY/);
 });

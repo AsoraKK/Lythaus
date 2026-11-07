@@ -6,6 +6,7 @@ import { RELEASE_STATES, transitionReleaseState } from './transition-release-sta
 import { COMPONENT_DISPOSITIONS } from '../release/component-deployment-plan.mjs';
 import { classifyRelease, RELEASE_CLASSES, RELEASE_COMPONENTS } from '../release/release-classification.mjs';
 import { FAILURE_DOMAINS } from '../release/failure-domains.mjs';
+import { verifyAppOnlyReleaseEvidence } from '../release/app-only-release-evidence.mjs';
 
 const root = process.cwd();
 const outputIndex = process.argv.indexOf('--output');
@@ -119,6 +120,14 @@ const reusedSet = new Set(reusedComponents);
 if (changedComponents.some((component) => reusedSet.has(component)) || RELEASE_COMPONENTS.some((component) => !changedSet.has(component) && !reusedSet.has(component))) {
   throw new Error('changed and reused component lists must partition all release components');
 }
+// Source classification remains unchanged. An app-only release has a
+// separate, explicitly narrower activation plan, backed by additional evidence.
+const appOnlyRelease = booleanValue('APP_ONLY_RELEASE');
+const appOnlyConfigurationValid = !appOnlyRelease || (!ownerTestingDeployment && releaseClass === RELEASE_CLASSES.AUTH_CRITICAL
+  && booleanValue('FORCE_AUTH_CRITICAL') && previousProductionSha !== 'NONE' && changedSet.has('flutter-web'));
+const deploymentChangedComponents = appOnlyRelease ? ['flutter-web'] : changedComponents;
+const deploymentChangedSet = new Set(deploymentChangedComponents);
+const deploymentReusedComponents = RELEASE_COMPONENTS.filter(component => !deploymentChangedSet.has(component)).sort();
 
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'lythaus-resource-registry.json'), 'utf8'));
 const hyperdrive = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json'), 'utf8'));
@@ -144,7 +153,7 @@ const validHttpsUrl = (value) => {
 
 const pages = Object.fromEntries(Object.entries(pageComponentConfig).map(([component, config]) => {
   const prefix = config.prefix;
-  const changed = changedSet.has(component);
+  const changed = deploymentChangedSet.has(component);
   const reused = reusedPagesState[component] ?? {};
   const deployedSha = shaOrNull(`${prefix}_DEPLOYMENT_SHA`) ?? (changed ? null : validSha(reused.commitSha));
   const deploymentId = deploymentIdOrNull(`${prefix}_DEPLOYMENT_ID`) ?? (changed ? null : validDeploymentId(reused.deploymentId));
@@ -174,7 +183,7 @@ const workerConfig = {
 const ownerTestingCoordinatorDeferred = ownerTestingDeployment;
 const workers = Object.fromEntries(Object.entries(workerConfig).map(([component, config]) => {
   const deferredForOwnerTest = component === 'coordinator' && ownerTestingCoordinatorDeferred;
-  const changed = changedSet.has(component) && !deferredForOwnerTest;
+  const changed = deploymentChangedSet.has(component) && !deferredForOwnerTest;
   const versionId = versionIdOrNull(`${config.env}_WORKER_VERSION`) ?? versionIdOrNull(`${config.env}_API_WORKER_VERSION`);
   const sourceSha = deferredForOwnerTest ? null : shaOrNull(`${config.env}_WORKER_SOURCE_SHA`) ?? shaOrNull('WORKER_SOURCE_SHA');
   const status = deferredForOwnerTest
@@ -209,7 +218,9 @@ const surfaces = {
 
 const cloudflareStatus = statusOrUnknown('CLOUDFLARE_INVENTORY_STATUS');
 const planetscaleStatus = statusOrUnknown('PLANETSCALE_INVENTORY_STATUS');
-const legacyAsoraActiveResources = legacyCountOrNull('CLOUDFLARE_LEGACY_ASORA_ACTIVE_RESOURCES');
+const legacyResourceCountVariable = process.env.APP_ONLY_RELEASE === 'true'
+  ? 'CLOUDFLARE_LEGACY_BRAND_ACTIVE_RESOURCES' : 'CLOUDFLARE_LEGACY_ASORA_ACTIVE_RESOURCES';
+const legacyAsoraActiveResources = legacyCountOrNull(legacyResourceCountVariable);
 const productionSmoke = {
   'lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_MARKETING'),
   'www.lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_WWW'),
@@ -234,7 +245,7 @@ const authAcceptanceStatus = authAcceptanceRequired
 const acceptanceRunId = authAcceptanceRequired ? uuidOrNull('AUTH_ACCEPTANCE_RUN_ID') : null;
 const acceptanceExpiresAt = authAcceptanceRequired ? timestampOrNull('AUTH_ACCEPTANCE_EXPIRES_AT') : null;
 const acceptanceDependencies = parseJson('AUTH_ACCEPTANCE_DEPENDENCIES_JSON', null);
-const acceptanceDependencyExpectedStatus = (component) => changedSet.has(component)
+const acceptanceDependencyExpectedStatus = (component) => deploymentChangedSet.has(component)
   ? COMPONENT_DISPOSITIONS.NEW_CANDIDATE
   : COMPONENT_DISPOSITIONS.REUSED_PRODUCTION;
 const defaultAcceptanceDependencies = Object.fromEntries(['public', 'admin', 'jobs', 'coordinator'].map((component) => [component, {
@@ -269,11 +280,11 @@ const componentEvidence = {
 };
 const changedActivationEvidence = parseJson('ACTIVATION_EVIDENCE_JSON', {
   state: valueOrNull('ACTIVATION_STATE') ?? 'BLOCKED',
-  changedComponents,
+  changedComponents: deploymentChangedComponents,
   activatedComponents: RELEASE_COMPONENTS.filter((component) => componentEvidence[component].status === COMPONENT_DISPOSITIONS.ACTIVATED),
 });
-const rollbackComponents = componentList('ROLLBACK_COMPONENTS_JSON', changedComponents);
-if (rollbackComponents.some((component) => !changedSet.has(component))) {
+const rollbackComponents = componentList('ROLLBACK_COMPONENTS_JSON', deploymentChangedComponents);
+if (rollbackComponents.some((component) => !deploymentChangedSet.has(component))) {
   throw new Error('ROLLBACK_COMPONENTS_JSON may contain only changed components');
 }
 const rollbackEvidence = {
@@ -337,7 +348,7 @@ const releaseStateHistoryValid = Array.isArray(releaseStateHistory)
 
 const pagesReady = (component) => {
   const evidence = pages[component];
-  const changed = changedSet.has(component);
+  const changed = deploymentChangedSet.has(component);
   const projectReady = component === 'marketing'
     ? evidence.project === 'lythaus-marketing'
     : component === 'flutter-web'
@@ -353,7 +364,7 @@ const pagesReady = (component) => {
 const workerReady = (component) => {
   const evidence = workers[component];
   const deferredForOwnerTest = component === 'coordinator' && ownerTestingCoordinatorDeferred;
-  const changed = changedSet.has(component) && !deferredForOwnerTest;
+  const changed = deploymentChangedSet.has(component) && !deferredForOwnerTest;
   return evidence.versionId !== null
     && evidence.sourceSha !== null
     && (deferredForOwnerTest
@@ -362,6 +373,31 @@ const workerReady = (component) => {
       ? evidence.status === COMPONENT_DISPOSITIONS.ACTIVATED && evidence.provenance === 'BUILT_FROM_RELEASE_SHA' && evidence.sourceSha.toLowerCase() === releaseSha.toLowerCase()
       : evidence.status === COMPONENT_DISPOSITIONS.REUSED_PRODUCTION && evidence.provenance === 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' && /^[0-9a-f]{40}$/i.test(evidence.sourceSha));
 };
+
+const appOnlyEvidence = (() => {
+  if (!appOnlyRelease) return null;
+  try {
+    const evidence = verifyAppOnlyReleaseEvidence({ evidence: parseJson('APP_ONLY_EVIDENCE_JSON', null), releaseSha,
+      ciRunId: valueOrNull('CI_RUN_ID'), previousSha: previousProductionSha,
+      previousRunId: valueOrNull('PREVIOUS_PRODUCTION_RUN_ID'), adminProject: pageComponentConfig['control-panel'].project });
+    for (const component of ['public', 'admin', 'jobs', 'coordinator']) {
+      if (workers[component].versionId !== evidence.workers[component].versionId
+        || workers[component].sourceSha !== evidence.workers[component].sourceSha
+        || acceptanceDependencies?.[component]?.sourceSha !== evidence.workers[component].sourceSha) return null;
+    }
+    for (const component of ['marketing', 'control-panel']) {
+      const observed = evidence.reusedPages[component], manifestPage = pages[component];
+      if (manifestPage.project !== observed.project || manifestPage.branch !== observed.branch
+        || manifestPage.deploymentId !== observed.deploymentId || manifestPage.deploymentUrl !== observed.deploymentUrl
+        || manifestPage.deployedSha !== observed.commitSha) return null;
+    }
+    const observed = evidence.appCandidate, manifestPage = pages['flutter-web'];
+    if (manifestPage.project !== observed.project || manifestPage.branch !== observed.branch
+      || manifestPage.deploymentId !== observed.deploymentId || manifestPage.deploymentUrl !== observed.deploymentUrl
+      || manifestPage.deployedSha !== observed.commitSha) return null;
+    return evidence;
+  } catch { return null; }
+})();
 
 const requiredEvidence = [
   releaseGovernanceCompensatingControls,
@@ -397,6 +433,8 @@ const requiredEvidence = [
   Object.values(productionSmoke).every((value) => value === 'PASS'),
   process.env.ROLLBACK_ARTIFACTS_PROVEN === 'true',
   process.env.CREDENTIAL_ROTATION_COMPLETED === 'true',
+  !appOnlyRelease || appOnlyEvidence !== null,
+  appOnlyConfigurationValid,
 ];
 const readinessStatus = ownerTestingDeployment
   ? 'owner-test-pending'
@@ -433,6 +471,8 @@ const unknowns = [
   legacyAsoraActiveResources === 0 ? null : 'Active Lythaus-related legacy Asora resources remain',
   process.env.CREDENTIAL_ROTATION_COMPLETED === 'true' ? null : 'Post-cutover credential rotation is not attested',
   process.env.ROLLBACK_ARTIFACTS_PROVEN === 'true' ? null : 'Rollback snapshots are not proven',
+  appOnlyRelease && appOnlyEvidence === null ? 'App-only artifact, real-browser or unchanged production component evidence is unavailable or mismatched' : null,
+  !appOnlyConfigurationValid ? 'App-only release requires a prior release, app source changes and full auth-critical certification' : null,
 ].filter(Boolean);
 
 const manifest = {
@@ -441,12 +481,38 @@ const manifest = {
   stateHistory: releaseStateHistory,
   status: productionStatus,
   productionStatus,
+  productionStatusScope: appOnlyRelease ? 'APP_ONLY_DEPLOYMENT_ONLY' : ownerTestingDeployment ? 'OWNER_TESTING' : 'CANONICAL_RELEASE',
   readinessStatus,
   capturedAt: new Date().toISOString(),
   releaseClass,
   releaseSha,
   changedComponents,
   reusedComponents,
+  ...(appOnlyRelease ? { deployment: {
+    mode: 'APP_ONLY', changedComponents: deploymentChangedComponents, reusedComponents: deploymentReusedComponents,
+    sourceChangesNotDeployed: changedComponents.filter(component => !deploymentChangedSet.has(component)),
+    artifact: appOnlyEvidence?.artifact ?? null,
+    priorCanonicalManifest: appOnlyEvidence?.prior ?? null,
+    browserAcceptance: appOnlyEvidence?.browser ?? null,
+    rollbackBaseline: appOnlyEvidence?.appBefore ?? null,
+    pagesServingProof: appOnlyEvidence?.servingProof ? {
+      schemaVersion: appOnlyEvidence.servingProof.schemaVersion,
+      proofId: appOnlyEvidence.servingProof.proofId,
+      proofDigest: appOnlyEvidence.servingProof.proofDigest,
+      source: appOnlyEvidence.servingProof.source,
+      sourceUrl: appOnlyEvidence.servingProof.sourceUrl,
+      observedAt: appOnlyEvidence.servingProof.observedAt,
+      verifiedAt: appOnlyEvidence.servingProof.verifiedAt,
+      accountId: appOnlyEvidence.servingProof.accountId,
+      hostname: appOnlyEvidence.servingProof.hostname,
+      project: appOnlyEvidence.servingProof.project,
+      projectId: appOnlyEvidence.servingProof.projectId,
+      deploymentId: appOnlyEvidence.servingProof.deploymentId,
+      commitSha: appOnlyEvidence.servingProof.commitSha,
+      previousProductionRunId: appOnlyEvidence.servingProof.previousProductionRunId,
+      previousManifestDigest: appOnlyEvidence.servingProof.previousManifestDigest,
+    } : null,
+  } } : {}),
   repository: { owner: 'AsoraKK', name: 'Lythaus', releaseSha },
   source: {
     releaseSha,
@@ -580,6 +646,7 @@ const manifest = {
     source: 'exact reviewed main SHA, deterministic release classification, and sanitized provider evidence',
     platformLimitations: [
       'GitHub artifact attestations are unavailable for private repositories on the current plan; the sanitized manifest is accompanied by a SHA-256 integrity digest.',
+      ...(appOnlyRelease ? ['App-only evidence is scoped to the Flutter Pages deployment; the dashboard association is not a byte-for-byte check of content served by app.lythaus.co and does not certify the full stack.'] : []),
     ],
     unknowns,
   },

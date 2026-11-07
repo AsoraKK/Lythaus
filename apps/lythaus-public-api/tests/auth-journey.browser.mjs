@@ -93,6 +93,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
       TURNSTILE_REQUIRED:'true', TURNSTILE_SECRET_KEY:'synthetic-only', TURNSTILE_EXPECTED_HOSTNAMES:'lythaus.co',
       EMAIL_PROVIDER_MODE:'cloudflare', EMAIL_FROM:'no-reply@mail.lythaus.co',
       EMAIL_VERIFICATION_BASE_URL:'https://lythaus.co/verify-email?token=',
+      WAITLIST_INVITES_REQUIRED:'false',
       EMAIL_PASSWORD_RESET_BASE_URL:'https://lythaus.co/reset-password?token=',
       EMAIL:{ send:async message => { const messageId=`synthetic-${uuidv7()}`; mailbox.push({ ...message,messageId }); return { messageId }; } },
     };
@@ -191,11 +192,13 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     const verifyToken=messageToken(verification);
     await navigate(`/verify-email#token=${verifyToken}`,'Confirm your email');
     assert.equal(new URL(page.url()).hash,'');
+    await page.locator('input[name=email]').fill(email);
     await page.locator('input[name=password]').fill(password);
     assert.equal(await page.locator('input[name=passwordConfirmation]').count(),0);
     await page.locator('button[type=submit]').click();
     await page.locator('[data-email-verification-status]').filter({ hasText:'verified' }).waitFor();
     await navigate(`/verify-email#token=${verifyToken}`,'Confirm your email');
+    await page.locator('input[name=email]').fill(email);
     await page.locator('input[name=password]').fill(password);
     await page.locator('button[type=submit]').click();
     await page.locator('[data-email-verification-status]').filter({ hasText:'already used' }).waitFor();

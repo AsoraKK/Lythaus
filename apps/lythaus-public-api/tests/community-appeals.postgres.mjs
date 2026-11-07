@@ -531,6 +531,7 @@ test('APP-13/REL-03: peer earning needs its own approved configuration; unavaila
   assert.equal(await processMonthlyPeerParticipation(jobsEnv, uuidv7()), null);
   assert.deepEqual(await reconcileMonthlyPeerParticipation(jobsEnv), { processed: 0 }); assert.equal(statements.length, 0);
   const untouched = await person();
+  await sql("UPDATE identity.users SET created_at = '2026-08-01T00:00:00Z' WHERE id = $1", [untouched.id]);
   const assembly = () => tx(client => assembleMonthlyReputation(client, { subjectUserId: untouched.id, sourceMonth: '2026-10',
     weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, maintenanceRulesVersion: PROPOSED_MONTHLY_MAINTENANCE_RULES.version,
     peerRulesVersion: peerVersion, evaluatedAt: '2026-11-04T00:00:00.000Z' }), 'lythaus_jobs');

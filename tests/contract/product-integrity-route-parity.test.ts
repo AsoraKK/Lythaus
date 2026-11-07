@@ -109,6 +109,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/admin/waitlist/{waitlistId}', method: 'patch', worker: 'admin', dispatcherNeedle: 'const waitlistEntry =' },
   { path: '/admin/waitlist/{waitlistId}', method: 'delete', worker: 'admin', dispatcherNeedle: 'const waitlistEntry =' },
   { path: '/admin/waitlist/{waitlistId}/status', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistStatus =' },
+  { path: '/admin/waitlist/{waitlistId}/invite', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistInvite =' },
   { path: '/admin/waitlist/{waitlistId}/retention-hold', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistRetentionHold =' },
   { path: '/admin/auth/summary', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/auth/summary'" },
   { path: '/admin/email-health', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/email-health'" },
@@ -197,19 +198,38 @@ describe('product-integrity OpenAPI parity', () => {
     expect(list.responses['200'].headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
     expect(spec.components.schemas.WaitlistAdminItem.required).toContain('retentionHold');
 
+    const deliveryStates = spec.components.schemas.WaitlistAdminItem.properties.inviteDeliveryState.enum;
+    expect(deliveryStates).toEqual(expect.arrayContaining(['revoked', 'redeemed', 'expired']));
+    const waitlistRuntime = workers.admin.split('export async function listWaitlist(')[1].split('export async function')[0];
+    const inviteProjection = waitlistRuntime.split('const inviteDeliveryProjection =')[1].split('const [records, summaryResult]')[0];
+    expect(inviteProjection).toContain("WHEN wi.revoked_at IS NOT NULL THEN 'revoked'");
+    expect(inviteProjection).toContain("WHEN wi.redeemed_at IS NOT NULL OR t.consumed_at IS NOT NULL THEN 'redeemed'");
+    expect(inviteProjection).toContain("WHEN t.expires_at <= now() AND t.superseded_at IS NULL THEN 'expired'");
+    const generatedWaitlistItem = fs.readFileSync(path.join(root, 'lib/generated/api_client/lib/src/model/waitlist_admin_item.dart'), 'utf8');
+    for (const state of ['revoked', 'redeemed', 'expired']) {
+      expect(generatedWaitlistItem).toContain(`@BuiltValueEnumConst(wireName: r'${state}')`);
+    }
+
     for (const path of [
-      '/admin/waitlist/{waitlistId}/status',
+      '/admin/waitlist/{waitlistId}/invite',
       '/admin/waitlist/{waitlistId}/retention-hold',
     ]) {
       const operation = spec.paths[path].post;
       expect(operation.security).toEqual([{ cloudflareAccess: [] }]);
-      expect(operation.responses['200'].headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
+      const success = path.endsWith('/invite') ? operation.responses['202'] : operation.responses['200'];
+      expect(success.headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
       expect(Object.keys(operation.responses)).toEqual(expect.arrayContaining(['400', '401', '403', '404', '413', '429', '503']));
     }
 
-    expect(spec.paths['/admin/waitlist/{waitlistId}/status'].post.responses['409']).toBeDefined();
+    const statusUpdate = spec.paths['/admin/waitlist/{waitlistId}/status'].post;
+    expect(statusUpdate.security).toEqual([{ cloudflareAccess: [] }]);
+    expect(statusUpdate.deprecated).toBe(true);
+    expect(statusUpdate.responses['409']).toBeDefined();
+    expect(statusUpdate.responses['200']).toBeUndefined();
     expect(spec.components.schemas.WaitlistStatusUpdate.required).toEqual(['status', 'reasonCode', 'confirmation']);
     expect(spec.components.schemas.WaitlistRetentionHoldUpdate.required).toEqual(['active', 'reasonCode', 'confirmation']);
+    expect(spec.paths['/admin/waitlist/{waitlistId}/invite'].post.requestBody.content['application/json'].schema.required)
+      .toEqual(['reasonCode', 'confirmation']);
   });
 
   test('retired duplicate product-integrity routes are absent', () => {

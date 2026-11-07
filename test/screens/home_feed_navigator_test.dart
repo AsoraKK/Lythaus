@@ -167,7 +167,7 @@ void main() {
         container.read(analyticsEventTrackerProvider) as _RecordingEventTracker;
     expect(tracker.onceEvents, contains(AnalyticsEvents.feedFirstLoad));
 
-    expect(find.text('Public posts, newest first.'), findsOneWidget);
+    expect(find.byTooltip('Public posts, newest first.'), findsOneWidget);
     expect(find.byType(FeedCard), findsWidgets);
 
     await tester.tap(find.byTooltip('Feed controls'));
@@ -185,12 +185,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('News').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('About News Board'));
+    await tester.pumpAndSettle();
     expect(
       find.text('Editorial coverage from earned, revocable contributors.'),
       findsOneWidget,
     );
 
     await tester.pumpWidget(buildNavigator(AlphaFeedSection.newsBoard));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('About News Board'));
     await tester.pumpAndSettle();
 
     expect(

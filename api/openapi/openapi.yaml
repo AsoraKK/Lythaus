@@ -65,6 +65,18 @@ tags:
   - name: Waitlist
     description: Private beta waitlist registration.
 paths:
+  /feedback/post/{targetId}:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1post~1{targetId}'
+  /feedback/post/{targetId}/quality:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1post~1{targetId}~1quality'
+  /feedback/post/{targetId}/emotion:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1post~1{targetId}~1emotion'
+  /feedback/comment/{targetId}:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1comment~1{targetId}'
+  /feedback/comment/{targetId}/quality:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1comment~1{targetId}~1quality'
+  /feedback/comment/{targetId}/emotion:
+    $ref: './contribution-feedback.yaml#/paths/~1feedback~1comment~1{targetId}~1emotion'
   /authenticity/cases:
     $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases'
   /authenticity/cases/{caseId}:
@@ -280,7 +292,7 @@ paths:
                   body: Local reporting from the community meeting.
                   declaredCreationMode: human
                   geoScope: community
-                  placeId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c
+                  placeId: "00000000-0000-4000-8000-000000000008"
       responses:
         '409':
           $ref: './product-integrity.yaml#/components/responses/IdempotencyConflict'
@@ -294,8 +306,8 @@ paths:
                 published:
                   summary: Published human-authored post
                   value:
-                    id: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
-                    authorId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1b
+                    id: "00000000-0000-4000-8000-000000000006"
+                    authorId: "00000000-0000-4000-8000-000000000007"
                     content: Local reporting from the community meeting.
                     contentType: text
                     visibility: public
@@ -308,8 +320,8 @@ paths:
                       reviewState: not_required
                       appealState: none
                       labelVersion: authorship-v1.0.0
-                    createdAt: '2026-08-10T09:00:00Z'
-                    updatedAt: '2026-08-10T09:00:00Z'
+                    createdAt: "2000-01-03T00:00:00Z"
+                    updatedAt: "2000-01-03T00:00:00Z"
         '400':
           description: Invalid input or content blocked by moderation/AI policy.
           content:
@@ -374,8 +386,10 @@ paths:
       summary: Register, sign in, or resend email verification
       description: >
         Registers an email account, signs in a verified account, or resends a
-        verification message. Registration requires a Turnstile token when the
-        production bot-protection gate is enabled.
+        verification message. New account creation is invite-only; an
+        invitation code is entered at signup and is bound to the invited email.
+        Registration requires a Turnstile token when the production
+        bot-protection gate is enabled.
       tags:
         - Auth
       security: []
@@ -391,20 +405,20 @@ paths:
                 value:
                   mode: login
                   email: alice@example.com
-                  password: correct-horse-battery-staple
+                  password: "SYNTHETIC-EXAMPLE-ONLY-PASSWORD-NOT-VALID"
               register:
                 summary: Email registration
                 value:
                   mode: register
                   email: alice@example.com
-                  password: correct-horse-battery-staple
-                  turnstileToken: turnstile_verified_token
+                  password: "SYNTHETIC-EXAMPLE-ONLY-PASSWORD-NOT-VALID"
+                  turnstileToken: "SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"
               resendVerification:
                 summary: Resend a verification message
                 value:
                   mode: resend_verification
                   email: alice@example.com
-                  turnstileToken: turnstile_verified_token
+                  turnstileToken: "SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"
       responses:
         '200':
           description: Authenticated token response
@@ -416,8 +430,8 @@ paths:
                 success:
                   summary: Email session created
                   value:
-                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
-                    refreshToken: refresh_example_01K1LYTHAUS
+                    accessToken: "SYNTHETIC-EXAMPLE-ONLY-ACCESS-TOKEN-NOT-VALID"
+                    refreshToken: "SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID"
                     tokenType: Bearer
                     expiresIn: 900
         '202':
@@ -434,7 +448,7 @@ paths:
                   value:
                     state: verification_required
         '400':
-          description: Invalid request
+          description: Invalid request, or invite_required when no valid invitation is available for a new account.
           content:
             application/json:
               schema:
@@ -491,10 +505,10 @@ paths:
                 processing:
                   value:
                     request:
-                      requestId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
+                      requestId: "00000000-0000-4000-8000-000000000006"
                       requestType: export
                       state: processing
-                      acceptedAt: '2026-07-29T07:00:00Z'
+                      acceptedAt: "2000-01-01T00:00:00Z"
                       completedAt: null
         '401':
           description: Missing or invalid authentication
@@ -537,10 +551,10 @@ paths:
               examples:
                 accepted:
                   value:
-                    requestId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
+                    requestId: "00000000-0000-4000-8000-000000000006"
                     requestType: export
                     state: received
-                    acceptedAt: '2026-07-29T07:00:00Z'
+                    acceptedAt: "2000-01-01T00:00:00Z"
         '400':
           description: Invalid privacy request
           content:
@@ -598,7 +612,7 @@ paths:
             examples:
               rotate:
                 value:
-                  refreshToken: refresh_example_01K1LYTHAUS
+                  refreshToken: "SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID"
       responses:
         '200':
           description: Refresh token rotated and replacement session issued.
@@ -609,8 +623,8 @@ paths:
               examples:
                 rotated:
                   value:
-                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.rotated
-                    refreshToken: refresh_example_01K1LYTHAUS_rotated
+                    accessToken: "SYNTHETIC-EXAMPLE-ONLY-ACCESS-TOKEN-NOT-VALID"
+                    refreshToken: "SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID"
                     tokenType: Bearer
                     expiresIn: 900
         '400':
@@ -690,7 +704,7 @@ paths:
               request:
                 value:
                   email: member@example.com
-                  turnstileToken: turnstile-token
+                  turnstileToken: "SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"
       responses:
         '202':
           description: Recovery intake accepted; this does not assert that a message was sent or delivered.
@@ -777,15 +791,15 @@ paths:
               examples:
                 authenticated:
                   value:
-                    id: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1b
-                    sub: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1b
+                    id: "00000000-0000-4000-8000-000000000007"
+                    sub: "00000000-0000-4000-8000-000000000007"
                     email: member@example.com
                     role: user
                     subscription_tier: free
                     reputation_level: 0
                     reputation_policy_version: reputation-v2.0.0
-                    created_at: '2026-08-01T09:00:00Z'
-                    last_login_at: '2026-08-10T09:00:00Z'
+                    created_at: "2000-01-02T00:00:00Z"
+                    last_login_at: "2000-01-03T00:00:00Z"
         '401':
           description: Missing or invalid authentication.
           content:
@@ -1035,7 +1049,7 @@ paths:
                 contentRevision:
                   value:
                     post:
-                      id: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
+                      id: "00000000-0000-4000-8000-000000000006"
                       body: Corrected local reporting from the community meeting.
                       declaredCreationMode: human
                       visibility: public
@@ -1398,6 +1412,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist'
   /admin/waitlist/{waitlistId}:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}'
+  /admin/waitlist/{waitlistId}/invite:
+    $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}~1invite'
   /admin/waitlist/{waitlistId}/status:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}~1status'
   /admin/waitlist/{waitlistId}/retention-hold:

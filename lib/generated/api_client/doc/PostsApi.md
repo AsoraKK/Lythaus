@@ -276,7 +276,7 @@ Create a post for the authenticated user. An authorship disclosure is required. 
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = {"body":"Local reporting from the community meeting.","declaredCreationMode":"human","geoScope":"community","placeId":"018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c"}; // CreatePostRequest |
+final CreatePostRequest createPostRequest = {"body":"Local reporting from the community meeting.","declaredCreationMode":"human","geoScope":"community","placeId":"00000000-0000-4000-8000-000000000008"}; // CreatePostRequest |
 final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {

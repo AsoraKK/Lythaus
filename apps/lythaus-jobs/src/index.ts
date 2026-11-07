@@ -10,6 +10,7 @@ import { sha256Hex as mediaSha256Hex } from '../../../packages/authenticity/src/
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
+import { exportContributionFeedback, purgeContributionFeedback } from './contribution-feedback-privacy.ts';
 import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, processEmailLifecycleQueue, readTransactionalEmailDeliveryEvidence, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { storePrivateExportObject } from './privacy-export-storage.ts';
@@ -2200,6 +2201,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`DELETE FROM social.blocks WHERE blocker_id = $1 OR blocked_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.mutes WHERE muter_id = $1 OR muted_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.reactions WHERE user_id = $1`, [subjectId]);
+        await purgeContributionFeedback(client, subjectId);
         await client.query(`DELETE FROM social.bookmarks WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM trust.accountability_signals WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM trust.reputation_balances WHERE user_id = $1`, [subjectId]);
@@ -2596,7 +2598,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       });
       const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId, subjectId);
       const accountActivityMeasurement = await activityMeasurementPrivacyExport(this.env.DB_PRIVACY_FRESH, requestId, subjectId);
-      return Object.freeze({ ...passport, accountActivityMeasurement, ...(supportFeedback === undefined ? {} : { supportFeedback }) });
+      const contributionFeedback = await transaction(this.env.DB_JOBS_FRESH, client => exportContributionFeedback(client, subjectId));
+      return Object.freeze({ ...passport, accountActivityMeasurement, contributionFeedback, ...(supportFeedback === undefined ? {} : { supportFeedback }) });
     });
 
     const completion = await step.do('store-export-and-complete-request', async () => {

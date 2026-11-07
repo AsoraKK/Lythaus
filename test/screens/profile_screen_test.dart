@@ -24,6 +24,7 @@ import 'package:lythaus/features/profile/domain/owner_post.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
+import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import '../helpers/content_recovery.dart';
@@ -135,6 +136,9 @@ void main() {
           ),
           jwtProvider.overrideWith((ref) async => 'synthetic-token'),
           reputationProvider.overrideWith((ref) async => _reputationSnapshot),
+          monthlyRewardsViewProvider.overrideWith((ref) async {
+            throw StateError('Synthetic monthly status unavailable');
+          }),
         ],
         child: const MaterialApp(home: ProfileScreen()),
       ),
@@ -144,7 +148,6 @@ void main() {
 
     expect(find.text('Ada Lovelace'), findsWidgets);
     expect(find.text('@ada'), findsOneWidget);
-    expect(find.text('Subscription: gold'), findsOneWidget);
     expect(find.text('120 points'), findsNothing);
     expect(find.text('Founding member'), findsNothing);
     expect(find.text('Reputation'), findsNothing);
@@ -160,6 +163,18 @@ void main() {
           .first,
     );
     expect(find.text('Settings'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Subscription: gold'),
+      280,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Subscription: gold'), findsOneWidget);
   });
 
   testWidgets('owner post card opens its post detail', (tester) async {

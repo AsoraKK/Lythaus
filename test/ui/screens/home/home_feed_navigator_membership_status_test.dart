@@ -126,6 +126,8 @@ void main() {
     await _pumpNavigator(tester, subscriptions: subscriptions, feeds: feeds);
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('About News Board'));
+    await tester.pumpAndSettle();
     expect(find.text('Current account tier: Black'), findsOneWidget);
     expect(feeds.newsRequests, 1);
   });

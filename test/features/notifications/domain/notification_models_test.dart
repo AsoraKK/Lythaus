@@ -41,6 +41,31 @@ void main() {
   });
 
   group('Notification', () {
+    test('retains an unknown event type through serialization and copying', () {
+      final notification = Notification.fromJson({
+        'id': 'n1',
+        'userId': 'u1',
+        'category': 'SOCIAL',
+        'eventType': 'FUTURE_EVENT',
+        'title': 'Future update',
+        'body': 'A synthetic update',
+        'createdAt': '2026-01-01T00:00:00Z',
+      });
+      expect(notification.eventType, NotificationEventType.commentCreated);
+      final copied = notification.copyWith(read: true);
+      expect(copied.toJson()['eventType'], 'FUTURE_EVENT');
+      expect(
+        Notification.fromJson(copied.toJson()).rawEventType,
+        'FUTURE_EVENT',
+      );
+      expect(
+        copied
+            .copyWith(eventType: NotificationEventType.postLiked)
+            .toJson()['eventType'],
+        'POST_LIKED',
+      );
+    });
+
     test('round trips through json', () {
       final createdAt = DateTime.utc(2024, 1, 2, 3, 4, 5);
       final notification = Notification(

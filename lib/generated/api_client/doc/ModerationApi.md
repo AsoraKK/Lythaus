@@ -70,7 +70,7 @@ Records a neutral report for moderation review. Flags are evidence, not a public
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getModerationApi();
-final FlagCreateRequest flagCreateRequest = {"contentType":"post","contentId":"018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a","reasonCode":"spam"}; // FlagCreateRequest |
+final FlagCreateRequest flagCreateRequest = {"contentType":"post","contentId":"00000000-0000-4000-8000-000000000006","reasonCode":"spam"}; // FlagCreateRequest |
 final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {

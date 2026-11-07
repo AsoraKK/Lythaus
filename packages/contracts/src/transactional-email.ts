@@ -16,6 +16,7 @@ export type EmailProviderFailureCategory = 'transient' | 'permanent' | 'unknown'
 
 export interface TransactionalEmailMessage {
   to: string;
+  replyTo?: string;
   subject: string;
   html: string;
   text: string;
@@ -33,6 +34,14 @@ export interface EmailProviderFailureDetails {
   status?: number;
   code?: string;
   category: EmailProviderFailureCategory;
+}
+
+function configuredSupportReplyTo(value: string | undefined): string | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (value.length > 254 || !/^[A-Za-z0-9_+.-]{1,64}@lythaus\.co$/i.test(value)) {
+    throw new Error('support_reply_to_configuration_invalid');
+  }
+  return value;
 }
 
 const PERMANENT_PROVIDER_CODES = new Set([
@@ -98,14 +107,17 @@ export interface EmailDeliveryReference {
 export function transactionalEmailLink(input: {
   baseUrl: string | undefined;
   acceptance: boolean;
+  invite?: boolean;
   parameters: Record<string, string>;
   environment?: string;
 }): string {
   let url: URL;
   try { url = new URL(input.baseUrl ?? ''); } catch { throw new Error('email_link_configuration_invalid'); }
   const local = input.environment === 'local' && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
-  const hosts = input.acceptance ? ['admin.lythaus.co'] : ['lythaus.co', 'www.lythaus.co'];
-  const paths = input.acceptance ? ['/api/admin/production-auth-acceptance/email'] : ['/verify-email', '/reset-password'];
+  const hosts = input.acceptance ? ['admin.lythaus.co']
+    : input.invite ? ['app.lythaus.co'] : ['lythaus.co', 'www.lythaus.co'];
+  const paths = input.acceptance ? ['/api/admin/production-auth-acceptance/email']
+    : input.invite ? ['/invite'] : ['/verify-email', '/reset-password', '/signup'];
   let unsafeQuery = false;
   url.searchParams.forEach((value, key) => { if (!['token', 'context'].includes(key) || value !== '') unsafeQuery = true; });
   if ((!local && (url.protocol !== 'https:' || !hosts.includes(url.hostname) || url.port))
@@ -122,36 +134,55 @@ export function renderTransactionalEmail(input: {
   token: string;
   verificationBaseUrl?: string;
   resetBaseUrl?: string;
+  inviteBaseUrl?: string;
   acceptanceLinkBaseUrl?: string;
   acceptanceContext?: string;
+  waitlistInvite?: boolean;
   environment?: string;
+  supportReplyToEmail?: string;
 }): TransactionalEmailMessage {
+  const replyTo = configuredSupportReplyTo(input.supportReplyToEmail);
   if (input.purpose === 'password_changed') {
-    const text = 'Your Lythaus password changed. Existing sessions were revoked. If you did not make this change, open https://lythaus.co/forgot-password to recover your account and contact Lythaus support. We will never ask you to send your password.';
-    return { to: '', subject: 'Your Lythaus password changed', text, html: `<!doctype html><html lang="en"><body><h1>Your Lythaus password changed</h1><p>${text}</p></body></html>` };
+    const text = 'Your Lythaus password changed. Existing sessions were revoked. If you did not make this change, open https://lythaus.co/forgot-password to recover your account and contact Lythaus support at https://lythaus.co/contact. We will never ask you to send your password.';
+    return { to: '', ...(replyTo ? { replyTo } : {}), subject: 'Your Lythaus password changed', text, html: `<!doctype html><html lang="en"><body><h1>Your Lythaus password changed</h1><p>${text}</p><p>Lythaus Support · <a href="https://lythaus.co/contact">lythaus.co/contact</a></p></body></html>` };
   }
   const subject = input.purpose === 'password_reset'
     ? 'Reset your Lythaus password'
     : input.purpose === 'email_change'
       ? 'Confirm your Lythaus email change'
       : input.purpose === 'invite' ? 'Your Lythaus invitation' : 'Verify your Lythaus email';
-  const baseUrl = input.purpose === 'password_reset' ? input.resetBaseUrl : input.verificationBaseUrl;
+  const baseUrl = input.purpose === 'password_reset' ? input.resetBaseUrl
+    : input.purpose === 'invite' && input.waitlistInvite ? input.inviteBaseUrl ?? 'https://app.lythaus.co/invite'
+      : input.verificationBaseUrl;
   const acceptance = Boolean(input.acceptanceContext);
+  const waitlistInvite = input.purpose === 'invite' && input.waitlistInvite === true;
   const url = transactionalEmailLink({
     baseUrl: acceptance ? input.acceptanceLinkBaseUrl : baseUrl,
     acceptance,
+    invite: waitlistInvite,
     environment: input.environment,
     parameters: acceptance ? { context: input.acceptanceContext!, purpose: input.purpose, token: input.token } : { token: input.token },
   });
   const safeUrl = url.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value));
   const guidance = input.purpose === 'password_reset'
     ? 'Choose a new password. This link expires in 30 minutes and can be used once.'
-    : 'Confirm your email and choose your own password to finish setup. This link expires in 30 minutes and can be used once.';
-  const unsolicited = 'If you did not request this, do not confirm it. You can ignore this message. Never share this link or your password.';
+    : input.purpose === 'invite'
+      ? `Enter the email address this invitation was sent to, the invitation code below, and a password to finish setup. This code expires in ${input.waitlistInvite ? '7 days' : '30 minutes'} and can be used once.`
+      : 'Confirm your email and choose your own password to finish setup. This link expires in 30 minutes and can be used once.';
+  const unsolicited = 'If you did not request this, do not confirm it. You can ignore this message. Never share this link, code, or your password.';
+  const signature = input.purpose === 'verification'
+    ? '<p>Thanks,<br>Kyle<br>kyle.kern@lythaus.co<br><a href="https://lythaus.co/contact">Lythaus Support</a></p>'
+    : '<p>Lythaus Support · <a href="https://lythaus.co/contact">lythaus.co/contact</a></p>';
+  const textSignature = input.purpose === 'verification'
+    ? 'Thanks,\nKyle\nkyle.kern@lythaus.co\nLythaus Support: https://lythaus.co/contact'
+    : 'Lythaus Support: https://lythaus.co/contact';
+  const inviteCode = input.purpose === 'invite' ? `<p>Invitation code: <strong>${input.token}</strong></p>` : '';
+  const inviteCodeText = input.purpose === 'invite' ? `\nInvitation code: ${input.token}` : '';
   return {
     to: '',
+    ...(replyTo ? { replyTo } : {}),
     subject,
-    html: `<!doctype html><html lang="en"><body><h1>${subject}</h1><p>${guidance}</p><p><a href="${safeUrl}">Continue securely at Lythaus</a></p><p>If the button does not open, copy the link into your browser: ${safeUrl}</p><p>${unsolicited}</p></body></html>`,
-    text: `${subject}. ${guidance}\nContinue securely at Lythaus: ${url}\n${unsolicited}`,
+    html: `<!doctype html><html lang="en"><body><h1>${subject}</h1><p>${guidance}</p><p><a href="${safeUrl}">Continue securely at Lythaus</a></p>${inviteCode}<p>If the button does not open, copy the link into your browser: ${safeUrl}</p><p>${unsolicited}</p>${signature}</body></html>`,
+    text: `${subject}. ${guidance}\nContinue securely at Lythaus: ${url}${inviteCodeText}\n${unsolicited}\n${textSignature}`,
   };
 }

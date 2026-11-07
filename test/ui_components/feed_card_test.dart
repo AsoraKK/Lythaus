@@ -8,6 +8,60 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  testWidgets('media follows the contribution even without a title', (
+    tester,
+  ) async {
+    final item = FeedItem(
+      id: 'untitled-image',
+      feedId: 'discover',
+      author: 'Writer',
+      contentType: ContentType.image,
+      title: '',
+      body: 'A short update',
+      publishedAt: DateTime.utc(2026),
+      imageUrl: 'https://example.com/synthetic.png',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(child: FeedCard(item: item)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Media unavailable'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('A short update')).dy,
+      lessThan(tester.getTopLeft(find.text('Media unavailable')).dy),
+    );
+  });
+
+  testWidgets('a readable contribution is available to accessibility', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final item = FeedItem(
+      id: 'accessible-post',
+      feedId: 'discover',
+      author: 'Writer',
+      contentType: ContentType.text,
+      title: 'A useful title',
+      body: 'A readable body',
+      publishedAt: DateTime.utc(2026),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FeedCard(item: item, onTap: () {}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel(RegExp('A useful title')), findsWidgets);
+    expect(find.bySemanticsLabel(RegExp('A readable body')), findsWidgets);
+    semantics.dispose();
+  });
+
   testWidgets('shows pinned icon, label, and author when feed item is pinned', (
     tester,
   ) async {

@@ -38,6 +38,7 @@ GRANT SELECT, INSERT ON privacy.requests TO lythaus_runtime;
 GRANT SELECT ON privacy.export_manifests, privacy.retention_rules TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events TO lythaus_runtime;
 GRANT INSERT (id, action, reason_code, correlation_id, metadata) ON system.audit_events TO lythaus_runtime;
+GRANT INSERT (actor_id, target_type, target_id) ON system.audit_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.transactional_email_outbox TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON system.idempotency_keys TO lythaus_runtime;
@@ -77,6 +78,7 @@ GRANT UPDATE (status, updated_at, invited_at, converted_at, unsubscribed_at, pur
   ON marketing.waitlist_signups TO lythaus_admin;
 
 GRANT USAGE ON SCHEMA identity, content, moderation, feed, social, trust, media, system TO lythaus_jobs;
+GRANT USAGE ON SCHEMA marketing TO lythaus_jobs;
 GRANT SELECT ON identity.users, identity.email_credentials, identity.contact_emails, identity.admin_memberships TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, moderation.cases, moderation.decisions, moderation.detector_runs, moderation.appeals, moderation.enforcement_events, feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.topic_memberships, feed.regional_memberships, feed.notifications, media.upload_sessions, media.objects, media.storage_ledger, media.variants, media.moderation_results, media.deletion_events, system.outbox_events, system.consumer_inbox TO lythaus_jobs;
 GRANT SELECT, UPDATE ON system.transactional_email_outbox TO lythaus_jobs;
@@ -122,6 +124,38 @@ GRANT SELECT (id, purge_after, retention_hold), DELETE ON marketing.waitlist_sig
 GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lythaus_privacy;
 
 GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
+-- The migration role may create only the foreign keys used by the waitlist
+-- invitation proposal. Column-level REFERENCES grants do not expose row data
+-- and are intentionally limited to each referenced primary-key column.
+GRANT REFERENCES (id) ON TABLE marketing.waitlist_signups,
+  identity.users,
+  identity.email_verification_tokens,
+  system.transactional_email_outbox
+  TO lythaus_migrations;
+GRANT TRIGGER ON TABLE marketing.waitlist_signups,
+  identity.users,
+  system.transactional_email_outbox
+  TO lythaus_migrations;
+DO $waitlist_invite_function_owner$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lythaus_waitlist_invite_function_owner'
+             AND NOT rolcanlogin AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole
+             AND NOT rolreplication AND NOT rolbypassrls) THEN
+    -- CREATE is a staged migration prerequisite only; the proposal revokes it
+    -- after ownership transfer. Persistent role reapplication must not restore it.
+    EXECUTE 'GRANT USAGE ON SCHEMA marketing TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT USAGE ON SCHEMA identity, system TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT SELECT (id, status), UPDATE (id) ON identity.users TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT SELECT (user_id, active, role) ON identity.admin_memberships TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT SELECT (user_id, email_lookup_hmac), UPDATE (user_id) ON identity.email_credentials TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT SELECT (id, user_id, expires_at, consumed_at, superseded_at), UPDATE (id, superseded_at) ON identity.email_verification_tokens TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT SELECT (id, email_lookup_hmac, status, retention_hold, invited_at, converted_at, unsubscribed_at, purge_after), UPDATE (id, status, invited_at, converted_at, unsubscribed_at, purge_after, updated_at) ON marketing.waitlist_signups TO lythaus_waitlist_invite_function_owner';
+    EXECUTE 'GRANT SELECT (id, state, provider_error_category, accepted_at, terminal_at), UPDATE (id, state, terminal_at, updated_at, delivery_envelope_ciphertext, delivery_envelope_encryption_key_version) ON system.transactional_email_outbox TO lythaus_waitlist_invite_function_owner';
+    -- Also clear any one-time staged grant on every normal roles.sql pass.
+    EXECUTE 'REVOKE CREATE ON SCHEMA marketing FROM lythaus_waitlist_invite_function_owner';
+  END IF;
+END;
+$waitlist_invite_function_owner$;
 GRANT SELECT, INSERT, UPDATE ON moderation.authenticity_beta, moderation.authenticity_beta_steps TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON moderation.authenticity_beta_feedback TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
 -- Private alpha keeps text/image cases and component attempts separate from the

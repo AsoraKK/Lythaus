@@ -24,14 +24,14 @@ Method | HTTP request | Description
 
 Register, sign in, or resend email verification
 
-Registers an email account, signs in a verified account, or resends a verification message. Registration requires a Turnstile token when the production bot-protection gate is enabled.
+Registers an email account, signs in a verified account, or resends a verification message. New account creation is invite-only; an invitation code is entered at signup and is bound to the invited email. Registration requires a Turnstile token when the production bot-protection gate is enabled.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final EmailAuthRequest emailAuthRequest = {"mode":"login","email":"alice@example.com","password":"correct-horse-battery-staple"}; // EmailAuthRequest |
+final EmailAuthRequest emailAuthRequest = {"mode":"login","email":"alice@example.com","password":"SYNTHETIC-EXAMPLE-ONLY-PASSWORD-NOT-VALID"}; // EmailAuthRequest |
 final String xLythausAuthTransport = xLythausAuthTransport_example; // String | Browser clients send cookie-v1 with credentials included and an exact allowed Origin. Refresh credentials use an HttpOnly Secure SameSite=Strict host-only cookie; native and older clients retain the JSON token transport. Never persist browser refresh or access credentials in Web Storage.
 final String idempotencyKey = idempotencyKey_example; // String | Random per-operation key for registration or resend. Replaying the same accepted payload does not reuse Turnstile or mint another challenge. Ambiguous outcomes return 409; login responses are never cached.
 
@@ -248,7 +248,7 @@ Valid accepted requests return the same neutral state for known, unknown and res
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final AuthPasswordResetRequestRequest authPasswordResetRequestRequest = {"email":"member@example.com","turnstileToken":"turnstile-token"}; // AuthPasswordResetRequestRequest |
+final AuthPasswordResetRequestRequest authPasswordResetRequestRequest = {"email":"member@example.com","turnstileToken":"SYNTHETIC-EXAMPLE-ONLY-TURNSTILE-TOKEN-NOT-VALID"}; // AuthPasswordResetRequestRequest |
 final String idempotencyKey = idempotencyKey_example; // String |
 
 try {
@@ -293,7 +293,7 @@ Browser cookie-v1 transport requires an allowed Origin, credentials included, an
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final RefreshSessionRequest refreshSessionRequest = {"refreshToken":"refresh_example_01K1LYTHAUS"}; // RefreshSessionRequest |
+final RefreshSessionRequest refreshSessionRequest = {"refreshToken":"SYNTHETIC-EXAMPLE-ONLY-REFRESH-TOKEN-NOT-VALID"}; // RefreshSessionRequest |
 final String xLythausAuthTransport = xLythausAuthTransport_example; // String |
 
 try {

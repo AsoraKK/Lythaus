@@ -7,11 +7,6 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminWaitlistPatch, () {
-    // String status
-    test('to test the property `status`', () async {
-      // TODO
-    });
-
     // String source_
     test('to test the property `source_`', () async {
       // TODO

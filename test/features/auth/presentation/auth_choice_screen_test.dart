@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/design_system/widgets/lyth_loading_wordmark.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -18,6 +19,100 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockIntegrityGuard extends Mock implements DeviceIntegrityGuard {}
 
 void main() {
+  for (final outcome in ['success', 'error', 'disposed']) {
+    testWidgets('long sign-in light stops on $outcome', (tester) async {
+      final auth = _MockAuthService();
+      final guard = _MockIntegrityGuard();
+      final pending = Completer<User>();
+      when(() => auth.getCurrentUser()).thenAnswer((_) async => null);
+      when(
+        () => guard.evaluate(IntegrityUseCase.signIn),
+      ).thenAnswer((_) async => DeviceIntegrityDecision.allow());
+      when(
+        () => auth.loginWithEmail(any(), any()),
+      ).thenAnswer((_) => pending.future);
+      var completed = 0;
+      await tester.binding.setSurfaceSize(const Size(430, 950));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            analyticsClientProvider.overrideWithValue(
+              const NullAnalyticsClient(),
+            ),
+            enhancedAuthServiceProvider.overrideWithValue(auth),
+            deviceIntegrityGuardProvider.overrideWithValue(guard),
+          ],
+          child: MaterialApp(
+            home: AuthChoiceScreen(onSignedIn: () => completed++),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<LythLoadingWordmark>(find.byType(LythLoadingWordmark))
+            .active,
+        isFalse,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email'),
+        'synthetic@example.invalid',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Password'),
+        'historical12',
+      );
+      await tester.tap(find.text('Sign in with email'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 6600));
+      expect(
+        tester
+            .widget<LythLoadingWordmark>(find.byType(LythLoadingWordmark))
+            .active,
+        isTrue,
+      );
+      expect(find.text('Signing in…'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.liveRegion == true &&
+              widget.properties.label == 'Signing in…',
+        ),
+        findsOneWidget,
+      );
+      if (outcome == 'disposed') {
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+      if (outcome == 'error') {
+        pending.completeError(StateError('Synthetic sign-in failure'));
+      } else {
+        pending.complete(
+          User.fromJson({
+            'id': '018f0000-0000-7000-8000-000000000001',
+            'email': 'synthetic@example.invalid',
+            'role': 'user',
+            'tier': 'bronze',
+            'created_at': '2026-08-01T00:00:00Z',
+            'last_login_at': '2026-08-01T00:00:00Z',
+          }),
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(completed, outcome == 'success' ? 1 : 0);
+      if (outcome != 'disposed') {
+        expect(
+          tester
+              .widget<LythLoadingWordmark>(find.byType(LythLoadingWordmark))
+              .active,
+          isFalse,
+        );
+      }
+      expect(tester.binding.transientCallbackCount, 0);
+      expect(tester.takeException(), isNull);
+    });
+  }
   for (final outcome in ['timeout', 'error', 'disposed', 'blocked']) {
     testWidgets(
       'sign-in security preflight handles $outcome without a late login',

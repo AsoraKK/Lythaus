@@ -102,15 +102,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Editorial coverage from earned, revocable contributors.'),
-      findsOneWidget,
-    );
+    expect(find.text('About News Board'), findsOneWidget);
     expect(find.text('Pinned Story'), findsOneWidget);
     expect(find.text('Body for Pinned Story'), findsOneWidget);
     expect(find.text('author n1'), findsOneWidget);
     expect(find.text('Authorship: Under review'), findsOneWidget);
     expect(find.text('Authorship: Under review'), findsWidgets);
     expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
+    await tester.tap(find.text('About News Board'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Editorial coverage from earned, revocable contributors.'),
+      findsOneWidget,
+    );
   });
 }
