@@ -1,8 +1,11 @@
+import { requireAdminApiAudienceSnapshot } from './cloudflare-admin-api-audience.mjs';
+
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
-const token = process.env.CLOUDFLARE_AUDIT_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
+const token = process.env.CLOUDFLARE_API_TOKEN ?? '';
+const expectedAdminApiAudience = process.env.EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT;
 
 if (!/^[0-9a-f]{32}$/i.test(accountId)) throw new Error('CLOUDFLARE_ACCOUNT_ID is required');
-if (!token) throw new Error('CLOUDFLARE_AUDIT_API_TOKEN or CLOUDFLARE_API_TOKEN is required');
+if (!token) throw new Error('CLOUDFLARE_API_TOKEN is required');
 
 const accountBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`;
 const expectedApplications = [
@@ -52,6 +55,9 @@ for (const expected of expectedApplications) {
   ));
   if (matches.length !== 1) throw new Error(`expected exactly one ${expected.name} for ${expected.destination}`);
   const application = matches[0];
+  if (expected.name === 'Lythaus Admin API' && expectedAdminApiAudience !== undefined) {
+    requireAdminApiAudienceSnapshot(application, expectedAdminApiAudience);
+  }
   const policies = await request(`/access/apps/${application.id}/policies?per_page=100`);
   if (!Array.isArray(policies)) throw new Error(`${expected.name} Access policies are not an array`);
 
@@ -86,4 +92,5 @@ console.log(JSON.stringify({
   status: 'verified',
   applications: verified.map(({ humanAllowEmail: _humanAllowEmail, ...application }) => application),
   soleHumanIdentityShared: true,
+  adminApiAudienceMatchesSnapshot: expectedAdminApiAudience === undefined ? null : true,
 }));
