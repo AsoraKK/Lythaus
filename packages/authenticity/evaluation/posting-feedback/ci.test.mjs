@@ -17,6 +17,30 @@ test('allocated CI executes the offline suite at the PR source head without priv
   const source = await readFile(new URL('../../../../.github/workflows/posting-feedback-evaluation.yml', import.meta.url), 'utf8');
   const workflow = parseDocument(source).toJS();
   assert.deepEqual(Object.keys(workflow.on).sort(), ['pull_request', 'push']);
+  assert.deepEqual(workflow.on.pull_request.branches, ['main', 'codex/**']);
+  assert.deepEqual(workflow.on.push.branches, ['main']);
+  const expectedPaths = [
+    '.github/workflows/posting-feedback-evaluation.yml',
+    '.github/actions/**',
+    'packages/**',
+    'scripts/**',
+    'tools/**',
+    'package.json',
+    'package-lock.json',
+    '**/package.json',
+    '**/package-lock.json',
+    '.npmrc',
+    '**/.npmrc',
+    'tsconfig.native.json',
+    'tsconfig*.json',
+    '**/tsconfig*.json',
+    '.gitignore',
+    '.gitattributes',
+  ];
+  assert.deepEqual(workflow.on.pull_request.paths, expectedPaths);
+  assert.deepEqual(workflow.on.push.paths, expectedPaths);
+  for (const unrelatedRoot of ['apps/**', 'docs/**', 'lib/**', '**'])
+    assert.equal(expectedPaths.includes(unrelatedRoot), false);
   assert.deepEqual(workflow.permissions, { contents: 'read' });
   const job = workflow.jobs.posting_feedback_evaluation;
   assert.equal(job.permissions, undefined);
