@@ -33,10 +33,13 @@ jobs:
         with:
           node-version: '22'
       - name: Check verifier syntax
-        run: node --check scripts/ci/verify-cloudflare-admin-access.mjs
+        run: |
+          node --check scripts/ci/cloudflare-admin-api-audience.mjs
+          node --check scripts/ci/verify-cloudflare-admin-access.mjs
+          node --test scripts/tests/cloudflare-admin-api-audience.test.mjs
       - name: Verify exact Admin UI and API Access rules
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT: cee241b59a461d2c0199404312504688a92949276b74b1a2364464bf8554810c
         run: node scripts/ci/verify-cloudflare-admin-access.mjs
