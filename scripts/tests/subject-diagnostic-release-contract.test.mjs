@@ -10,10 +10,18 @@ const generatedDefault = fs.readFileSync('apps/lythaus-admin-api/src/solo-recove
 test('diagnostic remains disabled by default and only canonical production release can opt in', () => {
   assert.match(generatedDefault, /COMPILED_SUBJECT_DIAGNOSTIC_POLICY:[\s\S]*= null/);
   assert.match(policy, /validateSubjectDiagnosticPolicy/);
-  assert.match(productionRelease, /enable_subject_diagnostic:[\s\S]*default: false[\s\S]*type: boolean/);
-  assert.match(productionRelease, /enable_subject_diagnostic: \$\{\{ inputs\.enable_subject_diagnostic \}\}/);
-  const dispatchInputs = nativeWorkers.split('  workflow_call:')[0];
+  const dispatchInputs = productionRelease.match(/^  workflow_dispatch:\n    inputs:\n([\s\S]*?)(?=^permissions:)/m)?.[1] ?? '';
+  assert.equal([...dispatchInputs.matchAll(/^      [a-z_]+:$/gm)].length, 10);
   assert.doesNotMatch(dispatchInputs, /enable_subject_diagnostic/);
+  for (const mode of ['automatic', 'automatic_subject_diagnostic', 'force_auth_critical', 'force_auth_critical_subject_diagnostic', 'owner_testing', 'owner_testing_native_recovery_exception']) {
+    assert.match(dispatchInputs, new RegExp(`^\\s*- ${mode}$`, 'm'));
+  }
+  assert.match(productionRelease, /enable_subject_diagnostic: \$\{\{ inputs\.release_mode == 'automatic_subject_diagnostic' \|\| inputs\.release_mode == 'force_auth_critical_subject_diagnostic' \}\}/);
+  assert.doesNotMatch(productionRelease, /inputs\.release_mode != 'automatic'/);
+  assert.match(productionRelease, /FORCE_AUTH_CRITICAL: \$\{\{ inputs\.release_mode == 'force_auth_critical' \|\| inputs\.release_mode == 'force_auth_critical_subject_diagnostic' \|\| inputs\.release_mode == 'owner_testing' \|\| inputs\.release_mode == 'owner_testing_native_recovery_exception' \}\}/);
+  assert.doesNotMatch(productionRelease, /FORCE_AUTH_CRITICAL: \$\{\{[^\n]*automatic_subject_diagnostic/);
+  const nativeDispatchInputs = nativeWorkers.split('  workflow_call:')[0];
+  assert.doesNotMatch(nativeDispatchInputs, /enable_subject_diagnostic/);
   assert.match(nativeWorkers.split('  workflow_call:')[1], /enable_subject_diagnostic:[\s\S]*default: false/);
 });
 
