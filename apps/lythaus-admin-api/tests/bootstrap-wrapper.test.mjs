@@ -24,6 +24,15 @@ test('bootstrap route is POST-only and no-store', async () => {
   assert.match(response.headers.get('cache-control') ?? '', /no-store/);
 });
 
+test('subject diagnostic route stays unavailable when no compiled policy is armed', async () => {
+  const response = await bootstrapWorker.fetch(new Request(
+    'https://admin.lythaus.co/api/admin/recovery/subject-diagnostic', { method: 'GET' },
+  ), env);
+  assert.equal(response.status, 404);
+  assert.equal((await response.json()).error, 'subject_diagnostic_unavailable');
+  assert.match(response.headers.get('cache-control') ?? '', /private, no-store/);
+});
+
 test('bootstrap rejects cross-origin mutation before Access or database work', async () => {
   const response = await bootstrapWorker.fetch(
     request('POST', { confirmation: 'BOOTSTRAP FIRST ADMINISTRATOR' }, 'https://example.invalid'),
