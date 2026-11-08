@@ -62,7 +62,7 @@ async function hyperdriveTarget(connectionString: string): Promise<ParsedTarget>
     throw new Error('subject_diagnostic_target_invalid');
   }
   const seen = new Set<string>();
-  for (const [name, value] of url.searchParams) {
+  url.searchParams.forEach((value, name) => {
     if (seen.has(name)) throw new Error('subject_diagnostic_target_invalid');
     seen.add(name);
     if (name === 'sslmode') {
@@ -72,7 +72,7 @@ async function hyperdriveTarget(connectionString: string): Promise<ParsedTarget>
     } else {
       throw new Error('subject_diagnostic_target_invalid');
     }
-  }
+  });
 
   const username = decodeURIComponent(url.username);
   const separator = username.lastIndexOf('.');
