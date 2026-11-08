@@ -39,6 +39,7 @@ mock.module('jose', { cache: true, namedExports: { ...jose, createRemoteJWKSet: 
 mock.method(globalThis, 'fetch', async () => { throw new Error('external_network_forbidden'); });
 
 const { handleSubjectDiagnostic, SUBJECT_DIAGNOSTIC_PATH, SUBJECT_DIAGNOSTIC_SQL } = await import('../src/solo-recovery/subject-diagnostic.ts');
+const { SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS, validateSubjectDiagnosticPolicy } = await import('../src/solo-recovery/diagnostic-policy.ts');
 const { hmacLookup } = await import('../../../packages/security/src/index.ts');
 
 function fixture({ row = { role: 'administrator', active: true, principal_status: 'locked', principal_deleted: false }, session = {} } = {}) {
@@ -98,6 +99,36 @@ test('compiled diagnostic policy is disabled by default', async () => {
   const response = await handleSubjectDiagnostic(await f.request(), f.env, { run: f.run });
   assert.equal(response.status, 404);
   assert.deepEqual(f.sql, []);
+});
+
+test('policy allows a finite three-hour workflow window and rejects longer windows', () => {
+  const f = fixture();
+  const bounded = validateSubjectDiagnosticPolicy({
+    ...f.policy,
+    expiresAt: f.policy.notBefore + SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS,
+  });
+  assert.equal(bounded.expiresAt - bounded.notBefore, 3 * 60 * 60);
+  assert.throws(() => validateSubjectDiagnosticPolicy({
+    ...f.policy,
+    expiresAt: f.policy.notBefore + SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS + 1,
+  }), /subject_diagnostic_policy_invalid/);
+});
+
+test('the same valid human assertion can repeat read-only diagnostics within the policy window', async () => {
+  const f = fixture();
+  const policy = validateSubjectDiagnosticPolicy({
+    ...f.policy,
+    expiresAt: f.policy.notBefore + SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS,
+  });
+  const request = await f.request();
+  const responses = await Promise.all([
+    handleSubjectDiagnostic(request, f.env, { policy, run: f.run }),
+    handleSubjectDiagnostic(request, f.env, { policy, run: f.run }),
+  ]);
+
+  assert.deepEqual(responses.map(response => response.status), [200, 200]);
+  assert.ok(f.sql.every(entry => /^(?:SET TRANSACTION READ ONLY|SELECT)\b/.test(entry.statement)));
+  assert.equal(f.sql.filter(entry => entry.statement === SUBJECT_DIAGNOSTIC_SQL).length, 2);
 });
 
 test('strict signed identity gets only a no-store read-only subject comparison', async () => {

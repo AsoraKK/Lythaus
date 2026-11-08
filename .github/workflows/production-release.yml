@@ -37,6 +37,11 @@ on:
         required: false
         default: ''
         type: string
+      enable_subject_diagnostic:
+        description: Enable the repeatable read-only Admin identity diagnostic for up to three hours
+        required: false
+        default: false
+        type: boolean
       release_mode:
         description: Select the canonical release mode; owner testing remains uncertified
         required: true
@@ -353,6 +358,19 @@ jobs:
             --base-sha "$PREVIOUS_PRODUCTION_SHA" \
             --output "$RUNNER_TEMP/release-plan.json"
           jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/release-plan.json" >/dev/null
+      - name: Require an Admin auth-critical candidate for the subject diagnostic
+        if: inputs.enable_subject_diagnostic == true
+        env:
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+          CHANGED_COMPONENTS_JSON: ${{ steps.release_plan.outputs.changed_components_json }}
+          RELEASE_MODE: ${{ inputs.release_mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
+          test "$RELEASE_MODE" != owner_testing
+          test "$RELEASE_MODE" != owner_testing_native_recovery_exception
+          jq -e 'type == "array" and index("admin") != null' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
       - name: Validate owner-testing deployment scope
         if: (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception')
         env:
@@ -629,6 +647,7 @@ jobs:
     with:
       release_sha: ${{ inputs.release_sha }}
       acceptance_run_id: ${{ inputs.acceptance_run_id }}
+      enable_subject_diagnostic: ${{ inputs.enable_subject_diagnostic }}
       previous_production_sha: ${{ inputs.previous_production_sha }}
       source_evidence_verified: true
       force_auth_critical: ${{ inputs.release_mode != 'automatic' }}
