@@ -104,16 +104,25 @@ if (previousProductionSha !== 'NONE' && !/^[0-9a-f]{40}$/i.test(previousProducti
 const releaseClass = valueOrNull('RELEASE_CLASS') ?? RELEASE_CLASSES.AUTH_CRITICAL;
 if (!Object.values(RELEASE_CLASSES).includes(releaseClass)) throw new Error(`RELEASE_CLASS must be ${Object.values(RELEASE_CLASSES).join(' or ')}`);
 const ownerTestingDeployment = booleanValue('OWNER_TESTING_DEPLOYMENT');
+const ownerTestingSubjectDiagnostic = booleanValue('OWNER_TESTING_SUBJECT_DIAGNOSTIC');
 const independentRecoveryStatus = valueOrNull('INDEPENDENT_RECOVERY_STATUS') ?? 'BLOCKED';
 if (!['VERIFIED', 'BLOCKED', 'DEFERRED_BY_OWNER_EXCEPTION'].includes(independentRecoveryStatus)) throw new Error('INDEPENDENT_RECOVERY_STATUS is invalid');
 if (!ownerTestingDeployment && independentRecoveryStatus === 'DEFERRED_BY_OWNER_EXCEPTION') throw new Error('independent recovery exception requires owner testing');
 if (ownerTestingDeployment && releaseClass !== RELEASE_CLASSES.AUTH_CRITICAL) throw new Error('OWNER_TESTING_DEPLOYMENT requires AUTH_CRITICAL_RELEASE');
-if (ownerTestingDeployment && (booleanValue('AUTHENTICATED_ACCEPTANCE_PROVEN') || valueOrNull('AUTH_ACCEPTANCE_RUN_ID') || valueOrNull('AUTH_ACCEPTANCE_EXPIRES_AT'))) {
+if (ownerTestingSubjectDiagnostic && !ownerTestingDeployment) throw new Error('owner-testing subject diagnostic requires owner testing');
+if (ownerTestingSubjectDiagnostic && independentRecoveryStatus !== 'DEFERRED_BY_OWNER_EXCEPTION') {
+  throw new Error('owner-testing subject diagnostic requires only independent recovery to remain deferred');
+}
+if (ownerTestingDeployment && !ownerTestingSubjectDiagnostic
+  && (booleanValue('AUTHENTICATED_ACCEPTANCE_PROVEN') || valueOrNull('AUTH_ACCEPTANCE_RUN_ID') || valueOrNull('AUTH_ACCEPTANCE_EXPIRES_AT'))) {
   throw new Error('owner-testing deployment cannot include or claim an acceptance run');
 }
 
 const changedComponents = componentList('CHANGED_COMPONENTS_JSON', RELEASE_COMPONENTS);
 const changedSet = new Set(changedComponents);
+if (ownerTestingSubjectDiagnostic && changedComponents.join(',') !== 'admin,coordinator') {
+  throw new Error('owner-testing subject diagnostic requires exactly Admin and coordinator candidates');
+}
 const reusedComponents = componentList('REUSED_COMPONENTS_JSON', RELEASE_COMPONENTS.filter((component) => !changedSet.has(component)));
 const reusedSet = new Set(reusedComponents);
 if (changedComponents.some((component) => reusedSet.has(component)) || RELEASE_COMPONENTS.some((component) => !changedSet.has(component) && !reusedSet.has(component))) {
@@ -171,7 +180,7 @@ const workerConfig = {
   jobs: { env: 'JOBS', name: 'lythaus-jobs-development' },
   coordinator: { env: 'COORDINATOR', name: 'lythaus-auth-acceptance-coordinator-development' },
 };
-const ownerTestingCoordinatorDeferred = ownerTestingDeployment;
+const ownerTestingCoordinatorDeferred = ownerTestingDeployment && !ownerTestingSubjectDiagnostic;
 const workers = Object.fromEntries(Object.entries(workerConfig).map(([component, config]) => {
   const deferredForOwnerTest = component === 'coordinator' && ownerTestingCoordinatorDeferred;
   const changed = changedSet.has(component) && !deferredForOwnerTest;
@@ -229,11 +238,19 @@ const security = {
 const authAcceptanceRequired = releaseClass === RELEASE_CLASSES.AUTH_CRITICAL;
 const authenticatedAcceptanceProven = booleanValue('AUTHENTICATED_ACCEPTANCE_PROVEN');
 const authAcceptanceStatus = authAcceptanceRequired
-  ? (ownerTestingDeployment ? 'OWNER_TEST_PENDING' : valueOrNull('AUTH_ACCEPTANCE_STATUS') ?? valueOrNull('AUTHENTICATED_ACCEPTANCE_STATUS') ?? (authenticatedAcceptanceProven ? 'PASSED' : 'BLOCKED'))
+  ? (ownerTestingDeployment && !ownerTestingSubjectDiagnostic ? 'OWNER_TEST_PENDING' : valueOrNull('AUTH_ACCEPTANCE_STATUS') ?? valueOrNull('AUTHENTICATED_ACCEPTANCE_STATUS') ?? (authenticatedAcceptanceProven ? 'PASSED' : 'BLOCKED'))
   : 'NOT_REQUIRED';
 const acceptanceRunId = authAcceptanceRequired ? uuidOrNull('AUTH_ACCEPTANCE_RUN_ID') : null;
 const acceptanceExpiresAt = authAcceptanceRequired ? timestampOrNull('AUTH_ACCEPTANCE_EXPIRES_AT') : null;
 const acceptanceDependencies = parseJson('AUTH_ACCEPTANCE_DEPENDENCIES_JSON', null);
+const subjectDiagnosticExpiresAt = ownerTestingSubjectDiagnostic && acceptanceDependencies
+  ? acceptanceDependencies.subjectDiagnosticExpiresAt ?? null
+  : null;
+const subjectDiagnosticExpiryMs = typeof subjectDiagnosticExpiresAt === 'string'
+  && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(subjectDiagnosticExpiresAt)
+  && Number.isFinite(Date.parse(subjectDiagnosticExpiresAt))
+  ? Date.parse(subjectDiagnosticExpiresAt)
+  : null;
 const acceptanceDependencyExpectedStatus = (component) => changedSet.has(component)
   ? COMPONENT_DISPOSITIONS.NEW_CANDIDATE
   : COMPONENT_DISPOSITIONS.REUSED_PRODUCTION;
@@ -250,13 +267,22 @@ const acceptanceDependenciesPresent = acceptanceDependencies !== null;
 const acceptanceDependenciesValid = (() => {
   const dependencies = acceptanceDependencies ?? defaultAcceptanceDependencies;
   if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) return false;
-  if (Object.keys(dependencies).sort().join(',') !== [...acceptanceDependencyComponents].sort().join(',')) return false;
+  const expectedKeys = ownerTestingSubjectDiagnostic
+    ? [...acceptanceDependencyComponents, 'subjectDiagnosticExpiresAt']
+    : acceptanceDependencyComponents;
+  if (Object.keys(dependencies).sort().join(',') !== expectedKeys.sort().join(',')) return false;
+  // Acceptance dependencies describe the historical candidate binding. Expiry is
+  // an activation-time constraint, enforced by the final gate and the activation
+  // job; it must not erase truthful evidence after the temporary diagnostic window
+  // has elapsed.
+  if (ownerTestingSubjectDiagnostic && subjectDiagnosticExpiryMs === null) return false;
   return acceptanceDependencyComponents.every((component) => {
     const dependency = dependencies[component];
     const expected = workers[component];
     return dependency && typeof dependency === 'object' && !Array.isArray(dependency)
       && dependency.workerName === expected.name
       && dependency.versionId === expected.versionId
+      && dependency.sourceSha === expected.sourceSha
       && typeof dependency.sourceSha === 'string' && /^[0-9a-f]{40}$/i.test(dependency.sourceSha)
       && dependency.status === acceptanceDependencyExpectedStatus(component)
       && dependency.provenance === expected.provenance;
@@ -381,7 +407,9 @@ const requiredEvidence = [
   process.env.DATABASE_IDENTITY_VERIFIED === 'true',
   process.env.BUDGET_ENFORCEMENT_VERIFIED === 'true',
   authAcceptanceRequired
-    ? !ownerTestingDeployment && authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED' && acceptanceRunId !== null && acceptanceExpiresAt !== null && acceptanceDependenciesPresent && acceptanceDependenciesValid
+    ? (ownerTestingSubjectDiagnostic
+      ? authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED' && acceptanceRunId !== null && acceptanceExpiresAt !== null && acceptanceDependenciesPresent && acceptanceDependenciesValid
+      : !ownerTestingDeployment && authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED' && acceptanceRunId !== null && acceptanceExpiresAt !== null && acceptanceDependenciesPresent && acceptanceDependenciesValid)
     : authAcceptanceStatus === 'NOT_REQUIRED',
   releaseStateHistoryValid,
   fingerprintOrNull('PLANETSCALE_SCHEMA_FINGERPRINT') !== null,
@@ -399,7 +427,9 @@ const requiredEvidence = [
   process.env.CREDENTIAL_ROTATION_COMPLETED === 'true',
 ];
 const readinessStatus = ownerTestingDeployment
-  ? 'owner-test-pending'
+  ? (ownerTestingSubjectDiagnostic && authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED'
+    ? 'owner-test-authenticated-uncertified'
+    : 'owner-test-pending')
   : requiredEvidence.every(Boolean)
   ? 'ready'
   : [cloudflareStatus, planetscaleStatus].some((value) => value === 'UNKNOWN/BLOCKED' || value === 'BLOCKED')
@@ -418,7 +448,7 @@ const unknowns = [
   Object.values(componentEvidence).some(({ versionId }) => versionId === null) ? 'One or more candidate or reused version IDs are unavailable' : null,
   Object.values(componentEvidence).some(({ sourceSha }) => sourceSha === null) ? 'One or more component source SHA proofs are unavailable' : null,
   Object.values(productionSmoke).every((value) => value === 'PASS') ? null : 'One or more canonical production smoke checks are unavailable',
-  authAcceptanceRequired ? (authenticatedAcceptanceProven ? null : ownerTestingDeployment ? 'Owner authentication testing is pending; this deployment is not certified' : 'Auth-critical real acceptance proof is unavailable') : 'Human auth acceptance is not required for STANDARD_RELEASE',
+  authAcceptanceRequired ? (authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED' ? null : ownerTestingDeployment ? 'Owner authentication testing is pending; this deployment is not certified' : 'Auth-critical real acceptance proof is unavailable') : 'Human auth acceptance is not required for STANDARD_RELEASE',
   authAcceptanceRequired && (!acceptanceDependenciesPresent || !acceptanceDependenciesValid) ? 'Exact acceptance candidate/reused dependency evidence is unavailable or mismatched' : null,
   releaseStateHistoryValid ? null : 'Release state history is unavailable or malformed',
   failureDomainsSchemaValid ? null : 'Failure-domain evidence is malformed',
@@ -508,7 +538,11 @@ const manifest = {
     ownerTesting: {
       enabled: ownerTestingDeployment,
       status: ownerTestingDeployment
-        ? (releaseState === 'OWNER_TEST_DEPLOYED_UNCERTIFIED' ? 'DEPLOYED_UNCERTIFIED' : 'PENDING')
+        ? (releaseState === 'OWNER_TEST_DEPLOYED_UNCERTIFIED'
+          ? 'DEPLOYED_UNCERTIFIED'
+          : ownerTestingSubjectDiagnostic && authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED'
+            ? 'AUTHENTICATED_UNCERTIFIED'
+            : 'PENDING')
         : 'NOT_REQUESTED',
       deferredComponents: ownerTestingCoordinatorDeferred ? ['coordinator'] : [],
     },
@@ -522,7 +556,23 @@ const manifest = {
       provenance: workers.public.provenance,
     } : null,
     candidateDependencies: authAcceptanceRequired ? acceptanceDependencies : null,
+    candidateDependenciesVerified: authAcceptanceRequired && acceptanceDependenciesPresent && acceptanceDependenciesValid,
     evidencePath: authAcceptanceRequired ? valueOrNull('AUTH_ACCEPTANCE_EVIDENCE_PATH') : null,
+  },
+  subjectDiagnostic: {
+    enabled: ownerTestingSubjectDiagnostic,
+    status: !ownerTestingSubjectDiagnostic
+      ? 'DISABLED'
+      : releaseState === 'ROLLED_BACK'
+        ? 'ROLLED_BACK'
+        : subjectDiagnosticExpiryMs !== null && subjectDiagnosticExpiryMs <= Date.now()
+          ? 'EXPIRED'
+          : workers.admin.status === COMPONENT_DISPOSITIONS.ACTIVATED
+            ? 'ACTIVE_UNCERTIFIED'
+            : 'NOT_ACTIVATED',
+    adminVersionId: ownerTestingSubjectDiagnostic ? workers.admin.versionId : null,
+    adminSourceSha: ownerTestingSubjectDiagnostic ? workers.admin.sourceSha : null,
+    expiresAt: subjectDiagnosticExpiresAt,
   },
   activation: changedActivationEvidence,
   rollback: rollbackEvidence,

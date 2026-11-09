@@ -37,8 +37,13 @@ for (const file of [
   path.join(root, 'scripts', 'ci', 'resolve-release-failure-domain.mjs'),
   path.join(root, 'scripts', 'ci', 'verify-exact-release-evidence.mjs'),
   path.join(root, 'scripts', 'ci', 'prepare-acceptance-rollback-snapshot.mjs'),
+  path.join(root, 'scripts', 'ci', 'create-owner-testing-activation-handoff.mjs'),
+  path.join(root, 'scripts', 'ci', 'validate-owner-testing-activation-handoff.mjs'),
+  path.join(root, 'scripts', 'ci', 'assert-owner-testing-rollback-safe.mjs'),
+  path.join(root, 'scripts', 'ci', 'wait-for-owner-testing-admin-zero-traffic.mjs'),
   path.join(root, 'scripts', 'ci', 'write-scoped-worker-secret-evidence.mjs'),
   path.join(root, 'scripts', 'release', 'acceptance-rollback-snapshot.mjs'),
+  path.join(root, 'scripts', 'release', 'owner-testing-activation-handoff.mjs'),
 ]) {
   if (!fs.existsSync(file)) failures.push(`missing deterministic release control: ${path.relative(root, file)}`);
 }
@@ -125,6 +130,7 @@ if (canonical) {
 }
 
 const nativeWorkers = readWorkflow('native-workers-deploy.yml');
+const ownerTestingActivation = readWorkflow('native-workers-owner-testing-activate.yml');
 const nativeAcceptance = readWorkflow('native-adr003-acceptance.yml');
 const authScripts = [
   path.join(root, 'scripts', 'ci', 'real-email-acceptance-evidence.mjs'),
@@ -184,8 +190,14 @@ if (nativeWorkers) {
   ]) {
     if (!nativeWorkers.includes(required)) failures.push(`native-workers-deploy.yml: missing simplified release control ${required}`);
   }
-  if (nativeWorkers.includes('triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc') && !nativeWorkers.includes('if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]')) {
-    failures.push('native-workers-deploy.yml: coordinator route deployment is not component-scoped');
+  const coordinatorRouteStart = nativeWorkers.indexOf('# Queue consumers do not accept a per-request Worker-version override.');
+  const coordinatorRouteEnd = nativeWorkers.indexOf('- name: Prove staged Public and Jobs transactional-email key compatibility', coordinatorRouteStart);
+  const coordinatorRoute = coordinatorRouteStart >= 0 && coordinatorRouteEnd > coordinatorRouteStart
+    ? nativeWorkers.slice(coordinatorRouteStart, coordinatorRouteEnd)
+    : '';
+  if (!coordinatorRoute.includes('triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc')
+    || !coordinatorRoute.includes('if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then')) {
+    failures.push('native-workers-deploy.yml: coordinator route must be component-scoped to standard releases or the explicit owner diagnostic exception');
   }
   if (!nativeWorkers.includes('if coordinator_managed; then list_coordinator_secrets')) {
     failures.push('native-workers-deploy.yml: unchanged Coordinator secret inventory is not reused');
@@ -206,9 +218,38 @@ if (nativeWorkers) {
   if (!nativeWorkers.includes('AUTH_ACCEPTANCE_DEPENDENCIES_JSON')) {
     failures.push('native-workers-deploy.yml: exact acceptance dependency provenance is missing');
   }
+  for (const required of [
+    'Restore acceptance-only Coordinator before activation approval',
+    'Create exact same-run activation handoff',
+    'jobs.activate.outputs',
+    'owner_testing_subject_diagnostic == true && needs.deploy.result == \'success\'',
+    'assert-owner-testing-rollback-safe.mjs',
+    'wait-for-owner-testing-admin-zero-traffic.mjs',
+  ]) {
+    if (!nativeWorkers.includes(required)) failures.push(`native-workers-deploy.yml: missing protected activation split control ${required}`);
+  }
+  if (!nativeWorkers.includes('timeout-minutes: ${{ inputs.owner_testing_subject_diagnostic == true && 105 || 35 }}')) {
+    failures.push('native-workers-deploy.yml: stage timeout must leave the diagnostic runway for the separately approved activation job');
+  }
   if (!nativeWorkers.includes('RELEASE_FAILURE_CODE=') || !nativeWorkers.includes('write-failure-domain-evidence.mjs')) {
     failures.push('native-workers-deploy.yml: explicit failure-domain evidence is missing');
   }
+}
+if (ownerTestingActivation) {
+  for (const required of [
+    'workflow_call:',
+    'environment: production',
+    'Validate same-run first-attempt handoff after activation approval',
+    'Revalidate exact candidate versions and source tags',
+    'Reverify fresh recovery readiness and exact owner exception after approval',
+    'Capture and compare live Workers and routes immediately before activation',
+    'Safely roll back partial activation only from known in-run states',
+    'owner-testing-activation-handoff.mjs',
+    'assert-owner-testing-rollback-safe.mjs',
+  ]) {
+    if (!ownerTestingActivation.includes(required)) failures.push(`native-workers-owner-testing-activate.yml: missing ${required}`);
+  }
+  if (ownerTestingActivation.includes('workflow_dispatch:')) failures.push('native-workers-owner-testing-activate.yml: activation helper must not be independently dispatchable');
 }
 if (fs.existsSync(authAcceptanceCollector)) {
   const collector = fs.readFileSync(authAcceptanceCollector, 'utf8');

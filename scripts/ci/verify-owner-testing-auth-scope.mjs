@@ -9,8 +9,14 @@ export function verifyOwnerTestingAuthScope(environment) {
     infrastructureMode:'verify_existing', scopedKeyMode:'preserve_only' };
 }
 
-export function assertOwnerTestingScopedKeys(lifecycle, ownerTesting) {
+export function assertOwnerTestingScopedKeys(lifecycle, ownerTesting, ownerTestingSubjectDiagnostic = false) {
   if (!ownerTesting) return;
+  if (ownerTestingSubjectDiagnostic) {
+    if (lifecycle.transactionalEmail.action !== 'preserve' || lifecycle.acceptanceState.action !== 'preserve') {
+      throw new Error('owner_testing_subject_diagnostic_requires_existing_scoped_keys');
+    }
+    return;
+  }
   if (lifecycle.transactionalEmail.action !== 'preserve' || lifecycle.acceptanceState.action !== 'reuse_not_touched') {
     throw new Error('owner_testing_requires_existing_email_keys_and_deferred_coordinator');
   }
