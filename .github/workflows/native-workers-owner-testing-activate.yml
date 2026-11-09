@@ -222,7 +222,8 @@ jobs:
           fi
           export ROLLBACK_ATTEMPTED_COMPONENTS_JSON="$attempted_components"
           export ROLLBACK_ATTEMPTED_ROUTES_JSON="$attempted_routes"
-          export ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg admin "$ADMIN_WORKER_VERSION_ID" --arg coordinator "$COORDINATOR_WORKER_VERSION_ID" '{admin:$admin,coordinator:$coordinator}')"
+          ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg admin "$ADMIN_WORKER_VERSION_ID" --arg coordinator "$COORDINATOR_WORKER_VERSION_ID" '{admin:$admin,coordinator:$coordinator}')"
+          export ROLLBACK_CANDIDATE_VERSIONS_JSON
           export ROLLBACK_CANDIDATE_ROUTE_TARGETS_JSON='{"adminApi":{"pattern":"admin.lythaus.co/api/admin/*","script":"lythaus-admin-api-development"},"coordinator":{"pattern":"admin.lythaus.co/api/admin/production-auth-acceptance/*","script":"lythaus-auth-acceptance-coordinator-development"}}'
           if ! node scripts/ci/assert-owner-testing-rollback-safe.mjs --expected "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" --current "$work/current.json"; then
             echo 'ROLLBACK_STATE=BLOCKED_EXTERNAL_DRIFT' >> "$GITHUB_ENV"

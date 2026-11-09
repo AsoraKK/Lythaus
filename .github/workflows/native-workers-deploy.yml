@@ -2075,7 +2075,8 @@ jobs:
             if [[ "${COORDINATOR_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then attempted_routes='["coordinator"]'; fi
             export ROLLBACK_ATTEMPTED_COMPONENTS_JSON="$attempted_components"
             export ROLLBACK_ATTEMPTED_ROUTES_JSON="$attempted_routes"
-            export ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg id "${COORDINATOR_WORKER_VERSION_ID:-}" '{coordinator:$id}')"
+            ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg id "${COORDINATOR_WORKER_VERSION_ID:-}" '{coordinator:$id}')"
+            export ROLLBACK_CANDIDATE_VERSIONS_JSON
             export ROLLBACK_CANDIDATE_ROUTE_TARGETS_JSON='{"coordinator":{"pattern":"admin.lythaus.co/api/admin/production-auth-acceptance/*","script":"lythaus-auth-acceptance-coordinator-development"}}'
             if ! node scripts/ci/assert-owner-testing-rollback-safe.mjs \
               --expected "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" --current "$drift_dir/current.json"; then
