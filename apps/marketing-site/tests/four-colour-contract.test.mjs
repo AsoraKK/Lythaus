@@ -25,16 +25,25 @@ const files = (dir) => readdirSync(path.join(root, dir), { withFileTypes: true }
   .flatMap((entry) => entry.isDirectory() ? files(`${dir}/${entry.name}`) : [`${dir}/${entry.name}`]);
 
 test('marketing and Flutter semantic aliases resolve to exactly the approved four colours', () => {
-  assert.deepEqual(tokens.color.light, tokens.color.dark);
-  assert.deepEqual(new Set(Object.values(tokens.color.dark).map((value) => value.slice(1))), palette);
+  const light = tokens.color.light;
+  const dark = tokens.color.dark;
+  assert.deepEqual(Object.keys(light).sort(), Object.keys(dark).sort());
+  const tokenValues = [...Object.values(light), ...Object.values(dark)];
+  for (const value of tokenValues) assert.ok(palette.has(value.slice(1)), value);
+  assert.deepEqual(new Set(tokenValues.map((value) => value.slice(1))), palette);
   const css = read('apps/marketing-site/src/styles/palette.css');
   const cssSources = Object.fromEntries([...css.matchAll(/--palette-([\w-]+): #(\w{6});/g)].map((m) => [m[1], `#${m[2]}`]));
   const cssAliases = Object.fromEntries([...css.matchAll(/--ds-([\w-]+): var\(--palette-([\w-]+)\);/g)].map((m) => [m[1], cssSources[m[2]]]));
   const dart = read('lib/design_system/tokens/semantic_colors.dart');
   const dartSources = Object.fromEntries([...dart.matchAll(/static const (\w+) = Color\(0xFF(\w{6})\);/g)].map((m) => [m[1], `#${m[2]}`]));
-  const dartAliases = Object.fromEntries([...dart.matchAll(/'(\w+)': (\w+),/g)].map((m) => [m[1], dartSources[m[2]]]));
-  assert.deepEqual(dartAliases, tokens.color.dark);
-  for (const [key, value] of Object.entries(tokens.color.dark)) {
+  const dartAliasesFor = (mode) => {
+    const block = dart.match(new RegExp(`static const ${mode} = <String, Color>\\{([\\s\\S]*?)\\n  \\};`));
+    assert.ok(block, `missing ${mode} Flutter semantic map`);
+    return Object.fromEntries([...block[1].matchAll(/'(\w+)': (\w+),/g)].map((m) => [m[1], dartSources[m[2]]]));
+  };
+  assert.deepEqual(dartAliasesFor('dark'), dark);
+  assert.deepEqual(dartAliasesFor('light'), light);
+  for (const [key, value] of Object.entries(dark)) {
     assert.equal(cssAliases[key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)], value, key);
   }
 });
@@ -67,11 +76,19 @@ test('colour inventory rejects new literals, named colours and inline script sty
   }
 });
 
-test('one dark theme preserves readable copy, status semantics and static brand fallback', () => {
+test('application appearance modes preserve readable copy, status semantics and static brand fallback', () => {
   const layout = read('apps/marketing-site/src/layouts/SecondaryLayout.astro');
   assert.doesNotMatch(layout, /secondary-appearance|prefers-color-scheme/);
-  assert.match(read('lib/main.dart'), /themeMode: ThemeMode.dark/);
-  assert.match(read('lib/design_system/theme/lyth_color_schemes.dart'), /static ColorScheme light\(\) => dark\(\)/);
+  const app = read('lib/main.dart');
+  assert.match(app, /theme: LythausTheme\.light\(\)/);
+  assert.match(app, /darkTheme: LythausTheme\.dark\(\)/);
+  assert.match(app, /themeMode: themeMode/);
+  assert.match(app, /themeModeProvider/);
+  assert.match(read('lib/ui/screens/adaptive_shell.dart'), /RadioGroup<ThemeMode>/);
+  assert.match(read('lib/state/providers/theme_mode_provider.dart'), /ThemeMode\.system/);
+  const schemes = read('lib/design_system/theme/lyth_color_schemes.dart');
+  assert.match(schemes, /static ColorScheme light\(\) => _scheme\(Brightness\.light\)/);
+  assert.match(schemes, /static ColorScheme dark\(\) => _scheme\(Brightness\.dark\)/);
   const opening = read('apps/marketing-site/src/components/OpeningWordmark.astro');
   assert.match(opening, /class="wordmark-fallback approved-brand" aria-hidden="true"><ApprovedBrand \/>/);
   assert.match(read('apps/marketing-site/src/scripts/home-opening.js'), /SVGMaskElement/);
