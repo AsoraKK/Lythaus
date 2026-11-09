@@ -94,14 +94,25 @@ test('activation handoff binds first attempt, exact run, release SHA and candida
   }), /release_binding_mismatch/);
 });
 
-test('passed Keeper evidence remains historical after its polling window closes while diagnostic activation window is live', () => {
+test('Keeper PASSED remains historical in the handoff but cannot activate after its expiry', () => {
   const value = handoff({ acceptanceExpiresAt: '2026-11-09T11:00:00.000Z' });
-  assert.equal(validateOwnerTestingActivationHandoff(value, {
+  assert.equal(value.acceptance.status, 'PASSED');
+  assert.throws(() => validateOwnerTestingActivationHandoff(value, {
     expectedRunId: runId,
     expectedRunAttempt: 1,
     expectedReleaseSha: releaseSha,
     nowMs,
-  }).acceptance.status, 'PASSED');
+  }), /owner_testing_activation_acceptance_expired/);
+});
+
+test('activation rejects Keeper acceptance expiring at the approval-time boundary', () => {
+  const value = handoff({ acceptanceExpiresAt: new Date(nowMs).toISOString() });
+  assert.throws(() => validateOwnerTestingActivationHandoff(value, {
+    expectedRunId: runId,
+    expectedRunAttempt: 1,
+    expectedReleaseSha: releaseSha,
+    nowMs,
+  }), /owner_testing_activation_acceptance_expired/);
 });
 
 test('activation handoff fails closed when expired, short on 40-minute runway, or outside three-hour window', () => {

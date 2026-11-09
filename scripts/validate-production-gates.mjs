@@ -88,6 +88,7 @@ if (phase === 'final') {
       && authAcceptanceStatus === 'PASSED'
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(runId)
       && validTimestamp(expiresAt)
+      && Date.parse(expiresAt) > Date.now()
       && validDiagnosticTimestamp(diagnosticExpiresAt)
       && Date.parse(diagnosticExpiresAt) > Date.now()
       && dependencies && typeof dependencies === 'object' && !Array.isArray(dependencies)

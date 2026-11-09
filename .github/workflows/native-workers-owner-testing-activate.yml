@@ -250,11 +250,13 @@ jobs:
             npx --yes wrangler@4.123.0 versions deploy $admin_specs --name lythaus-admin-api-development --yes --message 'Restore exact owner-test Admin baseline' || rollback_failed=1
           fi
           if [[ "$rollback_failed" == 0 ]]; then
-            echo 'ROLLBACK_STATE=ROLLED_BACK' >> "$GITHUB_ENV"
-            echo 'ACTIVATION_STATE=ROLLED_BACK' >> "$GITHUB_ENV"
-            echo 'RELEASE_STATE_HISTORY_JSON<<LYTHAUS_ROLLBACK_HISTORY' >> "$GITHUB_ENV"
-            echo "$RELEASE_STATE_HISTORY_JSON" >> "$GITHUB_ENV"
-            echo 'LYTHAUS_ROLLBACK_HISTORY' >> "$GITHUB_ENV"
+            {
+              echo 'ROLLBACK_STATE=ROLLED_BACK'
+              echo 'ACTIVATION_STATE=ROLLED_BACK'
+              echo 'RELEASE_STATE_HISTORY_JSON<<LYTHAUS_ROLLBACK_HISTORY'
+              echo "$RELEASE_STATE_HISTORY_JSON"
+              echo 'LYTHAUS_ROLLBACK_HISTORY'
+            } >> "$GITHUB_ENV"
             node scripts/ci/transition-release-state.mjs ROLLED_BACK || rollback_failed=1
           else
             echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"

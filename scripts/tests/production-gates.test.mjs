@@ -99,6 +99,7 @@ test('owner diagnostic accepts only same-run proof bound to exact Admin and coor
     { ADMIN_WORKER_SOURCE_SHA: 'd'.repeat(40) },
     { COORDINATOR_WORKER_VERSION_ID: '66666666-6666-4666-8666-666666666666' },
     { AUTH_ACCEPTANCE_STATUS: 'HUMAN_ACCEPTANCE_REQUIRED' },
+    { AUTH_ACCEPTANCE_EXPIRES_AT: new Date(Date.now() - 60_000).toISOString() },
   ]) {
     const rejected = runFinal({ ...valid, ...mutation });
     assert.notEqual(rejected.status, 0);

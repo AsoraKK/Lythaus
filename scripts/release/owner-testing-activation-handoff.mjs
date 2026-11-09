@@ -183,8 +183,12 @@ export function validateOwnerTestingActivationHandoff(value, {
     infrastructure: value.infrastructure,
     releaseStateHistory: value.releaseStateHistory,
   });
+  const acceptanceExpiresAtMs = Date.parse(checked.acceptance.expiresAt);
+  if (!Number.isFinite(nowMs) || acceptanceExpiresAtMs <= nowMs) {
+    throw new Error('owner_testing_activation_acceptance_expired');
+  }
   const diagnosticExpiresAtMs = Date.parse(checked.diagnostic.expiresAt);
-  if (!Number.isFinite(nowMs) || checked.diagnostic.notBefore * 1000 > nowMs
+  if (checked.diagnostic.notBefore * 1000 > nowMs
     || diagnosticExpiresAtMs - nowMs < OWNER_TESTING_ACTIVATION_RUNWAY_MS) {
     throw new Error('owner_testing_activation_expired_or_runway_insufficient');
   }
