@@ -259,6 +259,30 @@ test('runtime observation preserves the exact candidate and reused dependency se
   );
 });
 
+test('diagnostic expiry is preserved only with a new exact Admin candidate', () => {
+  const evidence = validEvidence();
+  const sourceCandidate = { ...candidate, sourceReleaseSha: releaseSha };
+  const candidateDependencies = {
+    public: { workerName: 'lythaus-public-api-development', versionId: candidate.workerVersionId, sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    admin: { workerName: 'lythaus-admin-api-development', versionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    jobs: { workerName: 'lythaus-jobs-development', versionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    coordinator: { workerName: 'lythaus-auth-acceptance-coordinator-development', versionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    subjectDiagnosticExpiresAt: '2026-08-29T13:00:00.000Z',
+  };
+  evidence.candidate = sourceCandidate;
+  evidence.candidateDependencies = candidateDependencies;
+  assert.deepEqual(parseRealEmailAcceptanceEvidence(evidence, releaseSha, { ...sourceCandidate, candidateDependencies }).candidateDependencies, candidateDependencies);
+
+  const drifted = structuredClone(evidence);
+  drifted.candidateDependencies.subjectDiagnosticExpiresAt = '2026-08-29T12:59:59.000Z';
+  assert.throws(() => parseRealEmailAcceptanceEvidence(drifted, releaseSha, { ...sourceCandidate, candidateDependencies }), /subject_diagnostic_expiry_mismatch/);
+
+  const reusedAdmin = structuredClone(evidence);
+  reusedAdmin.candidateDependencies.admin.status = 'REUSED_PRODUCTION';
+  reusedAdmin.candidateDependencies.admin.provenance = 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION';
+  assert.throws(() => parseRealEmailAcceptanceEvidence(reusedAdmin, releaseSha, { ...sourceCandidate, candidateDependencies: reusedAdmin.candidateDependencies }), /subject_diagnostic_candidate_invalid/);
+});
+
 test('generated runtime observation accepts UUIDv7 acceptance and auth identifiers', () => {
   const evidence = validEvidence();
   evidence.acceptanceRunId = '99999999-9999-7999-8999-999999999999';

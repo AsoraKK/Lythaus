@@ -1,4 +1,9 @@
 export const SUBJECT_DIAGNOSTIC_PATH = '/api/admin/recovery/subject-diagnostic';
+// 35m candidate job + 45m Keeper window + 20m resumed preflight/provider path +
+// 35m resumed worker job = 135m; 180m leaves 45m slack. Production environment
+// approval and runner queue time are unbounded, so an expired candidate stays inert.
+// The diagnostic is repeatable while live; it does not use a replay latch.
+export const SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS = 3 * 60 * 60;
 
 export interface SubjectDiagnosticPolicy {
   origin: string;
@@ -14,8 +19,8 @@ export interface SubjectDiagnosticPolicy {
   };
 }
 
-// Deliberately null. There is no environment-variable or request-input fallback.
-export const COMPILED_SUBJECT_DIAGNOSTIC_POLICY: SubjectDiagnosticPolicy | null = null;
+// Replaced only in the protected candidate-upload workspace; committed source stays disabled.
+export { COMPILED_SUBJECT_DIAGNOSTIC_POLICY } from './diagnostic-policy.generated.ts';
 
 export function validateSubjectDiagnosticPolicy(value: unknown): SubjectDiagnosticPolicy {
   const policy = value as SubjectDiagnosticPolicy;
@@ -25,7 +30,8 @@ export function validateSubjectDiagnosticPolicy(value: unknown): SubjectDiagnost
     || Object.keys(policy.databaseTarget).sort().join(',') !== 'branchId,databaseName,originFingerprint,roleFingerprint'
     || !/^[A-Za-z0-9_-]{1,128}$/.test(policy.accessAudience)
     || !Number.isSafeInteger(policy.notBefore) || !Number.isSafeInteger(policy.expiresAt)
-    || policy.expiresAt <= policy.notBefore || policy.expiresAt - policy.notBefore > 600
+    || policy.expiresAt <= policy.notBefore
+    || policy.expiresAt - policy.notBefore > SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS
     || !/^[a-z0-9]+$/.test(policy.databaseTarget.branchId)
     || policy.databaseTarget.databaseName !== 'postgres'
     || !/^[a-f0-9]{64}$/.test(policy.databaseTarget.originFingerprint)

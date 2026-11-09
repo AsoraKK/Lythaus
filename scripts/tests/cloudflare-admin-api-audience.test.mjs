@@ -74,6 +74,6 @@ test('read-only Access workflow pins the historical expectation and reuses its e
   assert.match(workflow, /EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT: cee241b59a461d2c0199404312504688a92949276b74b1a2364464bf8554810c/);
   assert.match(workflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_AUDIT_API_TOKEN/);
-  assert.match(verifier, /process\.env\.CLOUDFLARE_API_TOKEN/);
-  assert.doesNotMatch(verifier, /process\.env\.CLOUDFLARE_AUDIT_API_TOKEN/);
+  assert.match(verifier, /environment\.CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(verifier, /environment\.CLOUDFLARE_AUDIT_API_TOKEN/);
 });
