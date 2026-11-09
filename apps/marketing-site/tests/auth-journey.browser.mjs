@@ -122,7 +122,8 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
       assert.equal(calls.length, beforeProof, 'Opening proof must not redeem it');
       await screenshot('verification');
       assert.equal(await page.locator('input[name="passwordConfirmation"]').count(), 0);
-      assert.equal(await page.locator('input[required]').count(), 1);
+      assert.equal(await page.locator('input[required]').count(), 2);
+      await page.locator('#verification-email').fill('synthetic@example.invalid');
       await page.locator('#verification-password').fill(setupPassword);
       await page.getByRole('button', { name: 'Verify email and finish setup', exact: true }).click();
       await page.locator('[data-email-verification-signin]').waitFor({ state: 'visible' });
@@ -198,7 +199,7 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
           await status.filter({ hasText: 'valid email' }).waitFor();
           assert.equal(requests.length, before);
           await page.locator('input[type="email"]').fill('synthetic@example.invalid');
-        }
+        } else await page.locator('#verification-email').fill('synthetic@example.invalid');
         for (const invalid of id === 'sign-in-password' ? [''] : ['', 'short', 'x'.repeat(129)]) {
           await password.fill(invalid);
           await submit.click();
