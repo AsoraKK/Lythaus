@@ -1,0 +1,60 @@
+name: Admin runtime target check (pass/fail only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-admin-runtime-target-pass-fail
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Verify protected Admin runtime target
+    if: github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Require protected main
+        env:
+          REF_PROTECTED: ${{ github.ref_protected }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run ephemeral read-only comparison
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          PSCALE_BRANCH_NAME: main
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0021_media_quarantine_cleanup.sql
+          EXPECTED_DATABASE_TARGET: main
+          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
+          REQUIRE_BUDGET_MIGRATION: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          REF_PROTECTED: ${{ github.ref_protected }}
+          PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
+          PRODUCTION_ADMIN_API_BASE_URL: https://admin-api.lythaus.co
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/admin-runtime-target-pass-fail.mjs

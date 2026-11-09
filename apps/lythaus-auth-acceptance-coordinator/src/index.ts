@@ -74,7 +74,7 @@ type CandidateDependency = {
   status: (typeof ACCEPTANCE_STATUS)[number];
   provenance: (typeof ACCEPTANCE_PROVENANCE)[number];
 };
-type CandidateDependencies = Record<AcceptanceComponent, CandidateDependency>;
+type CandidateDependencies = Record<AcceptanceComponent, CandidateDependency> & { subjectDiagnosticExpiresAt?: string };
 type RollbackVersion = { versionId: string; percentage: number };
 type RollbackRoute = { id: string; pattern: string; script: string | null };
 type AcceptanceRollbackSnapshot = {
@@ -186,7 +186,9 @@ async function runContext(env: Env, run: RunRow): Promise<string> {
 function strictCandidateDependencies(value: unknown, candidateSourceSha: string, releaseSha?: string): CandidateDependencies {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('acceptance_context_dependencies_invalid');
   const input = value as Record<string, unknown>;
-  if (Object.keys(input).sort().join(',') !== [...ACCEPTANCE_COMPONENTS].sort().join(',')) {
+  const componentKeys = [...ACCEPTANCE_COMPONENTS].sort().join(',');
+  const keys = Object.keys(input).sort().join(',');
+  if (keys !== componentKeys && keys !== [...ACCEPTANCE_COMPONENTS, 'subjectDiagnosticExpiresAt'].sort().join(',')) {
     throw new Error('acceptance_context_dependencies_invalid');
   }
   const candidateDependencies = Object.fromEntries(ACCEPTANCE_COMPONENTS.map((component) => {
@@ -209,14 +211,25 @@ function strictCandidateDependencies(value: unknown, candidateSourceSha: string,
       status: dependency.status as CandidateDependency['status'],
       provenance: dependency.provenance as CandidateDependency['provenance'],
     }];
-  })) as CandidateDependencies;
+  })) as unknown as CandidateDependencies;
+  if (Object.hasOwn(input, 'subjectDiagnosticExpiresAt')) {
+    const expiresAt = strictTimestamp(input.subjectDiagnosticExpiresAt, 'acceptance_context_subject_diagnostic_expiry_invalid');
+    if (candidateDependencies.admin.status !== 'NEW_CANDIDATE'
+      || candidateDependencies.admin.workerName !== ACCEPTANCE_WORKERS.admin) {
+      throw new Error('acceptance_context_subject_diagnostic_candidate_invalid');
+    }
+    candidateDependencies.subjectDiagnosticExpiresAt = expiresAt;
+  }
   if (candidateDependencies.public.sourceSha !== candidateSourceSha.toLowerCase()
     || candidateDependencies.public.workerName !== 'lythaus-public-api-development') {
     throw new Error('acceptance_context_dependencies_invalid');
   }
-  if (releaseSha && Object.values(candidateDependencies).some((dependency) => (
-    dependency.status === 'NEW_CANDIDATE' && dependency.sourceSha !== releaseSha.toLowerCase()
-  ))) {
+  if (releaseSha && ACCEPTANCE_COMPONENTS.some((component) => {
+    const dependency = candidateDependencies[component];
+    return (
+      dependency.status === 'NEW_CANDIDATE' && dependency.sourceSha !== releaseSha.toLowerCase()
+    );
+  })) {
     throw new Error('acceptance_context_dependencies_invalid');
   }
   return candidateDependencies;
@@ -403,6 +416,14 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   if (Date.parse(stagedAt) > Date.now()) throw new Error('acceptance_candidate_stage_in_future');
   if (body.candidateDependencies === undefined) throw new Error('acceptance_context_dependencies_required');
   const candidateDependencies = strictCandidateDependencies(body.candidateDependencies, candidateSourceSha, releaseSha);
+  if (candidateDependencies.subjectDiagnosticExpiresAt) {
+    const diagnosticRemainingMs = Date.parse(candidateDependencies.subjectDiagnosticExpiresAt) - Date.now();
+    if (diagnosticRemainingMs <= 0
+      || diagnosticRemainingMs > 3 * 60 * 60 * 1000
+      || diagnosticRemainingMs < 100 * 60 * 1000) {
+      throw new Error('acceptance_context_subject_diagnostic_window_invalid');
+    }
+  }
   const rollbackSnapshot = body.rollbackSnapshot === undefined
     ? undefined
     : strictRollbackSnapshot(body.rollbackSnapshot, candidateDependencies);

@@ -14,6 +14,24 @@ and a fresh separate owner action packet remain required before execution.
 ## Fixed scope
 
 `planetscale-native-restore-check.yml` defaults to a read-only metadata plan.
+Its `schema_mode` input defaults to `pre-0021`, preserving the original
+qualification contract and historical evidence. To qualify a post-0021
+snapshot, explicitly choose `post-0021`; the source, pre-create source
+readback, restored target and final source readback must all match the exact
+approved registry through `0021_media_quarantine_cleanup.sql` and the 0021
+column and index postconditions. The Worker smoke uses the resulting schema
+version and fingerprint. For an execution in this mode, the owner approval
+JSON must additionally contain `"schemaMode": "post-0021"`; a legacy
+approval cannot authorize it. The qualification report records the selected
+mode. A pre-0021 qualification is not post-0021 evidence, and a passing
+qualification alone does not certify recovery or authorize release.
+
+The fixed backup and target below are historical pins. A future attempt still
+needs separately reviewed fresh pins, complete history reconciliation including
+the later successful qualification and cleanup, current access and budget
+admission, and a new explicit action packet. This source change does not
+authorize or make those changes, choose a backup, or waive any gate.
+
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
 record. Every prior execute run in the complete workflow history blocks another
@@ -211,10 +229,12 @@ review, not repair against the restored data.
 ## Qualification and receipts
 
 The existing source read connection is pinned to main, verifier identity and
-reviewed origin fingerprint. Before spending, its read-only snapshot must have
-the exact 21 registry checksums through 0020, canonical relation inventory,
-0017–0020 postconditions, no partial 0021 objects, three extensions and all 17
-approved privileges. After restoration the setup connection checks the same
+reviewed origin fingerprint. Before spending, the `pre-0021` snapshot must have
+the exact 21 registry checksums through 0020, 0017–0020 postconditions and no
+partial 0021 objects. The `post-0021` snapshot must have the exact 22 registry
+checksums through 0021 and the 0017–0021 postconditions. Both modes require the
+canonical relation inventory, three extensions and all 17 approved privileges.
+After restoration the setup connection checks the same
 catalog/constraint/index/function, ACL/grantor, RLS, membership and role hashes.
 Source metadata is checked again after the exercise. No product rows are read;
 only catalogs and the migration registry enter these snapshots.

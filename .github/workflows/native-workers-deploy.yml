@@ -78,6 +78,11 @@ on:
         required: false
         default: false
         type: boolean
+      enable_subject_diagnostic:
+        description: Enable the repeatable read-only Admin identity diagnostic for up to three hours
+        required: false
+        default: false
+        type: boolean
       ci_run_id:
         description: Successful CI run ID for the exact release SHA
         required: true
@@ -329,6 +334,18 @@ jobs:
             --base-sha "$PREVIOUS_PRODUCTION_SHA" \
             --output "$RUNNER_TEMP/production-cutover/release-plan.json"
           jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/production-cutover/release-plan.json" >/dev/null
+      - name: Require exact-candidate acceptance for the subject diagnostic
+        if: inputs.enable_subject_diagnostic == true
+        env:
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+          CHANGED_COMPONENTS_JSON: ${{ steps.release_plan.outputs.changed_components_json }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
+          test "$OWNER_TESTING_DEPLOYMENT" != true
+          jq -e 'type == "array" and index("admin") != null' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
       - name: Require no manual release-class downgrade
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
@@ -743,6 +760,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PLANETSCALE_API_TOKEN: ${{ inputs.enable_subject_diagnostic == true && secrets.PLANETSCALE_API_TOKEN || '' }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ inputs.enable_subject_diagnostic == true && secrets.PSCALE_ROLE_IDENTIFIERS || '' }}
+          PSCALE_BRANCH_NAME: main
+          PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN: ${{ inputs.enable_subject_diagnostic == true && vars.PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN || '' }}
+          EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT: cee241b59a461d2c0199404312504688a92949276b74b1a2364464bf8554810c
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           AUTH_ACCEPTANCE_EMAIL_BASE: ${{ inputs.owner_testing_deployment != true && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_EMAIL || '' }}
           AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE: ${{ inputs.owner_testing_deployment != true && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_SECONDARY_EMAIL || '' }}
@@ -750,6 +772,7 @@ jobs:
           AUTHENTICITY_BETA_DISPATCH_SECRET: ${{ secrets.AUTHENTICITY_BETA_DISPATCH_SECRET }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
@@ -784,8 +807,15 @@ jobs:
           coordinator_response_file="$RUNNER_TEMP/production-cutover/coordinator-request.json"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
+          diagnostic_policy_module='apps/lythaus-admin-api/src/solo-recovery/diagnostic-policy.generated.ts'
+          diagnostic_policy_backup="$RUNNER_TEMP/production-cutover/diagnostic-policy.generated.original.ts"
+          diagnostic_policy_output="$RUNNER_TEMP/production-cutover/subject-diagnostic-policy.json"
           if component_changed public; then test -s "$turnstile_secret_file"; fi
-          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output" "$coordinator_response_file"' EXIT
+          cleanup_candidate_upload() {
+            if [[ -f "$diagnostic_policy_backup" ]]; then cp "$diagnostic_policy_backup" "$diagnostic_policy_module" || true; fi
+            rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output" "$coordinator_response_file" "$diagnostic_policy_backup" "$diagnostic_policy_output"
+          }
+          trap cleanup_candidate_upload EXIT
           jq -n \
             --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
@@ -863,6 +893,18 @@ jobs:
             node scripts/ci/configure-authenticity-beta-runtime.mjs dispatch-secret "$jobs_secrets_file"
           fi
           if component_changed public; then upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log" "$public_secrets_file"; fi
+          if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true ]]; then
+            component_changed admin || { echo 'Subject diagnostic requires an Admin Worker candidate.' >&2; exit 1; }
+            [[ "$OWNER_TESTING_DEPLOYMENT" != true ]] || { echo 'Subject diagnostic requires standard exact-candidate acceptance.' >&2; exit 1; }
+            cp "$diagnostic_policy_module" "$diagnostic_policy_backup"
+            SUBJECT_DIAGNOSTIC_POLICY_MODULE_PATH="$diagnostic_policy_module" \
+            SUBJECT_DIAGNOSTIC_POLICY_OUTPUT_PATH="$diagnostic_policy_output" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            node --experimental-strip-types scripts/ci/prepare-subject-diagnostic-policy.mjs
+            diagnostic_expiry_epoch="$(jq -er '.expiresAt' "$diagnostic_policy_output")"
+            diagnostic_expiry="$(date -u -d "@$diagnostic_expiry_epoch" +%Y-%m-%dT%H:%M:%S.000Z)"
+            echo "SUBJECT_DIAGNOSTIC_EXPIRES_AT=$diagnostic_expiry" >> "$GITHUB_ENV"
+          fi
           if component_changed admin; then upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$base_secrets_file"; fi
           if component_changed jobs; then upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"; fi
           if coordinator_managed; then upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"; fi
@@ -1201,6 +1243,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
@@ -1234,6 +1277,18 @@ jobs:
             --arg jobs_version "$JOBS_WORKER_VERSION_ID" --arg jobs_source "$JOBS_WORKER_SOURCE_SHA" --arg jobs_status "$JOBS_WORKER_STATUS" --arg jobs_provenance "$JOBS_WORKER_PROVENANCE" \
             --arg coordinator_version "$COORDINATOR_WORKER_VERSION_ID" --arg coordinator_source "$COORDINATOR_WORKER_SOURCE_SHA" --arg coordinator_status "$COORDINATOR_WORKER_STATUS" --arg coordinator_provenance "$COORDINATOR_WORKER_PROVENANCE" \
             '{public:{workerName:"lythaus-public-api-development",versionId:$public_version,sourceSha:$public_source,status:$public_status,provenance:$public_provenance},admin:{workerName:"lythaus-admin-api-development",versionId:$admin_version,sourceSha:$admin_source,status:$admin_status,provenance:$admin_provenance},jobs:{workerName:"lythaus-jobs-development",versionId:$jobs_version,sourceSha:$jobs_source,status:$jobs_status,provenance:$jobs_provenance},coordinator:{workerName:"lythaus-auth-acceptance-coordinator-development",versionId:$coordinator_version,sourceSha:$coordinator_source,status:$coordinator_status,provenance:$coordinator_provenance}}')"
+          diagnostic_expiry=''
+          if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true && -z "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
+            diagnostic_expiry="${SUBJECT_DIAGNOSTIC_EXPIRES_AT:-}"
+            [[ "$diagnostic_expiry" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.000Z$ ]] || {
+              echo 'The Admin candidate expiry is missing or invalid.' >&2
+              exit 1
+            }
+            candidate_dependencies="$(jq -c --arg expires_at "$diagnostic_expiry" '. + {subjectDiagnosticExpiresAt:$expires_at}' <<<"$candidate_dependencies")"
+          elif [[ "$ENABLE_SUBJECT_DIAGNOSTIC" != true && -n "${SUBJECT_DIAGNOSTIC_EXPIRES_AT:-}" ]]; then
+            echo 'Diagnostic expiry exists although diagnostic mode was not requested.' >&2
+            exit 1
+          fi
           candidate_source_sha="$PUBLIC_WORKER_SOURCE_SHA"
           uploaded_at=''
           staged_at=''
@@ -1283,6 +1338,19 @@ jobs:
             candidate_source_sha="$(jq -r '.candidate.sourceReleaseSha // empty' <<<"$run_json")"
             [[ "$candidate_source_sha" =~ ^[0-9a-f]{40}$ ]] || candidate_source_sha="$PUBLIC_WORKER_SOURCE_SHA"
             run_dependencies="$(jq -c '.candidateDependencies // empty' <<<"$run_json")"
+            if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true ]]; then
+              existing_diagnostic_expiry="$(jq -r '.subjectDiagnosticExpiresAt // empty' <<<"${run_dependencies:-{}}")"
+              [[ -n "$existing_diagnostic_expiry" ]] || {
+                echo 'Existing acceptance run lacks the diagnostic expiry bound to its candidate; refusing to resume.' >&2
+                exit 1
+              }
+              diagnostic_expiry="$(date -u -d "$existing_diagnostic_expiry" +%Y-%m-%dT%H:%M:%S.000Z)"
+              candidate_dependencies="$(jq -c --arg expires_at "$diagnostic_expiry" '. + {subjectDiagnosticExpiresAt:$expires_at}' <<<"$candidate_dependencies")"
+              echo "SUBJECT_DIAGNOSTIC_EXPIRES_AT=$diagnostic_expiry" >> "$GITHUB_ENV"
+            elif [[ -n "$run_dependencies" ]] && [[ -n "$(jq -r '.subjectDiagnosticExpiresAt // empty' <<<"$run_dependencies")" ]]; then
+              echo 'Acceptance run includes a diagnostic policy but this release did not request it.' >&2
+              exit 1
+            fi
             run_rollback_snapshot="$(jq -c '.rollbackSnapshot // empty' <<<"$run_json")"
             test -n "$run_rollback_snapshot" || {
               echo 'Existing acceptance run lacks exact rollback snapshot provenance; refusing to resume it.' >&2
@@ -1293,6 +1361,10 @@ jobs:
               exit 1
             }
             if [[ -z "$run_dependencies" ]]; then
+              if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true ]]; then
+                echo 'Existing acceptance run lacks exact candidate dependency provenance; refusing diagnostic resume.' >&2
+                exit 1
+              fi
               echo 'Existing acceptance run lacks exact candidate dependency provenance; creating a fresh run.' >&2
             else
               test "$(jq -S -c '.' <<<"$run_dependencies")" = "$(jq -S -c '.' <<<"$candidate_dependencies")" || {
@@ -1315,6 +1387,14 @@ jobs:
             fi
             test -n "$uploaded_at" && test -n "$staged_at"
             test -n "$candidate_source_sha"
+            if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true ]]; then
+              diagnostic_expiry_epoch="$(date -u -d "$diagnostic_expiry" +%s)"
+              now_epoch="$(date -u +%s)"
+              (( diagnostic_expiry_epoch - now_epoch >= 6000 )) || {
+                echo 'The diagnostic window cannot cover Keeper acceptance and the resumed release; upload a fresh candidate.' >&2
+                exit 1
+              }
+            fi
             rollback_snapshot="$(cat "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH")"
             payload="$(jq -n --arg releaseSha "$RELEASE_SHA" --arg candidateSourceSha "$candidate_source_sha" --arg candidateWorker lythaus-public-api-development --arg candidateVersion "$PUBLIC_WORKER_VERSION_ID" --arg candidateUploadedAt "$uploaded_at" --arg candidateStagedAt "$staged_at" --argjson candidateDependencies "$candidate_dependencies" --argjson rollbackSnapshot "$rollback_snapshot" '{releaseSha:$releaseSha,candidateSourceSha:$candidateSourceSha,candidateWorker:$candidateWorker,candidateVersion:$candidateVersion,candidateUploadedAt:$candidateUploadedAt,candidateStagedAt:$candidateStagedAt,candidateDependencies:$candidateDependencies,rollbackSnapshot:$rollbackSnapshot}')"
             run_json="$(coordinator_request POST "$base/runs" "$payload")"
@@ -1332,6 +1412,7 @@ jobs:
             echo "ADR003_CANDIDATE_STAGED_AT=$staged_at"
             echo "AUTH_ACCEPTANCE_KEEPER_URL=$keeper_url"
             echo "AUTH_ACCEPTANCE_DEPENDENCIES_JSON=$candidate_dependencies"
+            echo "SUBJECT_DIAGNOSTIC_EXPIRES_AT=$diagnostic_expiry"
           } >> "$GITHUB_ENV"
           {
             echo '## Production authentication acceptance'
@@ -1527,6 +1608,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
+          SUBJECT_DIAGNOSTIC_EXPIRES_AT: ${{ env.SUBJECT_DIAGNOSTIC_EXPIRES_AT }}
+          AUTH_ACCEPTANCE_DEPENDENCIES_JSON: ${{ env.AUTH_ACCEPTANCE_DEPENDENCIES_JSON }}
+          ADMIN_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID }}
+          ADMIN_WORKER_SOURCE_SHA: ${{ env.ADMIN_WORKER_SOURCE_SHA }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
@@ -1535,6 +1622,9 @@ jobs:
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
+          if component_changed admin; then
+            node scripts/ci/verify-subject-diagnostic-expiry.mjs
+          fi
           if component_changed public; then
             npx --yes wrangler@4.123.0 versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" --name lythaus-public-api-development --yes --message "Activate reviewed Lythaus public release ${{ inputs.release_sha }}"
             echo "PUBLIC_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"

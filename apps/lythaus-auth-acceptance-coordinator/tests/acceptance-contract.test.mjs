@@ -68,6 +68,15 @@ test('live acceptance pins dependencies and records expired link, cooldown and a
   assert.match(coordinator, /account_switch_required/);
 });
 
+test('read-only subject diagnostic expiry is encrypted with and bounded to the exact Admin candidate', () => {
+  assert.match(coordinator, /subjectDiagnosticExpiresAt\?: string/);
+  assert.match(coordinator, /candidateDependencies\.admin\.status !== 'NEW_CANDIDATE'/);
+  assert.match(coordinator, /diagnosticRemainingMs > 3 \* 60 \* 60 \* 1000/);
+  assert.match(coordinator, /diagnosticRemainingMs < 100 \* 60 \* 1000/);
+  assert.match(coordinator, /candidateDependencies: await candidateDependencies\(env, run\) \?\? null/);
+  assert.match(coordinator, /subjectDiagnosticExpiresAt/);
+});
+
 test('service readiness authorization survives the Access edge without weakening human Access validation', () => {
   assert.match(coordinator, /request\.headers\.get\('x-lythaus-readiness-token'\)/);
   assert.match(coordinator, /request\.headers\.get\('authorization'\)\?\.match\(\/\^Bearer/);

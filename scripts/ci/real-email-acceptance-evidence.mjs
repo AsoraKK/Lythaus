@@ -74,7 +74,9 @@ function validateCandidate(candidate, releaseSha, expectedCandidate = {}) {
 
 function validateCandidateDependencies(value, candidate, expectedDependencies, releaseSha) {
   assertObject(value, 'real_email_acceptance_candidate_dependencies_invalid');
-  if (Object.keys(value).sort().join(',') !== ACCEPTANCE_DEPENDENCY_COMPONENTS.slice().sort().join(',')) {
+  const componentKeys = ACCEPTANCE_DEPENDENCY_COMPONENTS.slice().sort().join(',');
+  const keys = Object.keys(value).sort().join(',');
+  if (keys !== componentKeys && keys !== [...ACCEPTANCE_DEPENDENCY_COMPONENTS, 'subjectDiagnosticExpiresAt'].sort().join(',')) {
     throw new Error('real_email_acceptance_candidate_dependencies_invalid');
   }
   const normalized = {};
@@ -99,6 +101,11 @@ function validateCandidateDependencies(value, candidate, expectedDependencies, r
       provenance: dependency.provenance,
     };
   }
+  if (Object.hasOwn(value, 'subjectDiagnosticExpiresAt')) {
+    const expiryMs = timestamp(value.subjectDiagnosticExpiresAt, 'real_email_acceptance_subject_diagnostic_expiry_invalid');
+    if (normalized.admin.status !== 'NEW_CANDIDATE') throw new Error('real_email_acceptance_subject_diagnostic_candidate_invalid');
+    normalized.subjectDiagnosticExpiresAt = new Date(expiryMs).toISOString();
+  }
   if (normalized.public.versionId !== candidate.workerVersionId || normalized.public.workerName !== candidate.workerName
     || normalized.public.sourceSha !== (candidate.sourceReleaseSha ?? '').toLowerCase()) {
     throw new Error('real_email_acceptance_candidate_dependency_public_mismatch');
@@ -121,6 +128,12 @@ function validateCandidateDependencies(value, candidate, expectedDependencies, r
         || normalized[component].provenance !== expected.provenance) {
         throw new Error('real_email_acceptance_candidate_dependency_mismatch');
       }
+    }
+    const expectedExpiry = expectedDependencies.subjectDiagnosticExpiresAt;
+    if ((expectedExpiry === undefined) !== (normalized.subjectDiagnosticExpiresAt === undefined)
+      || (expectedExpiry !== undefined && timestamp(expectedExpiry, 'real_email_acceptance_expected_subject_diagnostic_expiry_invalid')
+        !== timestamp(normalized.subjectDiagnosticExpiresAt, 'real_email_acceptance_subject_diagnostic_expiry_invalid'))) {
+      throw new Error('real_email_acceptance_subject_diagnostic_expiry_mismatch');
     }
   }
   return normalized;

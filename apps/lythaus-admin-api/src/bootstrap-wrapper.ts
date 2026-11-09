@@ -8,6 +8,7 @@ import { verifiedAccessSubject } from './admin-access-runtime-policy.ts';
 import { rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import { bootstrapFirstAdmin, FIRST_ADMIN_BOOTSTRAP_CONFIRMATION } from './first-admin-bootstrap.ts';
+import { SUBJECT_DIAGNOSTIC_PATH, handleSubjectDiagnostic } from './solo-recovery/subject-diagnostic.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -90,6 +91,7 @@ async function handleFirstAdminBootstrap(request: Request, env: Env): Promise<Re
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (new URL(request.url).pathname === SUBJECT_DIAGNOSTIC_PATH) return handleSubjectDiagnostic(request, env);
     if (new URL(request.url).pathname === BOOTSTRAP_PATH) {
       return handleFirstAdminBootstrap(request, env);
     }
