@@ -89,17 +89,20 @@ try {
         `The Notifications label stays on one line at text scale ${scale}`);
       if (scale === 2) {
         const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
-        assert.ok(row && row.x >= 0 && row.y >= 0 && row.x + row.width <= viewport.width &&
-          row.y + row.height <= viewport.height,
-        'The scaled Notifications row remains within the viewport');
-        const [labelLine] = labelLines;
+        const renderedLabels = await page.evaluate(() =>
+          JSON.parse(window.lythausNavigationTextGeometry()));
+        const renderedLabel = renderedLabels[0];
+        const renderedTextBox = renderedLabel?.box;
+        const renderedTextLines = renderedLabel?.lines ?? [];
         if (engine === 'webkit') {
           console.error(JSON.stringify({
             diagnostic: 'adaptive-shell Notifications geometry',
             theme,
             scale,
             rowRect: row && { ...row, right: row.x + row.width, bottom: row.y + row.height },
-            labelLineRects: labelLines,
+            semanticsLabelLineRects: labelLines,
+            renderedTextBox,
+            renderedTextLineRects: renderedTextLines,
             viewportRect: {
               x: 0,
               y: 0,
@@ -110,12 +113,25 @@ try {
             },
           }));
         }
-        assert.ok(labelLine.x >= row.x && labelLine.y >= row.y &&
-          labelLine.right <= row.x + row.width && labelLine.bottom <= row.y + row.height,
-        'The scaled Notifications label remains within its row');
-        assert.ok(labelLine.x >= 0 && labelLine.y >= 0 &&
-          labelLine.right <= viewport.width && labelLine.bottom <= viewport.height,
-        'The scaled Notifications label remains within the viewport');
+        assert.equal(renderedLabels.length, 1,
+          'Flutter exposes exactly one rendered Notifications label');
+        assert.equal(renderedLabel.text, 'Notifications');
+        assert.equal(renderedTextLines.length, 1,
+          'The rendered Notifications label stays on one line');
+        assert.ok(renderedTextBox, 'Flutter exposes the rendered Notifications text box');
+        assert.ok(row && row.x >= 0 && row.y >= 0 && row.x + row.width <= viewport.width &&
+          row.y + row.height <= viewport.height,
+        'The scaled Notifications row remains within the viewport');
+        assert.ok(renderedTextBox.x >= row.x && renderedTextBox.y >= row.y &&
+          renderedTextBox.right <= row.x + row.width && renderedTextBox.bottom <= row.y + row.height,
+        'The rendered Notifications label remains within its row');
+        assert.ok(renderedTextBox.x >= 0 && renderedTextBox.y >= 0 &&
+          renderedTextBox.right <= viewport.width && renderedTextBox.bottom <= viewport.height,
+        'The rendered Notifications label remains within the viewport');
+        const [renderedLine] = renderedTextLines;
+        assert.ok(renderedLine.x >= renderedTextBox.x && renderedLine.y >= renderedTextBox.y &&
+          renderedLine.right <= renderedTextBox.right && renderedLine.bottom <= renderedTextBox.bottom,
+        'The rendered Notifications line is not clipped by its text box');
       }
       await closeMenu.click();
       await closeMenu.waitFor({ state: 'hidden' });
