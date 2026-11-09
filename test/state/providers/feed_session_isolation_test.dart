@@ -22,7 +22,6 @@ import 'package:lythaus/services/subscription/subscription_service.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/design_system/theme/lyth_theme.dart';
-import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/screens/home/discover_feed.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
@@ -340,9 +339,10 @@ void main() {
         greaterThan(0),
       );
 
-      await tester.tap(find.text('Profile').last);
-      await tester.pump();
-      await tester.pump();
+      await tester.tap(find.text('Menu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Profile'));
+      await tester.pumpAndSettle();
       expect(find.text('Unable to load profile'), findsOneWidget);
 
       h.switchTo('b');
@@ -367,7 +367,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(find.text('Feed').last);
+      await tester.tap(find.text('Discovery'));
       await tester.pump();
       await tester.pump();
       expect(find.text('Synthetic post b-current-card'), findsOneWidget);
@@ -859,7 +859,7 @@ void main() {
           .loadMore();
       await tester.pump();
       final oldPage = h.feeds.requests.last;
-      tester.widget<LythausTopBar>(find.byType(LythausTopBar)).onTitleTap!();
+      await tester.tap(find.widgetWithText(TextButton, 'Discovery'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       expect(find.text(_custom('a').name), findsWidgets);

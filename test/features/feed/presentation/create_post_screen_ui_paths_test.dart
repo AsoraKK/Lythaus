@@ -937,20 +937,24 @@ void main() {
     expect(find.text('Source attestation'), findsNothing);
     expect(find.text('Photos are not available yet'), findsOneWidget);
     expect(
-      find.textContaining('does not mean AI assessment has completed'),
+      find.textContaining('Posting and edits are unavailable'),
       findsOneWidget,
     );
     await tester.ensureVisible(find.text('Posting policy'));
     await tester.tap(find.text('Posting policy'));
     await tester.pumpAndSettle();
     expect(
-      find.textContaining('AI-generated public content is not allowed.'),
+      find.textContaining('AI-generated or AI-edited media are not permitted.'),
       findsOneWidget,
     );
     expect(
-      find.textContaining('249 user-perceived characters'),
+      find.textContaining(
+        'AI-generated text may contain up to 250 characters.',
+      ),
       findsOneWidget,
     );
+    expect(find.textContaining('Human-authored'), findsNothing);
+    expect(find.textContaining('AI-assisted'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -977,9 +981,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.textContaining('249 user-perceived characters'),
+          find.textContaining(
+            'AI-generated text may contain up to 250 characters.',
+          ),
           findsOneWidget,
         );
+        expect(find.textContaining('Human-authored'), findsNothing);
+        expect(find.textContaining('AI-assisted'), findsNothing);
         expect(find.text('Done').hitTestable(), findsOneWidget);
         final policyContent = find.descendant(
           of: find.byType(AlertDialog),

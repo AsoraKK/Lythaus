@@ -589,9 +589,9 @@ ContentMutationFailure contentMutationFailure(Object error) {
       'This content conflicts with policy and was not submitted.',
     'ai_assisted_public_text_too_long' ||
     'ai_assisted_character_limit_exceeded' =>
-      'AI-assisted public text cannot exceed 249 user-perceived characters.',
+      'Public text cannot exceed 249 user-perceived characters.',
     'declared_creation_mode_required' || 'invalid_declared_creation_mode' =>
-      'Choose an authorship disclosure before submitting.',
+      'Content does not meet Lythaus posting requirements.',
     'invalid_comment_parent' => 'This reply target is unavailable.',
     'post_tag_limit_exceeded' =>
       'This post has too many distinct tags for search. Remove some tags and try again.',

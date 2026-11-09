@@ -46,8 +46,8 @@ on:
           - automatic
           - automatic_subject_diagnostic
           - force_auth_critical
-          - app_only
           - force_auth_critical_subject_diagnostic
+          - app_only
           - owner_testing
           - owner_testing_native_recovery_exception
       confirm_production:

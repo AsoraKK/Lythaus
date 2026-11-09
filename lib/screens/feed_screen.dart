@@ -598,7 +598,7 @@ class _LythausDrawer extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Text(
-            'A social platform for authentic human-authored content with AI-powered verification.',
+            'A social platform for thoughtful public conversation.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

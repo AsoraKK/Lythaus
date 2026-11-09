@@ -2,16 +2,24 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/design_system/widgets/lyth_loading_wordmark.dart';
+
+final _darkTheme = LythausTheme.dark();
+final _lightTheme = LythausTheme.light();
 
 Widget fixture({
   bool active = true,
   bool reduced = false,
   bool ticking = true,
   bool show = true,
+  bool dark = true,
   double width = 320,
 }) => MaterialApp(
+  theme: dark ? _darkTheme : _lightTheme,
   home: MediaQuery(
     data: MediaQueryData(size: Size(width, 844), disableAnimations: reduced),
     child: TickerMode(
@@ -55,6 +63,47 @@ Future<List<int>> pixels(
 }
 
 void main() {
+  for (final reduced in [false, true]) {
+    testWidgets('light loading stays readable and static, reduced=$reduced', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(fixture(dark: false, reduced: reduced));
+        await tester.pumpAndSettle();
+        expect(find.byType(LythBrand), findsOneWidget);
+        expect(find.bySemanticsLabel('Lythaus'), findsOneWidget);
+        expect(
+          tester.widget<SvgPicture>(find.byType(SvgPicture)).colorFilter,
+          const ColorFilter.mode(LythSemanticColors.canvas, BlendMode.srcIn),
+        );
+        await tester.pump(const Duration(seconds: 4));
+        expect(tester.binding.transientCallbackCount, 0);
+        expect(tester.binding.hasScheduledFrame, isFalse);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    });
+  }
+
+  testWidgets('appearance changes stop and resume dark loading safely', (
+    tester,
+  ) async {
+    await tester.pumpWidget(fixture());
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(tester.binding.transientCallbackCount, 1);
+    await tester.pumpWidget(fixture(dark: false));
+    await tester.pumpAndSettle();
+    expect(find.byType(LythBrand), findsOneWidget);
+    expect(tester.binding.transientCallbackCount, 0);
+    await tester.pumpWidget(fixture());
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(tester.binding.transientCallbackCount, greaterThanOrEqualTo(1));
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(tester.takeException(), isNull);
+  });
+
   for (final width in [96.0, 144.0, 200.0, 320.0]) {
     testWidgets('settled artwork matches approved bounds at $width', (
       tester,

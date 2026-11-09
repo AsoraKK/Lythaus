@@ -35,14 +35,14 @@ String? validatePublicPostAuthorship({
 }) {
   final normalizedLabel = aiLabel?.trim().toLowerCase();
   if (normalizedLabel == null || normalizedLabel.isEmpty) {
-    return 'Choose an authorship disclosure before posting';
+    return 'Content does not meet Lythaus posting requirements.';
   }
   if (!isSupportedPublicAuthorshipLabel(normalizedLabel)) {
-    return 'AI-generated public content cannot be posted';
+    return 'Content does not meet Lythaus posting requirements.';
   }
   if (normalizedLabel == 'assisted' &&
       userPerceivedCharacterCount(text) > aiAssistedPublicTextMaxGraphemes) {
-    return 'AI-assisted public text cannot exceed '
+    return 'Public text cannot exceed '
         '$aiAssistedPublicTextMaxGraphemes user-perceived characters';
   }
   return null;
@@ -172,7 +172,7 @@ class UpdatePostRequest {
       throw ArgumentError.value(
         aiLabel,
         'aiLabel',
-        'A fresh authorship declaration is required when editing post text.',
+        'Content does not meet Lythaus posting requirements.',
       );
     }
     if (text != null && aiLabel != null) {

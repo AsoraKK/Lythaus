@@ -133,7 +133,7 @@ void main() {
     );
     final swipeTile = find.widgetWithText(
       SwitchListTile,
-      'Swipe between profile tabs',
+      'Swipe between feeds and profile tabs',
     );
 
     expect(tester.widget<SwitchListTile>(leftHandedTile).value, isFalse);

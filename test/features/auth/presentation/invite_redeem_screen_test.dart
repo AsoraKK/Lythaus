@@ -134,11 +134,17 @@ void main() {
 
     await tester.tap(find.byType(LythButton));
     await tester.pump();
-    expect(tester.widget<LythButton>(find.byType(LythButton)).isLoading, isTrue);
+    expect(
+      tester.widget<LythButton>(find.byType(LythButton)).isLoading,
+      isTrue,
+    );
 
     // A keyboard submit can still arrive while the button is disabled. The
     // screen-level guard must prevent a second API request in that window.
-    tester.widget<TextField>(find.byType(TextField).at(2)).onSubmitted?.call('');
+    tester
+        .widget<TextField>(find.byType(TextField).at(2))
+        .onSubmitted
+        ?.call('');
     await tester.pump();
     verify(
       () => service.redeemInvite(

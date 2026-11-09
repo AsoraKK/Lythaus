@@ -16,6 +16,7 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
@@ -104,6 +105,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // Preserve legacy response/route ownership coverage behind a test gate.
+          contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
           contentRecoveryStorageProvider.overrideWithValue(
             MemoryContentRecoveryStorage(),
           ),
@@ -148,7 +151,7 @@ void main() {
       find.byType(TextField).first,
       'Synthetic submission',
     );
-    await tester.tap(find.text('Human-authored'));
+    container.read(postCreationProvider.notifier).setAiLabel('human');
     await tester.pumpAndSettle();
     return (router: router, container: container, repo: repo);
   }

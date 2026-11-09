@@ -13,10 +13,9 @@ class OnboardingIntroScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const policyLines = [
-      'Choose Human-authored or AI-assisted before posting.',
-      'AI-generated public content cannot be posted.',
-      'AI-assisted public text is limited to 249 user-perceived characters.',
-      'Disclosure conflicts may enter Under review.',
+      'AI-generated or AI-edited media cannot be posted.',
+      'AI-generated text is allowed up to 250 user-perceived characters.',
+      'Posts may remain under review until publication checks are complete.',
       'Appeal outcomes are recorded by Lythaus.',
       'This is an invite-only Alpha.',
     ];

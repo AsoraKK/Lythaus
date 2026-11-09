@@ -14,7 +14,6 @@ import 'package:lythaus/features/reactions/domain/reaction.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
-import 'package:lythaus/ui/components/authorship_disclosure.dart';
 import 'package:lythaus/ui/components/author_profile_link.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
@@ -64,8 +63,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final epoch = _readEpoch;
     final revised = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
-        builder: (_) =>
-            ContentEditorScreen(contentId: post.id, text: post.text),
+        builder: (_) => ContentEditorScreen(
+          contentId: post.id,
+          text: post.text,
+          declaredCreationMode: post.declaredCreationMode,
+        ),
       ),
     );
     if (!mounted || revised == null || !_isOwner(post) || epoch != _readEpoch) {
@@ -384,12 +386,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     ],
                     _PostHeader(post: post),
                     const SizedBox(height: 10),
-                    AuthorshipDisclosure(
-                      label: post.authorship.label.label,
-                      classificationSource:
-                          post.authorship.classificationSource,
-                      classificationState: post.authorship.classificationState,
-                    ),
                     if (post.moderationState == 'under_review') ...[
                       const SizedBox(height: 8),
                       const Text(

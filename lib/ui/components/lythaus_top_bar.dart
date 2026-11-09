@@ -41,6 +41,15 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
+    if (useWordmark) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(24, 12, 24, 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: LythBrand(variant: LythBrandVariant.wordmark, height: 32),
+        ),
+      );
+    }
     return Container(
       constraints: BoxConstraints(minHeight: preferredSize.height),
       decoration: BoxDecoration(
@@ -58,45 +67,28 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Account menu',
               icon: const Icon(Icons.account_circle_outlined),
             ),
-          if (useWordmark) ...[
-            const Expanded(
-              child: Align(
+          IconButton(
+            focusNode: logoFocusNode,
+            onPressed: onLogoTap,
+            tooltip: 'Feed controls',
+            icon: const LythBrand(
+              variant: LythBrandVariant.symbol,
+              height: 24,
+              decorative: true,
+            ),
+          ),
+          SizedBox(width: spacing.sm),
+          Expanded(
+            child: TextButton(
+              focusNode: titleFocusNode,
+              onPressed: onTitleTap,
+              style: TextButton.styleFrom(
                 alignment: Alignment.centerLeft,
-                child: LythBrand(variant: LythBrandVariant.symbol, height: 36),
+                foregroundColor: theme.colorScheme.onSurface,
               ),
+              child: Text(title, style: theme.textTheme.titleLarge),
             ),
-            if (onLogoTap != null)
-              IconButton(
-                focusNode: logoFocusNode,
-                onPressed: onLogoTap,
-                tooltip: 'Feed controls',
-                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
-                icon: const Icon(Icons.tune),
-              ),
-          ] else ...[
-            IconButton(
-              focusNode: logoFocusNode,
-              onPressed: onLogoTap,
-              tooltip: 'Feed controls',
-              icon: const LythBrand(
-                variant: LythBrandVariant.symbol,
-                height: 24,
-                decorative: true,
-              ),
-            ),
-            SizedBox(width: spacing.sm),
-            Expanded(
-              child: TextButton(
-                focusNode: titleFocusNode,
-                onPressed: onTitleTap,
-                style: TextButton.styleFrom(
-                  alignment: Alignment.centerLeft,
-                  foregroundColor: theme.colorScheme.onSurface,
-                ),
-                child: Text(title, style: theme.textTheme.titleLarge),
-              ),
-            ),
-          ],
+          ),
           Row(
             children: [
               if (onCreateTap == null)

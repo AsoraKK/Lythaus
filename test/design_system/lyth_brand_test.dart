@@ -13,6 +13,33 @@ import 'package:lythaus/ui/screens/onboarding/onboarding_intro.dart';
 
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  testWidgets('explicit masthead tint preserves the same wordmark geometry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: LythausTheme.light(),
+        home: const Scaffold(
+          body: ColoredBox(
+            color: LythSemanticColors.canvas,
+            child: LythBrand(foreground: LythSemanticColors.text),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final image = tester.widget<SvgPicture>(find.byType(SvgPicture));
+    expect(
+      image.colorFilter,
+      const ColorFilter.mode(LythSemanticColors.text, BlendMode.srcIn),
+    );
+    final size = tester.getSize(find.byType(SvgPicture));
+    expect(size.height, 32);
+    expect(
+      size.width / size.height,
+      closeTo(470.28944891 / 130.6866688, 0.00001),
+    );
+  });
   testWidgets('named branding defaults to the standalone approved wordmark', (
     tester,
   ) async {
@@ -60,7 +87,10 @@ void main() {
               size.width / size.height,
               closeTo(viewBox[2] / viewBox[3], 0.00001),
             );
-            const foreground = LythSemanticColors.text;
+            final foreground =
+                (dark ? LythausTheme.dark() : LythausTheme.light())
+                    .colorScheme
+                    .onSurface;
             final background =
                 (dark ? LythausTheme.dark() : LythausTheme.light())
                     .colorScheme
@@ -77,7 +107,7 @@ void main() {
             );
             expect(
               svg.colorFilter,
-              const ColorFilter.mode(LythSemanticColors.text, BlendMode.srcIn),
+              ColorFilter.mode(foreground, BlendMode.srcIn),
             );
             expect(find.bySemanticsLabel('Lythaus'), findsOneWidget);
             expect(tester.getSize(find.byType(SvgPicture)).height, 32);

@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/design_system/theme/lyth_theme.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
@@ -12,6 +15,8 @@ import 'package:lythaus/ui/components/interactive_feed_card.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import '../helpers/content_recovery.dart';
 import '../helpers/feed_session.dart';
+
+class _NoNetworkDio extends Mock implements Dio {}
 
 const custom = FeedModel(
   id: 'custom-a',
@@ -89,10 +94,22 @@ void main() {
     expect(find.text('Loading your feed'), findsOneWidget);
     loaded.complete([custom]);
     await tester.pumpAndSettle();
+    final selectedFeed = find.widgetWithText(TextButton, 'Private topics');
+    expect(selectedFeed, findsOneWidget);
+    final selectedState = find.ancestor(
+      of: selectedFeed,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.selected == true,
+      ),
+    );
+    expect(selectedState, findsOneWidget);
     expect(
       tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Private topics'))
-          .selected,
+          .getSemantics(selectedState)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected
+          .toBoolOrNull(),
       isTrue,
     );
     expect(find.text('Loading your feed'), findsNothing);
@@ -168,9 +185,17 @@ void main() {
   testWidgets(
     'feedback controls explain unavailable channels without writing',
     (tester) async {
+      final dio = _NoNetworkDio();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedBookmarksProvider.overrideWith((ref) async => {})],
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => FeedTestAuth(feedTestUser('a')),
+            ),
+            jwtProvider.overrideWith((ref) async => 'token'),
+            secureDioProvider.overrideWithValue(dio),
+            feedBookmarksProvider.overrideWith((ref) async => {}),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: InteractiveFeedCard(
@@ -189,7 +214,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Negative feedback'));
+      await tester.tap(find.byTooltip('Post actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Negative feedback'));
       await tester.pumpAndSettle();
       expect(find.text('Not useful to me'), findsOneWidget);
       expect(
@@ -204,6 +231,18 @@ void main() {
         find.textContaining('No emotion has been recorded.'),
         findsOneWidget,
       );
+      verifyZeroInteractions(dio);
+      Navigator.of(tester.element(find.text('Reacting to the story'))).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Post actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Story emotions — unavailable'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('No emotion has been recorded.'),
+        findsOneWidget,
+      );
+      verifyZeroInteractions(dio);
     },
   );
 }

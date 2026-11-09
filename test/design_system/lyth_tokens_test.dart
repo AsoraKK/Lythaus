@@ -115,9 +115,9 @@ void main() {
 
   // ── LythColorSchemes ───────────────────────────────────────────────────────
   group('LythColorSchemes', () {
-    test('legacy light() resolves to the approved dark ColorScheme', () {
+    test('light() produces a light-brightness ColorScheme', () {
       final scheme = LythColorSchemes.light();
-      expect(scheme.brightness, Brightness.dark);
+      expect(scheme.brightness, Brightness.light);
     });
 
     test('light() surface is non-pure-white (warm off-white)', () {
@@ -174,13 +174,14 @@ void main() {
       expect(scheme.error, isNot(scheme.surface));
     });
 
-    test('legacy light and dark surface share the approved charcoal', () {
+    test('light and dark surfaces are distinct approved colours', () {
       final light = LythColorSchemes.light();
       final dark = LythColorSchemes.dark();
-      expect(light.surface, dark.surface);
+      expect(light.surface.toARGB32(), 0xFFF5F3EE);
+      expect(dark.surface.toARGB32(), 0xFF242321);
     });
 
-    test('each appearance has an accessible amber action treatment', () {
+    test('each appearance has accessible primary emphasis', () {
       final light = LythColorSchemes.light();
       final dark = LythColorSchemes.dark();
       for (final scheme in [light, dark]) {

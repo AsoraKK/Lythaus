@@ -71,7 +71,7 @@ void main() {
     expect(find.text('Body for Discover Two'), findsOneWidget);
     expect(find.text('author 1'), findsOneWidget);
     expect(find.text('author 2'), findsOneWidget);
-    expect(find.text('Authorship: Under review'), findsNWidgets(2));
+    expect(find.text('Authorship: Under review'), findsNothing);
     expect(find.text('Discover One'), findsOneWidget);
     expect(find.text('Discover Two'), findsOneWidget);
   });
@@ -106,8 +106,8 @@ void main() {
     expect(find.text('Pinned Story'), findsOneWidget);
     expect(find.text('Body for Pinned Story'), findsOneWidget);
     expect(find.text('author n1'), findsOneWidget);
-    expect(find.text('Authorship: Under review'), findsOneWidget);
-    expect(find.text('Authorship: Under review'), findsWidgets);
+    expect(find.text('Authorship: Under review'), findsNothing);
+    expect(find.text('Authorship: Under review'), findsNothing);
     expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
     await tester.tap(find.text('About News Board'));
     await tester.pumpAndSettle();

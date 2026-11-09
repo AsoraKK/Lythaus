@@ -3,7 +3,8 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/components/lythaus_side_navigation.dart';
-import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
+import 'package:lythaus/ui/components/editorial_action_bar.dart';
+import 'package:lythaus/ui/components/feed_navigation_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/state/providers/theme_mode_provider.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
@@ -38,9 +40,7 @@ bool _navigationHasFocus() {
   if (context is! Element) return false;
   var found = false;
   context.visitAncestorElements((element) {
-    found =
-        element.widget is LythausSideNavigation ||
-        element.widget is LythausBottomNav;
+    found = element.widget is EditorialActionBar;
     return !found;
   });
   return found;
@@ -96,6 +96,20 @@ List<Override> _baseOverrides({bool guest = false}) => [
   ),
   liveFeedItemsProvider.overrideWith((ref, _) async => _items),
 ];
+
+Finder _action(String label) => find.descendant(
+  of: find.byType(EditorialActionBar),
+  matching: find.text(label),
+);
+
+Future<void> _menuDestination(WidgetTester tester, String label) async {
+  await tester.tap(_action('Menu'));
+  await tester.pumpAndSettle();
+  final target = find.widgetWithText(ListTile, label);
+  await tester.ensureVisible(target);
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
@@ -164,7 +178,7 @@ void main() {
           controller.selection,
           const TextSelection(baseOffset: 2, extentOffset: 9),
         );
-        await tester.tap(find.text('Feed').last);
+        await tester.tap(find.text('Discovery'));
         await tester.pumpAndSettle();
         expect(
           tester
@@ -175,7 +189,7 @@ void main() {
         );
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
-        await tester.tap(find.byTooltip('Create'));
+        await tester.tap(_action('Create'));
         await tester.pumpAndSettle();
         expect(tester.state(find.byType(CreatePostScreen)), same(composer));
         expect(controller.text, 'Synthetic unfinished draft');
@@ -197,11 +211,13 @@ void main() {
         tester.element(find.byType(AdaptiveShell)),
       );
       expect(container.read(currentUserProvider), same(user));
-      final navigation = tester.widget<LythausBottomNav>(
-        find.byType(LythausBottomNav),
+      final navigation = tester.widget<EditorialActionBar>(
+        find.byType(EditorialActionBar),
       );
-      navigation.onTap(0);
-      navigation.onTap(1);
+      tester
+          .widget<FeedNavigationRail>(find.byType(FeedNavigationRail))
+          .onSelect('discover');
+      navigation.onCreate();
       await container.read(authStateProvider.notifier).signOut();
       await tester.binding.setSurfaceSize(const Size(1440, 844));
       await tester.pumpAndSettle();
@@ -250,7 +266,7 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
-            await tester.tap(find.widgetWithText(TextButton, 'Settings'));
+            await _menuDestination(tester, 'Settings');
             await tester.pumpAndSettle();
             await tester.tap(find.text('Account security'));
             await tester.pumpAndSettle();
@@ -312,7 +328,7 @@ void main() {
             final labels = tester
                 .widgetList<Text>(
                   find.descendant(
-                    of: find.byType(LythausBottomNav),
+                    of: find.byType(EditorialActionBar),
                     matching: find.byType(Text),
                   ),
                 )
@@ -321,12 +337,12 @@ void main() {
             expect(
               labels,
               leftHanded
-                  ? ['Profile', 'Notifications', 'Search', 'Feed']
-                  : ['Feed', 'Search', 'Notifications', 'Profile'],
+                  ? ['Menu', 'Search', 'Create']
+                  : ['Create', 'Search', 'Menu'],
             );
-            await tester.tap(find.text('Feed'));
+            await tester.tap(find.text('Discovery'));
             await tester.pumpAndSettle();
-            await tester.tap(find.byTooltip('Create'));
+            await tester.tap(_action('Create'));
             await tester.pumpAndSettle();
             expect(find.text('Sign in to create a post.'), findsOneWidget);
             expect(tester.takeException(), isNull);
@@ -372,7 +388,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Help'));
+        await _menuDestination(tester, 'Help');
         await tester.pumpAndSettle();
         expect(launches, ['https://lythaus.co/help']);
         expect(find.text('Sign in to view your rewards.'), findsOneWidget);
@@ -399,7 +415,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Settings'));
+      await _menuDestination(tester, 'Settings');
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
       await tester.pageBack();
@@ -438,14 +454,13 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Rewards'));
-        await tester.tap(find.text('Rewards'));
+        await _menuDestination(tester, 'Rewards');
         await tester.pumpAndSettle();
         expect(router.routeInformationProvider.value.uri.queryParameters, {
           'source': 'fixture',
           'tab': 'rewards',
         });
-        await tester.tap(find.text('Profile'));
+        await _menuDestination(tester, 'Profile');
         await tester.pumpAndSettle();
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
@@ -482,7 +497,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Bottom nav should be present on narrow viewport
-      expect(find.byType(LythausBottomNav), findsOneWidget);
+      expect(find.byType(EditorialActionBar), findsOneWidget);
       expect(find.byType(LythausSideNavigation), findsNothing);
     });
 
@@ -501,9 +516,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Account menu'));
+      await tester.tap(_action('Menu'));
       await tester.pumpAndSettle();
-      expect(find.text('Guest'), findsOneWidget);
+      expect(find.byTooltip('Close menu'), findsOneWidget);
       expect(find.text('Manage feeds'), findsOneWidget);
       expect(find.text('Rewards'), findsOneWidget);
       await tester.tap(find.text('Manage feeds'));
@@ -514,7 +529,7 @@ void main() {
       expect(find.text('Sign in to create a custom feed.'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Account menu'));
+      await tester.tap(_action('Menu'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Review and appeals'));
       await tester.pumpAndSettle();
@@ -522,7 +537,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    for (final command in ['search', 'searchThenFeed', 'feed']) {
+    for (final command in ['search', 'searchThenFeed']) {
       testWidgets('newer tab navigation cancels pending feed controls '
           '(command=$command)', (tester) async {
         await tester.binding.setSurfaceSize(const Size(390, 900));
@@ -537,24 +552,26 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final navigation = tester.widget<LythausBottomNav>(
-          find.byType(LythausBottomNav),
+        final navigation = tester.widget<EditorialActionBar>(
+          find.byType(EditorialActionBar),
         );
-        await tester.tap(find.byTooltip('Account menu'));
+        await tester.tap(_action('Menu'));
         await tester.pumpAndSettle();
         final manage = tester.widget<ListTile>(
           find.widgetWithText(ListTile, 'Manage feeds'),
         );
         manage.onTap!();
-        if (command != 'feed') navigation.onTap(4);
-        if (command != 'search') navigation.onTap(0);
+        navigation.onSearch();
+        if (command != 'search') {
+          tester
+              .widget<FeedNavigationRail>(find.byType(FeedNavigationRail))
+              .onSelect('discover');
+        }
         await tester.pumpAndSettle();
         expect(find.text('Choose a feed'), findsNothing);
         expect(
-          tester
-              .widget<LythausBottomNav>(find.byType(LythausBottomNav))
-              .currentIndex,
-          command == 'search' ? 4 : 0,
+          find.text('Back to feed'),
+          command == 'search' ? findsOneWidget : findsNothing,
         );
         expect(tester.takeException(), isNull);
       });
@@ -577,7 +594,7 @@ void main() {
       await tester.pumpAndSettle();
       final context = tester.element(find.byType(AdaptiveShell));
       ModalRoute.of(context)!.addLocalHistoryEntry(LocalHistoryEntry());
-      await tester.tap(find.byTooltip('Account menu'));
+      await tester.tap(_action('Menu'));
       await tester.pumpAndSettle();
       final manage = tester.widget<ListTile>(
         find.widgetWithText(ListTile, 'Manage feeds'),
@@ -615,7 +632,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Account menu'));
+      await tester.tap(_action('Menu'));
       await tester.pumpAndSettle();
       tester
           .widget<ListTile>(find.widgetWithText(ListTile, 'Manage feeds'))
@@ -671,13 +688,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(LythausBottomNav), findsNothing);
+      expect(find.byType(EditorialActionBar), findsNothing);
       await tester.enterText(find.byType(TextField), 'A synthetic draft');
       expect(find.text('A synthetic draft'), findsOneWidget);
       expect(tester.takeException(), isNull);
       inset.value = 0;
       await tester.pumpAndSettle();
-      expect(find.byType(LythausBottomNav), findsOneWidget);
+      expect(find.byType(EditorialActionBar), findsOneWidget);
       expect(find.text('A synthetic draft'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -716,7 +733,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       Finder navigationLabel(String label) => find.descendant(
-        of: find.byType(LythausBottomNav),
+        of: find.byType(EditorialActionBar),
         matching: find.text(label),
       );
       await tester.tap(navigationLabel('Search'));
@@ -729,7 +746,7 @@ void main() {
         'tab': 'search',
         'q': 'civic',
       });
-      await tester.tap(navigationLabel('Feed'));
+      await tester.tap(find.text('Discovery'));
       await tester.pumpAndSettle();
       await tester.tap(navigationLabel('Search'));
       await tester.pumpAndSettle();
@@ -737,7 +754,7 @@ void main() {
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         'civic',
       );
-      await tester.tap(navigationLabel('Notifications'));
+      await _menuDestination(tester, 'Notifications');
       await tester.pumpAndSettle();
       expect(find.byType(NotificationsScreen), findsOneWidget);
       expect(find.text('Sign in to view your notifications.'), findsOneWidget);
@@ -748,7 +765,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders compact side navigation on wide viewport', (
+    testWidgets('wide viewport retains actions and a hidden menu', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(1024, 768));
@@ -768,16 +785,85 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(LythausSideNavigation), findsOneWidget);
+      expect(find.byType(LythausSideNavigation), findsNothing);
       expect(find.text('Fixture identity'), findsOneWidget);
-      expect(
-        tester
-            .widget<LythausSideNavigation>(find.byType(LythausSideNavigation))
-            .extended,
-        isFalse,
+      expect(find.byType(EditorialActionBar), findsOneWidget);
+      expect(find.text('Settings'), findsNothing);
+      await tester.tap(_action('Menu'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Settings'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Settings'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('appearance changes preserve Escape and return Menu focus', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _baseOverrides(guest: true),
+          child: Consumer(
+            builder: (context, ref, _) => MaterialApp(
+              theme: LythausTheme.light(),
+              darkTheme: LythausTheme.dark(),
+              themeMode: ref.watch(themeModeProvider),
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: const TextScaler.linear(2),
+                  disableAnimations: true,
+                ),
+                child: child!,
+              ),
+              home: const AdaptiveShell(),
+            ),
+          ),
+        ),
       );
-      // Bottom nav should not be present
-      expect(find.byType(LythausBottomNav), findsNothing);
+      await tester.pumpAndSettle();
+      for (final choice in ['Dark', 'Light', 'System']) {
+        await tester.tap(_action('Menu'));
+        await tester.pumpAndSettle();
+        final radio = find.widgetWithText(RadioListTile<ThemeMode>, choice);
+        await tester.scrollUntilVisible(
+          radio,
+          400,
+          scrollable: find.descendant(
+            of: find.byType(Drawer),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(radio);
+        await tester.pumpAndSettle();
+        expect(tester.getRect(radio).bottom, lessThanOrEqualTo(960));
+        await tester.tap(radio);
+        await tester.pumpAndSettle();
+        expect(
+          Theme.of(tester.element(find.byType(AdaptiveShell))).brightness,
+          choice == 'Dark' ? Brightness.dark : Brightness.light,
+        );
+        expect(
+          tester.widget<RadioListTile<ThemeMode>>(radio).focusNode!.hasFocus,
+          isTrue,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Close menu'), findsNothing);
+        expect(
+          tester
+              .widget<EditorialActionBar>(find.byType(EditorialActionBar))
+              .menuFocusNode!
+              .hasFocus,
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      }
     });
 
     testWidgets('guest tapping Create offers account entry', (tester) async {

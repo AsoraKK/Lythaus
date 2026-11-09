@@ -96,7 +96,11 @@ class LythausTheme {
       highlightColor: colors.primary.withValues(alpha: 0.12),
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      extensions: [LythThemeExtension.dark()],
+      extensions: [
+        colors.brightness == Brightness.light
+            ? LythThemeExtension.light()
+            : LythThemeExtension.dark(),
+      ],
       appBarTheme: AppBarTheme(
         backgroundColor: colors.surface,
         foregroundColor: colors.onSurface,
@@ -110,8 +114,8 @@ class LythausTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: button.merge(
           ElevatedButton.styleFrom(
-            backgroundColor: colors.primary,
-            foregroundColor: colors.onPrimary,
+            backgroundColor: LythSemanticColors.accent,
+            foregroundColor: LythSemanticColors.onAccent,
             disabledBackgroundColor: colors.surfaceContainerHigh,
             disabledForegroundColor: semantic['muted'],
           ),
@@ -120,8 +124,8 @@ class LythausTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: button.merge(
           FilledButton.styleFrom(
-            backgroundColor: colors.primary,
-            foregroundColor: colors.onPrimary,
+            backgroundColor: LythSemanticColors.accent,
+            foregroundColor: LythSemanticColors.onAccent,
             disabledBackgroundColor: colors.surfaceContainerHigh,
             disabledForegroundColor: semantic['muted'],
           ),

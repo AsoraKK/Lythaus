@@ -250,7 +250,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Short text body'), findsOneWidget);
-    expect(find.text('Authorship: Under review'), findsOneWidget);
+    expect(find.text('Authorship: Under review'), findsNothing);
     expect(find.text('Text'), findsNothing);
     expect(find.text('update'), findsNothing);
     expect(find.text('Plain update'), findsOneWidget);

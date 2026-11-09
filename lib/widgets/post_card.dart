@@ -95,11 +95,6 @@ class _PostCardState extends ConsumerState<PostCard> {
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: scheme.onSurface),
                         ),
-                        const SizedBox(height: 4),
-                        Chip(
-                          visualDensity: VisualDensity.compact,
-                          label: Text(widget.post.authorshipLabel),
-                        ),
                       ],
                     ),
                   ),

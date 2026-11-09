@@ -130,7 +130,7 @@ void main() {
         await tester.pumpWidget(preferencesApp(scope));
         await tester.pumpAndSettle();
         final left = preferenceSwitch('Left-handed mode (mirror nav)');
-        final swipe = preferenceSwitch('Swipe between profile tabs');
+        final swipe = preferenceSwitch('Swipe between feeds and profile tabs');
         final save = find.widgetWithText(FilledButton, 'Save preferences');
         final discard = find.text('Discard preference changes');
         final reads = adapter.requests.length;
@@ -244,7 +244,7 @@ void main() {
         await tester.pumpWidget(preferencesApp(scope));
         await tester.pumpAndSettle();
         final left = preferenceSwitch('Left-handed mode (mirror nav)');
-        final swipe = preferenceSwitch('Swipe between profile tabs');
+        final swipe = preferenceSwitch('Swipe between feeds and profile tabs');
         final save = find.widgetWithText(FilledButton, 'Save preferences');
         final discard = find.text('Discard preference changes');
         final reads = adapter.requests.length;
@@ -368,7 +368,9 @@ void main() {
           await tester.pumpWidget(preferencesApp(scope));
           await tester.pumpAndSettle();
           final left = preferenceSwitch('Left-handed mode (mirror nav)');
-          final swipe = preferenceSwitch('Swipe between profile tabs');
+          final swipe = preferenceSwitch(
+            'Swipe between feeds and profile tabs',
+          );
           await tester.tap(editLeft ? left : swipe);
           await tester.pumpAndSettle();
           expect(scope.read(leftHandedModeProvider), isFalse);
@@ -1024,7 +1026,7 @@ void main() {
       );
       final swipe = find.widgetWithText(
         SwitchListTile,
-        'Swipe between profile tabs',
+        'Swipe between feeds and profile tabs',
       );
       await tester.tap(left);
       await tester.pumpAndSettle();

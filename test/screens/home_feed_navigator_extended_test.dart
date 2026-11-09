@@ -5,11 +5,15 @@ import 'package:lythaus/features/feed/application/content_recovery_storage.dart'
 import '../helpers/content_recovery.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:lythaus/ui/components/lythaus_top_bar.dart';
+import 'package:lythaus/ui/components/feed_navigation_rail.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +88,7 @@ void main() {
     required LiveFeedState Function(FeedModel) stateForFeed,
     User? user,
     List<FeedModel>? feeds,
+    List<ScrollNotification>? scrollEvents,
   }) {
     final container = ProviderContainer(
       overrides: [
@@ -91,6 +96,7 @@ void main() {
           MemoryContentRecoveryStorage(),
         ),
         feedListProvider.overrideWith((ref) => feeds ?? _feeds),
+        horizontalSwipeEnabledProvider.overrideWith((ref) => true),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => _StaticLiveFeedNotifier(stateForFeed(feed)),
         ),
@@ -100,6 +106,7 @@ void main() {
         ],
       ],
     );
+    addTearDown(container.dispose);
 
     return UncontrolledProviderScope(
       container: container,
@@ -108,7 +115,13 @@ void main() {
           data: MediaQuery.of(context).copyWith(disableAnimations: true),
           child: child!,
         ),
-        home: const HomeFeedNavigator(),
+        home: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            scrollEvents?.add(notification);
+            return false;
+          },
+          child: const HomeFeedNavigator(),
+        ),
       ),
     );
   }
@@ -129,17 +142,24 @@ void main() {
       expect(bar.onTitleTap, isNull);
     });
 
-    testWidgets('multiple available feeds keep selector callbacks', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildWithState(stateForFeed: (_) => const LiveFeedState()),
-      );
-      await tester.pumpAndSettle();
-      final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
-      expect(bar.onLogoTap, isNotNull);
-      expect(bar.onTitleTap, isNotNull);
-    });
+    testWidgets(
+      'multiple feeds use the selected feed control, not the wordmark',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWithState(stateForFeed: (_) => const LiveFeedState()),
+        );
+        await tester.pumpAndSettle();
+        final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
+        expect(bar.onLogoTap, isNull);
+        expect(bar.onTitleTap, isNull);
+        expect(bar.useWordmark, isTrue);
+        final brand = tester.widget<LythBrand>(find.byType(LythBrand));
+        expect(brand.variant, LythBrandVariant.wordmark);
+        await tester.tap(find.byTooltip('Discovery · Feed controls'));
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a feed'), findsOneWidget);
+      },
+    );
 
     testWidgets('empty Alpha sections render scoped recovery states', (
       tester,
@@ -482,40 +502,79 @@ void main() {
       await tester.tap(find.text('Local'));
       await tester.pumpAndSettle();
 
-      final selected = tester.widget<ChoiceChip>(
-        find.widgetWithText(ChoiceChip, 'Local'),
+      final navigation = tester.widget<FeedNavigationRail>(
+        find.byType(FeedNavigationRail),
       );
-      expect(selected.selected, isTrue);
+      expect(navigation.selectedId, 'discover-local');
+      expect(find.byTooltip('Local · Feed controls'), findsOneWidget);
     });
 
-    testWidgets('PageView enables swipe navigation', (tester) async {
-      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
-      addTearDown(
-        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
-      );
+    testWidgets(
+      'horizontal touch survives a zero-movement vertical scroll start',
+      (tester) async {
+        final scrollEvents = <ScrollNotification>[];
+        tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+        addTearDown(
+          () =>
+              tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+        );
 
-      await tester.pumpWidget(
-        buildWithState(
-          stateForFeed: (feed) => LiveFeedState(
-            items: [
-              FeedItem(
-                id: '${feed.id}-1',
-                feedId: feed.id,
-                author: 'Alex',
-                contentType: ContentType.text,
-                title: 'T',
-                body: 'B',
-                publishedAt: DateTime(2024),
-              ),
-            ],
+        await tester.pumpWidget(
+          buildWithState(
+            scrollEvents: scrollEvents,
+            stateForFeed: (feed) => LiveFeedState(
+              items: [
+                FeedItem(
+                  id: '${feed.id}-1',
+                  feedId: feed.id,
+                  author: 'Alex',
+                  contentType: ContentType.text,
+                  title: 'T',
+                  body: 'B',
+                  publishedAt: DateTime(2024),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      final pageView = tester.widget<PageView>(find.byType(PageView));
-      expect(pageView.physics, isNot(isA<NeverScrollableScrollPhysics>()));
-    });
+        final pageView = tester.widget<PageView>(find.byType(PageView));
+        expect(pageView.physics, isA<NeverScrollableScrollPhysics>());
+        final start = tester.getCenter(find.text('B').first);
+        final gesture = await tester.startGesture(
+          start,
+          kind: PointerDeviceKind.touch,
+        );
+        await gesture.moveBy(const Offset(-40, 0));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(-100, 0));
+        await gesture.up();
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .state<HomeFeedNavigatorState>(find.byType(HomeFeedNavigator))
+              .selectedFeedId,
+          'news',
+        );
+        expect(
+          scrollEvents.whereType<ScrollStartNotification>().any(
+            (event) =>
+                event.metrics.axis == Axis.vertical &&
+                event.dragDetails != null,
+          ),
+          isTrue,
+        );
+        expect(
+          scrollEvents.whereType<ScrollUpdateNotification>().where(
+            (event) =>
+                event.metrics.axis == Axis.vertical &&
+                (event.scrollDelta?.abs() ?? 0) > .5,
+          ),
+          isEmpty,
+        );
+      },
+    );
 
     testWidgets('feed control panel lists available feeds', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
@@ -542,7 +601,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(InkWell).first);
+      await tester.tap(find.byTooltip('Discovery · Feed controls'));
       await tester.pumpAndSettle();
 
       expect(find.text('Choose a feed'), findsOneWidget);
@@ -566,7 +625,9 @@ void main() {
       );
     });
 
-    testWidgets('top bar search button opens search screen', (tester) async {
+    testWidgets('wordmark-only header omits secondary navigation controls', (
+      tester,
+    ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -591,17 +652,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.search));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Search'), findsOneWidget);
-      expect(
-        find.textContaining('Find posts by tag across your feeds.'),
-        findsOneWidget,
-      );
+      final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
+      expect(bar.useWordmark, isTrue);
+      expect(bar.onSearchTap, isNull);
+      expect(bar.onTrendingTap, isNull);
+      expect(bar.onAccountTap, isNull);
+      expect(bar.onCreateTap, isNull);
+      expect(find.byIcon(Icons.search), findsNothing);
+      expect(find.byIcon(Icons.trending_up_outlined), findsNothing);
+      expect(find.byType(LythBrand), findsOneWidget);
     });
 
-    testWidgets('top bar trending button opens trending feed', (tester) async {
+    testWidgets('public menu action opens the existing Trending destination', (
+      tester,
+    ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -626,7 +690,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.trending_up_outlined));
+      tester
+          .state<HomeFeedNavigatorState>(find.byType(HomeFeedNavigator))
+          .showTrending();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -660,7 +726,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(InkWell).first);
+      await tester.tap(find.byTooltip('Discovery · Feed controls'));
       await tester.pumpAndSettle();
       expect(find.text('Choose a feed'), findsOneWidget);
       expect(

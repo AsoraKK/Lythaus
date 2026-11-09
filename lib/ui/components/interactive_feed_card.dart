@@ -424,6 +424,28 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
     final service = ref.read(feedActionsServiceProvider);
     final postId = _postId;
     final feedbackCandidate = ref.watch(contributionFeedbackCandidateProvider);
+    final saveAction = IconButton(
+      tooltip: bookmarks.hasError
+          ? 'Saved state unavailable'
+          : saved
+          ? 'Remove saved post'
+          : 'Save post',
+      onPressed: !enabled || bookmarks.isLoading
+          ? null
+          : bookmarks.hasError
+          ? () => ref.invalidate(feedBookmarksProvider)
+          : () => _mutate(
+              'bookmark',
+              (token) => service.bookmark(postId, !saved, token),
+              () {
+                ref.invalidate(feedBookmarksProvider);
+                _notice(
+                  saved ? 'Post removed from saved posts.' : 'Post saved.',
+                );
+              },
+            ),
+      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_add_outlined),
+    );
     final utilityActions = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -432,11 +454,16 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
           onPressed: _comments,
           icon: const Icon(Icons.chat_bubble_outline, size: 20),
         ),
+        saveAction,
         PopupMenuButton<String>(
           tooltip: 'Post actions',
           icon: const Icon(Icons.more_horiz),
           onSelected: (action) {
             switch (action) {
+              case 'negative':
+                _negativeFeedback();
+              case 'emotions':
+                _emotions();
               case 'share':
                 _share();
               case 'details':
@@ -458,6 +485,17 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
             }
           },
           itemBuilder: (_) => [
+            if (!feedbackCandidate)
+              PopupMenuItem(
+                value: 'negative',
+                enabled: enabled,
+                child: const Text('Negative feedback'),
+              ),
+            if (!feedbackCandidate)
+              const PopupMenuItem(
+                value: 'emotions',
+                child: Text('Story emotions — unavailable'),
+              ),
             const PopupMenuItem(value: 'share', child: Text('Share post link')),
             const PopupMenuItem(value: 'details', child: Text('Post details')),
             const PopupMenuItem(value: 'sources', child: Text('Sources')),
@@ -488,28 +526,6 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
       onTap: widget.onTap,
       canEdit: widget.canEdit,
       onEdit: widget.onEdit,
-      saveAction: IconButton(
-        tooltip: bookmarks.hasError
-            ? 'Saved state unavailable'
-            : saved
-            ? 'Remove saved post'
-            : 'Save post',
-        onPressed: !enabled || bookmarks.isLoading
-            ? null
-            : bookmarks.hasError
-            ? () => ref.invalidate(feedBookmarksProvider)
-            : () => _mutate(
-                'bookmark',
-                (token) => service.bookmark(postId, !saved, token),
-                () {
-                  ref.invalidate(feedBookmarksProvider);
-                  _notice(
-                    saved ? 'Post removed from saved posts.' : 'Post saved.',
-                  );
-                },
-              ),
-        icon: Icon(saved ? Icons.bookmark : Icons.bookmark_add_outlined),
-      ),
       actions: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -533,18 +549,6 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
                       size: 20,
                     ),
                     label: Text(selected ? 'Useful selected' : 'Useful'),
-                  ),
-                if (!feedbackCandidate)
-                  IconButton(
-                    tooltip: 'Negative feedback',
-                    onPressed: enabled ? _negativeFeedback : null,
-                    icon: const Icon(Icons.thumb_down_outlined, size: 20),
-                  ),
-                if (!feedbackCandidate)
-                  IconButton(
-                    tooltip: 'Story emotions — unavailable',
-                    onPressed: _emotions,
-                    icon: const Icon(Icons.add_reaction_outlined, size: 20),
                   ),
                 utilityActions,
               ],

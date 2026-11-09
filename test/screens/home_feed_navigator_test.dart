@@ -1,5 +1,7 @@
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import '../helpers/content_recovery.dart';
+import '../helpers/feed_session.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_event_tracker.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
@@ -7,7 +9,6 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
-import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -73,6 +74,91 @@ class _StaticLiveFeedNotifier extends LiveFeedController {
 }
 
 void main() {
+  testWidgets(
+    'delayed custom resolution and session changes report the actual feed',
+    (tester) async {
+      FeedModel custom(String id) => FeedModel(
+        id: id,
+        name: id,
+        type: FeedType.custom,
+        contentFilters: const ContentFilters(allowedTypes: {ContentType.mixed}),
+        sorting: SortingRule.newest,
+        refinements: const FeedRefinements(),
+        subscriptionLevelRequired: 0,
+        isCustom: true,
+      );
+      final available = StateProvider<List<FeedModel>>((_) => const []);
+      final auth = FeedTestAuth(feedTestUser('reader-a'));
+      final reported = <String>[];
+      String? parentSelection;
+      final container = ProviderContainer(
+        overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+          authStateProvider.overrideWith((_) => auth),
+          jwtProvider.overrideWith((_) async => 'synthetic-token'),
+          feedListProvider.overrideWith(
+            (ref) => [newsBoardFeedModel, ...ref.watch(available)],
+          ),
+          customFeedsProvider.overrideWith((ref) async => ref.watch(available)),
+          feedEntitlementsProvider.overrideWith(
+            (_) async => const FeedEntitlements(
+              tier: 'black',
+              maxCustomFeeds: 3,
+              newsBoardAccess: 'full',
+            ),
+          ),
+          liveFeedStateProvider.overrideWith(
+            (ref, feed) => _StaticLiveFeedNotifier(const []),
+          ),
+          analyticsClientProvider.overrideWithValue(
+            _RecordingAnalyticsClient(),
+          ),
+          analyticsEventTrackerProvider.overrideWithValue(
+            _RecordingEventTracker(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                return HomeFeedNavigator(
+                  initialFeedId: '_custom',
+                  onFeedChanged: (id) {
+                    reported.add(id);
+                    setState(() => parentSelection = id);
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(parentSelection, '_custom');
+      container.read(available.notifier).state = [custom('custom-a')];
+      await tester.pumpAndSettle();
+      expect(parentSelection, 'custom-a');
+      expect(find.byTooltip('custom-a · Feed controls'), findsOneWidget);
+      expect(reported.where((id) => id == 'custom-a'), hasLength(1));
+
+      auth.setUser(feedTestUser('reader-b'));
+      container.read(available.notifier).state = [custom('custom-b')];
+      await tester.pumpAndSettle();
+      expect(parentSelection, 'custom-b');
+      expect(find.byTooltip('custom-b · Feed controls'), findsOneWidget);
+      expect(find.text('custom-a'), findsNothing);
+      expect(reported.last, 'custom-b');
+      expect(reported.where((id) => id == 'custom-b'), hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('home feed navigator switches feeds and renders views', (
     tester,
   ) async {
@@ -167,10 +253,11 @@ void main() {
         container.read(analyticsEventTrackerProvider) as _RecordingEventTracker;
     expect(tracker.onceEvents, contains(AnalyticsEvents.feedFirstLoad));
 
-    expect(find.byTooltip('Public posts, newest first.'), findsOneWidget);
+    expect(find.text('Discovery'), findsOneWidget);
+    expect(find.byTooltip('Public posts, newest first.'), findsNothing);
     expect(find.byType(FeedCard), findsWidgets);
 
-    await tester.tap(find.byTooltip('Feed controls'));
+    await tester.tap(find.byTooltip('Discovery · Feed controls'));
     await tester.pumpAndSettle();
     expect(find.text('Choose a feed'), findsOneWidget);
     expect(find.text('Curated discover'), findsOneWidget);
@@ -181,7 +268,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Close feed controls'), findsNothing);
 
-    await tester.tap(find.byTooltip('Feed controls'));
+    await tester.tap(find.byTooltip('Discovery · Feed controls'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('News').last);
     await tester.pumpAndSettle();
@@ -289,7 +376,7 @@ void main() {
     addTearDown(container.dispose);
 
     Future<void> selectFeed(String name) async {
-      await tester.tap(find.byTooltip('Feed controls'));
+      await tester.tap(find.byTooltip(RegExp(r' · Feed controls$')));
       await tester.pumpAndSettle();
       await tester.tap(find.text(name).last);
       await tester.pump();
@@ -394,7 +481,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Feed controls'));
+      await tester.tap(find.byTooltip('Discovery · Feed controls'));
       await tester.pumpAndSettle();
 
       final sheetRect = tester.getRect(find.byType(BottomSheet));
@@ -404,8 +491,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Choose a feed'), findsNothing);
       final openControls = tester
-          .widget<LythausTopBar>(find.byType(LythausTopBar))
-          .onLogoTap!;
+          .state<HomeFeedNavigatorState>(find.byType(HomeFeedNavigator))
+          .openFeedControls;
       openControls();
       openControls();
       await tester.pumpAndSettle();
@@ -413,7 +500,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Choose a feed'), findsNothing);
       final controlsFocus = tester
-          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.tune))
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Discovery'))
           .focusNode!;
       for (final triggerFocus in [controlsFocus]) {
         triggerFocus.requestFocus();

@@ -68,7 +68,7 @@ class _PrivateImageUploadCardState extends ConsumerState<PrivateImageUploadCard>
             ),
             const SizedBox(height: 8),
             const Text(
-              'Images cannot be attached to posts yet. Uploading keeps the image private and does not certify it as safe or human-authored. Image selections are not saved when you leave this composer.',
+              'Images cannot be attached to posts yet. Uploading keeps the image private. Image selections are not saved when you leave this composer.',
             ),
             const SizedBox(height: 8),
             Semantics(liveRegion: true, child: Text(description)),

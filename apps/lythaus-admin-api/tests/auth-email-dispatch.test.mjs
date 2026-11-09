@@ -61,6 +61,7 @@ function database({ member=true, duplicate=false, recovered=account, recent=fals
   const run=async (_,work)=>work({query:async(sql,values)=>{
     calls.push({sql,values});
     if(sql.includes('FROM identity.admin_memberships a JOIN')) return {rows:[],rowCount:member?1:0};
+    if(sql.includes("pg_catalog.to_regclass('marketing.waitlist_invites')")) return {rows:[{invites_present:false,verifier_present:false}],rowCount:1};
     if(sql.includes('marketing.waitlist_invite_eligible')) return {rows:[{eligible:waitlistEligible && (!existingWaitlistInvite || reissueEligibleAccount)}],rowCount:1};
     if(sql.includes('marketing.waitlist_invite_reissue_user')) return {rows:[{user_id:reissueEligibleAccount ? existingWaitlistInvite.user_id : null}],rowCount:1};
     if(sql.includes('marketing.bind_waitlist_invite')) return {rows:[{bound:inviteBound}],rowCount:1};

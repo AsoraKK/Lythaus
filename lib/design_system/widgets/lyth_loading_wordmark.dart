@@ -7,7 +7,7 @@ import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/design_system/widgets/loading_motion_preference_stub.dart'
     if (dart.library.js_interop) 'package:lythaus/design_system/widgets/loading_motion_preference_web.dart';
 
-/// The website's approved wordmark and light, while an existing load is active.
+/// Approved loading artwork: dark-mode light, or a static light-mode wordmark.
 class LythLoadingWordmark extends StatefulWidget {
   /// Leaves a static, readable wordmark when [active] is false.
   const LythLoadingWordmark({
@@ -81,7 +81,9 @@ class _LythLoadingWordmarkState extends State<LythLoadingWordmark>
   void _sync() {
     final motionWasAllowed = _motionAllowed;
     _motionAllowed =
-        !MediaQuery.disableAnimationsOf(context) && !_browserMotion.value;
+        Theme.of(context).brightness == Brightness.dark &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        !_browserMotion.value;
     if (widget.active && motionWasAllowed && !_motionAllowed) {
       _scheduleStaticPresentation();
     }

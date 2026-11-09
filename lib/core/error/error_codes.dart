@@ -87,7 +87,7 @@ abstract final class ErrorMessages {
     ErrorCodes.aiContentBlocked:
         'AI-generated public content cannot be posted.',
     ErrorCodes.aiLabelRequired:
-        'Choose Human-authored or AI-assisted before posting.',
+        'This post could not meet Lythaus publication requirements.',
     ErrorCodes.appealExists:
         'You have already submitted an appeal for this content.',
     ErrorCodes.validationFailed: 'Please check your input and try again.',

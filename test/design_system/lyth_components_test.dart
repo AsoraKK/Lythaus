@@ -26,14 +26,16 @@ void main() {
       final image = tester.widget<SvgPicture>(find.byType(SvgPicture));
       expect(
         image.colorFilter,
-        const ColorFilter.mode(LythSemanticColors.text, BlendMode.srcIn),
+        const ColorFilter.mode(LythSemanticColors.canvas, BlendMode.srcIn),
       );
       expect(image.semanticsLabel, 'Lythaus');
       expect(find.text('Lyt haus'), findsNothing);
     },
   );
 
-  testWidgets('LythButton primary uses colorScheme.primary', (tester) async {
+  testWidgets('LythButton primary retains the approved amber fill', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: LythausTheme.light(),
@@ -47,11 +49,10 @@ void main() {
     await tester.pump();
 
     final element = tester.element(find.byType(ElevatedButton));
-    final scheme = Theme.of(element).colorScheme;
     final style = ElevatedButtonTheme.of(element).style;
     final background = style?.backgroundColor?.resolve(<WidgetState>{});
 
-    expect(background, scheme.primary);
+    expect(background, LythSemanticColors.accent);
   });
 
   testWidgets('LythButton shows icon before label by default', (tester) async {

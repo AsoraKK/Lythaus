@@ -113,6 +113,7 @@ class FeedItem {
   final bool isPinned;
   final FeedTrustSummary trustSummary;
   final String authorshipLabel;
+  final String? declaredCreationMode;
   final String classificationSource;
   final String classificationState;
 
@@ -137,6 +138,7 @@ class FeedItem {
     this.isPinned = false,
     this.trustSummary = const FeedTrustSummary(),
     this.authorshipLabel = 'Under review',
+    this.declaredCreationMode,
     this.classificationSource = 'automated_classification',
     this.classificationState = 'unavailable',
   });

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 
 class _AuthNotifier extends StateNotifier<AsyncValue<User?>>
     implements AuthStateNotifier {
@@ -165,74 +166,100 @@ void main() {
     },
   );
 
-  testWidgets('closing a saved draft preserves text and disclosure quietly', (
-    tester,
-  ) async {
-    final storage = MemoryContentRecoveryStorage();
-    await tester.pumpWidget(_screen(storage: storage, viaNavigator: true));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Open composer'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, 'Saved private draft');
-    await tester.pump();
-    await tester.tap(find.text('Human-authored'));
-    await tester.pumpAndSettle();
-    expect(find.text('Draft saved on this device.'), findsOneWidget);
+  testWidgets(
+    'closing a saved draft preserves text and historical declaration quietly',
+    (tester) async {
+      final storage = MemoryContentRecoveryStorage();
+      await tester.pumpWidget(_screen(storage: storage, viaNavigator: true));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open composer'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Saved private draft',
+      );
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      );
+      container.read(postCreationProvider.notifier).setAiLabel('human');
+      await tester.pumpAndSettle();
+      expect(find.text('Draft saved on this device.'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Close composer'));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard post?'), findsNothing);
-    expect(find.text('Open composer'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close composer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Discard post?'), findsNothing);
+      expect(find.text('Open composer'), findsOneWidget);
 
-    await tester.tap(find.text('Open composer'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
-      'Saved private draft',
-    );
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Human-authored'))
-          .selected,
-      isTrue,
-    );
-  });
+      await tester.tap(find.text('Open composer'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        'Saved private draft',
+      );
+      expect(container.read(postCreationProvider).aiLabel, 'human');
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+    },
+  );
 
-  testWidgets('offers only allowed public authorship choices', (tester) async {
-    await tester.pumpWidget(_screen());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'keeps drafts declaration-free and explains current posting policy',
+    (tester) async {
+      await tester.pumpWidget(_screen());
+      await tester.pumpAndSettle();
 
-    expect(find.text('Human-authored'), findsOneWidget);
-    expect(find.text('AI-assisted'), findsOneWidget);
-    expect(find.text('AI-generated'), findsNothing);
-    expect(
-      find.textContaining(
-        'This is your declaration; publication checks are separate.',
-      ),
-      findsOneWidget,
-    );
-    await tester.ensureVisible(find.text('Posting policy'));
-    await tester.tap(find.text('Posting policy'));
-    await tester.pumpAndSettle();
-    expect(
-      find.textContaining('AI-generated public content is not allowed'),
-      findsOneWidget,
-    );
-  });
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+      expect(find.text('AI-generated'), findsNothing);
+      expect(find.text('How did you write this?'), findsNothing);
+      expect(find.textContaining('This is your declaration'), findsNothing);
+      expect(find.text(contentSubmissionUnavailableMessage), findsOneWidget);
+      await tester.ensureVisible(find.text('Posting policy'));
+      await tester.tap(find.text('Posting policy'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          'AI-generated or AI-edited media are not permitted.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'AI-generated text may contain up to 250 characters.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+    },
+  );
 
-  testWidgets('shows the grapheme-aware assisted boundary', (tester) async {
-    await tester.pumpWidget(_screen());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'restored assisted declaration does not impose a legacy UI draft cap',
+    (tester) async {
+      await tester.pumpWidget(_screen());
+      await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('AI-assisted'));
-    await tester.tap(find.text('AI-assisted'));
-    await tester.pump();
-    await tester.enterText(find.byType(TextField).first, 'a' * 250);
-    await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      );
+      container.read(postCreationProvider.notifier).setAiLabel('assisted');
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).first, 'a' * 250);
+      await tester.pump();
 
-    expect(
-      find.textContaining('AI-assisted public text cannot exceed 249'),
-      findsOneWidget,
-    );
-  });
+      expect(find.text('250/5000'), findsOneWidget);
+      expect(find.textContaining('249'), findsNothing);
+      expect(container.read(postCreationProvider).text, 'a' * 250);
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Post'))
+            .onPressed,
+        isNull,
+      );
+    },
+  );
 }

@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,8 +9,13 @@ import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
-import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
-import 'package:lythaus/ui/components/lythaus_side_navigation.dart';
+import 'package:lythaus/ui/components/editorial_action_bar.dart';
+import 'package:lythaus/ui/components/feed_navigation_rail.dart';
+import 'package:lythaus/ui/components/feed_swipe_region.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/state/providers/theme_mode_provider.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/ui/screens/create/create_screen.dart';
@@ -48,6 +54,14 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   final _contentKey = GlobalKey();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _feedKey = GlobalKey<HomeFeedNavigatorState>();
+  final _menuFocus = FocusNode(debugLabel: 'Menu action');
+  final _feedFocus = FocusNode(debugLabel: 'Selected feed');
+  final _appearanceFocus = {
+    for (final mode in ThemeMode.values)
+      mode: FocusNode(debugLabel: 'Appearance ${mode.name}'),
+  };
+  late String _activeFeedId;
+  bool _menuOpen = false;
   static const _tabNames = [
     'discover',
     'create',
@@ -83,6 +97,11 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   @override
   void dispose() {
     _notificationActive.dispose();
+    _menuFocus.dispose();
+    _feedFocus.dispose();
+    for (final node in _appearanceFocus.values) {
+      node.dispose();
+    }
     for (final scope in _tabFocusScopes) {
       scope.dispose();
     }
@@ -92,6 +111,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   @override
   void initState() {
     super.initState();
+    _activeFeedId = widget.initialFeedId ?? 'discover';
     _currentIndex = widget.initialIndex.clamp(0, 5);
     _notificationActive = ValueNotifier(_currentIndex == 5);
     _visited.add(_currentIndex);
@@ -100,6 +120,9 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   @override
   void didUpdateWidget(AdaptiveShell oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialFeedId != widget.initialFeedId) {
+      _activeFeedId = widget.initialFeedId ?? 'discover';
+    }
     if ((oldWidget.initialIndex != widget.initialIndex &&
             widget.initialIndex.clamp(0, 5) != _currentIndex) ||
         oldWidget.initialFeedId != widget.initialFeedId ||
@@ -153,84 +176,212 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
     });
   }
 
+  void _openMenu() => _scaffoldKey.currentState?.openEndDrawer();
+
+  void _returnToPrevious() {
+    ++_navigationEpoch;
+    final previous = _history.isEmpty ? 0 : _history.removeLast();
+    _notificationActive.value = previous == 5;
+    _prepareTabFocus(previous);
+    setState(() => _currentIndex = previous);
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      final uri = GoRouterState.of(context).uri;
+      router.replace<void>(
+        uri
+            .replace(
+              queryParameters: {
+                ...uri.queryParameters,
+                'tab': _tabNames[previous],
+              },
+            )
+            .toString(),
+      );
+    }
+  }
+
   Widget _accountDrawer(bool signedIn) => Drawer(
-    width: (MediaQuery.sizeOf(context).width * .88).clamp(0, 320),
+    width: (MediaQuery.sizeOf(context).width - 24).clamp(0, 360),
     child: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Builder(
+        builder: (drawerContext) {
+          void close() => _scaffoldKey.currentState?.closeEndDrawer();
+          void closeAnd(VoidCallback action) {
+            close();
+            action();
+          }
+
+          Widget destination(
+            String title,
+            IconData icon,
+            VoidCallback action,
+          ) => ListTile(
+            leading: Icon(icon),
+            title: Text(title),
+            onTap: () => closeAnd(action),
+          );
+          return CallbackShortcuts(
+            bindings: {const SingleActivator(LogicalKeyboardKey.escape): close},
+            child: ListView(
+              padding: const EdgeInsets.all(24),
               children: [
-                const CircleAvatar(child: Icon(Icons.person_outline)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          'Menu',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close menu',
+                      onPressed: close,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
-                Text(
-                  signedIn ? 'Your account' : 'Guest',
-                  style: Theme.of(context).textTheme.titleLarge,
+                destination(
+                  'Profile',
+                  Icons.person_outline,
+                  () => _onTabTapped(2),
+                ),
+                destination(
+                  'Rewards',
+                  Icons.redeem_outlined,
+                  () => _onTabTapped(3),
+                ),
+                destination(
+                  'Notifications',
+                  Icons.notifications_outlined,
+                  () => _onTabTapped(5),
+                ),
+                destination(
+                  'Trending',
+                  Icons.trending_up,
+                  () => _openFeedSection((feed) => feed.showTrending()),
+                ),
+                destination(
+                  'Manage feeds',
+                  Icons.tune,
+                  () => _openFeedSection((feed) => feed.openFeedControls()),
+                ),
+                destination(
+                  'Create feed',
+                  Icons.add,
+                  () => _openFeedSection((feed) => feed.createFeed()),
+                ),
+                destination(
+                  'Refresh feed',
+                  Icons.refresh,
+                  () => _openFeedSection((feed) => feed.refreshFeed()),
+                ),
+                destination(
+                  'Review and appeals',
+                  Icons.fact_check_outlined,
+                  () => _openFeedSection((feed) => feed.showAppeals()),
+                ),
+                if (signedIn) const OwnSubmissionsMenu(),
+                const Divider(height: 32),
+                destination('Settings', Icons.settings_outlined, _openSettings),
+                destination('Help', Icons.help_outline, _openHelp),
+                const SizedBox(height: 24),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Appearance',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                RadioGroup<ThemeMode>(
+                  groupValue: ref.watch(themeModeProvider),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    final persistence = ref
+                        .read(themeModeProvider.notifier)
+                        .setThemeMode(value);
+                    final focus = _appearanceFocus[value]!;
+                    // Commit an unfocused semantics frame before refocusing.
+                    // Web semantics caches focus requests; requesting an
+                    // already-focused radio after a theme rebuild can leave
+                    // native focus on BODY and strand Tab/Escape at the root.
+                    focus.unfocus();
+                    FocusManager.instance.applyFocusChangesIfNeeded();
+                    await WidgetsBinding.instance.endOfFrame;
+                    if (mounted &&
+                        _menuOpen &&
+                        ModalRoute.of(context)?.isCurrent == true &&
+                        ref.read(themeModeProvider) == value &&
+                        focus.context != null &&
+                        focus.canRequestFocus) {
+                      focus.requestFocus();
+                    }
+                    final saved = await persistence;
+                    if (!saved && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Appearance changed for this session. It could not be saved.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Column(
+                    children: [
+                      for (final mode in ThemeMode.values)
+                        RadioListTile<ThemeMode>(
+                          focusNode: _appearanceFocus[mode],
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(switch (mode) {
+                            ThemeMode.system => 'System',
+                            ThemeMode.light => 'Light',
+                            ThemeMode.dark => 'Dark',
+                          }),
+                          value: mode,
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Choose a feed at the top, or swipe across its posts. '
+                  'Menu is also available with an inward swipe near the right edge.',
                 ),
               ],
             ),
-          ),
-          const Divider(height: 1),
-          Builder(
-            builder: (drawerContext) {
-              void closeAnd(VoidCallback action) {
-                Navigator.of(drawerContext).pop();
-                action();
-              }
-
-              return Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.person_outline),
-                    title: const Text('Profile'),
-                    onTap: () => closeAnd(() => _onTabTapped(2)),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.edit_outlined),
-                    title: const Text('Create'),
-                    onTap: () => closeAnd(() => _onTabTapped(1)),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.redeem_outlined),
-                    title: const Text('Rewards'),
-                    onTap: () => closeAnd(() => _onTabTapped(3)),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.tune),
-                    title: const Text('Manage feeds'),
-                    onTap: () => closeAnd(
-                      () => _openFeedSection((feed) => feed.openFeedControls()),
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.fact_check_outlined),
-                    title: const Text('Review and appeals'),
-                    onTap: () => closeAnd(
-                      () => _openFeedSection((feed) => feed.showAppeals()),
-                    ),
-                  ),
-                  const Divider(height: 24),
-                  ListTile(
-                    leading: const Icon(Icons.settings_outlined),
-                    title: const Text('Settings'),
-                    onTap: () => closeAnd(_openSettings),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.help_outline),
-                    title: const Text('Help'),
-                    onTap: () => closeAnd(_openHelp),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
+          );
+        },
       ),
     ),
   );
+
+  Widget _feedNavigation() {
+    final custom = ref
+        .watch(feedListProvider)
+        .where((feed) => feed.type == FeedType.custom)
+        .toList();
+    return FeedNavigationRail(
+      ids: ['discover', 'news', ...custom.map((feed) => feed.id)],
+      labels: ['Discovery', 'News', ...custom.map((feed) => feed.name)],
+      selectedId: _activeFeedId,
+      selectedFocusNode: _feedFocus,
+      onSelect: (id) {
+        final controls = id == _activeFeedId && _currentIndex == 0;
+        _openFeedSection((feed) {
+          if (controls) {
+            feed.openFeedControls();
+          } else {
+            feed.selectFeed(id);
+          }
+        });
+      },
+    );
+  }
 
   void _openSettings() {
     ++_navigationEpoch;
@@ -266,8 +417,11 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
         key: _feedKey,
         section: AlphaFeedSection.discover,
         initialFeedId: widget.initialFeedId,
-        onAccountTap: () => _scaffoldKey.currentState?.openDrawer(),
-        onCreateTap: () => _onTabTapped(1),
+        showNavigation: false,
+        feedControlsFocusNode: _feedFocus,
+        onFeedChanged: (id) {
+          if (_activeFeedId != id) setState(() => _activeFeedId = id);
+        },
       ),
       currentUser == null
           ? const Scaffold(
@@ -309,70 +463,110 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
         ],
       ),
     );
-    return PopScope(
-      canPop: _history.isEmpty,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _history.isNotEmpty) {
-          ++_navigationEpoch;
-          _notificationActive.value = _history.last == 5;
-          _prepareTabFocus(_history.last);
-          setState(() => _currentIndex = _history.removeLast());
-          final router = GoRouter.maybeOf(context);
-          if (router != null) {
-            final uri = GoRouterState.of(context).uri;
-            router.replace<void>(
-              Uri(
-                path: '/',
-                queryParameters: {
-                  ...uri.queryParameters,
-                  'tab': _tabNames[_currentIndex],
-                },
-              ).toString(),
-            );
-          }
-        }
+    return CallbackShortcuts(
+      bindings: {
+        if (_menuOpen)
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              _scaffoldKey.currentState?.closeEndDrawer(),
       },
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-          final desktop = constraints.maxWidth / scale >= kDesktopBreakpoint;
-          return Scaffold(
-            key: _scaffoldKey,
-            drawer: _accountDrawer(currentUser != null),
-            // Keep the content under the same parent while the navigation
-            // changes, so resizing cannot reparent an active composer during
-            // layout or discard its focus and draft.
-            body: Row(
-              children: [
-                if (desktop)
-                  LythausSideNavigation(
-                    currentIndex: _currentIndex,
-                    onDestinationSelected: _onTabTapped,
-                    onSettings: _openSettings,
-                    onHelp: _openHelp,
-                    extended: constraints.maxWidth >= 1100,
-                    brand:
-                        widget.brand ??
-                        const LythBrand(variant: LythBrandVariant.symbol),
-                  )
-                else
-                  const SizedBox.shrink(),
-                if (desktop)
-                  const VerticalDivider(width: 1)
-                else
-                  const SizedBox.shrink(),
-                Expanded(child: content),
-              ],
-            ),
-            bottomNavigationBar:
-                desktop || MediaQuery.viewInsetsOf(context).bottom > 0
-                ? null
-                : LythausBottomNav(
-                    currentIndex: _currentIndex,
-                    onTap: _onTabTapped,
-                  ),
-          );
+      child: PopScope(
+        canPop: _menuOpen || (_history.isEmpty && _currentIndex == 0),
+        onPopInvokedWithResult: (didPop, _) {
+          // The active composer owns draft persistence and in-flight submission
+          // guards. A blocked route pop notifies both scopes; do not navigate
+          // away before the composer's close handler resolves that decision.
+          if (!didPop &&
+              !_menuOpen &&
+              !(_currentIndex == 1 && ref.read(currentUserProvider) != null)) {
+            _returnToPrevious();
+          }
         },
+        child: Scaffold(
+          key: _scaffoldKey,
+          endDrawer: _accountDrawer(currentUser != null),
+          endDrawerEnableOpenDragGesture: false,
+          onEndDrawerChanged: (open) {
+            setState(() => _menuOpen = open);
+            if (!open) _menuFocus.requestFocus();
+          },
+          body: FeedSwipeRegion(
+            onOpenMenu: _menuOpen || !ref.watch(horizontalSwipeEnabledProvider)
+                ? null
+                : _openMenu,
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 992),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child:
+                                widget.brand ??
+                                const LythBrand(
+                                  variant: LythBrandVariant.wordmark,
+                                  height: 32,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 992),
+                      child: _feedNavigation(),
+                    ),
+                  ),
+                  if (_currentIndex != 0)
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 992),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () {
+                              if (_currentIndex == 1 && currentUser != null) {
+                                Navigator.of(context).maybePop();
+                              } else {
+                                _returnToPrevious();
+                              }
+                            },
+                            icon: const Icon(Icons.arrow_back),
+                            label: Text(
+                              'Back to ${switch (_history.lastOrNull ?? 0) {
+                                1 => 'draft',
+                                2 => 'profile',
+                                3 => 'rewards',
+                                4 => 'search',
+                                5 => 'notifications',
+                                _ => 'feed',
+                              }}',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Expanded(child: content),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+              ? null
+              : EditorialActionBar(
+                  onCreate: () => _onTabTapped(1),
+                  onSearch: () => _onTabTapped(4),
+                  onMenu: _openMenu,
+                  menuFocusNode: _menuFocus,
+                  leftHanded: ref.watch(leftHandedModeProvider),
+                ),
+        ),
       ),
     );
   }

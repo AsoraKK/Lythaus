@@ -8,6 +8,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/design_system/widgets/lyth_loading_wordmark.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
@@ -44,6 +46,7 @@ void main() {
             deviceIntegrityGuardProvider.overrideWithValue(guard),
           ],
           child: MaterialApp(
+            theme: LythausTheme.light(),
             home: AuthChoiceScreen(onSignedIn: () => completed++),
           ),
         ),
@@ -73,6 +76,7 @@ void main() {
         isTrue,
       );
       expect(find.text('Signing in…'), findsOneWidget);
+      expect(find.byType(LythBrand), findsOneWidget);
       expect(
         find.byWidgetPredicate(
           (widget) =>

@@ -157,7 +157,7 @@ void main() {
         expect(tester.takeException(), isNull);
         if (screen == 'post') {
           expect(find.text('Media unavailable'), findsOneWidget);
-          expect(find.text('Authorship: Under review'), findsOneWidget);
+          expect(find.text('Authorship: Under review'), findsNothing);
           expect(find.byTooltip('Pinned post'), findsOneWidget);
           expect(find.byTooltip('Save post'), findsOneWidget);
           expect(

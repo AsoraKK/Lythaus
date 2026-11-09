@@ -47,7 +47,7 @@ class DiscoverFeed extends StatelessWidget {
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
+        constraints: const BoxConstraints(maxWidth: 992),
         child: RefreshIndicator(
           onRefresh: onRefresh ?? () async {},
           child: NotificationListener<ScrollNotification>(

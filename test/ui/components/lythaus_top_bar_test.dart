@@ -9,7 +9,7 @@ void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
   for (final dark in [false, true]) {
-    testWidgets('wordmark and controls fit 320px at 200% text, dark=$dark', (
+    testWidgets('wordmark alone fits 320px at 200% text, dark=$dark', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -41,18 +41,14 @@ void main() {
         );
         await tester.pumpAndSettle();
         final brand = tester.widget<LythBrand>(find.byType(LythBrand));
-        expect(brand.variant, LythBrandVariant.symbol);
-        expect(brand.height, 36);
+        expect(brand.variant, LythBrandVariant.wordmark);
+        expect(brand.height, 32);
         expect(find.bySemanticsLabel('Lythaus'), findsOneWidget);
         expect(find.text('Discover'), findsNothing);
         for (final label in ['Feed controls', 'Search', 'Trending']) {
-          final control = find.byTooltip(label);
-          final size = tester.getSize(control);
-          expect(size.width, greaterThanOrEqualTo(48));
-          expect(size.height, greaterThanOrEqualTo(48));
-          await tester.tap(control);
+          expect(find.byTooltip(label), findsNothing);
         }
-        expect(feedOpened && searchOpened && trendingOpened, isTrue);
+        expect(feedOpened || searchOpened || trendingOpened, isFalse);
         expect(tester.takeException(), isNull);
       } finally {
         semantics.dispose();

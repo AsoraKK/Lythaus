@@ -40,7 +40,7 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1127 adds independently reviewed, default-off feedback and privacy hooks.
   ['apps/lythaus-jobs/src/index.ts', '1145049fc3d6d1f5afbf9754c4f8d949245caa70'],
   // The alpha waitlist verification gate stays on one exact API source revision.
-  ['apps/lythaus-public-api/src/index.ts', 'e4a357138325564a334d69b7f6781b1563be4bdc'],
+  ['apps/lythaus-public-api/src/index.ts', 'c04b83e9fa36f07b8d5807c260e5eb7f82aceb8c'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],

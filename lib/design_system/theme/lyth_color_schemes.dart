@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 class LythColorSchemes {
-  static ColorScheme light() => dark();
+  static ColorScheme light() => _scheme(Brightness.light);
 
   static ColorScheme dark() => _scheme(Brightness.dark);
 

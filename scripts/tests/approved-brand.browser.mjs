@@ -158,7 +158,7 @@ async function capture(page, name, validate = true) {
         const brands=page.getByRole('img',{name:'Lythaus',exact:true});
         for(let index=1;index<await brands.count();index++){
           const box=await brands.nth(index).boundingBox();
-          assert.ok(box && box.width>0 && box.height>0,'Every shell LH symbol is visible');
+          assert.ok(box && box.width>0 && box.height>0,'Every named wordmark is visible');
           await compareApprovedArtwork(page,png,containedBrandRect(box,presentation.kind),new URL(url,page.url()).href,PNG,'canvas',box,presentation.foreground);
         }
       }
@@ -219,15 +219,15 @@ try {
           await page.locator('flt-semantics-placeholder').evaluate(element => element.click());
           if (screen === 'shell') {
             await page.getByRole('textbox', { name: /Your post/ }).waitFor();
-            await page.getByRole('button', { name: /^Feed(?:$|\s+Tab)/ }).click();
+            await page.getByRole('button', { name: /^Discovery(?:$|\s)/ }).click();
             await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
-            assert.equal(await page.getByRole('button', { name: 'Feed controls', exact: true }).count(), 0,
-              'The single-feed fixture must not offer unavailable feed switching');
+            assert.equal(await page.getByRole('button', { name: /^Discovery(?:$|\s)/ }).count(), 1,
+              'The top feed row has a single Discovery entry');
           } else {
             await page.getByRole('img', { name: 'Lythaus', exact: true }).waitFor();
           }
-          assert.equal(await page.getByRole('img',{name:'Lythaus',exact:true}).count(), screen==='shell'&&width>=1100?2:1,
-            'The header brand is named; the expanded desktop sidebar retains its own LH symbol');
+          assert.equal(await page.getByRole('img',{name:'Lythaus',exact:true}).count(), 1,
+            'The header contains only the approved standalone wordmark');
           if(login){
             const semanticBox=await page.getByRole('img',{name:'Lythaus',exact:true}).boundingBox();
             for(const key of ['x','y','width','height'])assert.ok(Math.abs(semanticBox[key]-initialPaint.before.brands[0][key])<0.02,'Named image matches original fractional '+key);
@@ -271,7 +271,7 @@ try {
           if(login){
             await page.waitForURL(url=>url.pathname==='/');
             assert.equal(new URL(page.url()).pathname,'/','Real GoRouter guest destination');
-            await page.getByRole('button',{name:/^Feed(?:$|\s+Tab)/}).and(page.locator('[aria-current="true"]')).waitFor();
+            await page.getByRole('button',{name:/^Discovery(?:$|\s)/}).waitFor();
             await page.locator('flt-semantics').getByText('No public posts yet',{exact:true}).waitFor();
             assert.equal(requests.filter(r=>r.url===refreshUrl&&r.method==='POST').length,1,'Real signed-out refresh');
             assert.equal(requests.filter(r=>r.url===logoutUrl&&r.method==='POST').length,1,'One real guest logout');

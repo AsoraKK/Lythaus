@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/design_system/theme/lyth_theme.dart';
 import 'package:lythaus/state/models/feed_models.dart';
-import 'package:lythaus/ui/components/authorship_disclosure.dart';
+import 'package:lythaus/ui/components/editorial_action_bar.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
-import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
+import 'package:lythaus/ui/components/feed_navigation_rail.dart';
+import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
 import 'package:lythaus/ui/screens/home/discover_feed.dart';
 
@@ -69,10 +70,28 @@ Future<void> _render(
           child: child!,
         ),
         home: Scaffold(
-          appBar: shell ? AppBar(title: const Text('Discover')) : null,
-          body: body,
+          appBar: shell
+              ? const LythausTopBar(title: 'Feeds', useWordmark: true)
+              : null,
+          body: shell
+              ? Column(
+                  children: [
+                    FeedNavigationRail(
+                      ids: const ['discover'],
+                      labels: const ['Discovery'],
+                      selectedId: 'discover',
+                      onSelect: (_) {},
+                    ),
+                    Expanded(child: body),
+                  ],
+                )
+              : body,
           bottomNavigationBar: shell
-              ? LythausBottomNav(currentIndex: 0, onTap: (_) {})
+              ? EditorialActionBar(
+                  onCreate: () {},
+                  onSearch: () {},
+                  onMenu: () {},
+                )
               : null,
         ),
       ),
@@ -118,7 +137,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final navigationTop = tester
-            .getTopLeft(find.byType(LythausBottomNav))
+            .getTopLeft(find.byType(EditorialActionBar))
             .dy;
         expect(
           tester.getBottomLeft(find.byType(FeedCard).first).dy,
@@ -127,7 +146,8 @@ void main() {
         for (final post in [_shortPosts.first]) {
           expect(find.text(post.body).hitTestable(), findsOneWidget);
         }
-        expect(find.text('Authorship: Under review'), findsOneWidget);
+        expect(find.text('Authorship: Under review'), findsNothing);
+        expect(find.text('Discovery'), findsOneWidget);
         for (final button in find.byType(TextButton).evaluate()) {
           final size = tester.getSize(find.byWidget(button.widget));
           expect(size.height, greaterThanOrEqualTo(48));
@@ -160,7 +180,7 @@ void main() {
         tester.getSize(find.byType(FeedCard).at(1)).height,
         greaterThan(tester.getSize(find.byType(FeedCard).first).height),
       );
-      expect(tester.widget<Text>(find.text(longBody)).maxLines, 3);
+      expect(tester.widget<Text>(find.text(longBody)).maxLines, 6);
       await tester.ensureVisible(find.text('See more'));
       await tester.tap(find.text('See more'));
       await tester.pumpAndSettle();
@@ -184,16 +204,12 @@ void main() {
                 summary: const FeedTrustSummary(),
                 onTap: () => historyOpens++,
                 compact: true,
-                leading: const AuthorshipDisclosure(label: 'Under review'),
               ),
             ),
           );
           await tester.pumpAndSettle();
           final details = find.widgetWithText(TextButton, 'Trust details');
-          expect(
-            find.text('Authorship: Under review').hitTestable(),
-            findsOneWidget,
-          );
+          expect(find.text('Authorship: Under review'), findsNothing);
           expect(tester.getSize(details).height, greaterThanOrEqualTo(48));
           expect(find.text('Created: complete'), findsNothing);
           expect(
@@ -233,7 +249,7 @@ void main() {
           await tester.tap(details);
           await tester.pumpAndSettle();
           expect(find.text('Created: complete'), findsNothing);
-          expect(find.text('Authorship: Under review'), findsOneWidget);
+          expect(find.text('Authorship: Under review'), findsNothing);
           expect(tester.takeException(), isNull);
         },
       );
@@ -258,7 +274,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Post details'), findsOneWidget);
         expect(find.text('Created: complete'), findsNothing);
-        expect(find.text('Authorship: Under review'), findsWidgets);
+        expect(find.text('Authorship: Under review'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }

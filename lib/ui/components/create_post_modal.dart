@@ -17,6 +17,7 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 
@@ -30,12 +31,7 @@ class CreatePostModal extends ConsumerStatefulWidget {
 }
 
 class _CreatePostModalState extends ConsumerState<CreatePostModal> {
-  static const String _policyReminderMessage =
-      'Choose Human-authored or AI-assisted before posting.\n'
-      'AI-generated public content is not allowed.\n'
-      'AI-assisted public text is limited to 249 user-perceived characters.\n'
-      'Appeal outcomes are recorded by Lythaus.\n'
-      'This is an invite-only Alpha.';
+  static const String _policyReminderMessage = contentPostingPolicyMessage;
 
   ContentType selectedType = ContentType.text;
   bool isNews = false;
@@ -60,6 +56,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   }
 
   Future<void> _handleSubmit() async {
+    if (!ref.read(contentSubmissionPresentationEnabledProvider)) return;
     await runWithDeviceGuard(
       context,
       ref,
@@ -122,6 +119,9 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
       ),
     );
     final canCreate = ref.watch(canCreatePostProvider);
+    final submissionsEnabled = ref.watch(
+      contentSubmissionPresentationEnabledProvider,
+    );
     final canEdit =
         canCreate &&
         !state.isRestoring &&
@@ -170,16 +170,20 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               maxLines: 4,
               label: 'Your post',
               placeholder: 'Share an update...',
-              errorText: state.validationError,
+              errorText: submissionsEnabled
+                  ? state.validationError
+                  : contentDraftValidationError(state.text),
             ),
             SizedBox(height: spacing.md),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Authorship disclosure (required)',
-                style: Theme.of(context).textTheme.labelLarge,
+            Text('${state.text.length}/$postTextMaxLength'),
+            if (!submissionsEnabled)
+              const Text(contentSubmissionUnavailableMessage),
+            if (state.draftStatus != null)
+              Text(
+                !submissionsEnabled && state.draftStatus!.contains('disclosure')
+                    ? contentSubmissionPendingMessage
+                    : state.draftStatus!,
               ),
-            ),
             TextButton(
               onPressed: () => showDialog<void>(
                 context: context,
@@ -196,48 +200,6 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               ),
               child: const Text('Posting policy'),
             ),
-            SizedBox(height: spacing.xs),
-            Wrap(
-              spacing: spacing.xs,
-              runSpacing: spacing.xs,
-              children: [
-                ChoiceChip(
-                  label: const Text('Human-authored'),
-                  selected: state.aiLabel == 'human',
-                  onSelected: canEdit
-                      ? (_) => notifier.setAiLabel('human')
-                      : null,
-                ),
-                ChoiceChip(
-                  label: const Text('AI-assisted'),
-                  selected: state.aiLabel == 'assisted',
-                  onSelected: canEdit
-                      ? (_) => notifier.setAiLabel('assisted')
-                      : null,
-                ),
-              ],
-            ),
-            if (state.aiLabel == 'assisted') ...[
-              SizedBox(height: spacing.xs),
-              Semantics(
-                liveRegion: true,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${state.userPerceivedTextLength}/'
-                    '$aiAssistedPublicTextMaxGraphemes user-perceived '
-                    'characters for AI-assisted public text',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color:
-                          state.userPerceivedTextLength >
-                              aiAssistedPublicTextMaxGraphemes
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-            ],
             SizedBox(height: spacing.lg),
             const Text(
               'Photos are not available yet. Image sharing will open after '
@@ -292,7 +254,10 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                         ? 'Retry submission'
                         : 'Post',
                     onPressed:
-                        state.isSubmitting || state.isRestoring || !canCreate
+                        !submissionsEnabled ||
+                            state.isSubmitting ||
+                            state.isRestoring ||
+                            !canCreate
                         ? null
                         : _handleSubmit,
                     isLoading: state.isSubmitting,
@@ -317,7 +282,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'AI Scan',
+              'Submission restricted',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),

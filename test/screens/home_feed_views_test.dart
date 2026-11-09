@@ -162,7 +162,7 @@ void main() {
           hasAppeal ? findsOneWidget : findsNothing,
         );
         expect(find.text('Verified signals attached'), findsNothing);
-        expect(find.text('Author declaration: Human-authored'), findsOneWidget);
+        expect(find.text('Author declaration: Human-authored'), findsNothing);
         await tester.ensureVisible(find.byTooltip('Post actions'));
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Post actions'));
@@ -241,7 +241,7 @@ void main() {
     expect(find.text('Trending'), findsOneWidget);
     expect(find.text('Top story'), findsOneWidget);
     expect(find.text('Author post-1'), findsOneWidget);
-    expect(find.text('Authorship: Under review'), findsOneWidget);
+    expect(find.text('Authorship: Under review'), findsNothing);
     expect(find.text('Local updates'), findsNothing);
     expect(find.text('news'), findsNothing);
   });

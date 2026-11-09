@@ -9,15 +9,17 @@ class FeedNavigationRail extends StatefulWidget {
     required this.labels,
     required this.selectedId,
     required this.onSelect,
-    required this.onCreate,
+    this.onCreate,
     this.onRefresh,
+    this.selectedFocusNode,
   });
   final List<String> ids;
   final List<String> labels;
   final String selectedId;
   final ValueChanged<String> onSelect;
-  final VoidCallback onCreate;
+  final VoidCallback? onCreate;
   final VoidCallback? onRefresh;
+  final FocusNode? selectedFocusNode;
 
   @override
   State<FeedNavigationRail> createState() => _FeedNavigationRailState();
@@ -35,7 +37,7 @@ class _FeedNavigationRailState extends State<FeedNavigationRail> {
         if (mounted && selected != null) {
           Scrollable.ensureVisible(
             selected,
-            alignment: 0.5,
+            alignment: .5,
             duration: MediaQuery.disableAnimationsOf(context)
                 ? Duration.zero
                 : const Duration(milliseconds: 180),
@@ -45,71 +47,111 @@ class _FeedNavigationRailState extends State<FeedNavigationRail> {
     }
   }
 
+  void _select(String id) {
+    if (id != widget.selectedId) widget.onSelect(id);
+  }
+
   void _move(int offset) {
+    if (widget.ids.isEmpty) return;
     final index = widget.ids.indexOf(widget.selectedId);
-    widget.onSelect(
-      widget.ids[(index + offset).clamp(0, widget.ids.length - 1)],
-    );
+    _select(widget.ids[(index + offset).clamp(0, widget.ids.length - 1)]);
   }
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'Feeds',
-    container: true,
-    child: CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () => _move(1),
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _move(-1),
-        const SingleActivator(LogicalKeyboardKey.home): () =>
-            widget.onSelect(widget.ids.first),
-        const SingleActivator(LogicalKeyboardKey.end): () =>
-            widget.onSelect(widget.ids.last),
-      },
-      child: Row(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-              child: Row(
-                children: [
-                  for (var index = 0; index < widget.ids.length; index++)
-                    Padding(
-                      key: _keys.putIfAbsent(widget.ids[index], GlobalKey.new),
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        showCheckmark: true,
-                        side: BorderSide.none,
-                        shape: const StadiumBorder(),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        label: Text(widget.labels[index]),
-                        tooltip: widget.ids[index] == 'discover'
-                            ? 'Public posts, newest first.'
-                            : null,
-                        selected: widget.ids[index] == widget.selectedId,
-                        onSelected: (_) => widget.onSelect(widget.ids[index]),
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      label: 'Feeds',
+      container: true,
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () => _move(1),
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _move(-1),
+          if (widget.ids.isNotEmpty) ...{
+            const SingleActivator(LogicalKeyboardKey.home): () =>
+                _select(widget.ids.first),
+            const SingleActivator(LogicalKeyboardKey.end): () =>
+                _select(widget.ids.last),
+          },
+        },
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: colors.outlineVariant)),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                for (var index = 0; index < widget.ids.length; index++)
+                  Padding(
+                    key: _keys.putIfAbsent(widget.ids[index], GlobalKey.new),
+                    padding: const EdgeInsets.only(right: 20),
+                    child: Semantics(
+                      selected: widget.ids[index] == widget.selectedId,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: widget.ids[index] == widget.selectedId
+                                  ? colors.primary
+                                  : colors.surface,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        child: Tooltip(
+                          message: widget.ids[index] == widget.selectedId
+                              ? '${widget.labels[index]} · Feed controls'
+                              : widget.labels[index],
+                          child: TextButton(
+                            focusNode: widget.ids[index] == widget.selectedId
+                                ? widget.selectedFocusNode
+                                : null,
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              foregroundColor:
+                                  widget.ids[index] == widget.selectedId
+                                  ? colors.primary
+                                  : colors.onSurface,
+                              shape: const RoundedRectangleBorder(),
+                            ),
+                            onPressed: () => widget.onSelect(widget.ids[index]),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    (MediaQuery.sizeOf(context).width - 72)
+                                        .clamp(160, 320),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      widget.labels[index],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (widget.ids[index] ==
+                                      widget.selectedId) ...[
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.tune, size: 16),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  IconButton(
-                    tooltip: 'Create custom feed',
-                    onPressed: widget.onCreate,
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
-                    icon: const Icon(Icons.add),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
-          IconButton(
-            tooltip: 'Refresh feed',
-            onPressed: widget.onRefresh,
-            icon: const Icon(Icons.refresh, size: 20),
-          ),
-          const SizedBox(width: 8),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

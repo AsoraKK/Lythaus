@@ -25,6 +25,7 @@ import 'package:lythaus/core/observability/crash_reporting.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/core/network/pending_authenticated_operations.dart';
+import 'package:lythaus/state/providers/theme_mode_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -184,13 +185,17 @@ class _LythausAppState extends ConsumerState<LythausApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return ForegroundActivityObserver(
       child: MaterialApp.router(
         title: 'Lythaus',
-        theme: LythausTheme.dark(),
+        theme: LythausTheme.light(),
         darkTheme: LythausTheme.dark(),
-        themeMode: ThemeMode.dark,
+        themeMode: themeMode,
+        // Keep appearance changes immediate. Animated palette transitions can
+        // drop Flutter web semantics focus while the Menu is open.
+        themeAnimationDuration: Duration.zero,
         routerConfig: router,
       ),
     );

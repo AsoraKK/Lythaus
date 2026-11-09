@@ -47,7 +47,7 @@ class PostCreationState {
     this.validationError,
     this.isNews = false,
     this.contentType = 'text',
-    this.aiLabel,
+    this.aiLabel = 'human',
     this.proofSignals = const ProofSignals(),
     this.isRestoring = false,
     this.draftStatus,
@@ -110,7 +110,7 @@ class PostCreationState {
               proofSignals.editHistoryHash == null &&
               proofSignals.sourceAttestationUrl == null &&
               (text.isEmpty
-                  ? aiLabel == null
+                  ? aiLabel == null || aiLabel == 'human'
                   : draftStatus == 'Draft saved on this device.' ||
                         draftStatus == 'Draft restored on this device.')));
 
@@ -195,11 +195,13 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     final saved = pending != null && !pending.needsReentry
         ? pending.payload
         : registry.draft(_scope);
+    final restoredText = saved?['body'] as String? ?? '';
+    final restoredMode = saved?['declaredCreationMode'];
     state = PostCreationState(
-      text: saved?['body'] as String? ?? '',
-      aiLabel: saved?['declaredCreationMode'] == 'ai_assisted'
+      text: restoredText,
+      aiLabel: restoredMode == 'ai_assisted'
           ? 'assisted'
-          : saved?['declaredCreationMode'] == 'human'
+          : restoredMode == 'human' || (restoredMode == null && pending == null)
           ? 'human'
           : null,
       result: pending != null && !pending.needsReentry
@@ -211,7 +213,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       draftStatus: registry.storageUnavailable
           ? 'Recovery storage is unavailable.'
           : pending?.needsReentry == true
-          ? 'Saved text expired or was cleared at logout. Re-enter the same text and disclosure to check the previous request.'
+          ? 'Saved text expired or was cleared at logout. Re-enter the same text to check the previous request.'
           : saved == null
           ? null
           : 'Draft restored on this device.',

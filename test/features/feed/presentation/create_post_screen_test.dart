@@ -15,6 +15,7 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/security/device_security_service.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
@@ -100,8 +101,14 @@ User createTestUser() {
 }
 
 Future<void> chooseHumanAuthorship(WidgetTester tester) async {
-  await tester.tap(find.text('Human-authored'));
+  // Historical submission tests use an explicit stored-contract declaration.
+  // The production presentation exposes no authorship controls.
+  ProviderScope.containerOf(
+    tester.element(find.byType(CreatePostScreen)),
+  ).read(postCreationProvider.notifier).setAiLabel('human');
   await tester.pump();
+  expect(find.text('Human-authored'), findsNothing);
+  expect(find.text('AI-assisted'), findsNothing);
 }
 
 void main() {
@@ -121,6 +128,8 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        // Exercise existing request outcomes independently of the closed gate.
+        contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
@@ -317,6 +326,9 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              contentSubmissionPresentationEnabledProvider.overrideWithValue(
+                true,
+              ),
               contentRecoveryStorageProvider.overrideWithValue(
                 MemoryContentRecoveryStorage(),
               ),

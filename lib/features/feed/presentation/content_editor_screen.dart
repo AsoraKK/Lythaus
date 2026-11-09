@@ -9,18 +9,21 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 
 class ContentEditorScreen extends ConsumerStatefulWidget {
   const ContentEditorScreen({
     super.key,
     required this.contentId,
     required this.text,
+    this.declaredCreationMode,
     this.isComment = false,
     this.postId,
   });
 
   final String contentId;
   final String text;
+  final String? declaredCreationMode;
   final bool isComment;
   final String? postId;
 
@@ -62,11 +65,16 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
     _controller = TextEditingController(
       text: body is Map ? body['body'] as String? ?? widget.text : widget.text,
     );
+    _aiLabel = widget.declaredCreationMode == 'ai_assisted'
+        ? 'assisted'
+        : widget.declaredCreationMode == 'human'
+        ? 'human'
+        : null;
     if (pending != null) {
       _locked = true;
       _aiLabel = body is Map && body['declaredCreationMode'] == 'ai_assisted'
           ? 'assisted'
-          : body is Map
+          : body is Map && body['declaredCreationMode'] == 'human'
           ? 'human'
           : null;
       _error = pending.payload['method'] == 'PUT'
@@ -119,7 +127,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
       _locked = pending != null && !pending.needsReentry;
       if (pending != null) {
         _error = pending.needsReentry
-            ? 'Re-enter the same text and disclosure to check the previous edit.'
+            ? 'Re-enter the same text to check the previous edit.'
             : pending.payload['method'] == 'PUT'
             ? 'Retry to check the saved edit.'
             : 'Check the pending deletion before editing.';
@@ -175,7 +183,8 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_sessionValid ||
+    if (!ref.read(contentSubmissionPresentationEnabledProvider) ||
+        !_sessionValid ||
         _busy ||
         _restoring ||
         _successMessage != null ||
@@ -294,7 +303,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           _locked = true;
           _completedRevision = Map<String, dynamic>.from(revised);
           _successMessage = revised['moderationState'] == 'under_review'
-              ? 'Edit saved. Under review; this is not an authorship assessment.'
+              ? 'Edit saved. Publication checks are pending.'
               : 'Edit saved.';
         });
         return;
@@ -324,6 +333,9 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final submissionsEnabled = ref.watch(
+      contentSubmissionPresentationEnabledProvider,
+    );
     return PopScope(
       canPop: !_busy && _successMessage == null,
       onPopInvokedWithResult: (didPop, _) {
@@ -338,7 +350,10 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           children: [
             if (_error != null) ...[
               Text(
-                _error!,
+                !submissionsEnabled &&
+                        (_locked || _error!.contains('disclosure'))
+                    ? contentSubmissionPendingMessage
+                    : _error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               const SizedBox(height: 12),
@@ -365,35 +380,11 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
             const SizedBox(height: 16),
             if (_restoring) const Text('Restoring draft…'),
             if (_draftStatus != null) Text(_draftStatus!),
-            const Text(
-              'Choose the authorship of this edit. AI-generated public content is not allowed. '
-              'AI-assisted text is limited to 249 user-perceived characters.',
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Human-authored'),
-                  selected: _aiLabel == 'human',
-                  onSelected: _busy || _locked || _restoring
-                      ? null
-                      : (_) {
-                          setState(() => _aiLabel = 'human');
-                          _saveDraft();
-                        },
-                ),
-                ChoiceChip(
-                  label: const Text('AI-assisted'),
-                  selected: _aiLabel == 'assisted',
-                  onSelected: _busy || _locked || _restoring
-                      ? null
-                      : (_) {
-                          setState(() => _aiLabel = 'assisted');
-                          _saveDraft();
-                        },
-                ),
-              ],
+            if (!submissionsEnabled)
+              const Text(contentSubmissionUnavailableMessage),
+            TextButton(
+              onPressed: () => showContentPostingPolicy(context),
+              child: const Text('Posting policy'),
             ),
             const SizedBox(height: 16),
             FilledButton(
@@ -401,6 +392,8 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
                   ? null
                   : _successMessage != null
                   ? _closeCompletedEdit
+                  : !submissionsEnabled
+                  ? null
                   : _submit,
               child: Text(
                 _busy
