@@ -56,7 +56,7 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
         assert.equal(Object.hasOwn(body, 'passwordConfirmation'), false);
         let status = 200, result;
         if (url.pathname.endsWith('/email/verify')) {
-          assert.deepEqual(body, { token, password: setupPassword });
+          assert.deepEqual(body, { token, password: setupPassword, email: 'synthetic@example.invalid' });
           verified = true;
           result = { state: 'verified' };
         } else if (body.mode === 'register') {
@@ -372,6 +372,7 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
       await page.goto(`https://lythaus.co/verify-email#token=${'b'.repeat(64)}`);
       await page.waitForURL('https://lythaus.co/verify-email');
       assert.equal(requests.length, 0, 'GET must not redeem a verification link');
+      await page.locator('#verification-email').fill('synthetic@example.invalid');
       await page.locator('#verification-password').fill('synthetic chosen password');
       await page.getByRole('button', { name: 'Verify email and finish setup', exact: true }).click();
       await page.locator('[data-email-verification-status]').filter({ hasText: 'already used' }).waitFor();
@@ -383,6 +384,7 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
       await page.waitForURL('https://lythaus.co/verify-email');
       await page.locator('#verification-password').waitFor({ state: 'visible' });
       assert.equal(requests.length, beforeReplacement, 'Opening a replacement link must not redeem it');
+      await page.locator('#verification-email').fill('synthetic@example.invalid');
       await page.locator('#verification-password').fill('synthetic chosen password');
       await page.getByRole('button', { name: 'Verify email and finish setup', exact: true }).click();
       await page.locator('[data-email-verification-status][data-state="error"]').waitFor();
@@ -718,10 +720,12 @@ for(const [engine,type] of Object.entries({chromium,webkit})) for(const viewport
     await navigate(`/verify-email#token=${token}`,'Confirm your email');
     await page.waitForURL(origin+'/verify-email');
     assert.equal(requests.length,beforeGet,'Opening an email must not redeem it');
+    await page.locator('#verification-email').fill('synthetic@example.invalid');
     await page.locator('input[name=password]').fill('synthetic chosen password');
     await page.locator('button[type=submit]').click();
     await page.locator('[data-email-verification-status]').filter({hasText:'verified'}).waitFor();
     await navigate(`/verify-email#token=${token}`,'Confirm your email');
+    await page.locator('#verification-email').fill('synthetic@example.invalid');
     await page.locator('input[name=password]').fill('synthetic chosen password');
     await page.locator('button[type=submit]').click();
     await page.locator('[data-email-verification-status]').filter({hasText:'already used'}).waitFor();
