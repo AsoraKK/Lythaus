@@ -26,7 +26,7 @@ export const REVIEWED_APP_INPUTS = Object.freeze({
   'scripts/check_coverage_gates.sh': ['100644', 'blob', 'b51f3f4e0feeffe5d1a524cfe5f09e3e9ae345ae'],
   'scripts/check-web-release-hosts.sh': ['100644', 'blob', 'b4bad72db584237d1323f3f1277d3150e1231110'],
   'scripts/check-web-security-headers.sh': ['100644', 'blob', 'f13059bda8ff96432f4a23cb457ce6e3b2085efb'],
-  'scripts/ci/app-only-auth-browser.mjs': ['100644', 'blob', '9c1a1bd97f2f32729e834915842c99e04cd91d97'],
+  'scripts/ci/app-only-auth-browser.mjs': ['100644', 'blob', 'ce81548d1f86dfa7018755655ea14c1e30eb144e'],
   'scripts/ci/flutter-service-worker.js': ['100644', 'blob', 'fd682dea3ab36faf578c150d975668cb0615e02d'],
   'scripts/ci/version-web-entrypoints.mjs': ['100644', 'blob', '6e7f1bd9723c6889bcde65d7f17c106aacd88ff1'],
   'scripts/secret-scan.sh': ['100755', 'blob', 'becc30db6391f79a7d86c2c639647f19f718a703'],

@@ -131,7 +131,7 @@ export async function runAppOnlyAuthBrowser({ chromium, artifactDir, email, pass
     await enter(passwordField, password);
     await passwordField.press('Enter');
     await Promise.all([login, userinfo, discover]);
-    await page.getByRole('button', { name: /^Profile(?:\b|$)/ }).waitFor();
+    await page.getByRole('button', { name: 'Menu', exact: true }).waitFor();
     assert.ok((await context.cookies(API)).some(cookie => cookie.name === '__Host-lythaus_refresh'
       && cookie.httpOnly && cookie.secure && cookie.sameSite === 'Strict'));
     phase = 'refresh';
@@ -141,7 +141,8 @@ export async function runAppOnlyAuthBrowser({ chromium, artifactDir, email, pass
     await enableSemantics();
     await refresh;
     phase = 'security navigation';
-    await page.getByRole('button', { name: /^Profile(?:\b|$)/ }).click();
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.getByRole('button', { name: 'Profile', exact: true }).click();
     await page.getByRole('button', { name: 'Open settings', exact: true }).click();
     await page.getByText('Account security', { exact: true }).click();
     phase = 'logout';
