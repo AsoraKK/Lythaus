@@ -100,9 +100,7 @@ void main() {
 
       // Verify about dialog appears (check for dialog content)
       expect(
-        find.text(
-          'A social platform for thoughtful public conversation.',
-        ),
+        find.text('A social platform for thoughtful public conversation.'),
         findsOneWidget,
       );
     });
