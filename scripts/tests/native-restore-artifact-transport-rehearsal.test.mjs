@@ -6,7 +6,8 @@ import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import YAML from 'yaml';
 import { artifactTransportFixture, verifyArtifactTransportFixture } from '../ci/validate-native-restore-artifact-transport.mjs';
-import { sha256 } from '../ci/planetscale-native-restore-evidence.mjs';
+import { githubRead, sha256 } from '../ci/planetscale-native-restore-evidence.mjs';
+import { failureCode } from '../ci/planetscale-native-restore-contract.mjs';
 
 function fixture(t, { entry = 'transport.json', bytes } = {}) {
   const env = { GITHUB_REPOSITORY: 'SyntheticOwner/Lythaus', GITHUB_REPOSITORY_ID: '1010752912',
@@ -70,6 +71,48 @@ test('ordinary CI rehearsal refuses provider credentials without issuing request
   const f = fixture(t); f.env.PLANETSCALE_RESTORE_API_TOKEN = 'synthetic:forbidden';
   await assert.rejects(() => verifyArtifactTransportFixture(f.env, f.fetchImpl), { code: 'artifact_rehearsal_provider_access_forbidden' });
   assert.equal(f.calls.length, 0);
+});
+
+test('GitHub evidence read failures expose only sanitized categories', async t => {
+  const env = { GITHUB_REPOSITORY: 'SyntheticOwner/Lythaus', GH_TOKEN: 'synthetic-github-token-do-not-log' };
+  const expectedUrl = 'https://api.github.com/repos/SyntheticOwner/Lythaus/actions/artifacts/51';
+  const bodyMarker = 'synthetic-response-body-do-not-log';
+  const headerMarker = 'synthetic-response-header-do-not-log';
+  const locationMarker = 'https://signed.example.invalid/download?sig=synthetic-do-not-log';
+  const cases = [
+    ['transport', async () => { throw new Error(`${env.GH_TOKEN} ${bodyMarker} ${locationMarker}`); },
+      'github_evidence_transport_failed'],
+    ['HTTP 4xx', async () => Response.json({ message: bodyMarker }, { status: 403, headers: { 'x-fixture': headerMarker } }),
+      'github_evidence_read_failed_http_4xx'],
+    ['HTTP 5xx', async () => Response.json({ message: bodyMarker }, { status: 503, headers: { 'x-fixture': headerMarker } }),
+      'github_evidence_read_failed_http_5xx'],
+    ['other non-200', async () => ({ status: 304, redirected: false, url: expectedUrl, body: null }),
+      'github_evidence_read_failed_http_non_200'],
+    ['HTTP redirect response', async (_url, options) => {
+      assert.equal(options.redirect, 'manual');
+      return new Response(null, { status: 302, headers: { location: locationMarker } });
+    }, 'github_evidence_read_failed_redirect'],
+    ['redirected flag', async () => ({ status: 200, redirected: true, url: expectedUrl, body: null }),
+      'github_evidence_read_failed_redirect'],
+    ['URL mismatch', async () => ({ status: 200, redirected: false, url: locationMarker, body: null }),
+      'github_evidence_read_failed_redirect'],
+    ['malformed response metadata', async () => ({ status: '200', redirected: false, url: expectedUrl, body: null }),
+      'github_evidence_response_invalid'],
+    ['malformed JSON response', async () => new Response(bodyMarker, { status: 200 }),
+      'github_evidence_response_invalid'],
+  ];
+
+  for (const [label, fetchImpl, expectedCode] of cases) await t.test(label, async () => {
+    await assert.rejects(() => githubRead(env, '/actions/artifacts/51', fetchImpl), error => {
+      assert.equal(error.code, expectedCode);
+      const output = JSON.stringify({ blockers: [failureCode(error)] });
+      assert.equal(output, JSON.stringify({ blockers: [expectedCode] }));
+      for (const marker of [env.GH_TOKEN, bodyMarker, headerMarker, locationMarker, '302', '403', '503']) {
+        assert.doesNotMatch(`${error.message}\n${output}`, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      }
+      return true;
+    });
+  });
 });
 
 test('real transport rehearsal uses existing CodeQL read authority and a separate synthetic artifact', () => {
