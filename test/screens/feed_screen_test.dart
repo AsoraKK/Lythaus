@@ -101,7 +101,7 @@ void main() {
       // Verify about dialog appears (check for dialog content)
       expect(
         find.text(
-          'A social platform for authentic human-authored content with AI-powered verification.',
+          'A social platform for thoughtful public conversation.',
         ),
         findsOneWidget,
       );

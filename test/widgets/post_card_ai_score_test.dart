@@ -30,7 +30,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Under review'), findsOneWidget);
+    expect(find.text('Under review'), findsNothing);
     expect(find.textContaining('0.92'), findsNothing);
     expect(find.textContaining('%'), findsNothing);
   });

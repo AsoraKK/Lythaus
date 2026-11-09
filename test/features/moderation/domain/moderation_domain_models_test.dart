@@ -448,7 +448,7 @@ void main() {
       );
       expect(
         ErrorMessages.forCode(ErrorCodes.aiLabelRequired),
-        contains('AI-assisted'),
+        contains('publication requirements'),
       );
       expect(
         ErrorMessages.forCode(ErrorCodes.aiLabelRequired),

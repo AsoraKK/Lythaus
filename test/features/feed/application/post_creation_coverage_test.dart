@@ -14,7 +14,7 @@ void main() {
       expect(s.validationError, isNull);
       expect(s.isNews, isFalse);
       expect(s.contentType, 'text');
-      expect(s.aiLabel, isNull);
+      expect(s.aiLabel, 'human');
       expect(s.proofSignals.hasAny, isFalse);
     });
 
