@@ -194,6 +194,50 @@ chronology. Credential completion time comes from the atomic token consumption;
 the later coordinator observation is checked separately. No timestamp is backdated
 or replaced with a fixture value to make production evidence pass.
 
+## Owner-directed Admin subject diagnostic (uncertified)
+
+For the temporary read-only Admin subject diagnostic, select
+`release_mode=owner_testing_subject_diagnostic_exception`, leave
+`acceptance_run_id` empty, and set `confirm_production=true`. This mode is
+available only through the canonical protected release workflow and remains an
+`AUTH_CRITICAL_RELEASE`. The resolved changed-component set must be exactly
+Admin and the acceptance Coordinator, both built from the selected release SHA.
+The subject diagnostic is owner-only, read-only, and expires no later than three
+hours after preparation; activation requires at least 40 minutes of expiry
+runway.
+
+The native recovery exception still requires a fresh protected backup, a fresh
+completed native restore, and every existing restore scope, review, hash, and
+source check. It defers only the independent-recovery-destination gate. Do not
+mark that destination or any other unresolved recovery scope verified. Existing
+protected-environment approval, exact-candidate verification, production
+confirmation, rollback proof, activation checks, and public smoke remain in
+force. Candidate staging/acceptance and activation are separate `production`
+environment jobs in the same workflow run. The first approval gates staging;
+the second occurs only after Keeper acceptance and before activation. Before
+the second approval boundary the acceptance-only Coordinator route and serving
+versions are restored to the captured baseline. The activation job rechecks the
+same release SHA, first-attempt run binding, candidate versions, diagnostic
+expiry/runway, recovery readiness, and live serving versions/routes. Any drift
+from the exact predeployment snapshot blocks activation without overwriting the
+external change. Partial-activation rollback first re-reads live state and is
+allowed only when it still matches the original snapshot or the exact candidate
+state attempted by this run.
+
+The public release manifest must remain `NO-GO`, with the independent recovery
+destination explicitly unresolved.
+
+Unlike ordinary `owner_testing`, this mode creates the Keeper run and obtains
+real authenticated acceptance for the exact Admin and Coordinator candidates
+inside the same first-attempt release run. Admin remains at zero traffic during
+the Keeper wait. The workflow waits for that evidence until the Keeper expiry;
+it does not ask the operator to dispatch a second run or reuse the owner
+recovery exception. Missing, blocked, mismatched, or late acceptance fails
+closed and follows the existing rollback path. Successful
+acceptance still does not certify production authentication or change the public
+`NO-GO` result. Owner testing's existing verification-only checks also remain in
+effect: no Turnstile/email resource creation or key bootstrap is permitted.
+
 ## Reuse and resume
 
 The cutover artifact and Release Manifest v2 show every component's version ID,

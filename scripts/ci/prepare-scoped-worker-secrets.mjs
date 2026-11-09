@@ -145,7 +145,11 @@ async function main() {
     ? secretNames(readJson(requiredEnvironment('COORDINATOR_SECRET_INVENTORY_FILE')))
     : new Set();
   const lifecycle = classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorNames, coordinatorManaged });
-  assertOwnerTestingScopedKeys(lifecycle, process.env.OWNER_TESTING_DEPLOYMENT === 'true');
+  assertOwnerTestingScopedKeys(
+    lifecycle,
+    process.env.OWNER_TESTING_DEPLOYMENT === 'true',
+    process.env.OWNER_TESTING_SUBJECT_DIAGNOSTIC === 'true',
+  );
   const requiresBootstrap = lifecycle.transactionalEmail.action === 'bootstrap' || lifecycle.acceptanceState.action === 'bootstrap';
   const counts = requiresBootstrap ? await readBootstrapLedgerCounts() : undefined;
   if (counts) assertBootstrapLedgerPreconditions(counts, lifecycle);

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { verifyOwnerTestingAuthScope, assertOwnerTestingScopedKeys } from '../ci/verify-owner-testing-auth-scope.mjs';
-import { classifyScopedKeyBindings, TRANSACTIONAL_EMAIL_KEY } from '../ci/prepare-scoped-worker-secrets.mjs';
+import { classifyScopedKeyBindings, ACCEPTANCE_STATE_KEY, TRANSACTIONAL_EMAIL_KEY } from '../ci/prepare-scoped-worker-secrets.mjs';
 
 test('owner testing rejects a present or unobserved authenticity receipt before deployment', () => {
   for (const value of ['true', undefined, '', 'unknown']) assert.throws(() => verifyOwnerTestingAuthScope({
@@ -27,6 +27,25 @@ test('owner testing cannot bootstrap encryption keys or touch coordinator keys',
   assert.doesNotThrow(() => assertOwnerTestingScopedKeys(missing,false));
   const coordinator = classifyScopedKeyBindings({ publicNames:keys, jobsNames:keys, coordinatorManaged:true });
   assert.throws(() => assertOwnerTestingScopedKeys(coordinator,true), /deferred_coordinator/);
+});
+
+test('owner diagnostic preserves existing email and acceptance keys without bootstrap', () => {
+  const existing = classifyScopedKeyBindings({
+    publicNames: new Set([TRANSACTIONAL_EMAIL_KEY]),
+    jobsNames: new Set([TRANSACTIONAL_EMAIL_KEY]),
+    coordinatorNames: new Set([ACCEPTANCE_STATE_KEY]),
+    coordinatorManaged: true,
+  });
+  assert.doesNotThrow(() => assertOwnerTestingScopedKeys(existing, true, true));
+
+  const missingAcceptanceKey = classifyScopedKeyBindings({
+    publicNames: new Set([TRANSACTIONAL_EMAIL_KEY]),
+    jobsNames: new Set([TRANSACTIONAL_EMAIL_KEY]),
+    coordinatorNames: new Set(),
+    coordinatorManaged: true,
+  });
+  assert.throws(() => assertOwnerTestingScopedKeys(missingAcceptanceKey, true, true), /existing_scoped_keys/);
+  assert.doesNotThrow(() => assertOwnerTestingScopedKeys(existing, false, true));
 });
 
 function runProvider(script, scenario, args = []) {

@@ -68,6 +68,45 @@ test('owner testing cannot claim acceptance or skip other final production gates
   assert.match(missingDatabaseEvidence.stderr, /DATABASE_IDENTITY_VERIFIED=true is required/);
 });
 
+test('owner diagnostic accepts only same-run proof bound to exact Admin and coordinator versions', () => {
+  const diagnosticExpiry = new Date(Math.floor((Date.now() + 60 * 60_000) / 1000) * 1000).toISOString();
+  const dependencies = {
+    public: { workerName: 'lythaus-public-api-development', versionId: '11111111-1111-4111-8111-111111111111', sourceSha: 'b'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+    admin: { workerName: 'lythaus-admin-api-development', versionId: '22222222-2222-4222-8222-222222222222', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    jobs: { workerName: 'lythaus-jobs-development', versionId: '33333333-3333-4333-8333-333333333333', sourceSha: 'c'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+    coordinator: { workerName: 'lythaus-auth-acceptance-coordinator-development', versionId: '44444444-4444-4444-8444-444444444444', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    subjectDiagnosticExpiresAt: diagnosticExpiry,
+  };
+  const valid = {
+    OWNER_TESTING_DEPLOYMENT: 'true',
+    OWNER_TESTING_SUBJECT_DIAGNOSTIC: 'true',
+    AUTHENTICATED_ACCEPTANCE_PROVEN: 'true',
+    AUTH_ACCEPTANCE_STATUS: 'PASSED',
+    AUTH_ACCEPTANCE_RUN_ID: '55555555-5555-4555-8555-555555555555',
+    AUTH_ACCEPTANCE_EXPIRES_AT: new Date(Date.now() + 30 * 60_000).toISOString(),
+    AUTH_ACCEPTANCE_DEPENDENCIES_JSON: JSON.stringify(dependencies),
+    SUBJECT_DIAGNOSTIC_EXPIRES_AT: diagnosticExpiry,
+    ADMIN_WORKER_VERSION_ID: dependencies.admin.versionId,
+    ADMIN_WORKER_SOURCE_SHA: releaseSha,
+    COORDINATOR_WORKER_VERSION_ID: dependencies.coordinator.versionId,
+    COORDINATOR_WORKER_SOURCE_SHA: releaseSha,
+  };
+  const passed = runFinal(valid);
+  assert.equal(passed.status, 0, `${passed.stdout}\n${passed.stderr}`);
+
+  for (const mutation of [
+    { SUBJECT_DIAGNOSTIC_EXPIRES_AT: new Date(Date.now() + 70 * 60_000).toISOString() },
+    { ADMIN_WORKER_SOURCE_SHA: 'd'.repeat(40) },
+    { COORDINATOR_WORKER_VERSION_ID: '66666666-6666-4666-8666-666666666666' },
+    { AUTH_ACCEPTANCE_STATUS: 'HUMAN_ACCEPTANCE_REQUIRED' },
+    { AUTH_ACCEPTANCE_EXPIRES_AT: new Date(Date.now() - 60_000).toISOString() },
+  ]) {
+    const rejected = runFinal({ ...valid, ...mutation });
+    assert.notEqual(rejected.status, 0);
+    assert.match(rejected.stderr, /same-run PASSED acceptance bound to exact Admin\/coordinator candidates and live expiry/);
+  }
+});
+
 test('owner-test pending evidence cannot leak into a normal release', () => {
   const result = runFinal({
     OWNER_TESTING_DEPLOYMENT: 'false',
