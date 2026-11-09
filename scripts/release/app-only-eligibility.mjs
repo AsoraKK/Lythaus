@@ -29,7 +29,7 @@ export const REVIEWED_APP_INPUTS = Object.freeze({
   'scripts/ci/app-only-auth-browser.mjs': ['100644', 'blob', 'ce81548d1f86dfa7018755655ea14c1e30eb144e'],
   'scripts/ci/flutter-service-worker.js': ['100644', 'blob', 'fd682dea3ab36faf578c150d975668cb0615e02d'],
   'scripts/ci/version-web-entrypoints.mjs': ['100644', 'blob', '6e7f1bd9723c6889bcde65d7f17c106aacd88ff1'],
-  'scripts/secret-scan.sh': ['100755', 'blob', 'becc30db6391f79a7d86c2c639647f19f718a703'],
+  'scripts/secret-scan.sh': ['100755', 'blob', 'b30a1b9412712f23b5ddfb4f15e5adb92bb0e1a2'],
   'scripts/release/app-only-auth-network-policy.mjs': ['100644', 'blob', '8e7f2e1c333083502506be07fa499259e1d690aa'],
   'scripts/test-with-coverage.sh': ['100644', 'blob', 'aff11ea902930a65cd230a43bb24ddeaefbffb18'],
   'scripts/tests/auth-request-lifecycle.mjs': ['100644', 'blob', 'e34e36c8222a66cd8ec4a18e11753b567d60a7ff'],

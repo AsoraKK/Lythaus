@@ -28,12 +28,14 @@ if command -v gitleaks >/dev/null 2>&1; then
 else
   VERSION="${GITLEAKS_VERSION:-8.18.0}"
   ARCHIVE="gitleaks_${VERSION}_linux_x64.tar.gz"
-  URL="https://github.com/zricethezav/gitleaks/releases/download/v${VERSION}/${ARCHIVE}"
+  URL="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${ARCHIVE}"
   TARGET="$BIN_DIR/gitleaks"
   if [ ! -x "$TARGET" ]; then
     echo "Downloading gitleaks ${VERSION}..." >&2
     TMP_TAR=$(mktemp)
-    if ! curl -sSL "$URL" -o "$TMP_TAR"; then
+    if ! curl --fail --silent --show-error --location \
+      --retry 3 --retry-delay 2 --retry-max-time 30 \
+      "$URL" -o "$TMP_TAR"; then
       echo "Failed to download gitleaks from $URL" >&2
       echo "Attempting docker fallback" >&2
     else

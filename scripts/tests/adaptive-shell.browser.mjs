@@ -93,6 +93,23 @@ try {
           row.y + row.height <= viewport.height,
         'The scaled Notifications row remains within the viewport');
         const [labelLine] = labelLines;
+        if (engine === 'webkit') {
+          console.error(JSON.stringify({
+            diagnostic: 'adaptive-shell Notifications geometry',
+            theme,
+            scale,
+            rowRect: row && { ...row, right: row.x + row.width, bottom: row.y + row.height },
+            labelLineRects: labelLines,
+            viewportRect: {
+              x: 0,
+              y: 0,
+              width: viewport.width,
+              height: viewport.height,
+              right: viewport.width,
+              bottom: viewport.height,
+            },
+          }));
+        }
         assert.ok(labelLine.x >= row.x && labelLine.y >= row.y &&
           labelLine.right <= row.x + row.width && labelLine.bottom <= row.y + row.height,
         'The scaled Notifications label remains within its row');
