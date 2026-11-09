@@ -213,7 +213,7 @@ void main() {
     });
   }
 
-  testWidgets('new draft does not acquire a hidden declaration', (
+  testWidgets('new draft preserves stored mode without displaying it', (
     tester,
   ) async {
     final fixture = _Fixture();
@@ -226,7 +226,8 @@ void main() {
     await tester.pumpAndSettle();
     final draft = fixture.registry.draft('post-create:draft-owner');
     expect(draft?['body'], 'Undeclared private draft');
-    expect(draft?['declaredCreationMode'], isNull);
+    expect(draft?['declaredCreationMode'], 'human');
+    _expectNoDeclarations();
     fixture.expectNoWrites();
   });
 

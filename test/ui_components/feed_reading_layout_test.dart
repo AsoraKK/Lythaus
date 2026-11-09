@@ -230,7 +230,7 @@ void main() {
           expect(find.text('Created: complete'), findsNothing);
           expect(
             find.textContaining('does not independently verify authorship'),
-            findsOneWidget,
+            findsNothing,
           );
           expect(find.text('Media checked: none'), findsNothing);
           expect(find.text('Moderation: none'), findsNothing);

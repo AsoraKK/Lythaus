@@ -337,7 +337,7 @@ void main() {
   });
 
   testWidgets(
-    'discover card edit restores the legacy declaration and refreshes pending content out of feed',
+    'discover card edit preserves the restored mode and refreshes pending content out of feed',
     (tester) async {
       final adapter = _Adapter(
         (request) async => request.method == 'PUT'
@@ -360,7 +360,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_body(adapter.requests.singleWhere((r) => r.method == 'PUT')), {
         'body': 'Updated from Discover',
-        'declaredCreationMode': 'human',
+        'declaredCreationMode': 'ai_assisted',
       });
       expect(
         find.text('Edit submitted. Publication checks are pending.'),
@@ -407,7 +407,7 @@ void main() {
           'post': {
             ..._post(),
             'body': 'Revised from Discover',
-            'declaredCreationMode': 'human',
+            'declaredCreationMode': 'ai_assisted',
             'moderationState': 'under_review',
           },
         }),
@@ -560,7 +560,7 @@ void main() {
           text: 'A comment without a declaration',
           aiLabel: null,
         ),
-        'Choose an authorship disclosure before posting',
+        'Content does not meet Lythaus posting requirements.',
       );
       expect(
         validatePublicPostAuthorship(
@@ -737,7 +737,7 @@ void main() {
   );
 
   testWidgets(
-    'owner edits a comment with a restored legacy declaration and pending result',
+    'owner edits a comment with a restored assisted mode and pending result',
     (tester) async {
       final adapter = _Adapter(
         (request) async => request.method == 'PUT'
@@ -764,7 +764,7 @@ void main() {
       expect(write.path, '/api/comments/c1');
       expect(_body(write), {
         'body': 'Revised synthetic comment',
-        'declaredCreationMode': 'human',
+        'declaredCreationMode': 'ai_assisted',
       });
       expect(find.text('Revised synthetic comment'), findsOneWidget);
       expect(
@@ -813,7 +813,7 @@ void main() {
           'post': {
             ..._post(),
             'body': 'Revised synthetic post',
-            'declaredCreationMode': 'human',
+            'declaredCreationMode': 'ai_assisted',
             'moderationState': 'under_review',
           },
         }),
@@ -884,7 +884,7 @@ void main() {
         _response({
           'id': 'c1',
           'body': 'Revised synthetic comment',
-          'declaredCreationMode': 'human',
+          'declaredCreationMode': 'ai_assisted',
           'moderationState': 'under_review',
         }),
       );
@@ -960,7 +960,7 @@ void main() {
         _response({
           'id': 'c1',
           'body': 'Late synthetic edit receipt',
-          'declaredCreationMode': 'human',
+          'declaredCreationMode': 'ai_assisted',
           'moderationState': 'under_review',
         }),
       );
