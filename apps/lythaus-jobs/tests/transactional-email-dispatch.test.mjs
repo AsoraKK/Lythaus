@@ -26,6 +26,8 @@ function database(rows,{valid=true,dispatchState='provider_accepted',retryAfterS
   const remaining=[...rows];
   const run=async(sql,values=[])=>{
     calls.push({sql,values});
+    if(sql.includes("AS invites_present")&&sql.includes("AS delivery_lock_present"))
+      return reply([{invites_present:false,delivery_lock_present:false}]);
     if(sql.includes('WITH claimable')){
       assert.equal(values[0],1);
       const index=values.length===1?0:remaining.findIndex(row=>row.id===values[1]);
