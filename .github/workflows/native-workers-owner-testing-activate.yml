@@ -87,6 +87,11 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/ci/validate-owner-testing-activation-handoff.mjs
+      - name: Materialize validated rollback snapshot for following steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ROLLBACK_SNAPSHOT_JSON"
           mkdir -p "$RUNNER_TEMP/production-cutover"
           printf '%s\n' "$ROLLBACK_SNAPSHOT_JSON" > "$RUNNER_TEMP/production-cutover/acceptance-rollback-snapshot.json"
           echo 'ROLLBACK_ARTIFACTS_PROVEN=true' >> "$GITHUB_ENV"
