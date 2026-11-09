@@ -56,6 +56,55 @@ try {
     try {
       await page.goto(`${origin}/?theme=${theme}&scale=${scale}`);
       await page.locator('flt-semantics-placeholder').evaluate(element => element.click());
+
+      await page.setViewportSize({ width: 1024, height: 960 });
+      await page.waitForTimeout(150);
+      const menuAction = nav(page, 'Menu');
+      if (scale === 1) {
+        const menuActionBox = await menuAction.boundingBox();
+        assert.ok(menuActionBox && menuActionBox.height < 80,
+          'The compact Menu action fits within 80 px');
+      }
+      await menuAction.click();
+      const closeMenu = page.getByRole('button', { name: 'Close menu', exact: true });
+      await closeMenu.waitFor({ state: 'visible' });
+      const notifications = page.getByRole('button', { name: 'Notifications', exact: true });
+      await notifications.waitFor({ state: 'visible' });
+      const row = await notifications.boundingBox();
+      if (scale === 1) {
+        assert.ok(row && row.height < 80,
+          'The compact Notifications destination fits within 80 px');
+      }
+      const notificationLabel = page.getByText('Notifications', { exact: true });
+      await notificationLabel.waitFor({ state: 'visible' });
+      const labelLines = await notificationLabel.evaluate(element => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return [...range.getClientRects()]
+          .filter(rect => rect.width > 0 && rect.height > 0)
+          .map(rect => ({ x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+            right: rect.right, bottom: rect.bottom }));
+      });
+      assert.equal(labelLines.length, 1,
+        `The Notifications label stays on one line at text scale ${scale}`);
+      if (scale === 2) {
+        const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+        assert.ok(row && row.x >= 0 && row.y >= 0 && row.x + row.width <= viewport.width &&
+          row.y + row.height <= viewport.height,
+        'The scaled Notifications row remains within the viewport');
+        const [labelLine] = labelLines;
+        assert.ok(labelLine.x >= row.x && labelLine.y >= row.y &&
+          labelLine.right <= row.x + row.width && labelLine.bottom <= row.y + row.height,
+        'The scaled Notifications label remains within its row');
+        assert.ok(labelLine.x >= 0 && labelLine.y >= 0 &&
+          labelLine.right <= viewport.width && labelLine.bottom <= viewport.height,
+        'The scaled Notifications label remains within the viewport');
+      }
+      await closeMenu.click();
+      await closeMenu.waitFor({ state: 'hidden' });
+      await page.setViewportSize({ width: 390, height: 960 });
+      await page.waitForTimeout(150);
+
       const field = page.getByRole('textbox', { name: /Your post/ });
       await field.click();
       await page.waitForFunction(() => {
@@ -81,12 +130,7 @@ try {
         await page.setViewportSize({ width, height: 960 });
         await page.waitForTimeout(150);
         assert.deepEqual(await snapshot(page), initial, 'Resize preserves controller, text, selection and focus');
-        if (width === 1024 && scale === 1) {
-          const notifications = await nav(page, 'Notifications').boundingBox();
-          assert.ok(notifications && notifications.height < 80,
-            'The compact navigation label fits on one line');
-        }
-        await nav(page, 'Feed').click();
+        await nav(page, 'Discovery').click();
         await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
         assert.equal((await snapshot(page)).focused, false, 'Hidden composer cannot keep focus');
         await nav(page, 'Create').first().click();
@@ -99,7 +143,7 @@ try {
         await page.screenshot({ path: path.join(output, filename) });
         results.push({ engine, theme, scale, width, filename, state: await snapshot(page) });
       }
-      const discover = nav(page, 'Feed');
+      const discover = nav(page, 'Discovery');
       for (let i = 0; i < 40; i++) {
         await page.keyboard.press('Tab');
         await waitForTwoFrames(page);
