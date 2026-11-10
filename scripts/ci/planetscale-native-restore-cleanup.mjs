@@ -2,13 +2,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
-import { RESTORE, RestoreCleanupApi, RestoreFailure, requireThat, failureCode, checkOwnedBranch } from './planetscale-native-restore-contract.mjs';
+import { RestoreCleanupApi, RestoreFailure, requireThat, failureCode, checkOwnedBranch } from './planetscale-native-restore-contract.mjs';
 import { githubReadiness } from './planetscale-native-restore-check.mjs';
 import { githubRead, readTrackedEvidence, validateCleanupEvidence, verifyReviewedEvidence,
-  QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, RECORD_PATH, artifactPath, decimal, sha256 } from './planetscale-native-restore-evidence.mjs';
+  QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, recordPath, qualificationRestorePlan, artifactPath, decimal, sha256 } from './planetscale-native-restore-evidence.mjs';
 
-const targetPath = `/branches/${RESTORE.target}`, backupPath = `/branches/main/backups/${RESTORE.backupId}`;
+const originalPlan = context => {
+  const plan = qualificationRestorePlan(context.report, context.report.runId);
+  requireThat(context.creation?.acknowledged === true && context.creation.id === context.report.createdTargetId
+    && context.creation.name === plan.target.name && context.creation.sourceBranchId === plan.sourceBranchId
+    && isDeepStrictEqual(context.creation, context.report.creation), 'original_acknowledged_creation_required');
+  return plan;
+};
+const targetPath = context => `/branches/${originalPlan(context).target.name}`;
+const backupPath = context => `/branches/main/backups/${originalPlan(context).backup.id}`;
 const encode = value => JSON.stringify(value, null, 2) + '\n';
 const artifactName = report => `native-restore-qualification-${report.sourceMainSha}-${report.runId}`;
 export const pendingName = (report, intent) => `native-restore-cleanup-pending-${report.runId}-${report.createdTargetId}-${intent.runNumber}`;
@@ -45,7 +54,7 @@ export async function proveCleanupContext({ env, evidence, now = Date.now(), rec
   requireThat(/^[a-f0-9]{40}$/.test(env.EVIDENCE_SHA ?? '') && evidenceHead === env.EVIDENCE_SHA && (reconcile || env.EVIDENCE_SHA === env.RELEASE_SHA)
     && decimal(env.QUALIFICATION_RUN_ID ?? '') && decimal(env.GITHUB_RUN_ID ?? '')
     && decimal(env.GITHUB_RUN_NUMBER ?? '') && env.GITHUB_RUN_ATTEMPT === '1', 'cleanup_execution_context_invalid');
-  const { intent, creation, deadline } = validateCleanupEvidence({ ...evidence, qualificationRunId: env.QUALIFICATION_RUN_ID, now, reconcile });
+  const { intent, creation, deadline, plan } = validateCleanupEvidence({ ...evidence, qualificationRunId: env.QUALIFICATION_RUN_ID, now, reconcile });
   const { report, record } = evidence;
   const reviewer = record.review?.reviewedBy ?? null;
   if (reconcile) {
@@ -58,7 +67,7 @@ export async function proveCleanupContext({ env, evidence, now = Date.now(), rec
       'reserved_review_window_not_met');
     const sourceDelta = await read(`/compare/${report.sourceMainSha}...${env.RELEASE_SHA}`);
     requireThat(sourceDelta.merge_base_commit?.sha === report.sourceMainSha && Array.isArray(sourceDelta.files)
-      && sourceDelta.files.every(file => [RECORD_PATH, artifactPath(report.runId)].includes(file.filename)),
+      && sourceDelta.files.every(file => [recordPath(plan), artifactPath(report.runId)].includes(file.filename)),
     'cleanup_code_changed_since_qualification');
   }
   const original = await read(`/actions/runs/${report.runId}`);
@@ -90,17 +99,18 @@ export async function proveCleanupContext({ env, evidence, now = Date.now(), rec
     requireThat(now < Date.parse(report.cleanupStartByAt), 'cleanup_start_window_missed');
     cleanupConsent(env, evidence, now);
   }
-  return { intent, creation, deadline, report, record, current, reviewer };
+  return { intent, creation, deadline, plan, report, record, current, reviewer };
 }
 
 export function pendingReceipt(context, env) {
+  const plan = originalPlan(context);
   return { schemaVersion: 'native-restore-cleanup-attempt-v1', state: 'DELETE_PENDING',
     qualificationSha: context.report.sourceMainSha, qualificationRunId: context.report.runId,
     evidenceSha: env.EVIDENCE_SHA, recordSha256: context.record.recordSha256,
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID,
     workflowId: context.intent.workflowId, runNumber: context.intent.runNumber, attempt: 1,
-    sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetId: context.creation.id,
-    targetName: RESTORE.target, targetCreatedAt: context.creation.createdAt,
+    sourceBranchId: plan.sourceBranchId, backupId: plan.backup.id, planSha256: context.report.planSha256, targetId: context.creation.id,
+    targetName: plan.target.name, targetCreatedAt: context.creation.createdAt,
     deadlineAt: context.report.cleanupDeadlineAt, recoveryCertified: false };
 }
 
@@ -117,9 +127,10 @@ export async function provePendingUpload({ env, context, pendingBytes, downloade
 }
 
 function deletionTimestampValid(branch, context, now) {
+  const plan = originalPlan(context);
   const value = branch?.deleted_at, time = typeof value === 'string' ? Date.parse(value) : NaN;
-  return branch?.id === context.creation.id && branch.name === RESTORE.target && branch.kind === 'postgresql'
-    && branch.default === false && branch.restored_from_branch?.id === RESTORE.sourceId
+  return branch?.id === context.creation.id && branch.name === plan.target.name && branch.kind === 'postgresql'
+    && branch.default === false && branch.restored_from_branch?.id === plan.sourceBranchId
     && branch.created_at === context.creation.createdAt && typeof value === 'string'
     && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(value)
     && Number.isFinite(time) && time >= Date.parse(context.creation.createdAt) && time <= now
@@ -127,29 +138,30 @@ function deletionTimestampValid(branch, context, now) {
 }
 
 export async function observeOwnedTarget(api, context, now, allowDeleted = false, allowPresent = false, signal) {
+  const plan = originalPlan(context);
   let present = false;
-  const branch = await api.request(targetPath, { absent: allowDeleted, signal });
+  const branch = await api.request(targetPath(context), { absent: allowDeleted, signal });
   signal?.throwIfAborted();
   if (branch === null) {
     requireThat(allowDeleted, 'owned_target_absence_not_expected');
   } else if (!(allowDeleted && deletionTimestampValid(branch, context, now))) {
-    checkOwnedBranch(branch, context.creation.id);
+    checkOwnedBranch(branch, context.creation.id, plan);
     requireThat(branch.created_at === context.creation.createdAt, 'owned_target_creation_timestamp_changed');
     if (allowDeleted && !allowPresent) throw new RestoreFailure('target_deletion_not_confirmed');
     present = true;
   }
   if (!allowPresent) {
-    const backup = await api.request(backupPath, { signal });
+    const backup = await api.request(backupPath(context), { signal });
     signal?.throwIfAborted();
-    requireThat(backup.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
+    requireThat(backup.id === plan.backup.id && backup.database_branch?.id === plan.sourceBranchId
       && backup.database_branch.name === 'main', 'cleanup_backup_identity_changed');
     if (!allowDeleted) requireThat(backup.protected === true && backup.restored_branches?.some(row => row.id === context.creation.id
-      && row.name === RESTORE.target), 'cleanup_backup_binding_changed');
+      && row.name === plan.target.name), 'cleanup_backup_binding_changed');
   }
   if (allowDeleted && !present) {
     const inventory = await api.list('/branches', { signal });
     signal?.throwIfAborted();
-    for (const row of inventory.filter(row => row.id === context.creation.id || row.name === RESTORE.target)) {
+    for (const row of inventory.filter(row => row.id === context.creation.id || row.name === plan.target.name)) {
       requireThat(deletionTimestampValid(row, context, now), 'target_identity_still_present_or_replaced');
     }
   }
@@ -157,7 +169,7 @@ export async function observeOwnedTarget(api, context, now, allowDeleted = false
 }
 
 export async function deleteReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, pendingBytes, downloadedPending,
-  read = suffix => githubRead(env, suffix), assertMain, api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN),
+  read = suffix => githubRead(env, suffix), assertMain, api,
   now = Date.now, checkpoint = () => {}, sleep = milliseconds => delay(milliseconds), proveContext = proveCleanupContext }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'cleanup', state: 'NOT_ATTEMPTED',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
@@ -166,6 +178,7 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
   try {
     context = await proveContext({ env, evidence, evidenceHead, now: now(), read, assertMain });
     assertDownloadedQualification(evidence, downloadedQualification);
+    api ??= new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN, fetch, originalPlan(context));
     receipt.pendingSha256 = await provePendingUpload({ env, context, pendingBytes, downloadedBytes: downloadedPending, read });
     receipt.targetId = context.creation.id; receipt.qualificationSha = context.report.sourceMainSha;
     await api.authority(() => {}, false, context.deadline);
@@ -174,8 +187,8 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
     receipt.state = 'DELETE_PENDING'; await checkpoint(structuredClone(receipt));
     if (assertMain) await assertMain(); else await githubReadiness(env);
     if (context.assertEvidenceUnchanged) await context.assertEvidenceUnchanged();
-    const finalTarget = await api.request(targetPath);
-    checkOwnedBranch(finalTarget, context.creation.id);
+    const finalTarget = await api.request(targetPath(context));
+    checkOwnedBranch(finalTarget, context.creation.id, originalPlan(context));
     requireThat(finalTarget.created_at === context.creation.createdAt, 'owned_target_creation_timestamp_changed');
     const deleteAt = now();
     requireThat(deleteAt < context.deadline - 60000 && deleteAt < Date.parse(context.report.approvalExpiresAt),
@@ -183,7 +196,7 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
     cleanupConsent(env, evidence, deleteAt);
     attempted = true; receipt.providerMutations = true;
     let deleteError;
-    try { await api.request(targetPath, { method: 'DELETE' }); receipt.deleteAcknowledgment = 'ACKNOWLEDGED'; }
+    try { await api.request(targetPath(context), { method: 'DELETE' }); receipt.deleteAcknowledgment = 'ACKNOWLEDGED'; }
     catch (error) { deleteError = error; receipt.deleteAcknowledgment = 'UNKNOWN_OR_DENIED'; receipt.blockers.push(failureCode(error)); }
     receipt.deletionObservations = [];
     let absent = false;
@@ -207,13 +220,14 @@ export async function deleteReviewedTarget({ env, evidence, evidenceHead, downlo
 }
 
 export async function reconcileReviewedTarget({ env, evidence, evidenceHead, downloadedQualification, read = suffix => githubRead(env, suffix), assertMain,
-  api = new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN), now = Date.now, proveContext = proveCleanupContext }) {
+  api, now = Date.now, proveContext = proveCleanupContext }) {
   const receipt = { schemaVersion: 'native-restore-cleanup-receipt-v1', phase: 'read-only-reconciliation',
     cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID, qualificationRunId: env.QUALIFICATION_RUN_ID,
     providerMutations: false, deletionVerified: false, recoveryCertified: false, blockers: [] };
   try {
     const context = await proveContext({ env, evidence, evidenceHead, now: now(), reconcile: true, read, assertMain });
     assertDownloadedQualification(evidence, downloadedQualification);
+    api ??= new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN, fetch, originalPlan(context));
     const observation = await observeOwnedTarget(api, context, now(), true, true);
     receipt.state = observation.present ? 'TARGET_PRESENT_READ_ONLY' : 'ABSENCE_OBSERVED_READ_ONLY'; receipt.targetId = observation.targetId;
   } catch (error) { receipt.state = 'TARGET_PRESENT_OR_BINDING_UNCERTAIN'; receipt.blockers.push(failureCode(error)); }

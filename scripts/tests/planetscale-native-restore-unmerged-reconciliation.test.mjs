@@ -60,7 +60,7 @@ for (const [name, change] of [
   ['same-name replacement', f => {
     const request = f.options.api.request;
     f.options.api.request = async (path, options) => {
-      const row = await request(path, options); return path === `/branches/${RESTORE.target}` ? { ...row, id: 'replacement123' } : row;
+      const row = await request(path, options); return path === `/branches/${f.report.plan.target.name}` ? { ...row, id: 'replacement123' } : row;
     };
   }],
   ['GET access denied', f => { f.options.api.request = async () => { throw new RestoreFailure('provider_access_denied', 'DENIED'); }; }],

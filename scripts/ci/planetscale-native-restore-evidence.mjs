@@ -2,17 +2,46 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { canonicalRestorePlan, restorePlanSha256 } from './planetscale-native-restore-plan.mjs';
 import { RESTORE, RestoreFailure, requireThat, object } from './planetscale-native-restore-contract.mjs';
 import { hash0021RestoreEvidenceRecord, REQUIRED_0021_RESTORE_SCOPE } from './planetscale-0021-only-contract.mjs';
 
 export const QUALIFICATION_WORKFLOW = '.github/workflows/planetscale-native-restore-check.yml';
 export const CLEANUP_WORKFLOW = '.github/workflows/planetscale-native-restore-cleanup.yml';
-export const RECORD_PATH = `docs/evidence/production-cutover/0021-restore-evidence/${RESTORE.backupId}.json`;
 export const artifactPath = runId => `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-${runId}.json`;
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 export const decimal = value => typeof value === 'string' && /^[1-9]\d{0,17}$/.test(value) && Number.isSafeInteger(Number(value));
+
+// Resolve cleanup identity only from the immutable original qualification report.
+// Never consult a current restore plan, current runner inputs, or a target name supplied by the caller.
+export function qualificationRestorePlan(report, qualificationRunId = report?.runId, { requireProtected = true } = {}) {
+  requireThat(object(report) && decimal(qualificationRunId) && report.runId === qualificationRunId
+    && report.phase === 'qualification' && sha(report.sourceMainSha)
+    && report.sourceBranchId === RESTORE.sourceId && ['pre-0021', 'post-0021'].includes(report.schemaMode),
+  'qualification_plan_context_invalid');
+  const options = { sourceBranchId: RESTORE.sourceId, releaseSha: report.sourceMainSha,
+    schemaMode: report.schemaMode, requireProtected };
+  let plan;
+  try { plan = canonicalRestorePlan(report.plan, options); }
+  catch (error) { throw new RestoreFailure(error?.code ?? 'restore_plan_invalid'); }
+  requireThat(isDeepStrictEqual(report.plan, plan) && digest(report.planSha256)
+    && report.planSha256 === restorePlanSha256(plan, options), 'qualification_plan_hash_or_shape_mismatch');
+  requireThat(report.backupId === plan.backup.id && report.targetName === plan.target.name
+    && report.targetStorageBytes === plan.target.minimumStorageBytes, 'qualification_plan_identity_mismatch');
+  return plan;
+}
+
+export function recordPath(plan) {
+  let validated;
+  try { validated = canonicalRestorePlan(plan, { sourceBranchId: RESTORE.sourceId,
+    releaseSha: plan?.releaseSha, schemaMode: plan?.schemaMode, requireProtected: true }); }
+  catch (error) { throw new RestoreFailure(error?.code ?? 'restore_plan_invalid'); }
+  requireThat(isDeepStrictEqual(plan, validated), 'qualification_plan_hash_or_shape_mismatch');
+  return `docs/evidence/production-cutover/0021-restore-evidence/${validated.backup.id}.json`;
+}
 
 function githubReadFailure(response, url) {
   if (!object(response) || !Number.isInteger(response.status) || response.status < 100 || response.status > 599
@@ -32,8 +61,7 @@ export function finalizeQualificationEvidence(directory, now = Date.now()) {
   const checkpoint = path.join(directory, 'checkpoint.json');
   requireThat(fs.existsSync(checkpoint), 'qualification_checkpoint_unavailable');
   const report = JSON.parse(fs.readFileSync(checkpoint, 'utf8'));
-  requireThat(report.phase === 'qualification' && report.backupId === RESTORE.backupId && report.targetName === RESTORE.target,
-    'qualification_checkpoint_invalid');
+  const plan = qualificationRestorePlan(report, report.runId, { requireProtected: false });
   report.status = 'INTERRUPTED_QUALIFICATION_REQUIRES_REVIEW'; report.qualificationOutcome = 'UNKNOWN';
   report.recoveryAcceptance = 'NOT_CERTIFIED'; report.verifiedScope = []; report.finishedAt = new Date(now).toISOString();
   report.costEscalationRequired = true;
@@ -43,7 +71,7 @@ export function finalizeQualificationEvidence(directory, now = Date.now()) {
   const ownedCreateAcknowledged = createMutations.length === 1 && createMutations[0].outcome === 'ACKNOWLEDGED'
     && report.creation?.acknowledged === true && report.creation.id === report.createdTargetId
     && typeof report.createdTargetId === 'string' && /^[a-z0-9]{1,64}$/.test(report.createdTargetId)
-    && report.createdTargetId !== RESTORE.sourceId && report.creation.name === RESTORE.target
+    && report.createdTargetId !== RESTORE.sourceId && report.creation.name === plan.target.name
     && report.creation.sourceBranchId === RESTORE.sourceId && report.creation.kind === 'postgresql'
     && report.creation.default === false && typeof report.creation.createdAt === 'string'
     && Number.isFinite(startedAt) && Number.isFinite(finishedAt) && Number.isFinite(createdAt)
@@ -103,27 +131,39 @@ export function readTrackedEvidence(root, qualificationRunId, git = args => exec
     requireThat(Buffer.from(committed).equals(bytes), 'canonical_evidence_worktree_modified');
     return bytes;
   };
-  const recordBytes = read(RECORD_PATH), bytes = read(artifactPath(qualificationRunId));
-  let record, report;
-  try { record = JSON.parse(recordBytes); report = JSON.parse(bytes); } catch { throw new RestoreFailure('canonical_evidence_json_invalid'); }
-  return { record, report, recordBytes, bytes };
+  // The qualification path is fixed by run ID before any backup-specific path is read.
+  const bytes = read(artifactPath(qualificationRunId));
+  let report;
+  try { report = JSON.parse(bytes); } catch { throw new RestoreFailure('canonical_evidence_json_invalid'); }
+  const plan = qualificationRestorePlan(report, qualificationRunId);
+  const recordBytes = read(recordPath(plan));
+  let record;
+  try { record = JSON.parse(recordBytes); } catch { throw new RestoreFailure('canonical_evidence_json_invalid'); }
+  return { record, report, recordBytes, bytes, plan };
 }
 
 export function validateCleanupEvidence({ record, report, bytes, qualificationRunId, now, reconcile = false }) {
+  const plan = qualificationRestorePlan(report, qualificationRunId);
+  let artifactReport;
+  try {
+    requireThat(Buffer.isBuffer(bytes), 'qualification_artifact_bytes_required');
+    artifactReport = JSON.parse(bytes.toString('utf8'));
+  } catch { throw new RestoreFailure('canonical_evidence_json_invalid'); }
+  requireThat(isDeepStrictEqual(artifactReport, report), 'qualification_report_artifact_mismatch');
   const intent = record?.nativeRestoreCleanup, creation = report?.creation;
   requireThat(object(record) && record.schemaVersion === 'lythaus-0021-restore-evidence-v1'
     && record.recordSha256 === hash0021RestoreEvidenceRecord(record) && digest(record.evidenceSha256)
     && record.evidenceSha256 === sha256(bytes) && record.artifactPath === artifactPath(qualificationRunId), 'canonical_evidence_hash_or_path_mismatch');
   requireThat(record.sourceBranch?.id === RESTORE.sourceId && record.sourceBranch.name === 'main'
-    && record.selectedBackupId === RESTORE.backupId && report.sourceBranchId === RESTORE.sourceId
-    && report.backupId === RESTORE.backupId && report.targetName === RESTORE.target, 'canonical_source_or_backup_mismatch');
+    && record.selectedBackupId === plan.backup.id && report.sourceBranchId === RESTORE.sourceId
+    && report.backupId === plan.backup.id && report.targetName === plan.target.name, 'canonical_source_or_backup_mismatch');
   requireThat(decimal(qualificationRunId) && report.runId === qualificationRunId && sha(report.sourceMainSha)
     && report.phase === 'qualification' && report.state === 'TARGET_RETAINED_PENDING_REVIEW'
     && report.cleanup === 'TARGET_RETAINED_PENDING_REVIEW' && report.recoveryAcceptance === 'NOT_CERTIFIED', 'qualification_not_retained_or_proven');
   requireThat(creation?.acknowledged === true && creation.id === report.createdTargetId && creation.id !== RESTORE.sourceId
-    && /^[a-z0-9]{1,64}$/.test(creation.id) && creation.name === RESTORE.target && creation.sourceBranchId === RESTORE.sourceId
+    && /^[a-z0-9]{1,64}$/.test(creation.id) && creation.name === plan.target.name && creation.sourceBranchId === RESTORE.sourceId
     && creation.kind === 'postgresql' && creation.default === false
-    && record.restoredBranch?.id === creation.id && record.restoredBranch.name === RESTORE.target
+    && record.restoredBranch?.id === creation.id && record.restoredBranch.name === plan.target.name
     && record.restoredBranch.createdAt === creation.createdAt && ['ready','retained'].includes(record.restoredBranch.state)
     && report.providerMutations?.filter(item => item.action === 'create_fixed_restore' && item.outcome === 'ACKNOWLEDGED').length === 1,
   'original_acknowledged_creation_required');
@@ -156,7 +196,7 @@ export function validateCleanupEvidence({ record, report, bytes, qualificationRu
     && Date.parse(report.reviewByAt) === started + RESTORE.reviewMs
     && Date.parse(report.cleanupStartByAt) === started + RESTORE.cleanupStartMs, 'phase_deadline_invalid');
   if (!reconcile) requireThat(now < deadline - 60000 && now < Date.parse(report.approvalExpiresAt), 'cleanup_phase_deadline_expired');
-  return { intent, creation, deadline };
+  return { intent, creation, deadline, plan };
 }
 
 export function reviewAttestation(evidenceSha, record, report) {
@@ -172,7 +212,7 @@ export async function verifyReviewedEvidence({ env, evidenceSha, prNumber, comme
   requireThat(pr.head?.repo?.id === 1010752912 && pr.base?.repo?.id === 1010752912 && pr.base.ref === 'main'
     && pr.merged === true && pr.state === 'closed' && pr.merge_commit_sha === evidenceSha, 'reviewed_evidence_commit_mismatch');
   const comparison = await read(`/compare/${report.sourceMainSha}...${evidenceSha}`);
-  const allowed = new Set([RECORD_PATH, artifactPath(report.runId)]);
+  const allowed = new Set([recordPath(qualificationRestorePlan(report)), artifactPath(report.runId)]);
   requireThat(comparison.merge_base_commit?.sha === report.sourceMainSha && Array.isArray(comparison.files)
     && comparison.files.length === 2 && comparison.files.every(file => allowed.has(file.filename) && ['added','modified'].includes(file.status)),
   'evidence_commit_must_contain_only_canonical_data');

@@ -5,35 +5,44 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import YAML from 'yaml';
-import { RESTORE, ROLE_NAMES, ACTIONS, RestoreApi, RestoreCleanupApi, RestoreFailure, CREATE_TARGET_BODY, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
+import { RESTORE, ROLE_NAMES, ACTIONS, RestoreApi, RestoreCleanupApi, RestoreFailure, createTargetBody, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore } from '../ci/planetscale-native-restore-check.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 import { REQUIRED_0021_RESTORE_SCOPE, hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
-import { QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, RECORD_PATH, artifactPath, sha256, readTrackedEvidence,
+import { QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, recordPath, artifactPath, sha256, readTrackedEvidence,
   validateCleanupEvidence, reviewAttestation, inspectCleanupReservation, finalizeQualificationEvidence, githubRead } from '../ci/planetscale-native-restore-evidence.mjs';
 import { proveCleanupContext, pendingReceipt, pendingName, deleteReviewedTarget, reconcileReviewedTarget,
   observeOwnedTarget } from '../ci/planetscale-native-restore-cleanup.mjs';
+import { TEST_BACKUP_ID, TEST_BACKUP_COMPLETED_AT, TEST_TARGET, TEST_PLAN, testPlanSha } from './planetscale-native-restore-test-plan.mjs';
 
-const start = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000, instant = start + 35 * 60000;
+const start = Date.parse(TEST_BACKUP_COMPLETED_AT) + 90 * 60000, instant = start + 35 * 60000;
 const time = minutes => new Date(start + minutes * 60000).toISOString();
 const targetId = 'newrestore123', qualificationSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), cleanupSha = evidenceSha;
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
-const branch = () => ({ id: targetId, name: RESTORE.target, created_at: time(1), deleted_at: null,
+class TestRestoreApi extends RestoreApi {
+  constructor(token, fetchImpl = fetch, capability) { super(token, fetchImpl, capability, TEST_PLAN); }
+}
+class TestRestoreCleanupApi extends RestoreCleanupApi {
+  constructor(token, fetchImpl = fetch) { super(token, fetchImpl, TEST_PLAN); }
+}
+const branch = () => ({ id: targetId, name: TEST_TARGET, created_at: time(1), deleted_at: null,
   default: false, production: true, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false });
 
 function fixture() {
   const report = { phase: 'qualification', runId: '12345', sourceMainSha: qualificationSha, startedAt: time(0),
-    finishedAt: time(20), verifiedAt: time(20), sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId,
-    targetName: RESTORE.target, createdTargetId: targetId, state: 'TARGET_RETAINED_PENDING_REVIEW',
+    finishedAt: time(20), verifiedAt: time(20), sourceBranchId: RESTORE.sourceId, schemaMode: TEST_PLAN.schemaMode,
+    plan: TEST_PLAN, planSha256: testPlanSha(TEST_PLAN), targetStorageBytes: TEST_PLAN.target.minimumStorageBytes,
+    backupId: TEST_BACKUP_ID,
+    targetName: TEST_TARGET, createdTargetId: targetId, state: 'TARGET_RETAINED_PENDING_REVIEW',
     cleanup: 'TARGET_RETAINED_PENDING_REVIEW', qualificationOutcome: 'PASSED', recoveryAcceptance: 'NOT_CERTIFIED',
-    creation: { acknowledged: true, id: targetId, name: RESTORE.target, sourceBranchId: RESTORE.sourceId,
+    creation: { acknowledged: true, id: targetId, name: TEST_TARGET, sourceBranchId: RESTORE.sourceId,
       createdAt: time(1), kind: 'postgresql', default: false },
     providerMutations: [{ action: 'create_fixed_restore', outcome: 'ACKNOWLEDGED' }],
     cleanupPermit: { workflowId: 42, runNumber: 1 }, approvalExpiresAt: time(120),
     qualificationStopAt: time(20), escalationAt: time(45), reviewByAt: time(60), cleanupStartByAt: time(105), cleanupDeadlineAt: time(120),
     reviewWindow: { reviewer: 'owner', operator: 'owner' } };
   const record = { schemaVersion: 'lythaus-0021-restore-evidence-v1', sourceBranch: { id: RESTORE.sourceId, name: 'main' },
-    selectedBackupId: RESTORE.backupId, restoredBranch: { id: targetId, name: RESTORE.target, state: 'ready', createdAt: time(1) },
+    selectedBackupId: TEST_BACKUP_ID, restoredBranch: { id: targetId, name: TEST_TARGET, state: 'ready', createdAt: time(1) },
     verifiedAt: time(20), artifactPath: artifactPath(report.runId), verifiedScope: ['backup_binding'],
     unresolvedGates: REQUIRED_0021_RESTORE_SCOPE.filter(scope => scope !== 'backup_binding'),
     review: { reviewedAt: time(25), reviewedBy: 'owner', reference: 'owner-reviewed-canonical-evidence' },
@@ -44,14 +53,14 @@ function fixture() {
   const env = { RELEASE_SHA: cleanupSha, EVIDENCE_SHA: evidenceSha, EVIDENCE_PR: '999', REVIEW_COMMENT_ID: '88',
     QUALIFICATION_RUN_ID: report.runId, GITHUB_RUN_ID: '23456', GITHUB_RUN_NUMBER: '1', GITHUB_RUN_ATTEMPT: '1',
     GITHUB_REPOSITORY: 'SyntheticOwner/Lythaus', PENDING_ARTIFACT_ID: '52', PENDING_ARTIFACT_DIGEST: 'e'.repeat(64) };
-  const calls = [], checkpoints = [], overrides = new Map(); let deleted = false;
+  const calls = [], providerCalls = [], checkpoints = [], overrides = new Map(); let deleted = false;
   const read = async suffix => {
     calls.push(`GITHUB ${suffix}`);
     if (overrides.has(suffix)) return structuredClone(overrides.get(suffix));
     if (suffix === '/pulls/999') return { state: 'closed', merged: true, merge_commit_sha: evidenceSha,
       head: { repo: { id: 1010752912 }, sha: 'f'.repeat(40) }, base: { repo: { id: 1010752912 }, ref: 'main' } };
     if (suffix === `/compare/${qualificationSha}...${evidenceSha}` || suffix === `/compare/${qualificationSha}...${cleanupSha}`)
-      return { merge_base_commit: { sha: qualificationSha }, files: [RECORD_PATH, artifactPath(report.runId)].map(filename => ({ filename, status: 'added' })) };
+      return { merge_base_commit: { sha: qualificationSha }, files: [recordPath(TEST_PLAN), artifactPath(report.runId)].map(filename => ({ filename, status: 'added' })) };
     if (suffix === `/compare/${evidenceSha}...${env.RELEASE_SHA}`) return { merge_base_commit: { sha: evidenceSha }, files: [] };
     if (suffix === '/issues/comments/88') return { user: { type: 'User', login: 'owner' },
       issue_url: 'https://api.github.com/repos/SyntheticOwner/Lythaus/issues/999', body: reviewAttestation(evidenceSha, record, report),
@@ -75,31 +84,34 @@ function fixture() {
       user: { type: 'User', login: 'owner' }, environments: [{ name: 'production' }] }];
     throw new Error(`unexpected synthetic GitHub path ${suffix}`);
   };
-  const api = { authority: async () => { calls.push('AUTHORITY'); },
-    list: async () => { calls.push('LIST'); return []; },
+  const api = { authority: async () => { calls.push('AUTHORITY'); providerCalls.push('AUTHORITY'); },
+    list: async () => { calls.push('LIST'); providerCalls.push('LIST'); return []; },
     request: async (suffix, options = {}) => {
-      const method = options.method ?? 'GET'; calls.push(`${method} ${suffix}`);
-      if (method === 'DELETE') { assert.equal(suffix, `/branches/${RESTORE.target}`); deleted = true; return null; }
+      const method = options.method ?? 'GET'; calls.push(`${method} ${suffix}`); providerCalls.push(`${method} ${suffix}`);
+      if (method === 'DELETE') { assert.equal(suffix, `/branches/${TEST_TARGET}`); deleted = true; return null; }
       assert.equal(method, 'GET');
-      if (suffix === `/branches/${RESTORE.target}`) return deleted ? null : branch();
-      if (suffix === `/branches/main/backups/${RESTORE.backupId}`) return { id: RESTORE.backupId,
-        database_branch: { id: RESTORE.sourceId, name: 'main' }, protected: true, restored_branches: [{ id: targetId, name: RESTORE.target }] };
+      if (suffix === `/branches/${TEST_TARGET}`) return deleted ? null : branch();
+      if (suffix === `/branches/main/backups/${TEST_BACKUP_ID}`) return { id: TEST_BACKUP_ID,
+      database_branch: { id: RESTORE.sourceId, name: 'main' }, protected: true,
+      restored_branches: [{ id: targetId, name: TEST_TARGET, deleted_at: null }] };
       throw new Error(`unexpected synthetic provider path ${suffix}`);
     } };
   const options = { env, evidence, evidenceHead: evidenceSha, read, assertMain: async () => { calls.push('MAIN'); },
     api, now: () => instant, checkpoint: receipt => checkpoints.push(receipt), sleep: async () => {} };
-  const refresh = () => {
+  const refresh = ({ refreshPending = true } = {}) => {
     evidence.bytes = encode(report); record.evidenceSha256 = sha256(evidence.bytes);
     record.recordSha256 = hash0021RestoreEvidenceRecord(record); evidence.recordBytes = encode(record);
     env.CLEANUP_APPROVAL_JSON = JSON.stringify({ action: 'delete_only_original_acknowledged_target_once',
       cleanupSha, evidenceSha, qualificationRunId: report.runId, targetId, recordSha256: record.recordSha256,
       operator: 'owner', maximumUsd: 5, reference: 'separate-owner-deletion-consent', expiresAt: time(119) });
-    const context = { report, record, creation: report.creation, intent: record.nativeRestoreCleanup };
-    options.pendingBytes = encode(pendingReceipt(context, env)); options.downloadedPending = options.pendingBytes;
     options.downloadedQualification = evidence.bytes;
+    if (refreshPending) {
+      const context = { report, record, creation: report.creation, intent: record.nativeRestoreCleanup };
+      options.pendingBytes = encode(pendingReceipt(context, env)); options.downloadedPending = options.pendingBytes;
+    }
   };
   refresh();
-  return { env, evidence, report, record, options, calls, checkpoints, overrides, refresh,
+  return { env, evidence, report, record, options, calls, providerCalls, checkpoints, overrides, refresh,
     setDeleted: value => { deleted = value; } };
 }
 const deletions = f => f.calls.filter(call => call.startsWith('DELETE ')).length;
@@ -111,12 +123,12 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
     name: 'synthetic display label', base_username: name, username: `${name}.${source ? RESTORE.sourceId : targetId}`,
     database_name: 'postgres', ready: !(pending && index === 0), expired: false, deleted_at: null, disabled_at: null,
     dropped_at: null, expires_at: null, with_replication: index === 0, inherited_roles: [], default: index === 0,
-    branch: { id: source ? RESTORE.sourceId : targetId, name: source ? 'main' : RESTORE.target, deleted_at: null } }));
+    branch: { id: source ? RESTORE.sourceId : targetId, name: source ? 'main' : TEST_TARGET, deleted_at: null } }));
   const target = () => ({ ...branch(), cluster_name: RESTORE.cluster, cluster_architecture: 'aarch64',
     region: { slug: RESTORE.region }, replicas: 0, minimum_storage_bytes: RESTORE.bytes,
     maximum_storage_bytes: RESTORE.bytes, ready: true, state: 'ready', frozen: false });
   const source = { id: RESTORE.sourceId, name: 'main', kind: 'postgresql', default: true, deleted_at: null, ready: true };
-  const api = new RestoreApi('syntheticid:synthetic-value', async (url, options) => {
+  const api = new TestRestoreApi('syntheticid:synthetic-value', async (url, options) => {
     const parsed = new URL(url), path = parsed.pathname.slice(new URL(apiBase).pathname.length);
     requests.push({ path, method: options.method });
     if (url === apiBase) return Response.json({ id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' });
@@ -126,18 +138,19 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
           access, resource_id: RESTORE.databaseId, resource_type: 'Database',
           resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } })) });
     if (path === '/branches/main') return Response.json(source);
-    if (path.endsWith(`/backups/${RESTORE.backupId}`)) return Response.json({ id: RESTORE.backupId,
+    if (path.endsWith(`/backups/${TEST_BACKUP_ID}`)) return Response.json({ id: TEST_BACKUP_ID,
       database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null }, state: 'success', deleted_at: null,
-      protected: true, completed_at: RESTORE.backupCompletedAt, expires_at: time(48 * 60),
-      pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: created ? [{ id: targetId, name: RESTORE.target }] : [] });
+      protected: true, completed_at: TEST_BACKUP_COMPLETED_AT, expires_at: TEST_PLAN.backup.expiresAt,
+      pvc_size: TEST_PLAN.backup.pvcBytes, uncompressed_size: TEST_PLAN.backup.uncompressedBytes,
+      restored_branches: created ? [{ id: targetId, name: TEST_TARGET, deleted_at: null }] : [] });
     if (options.method === 'POST' && path === '/branches') {
-      assert.deepEqual(JSON.parse(options.body), CREATE_TARGET_BODY);
+      assert.deepEqual(JSON.parse(options.body), createTargetBody(TEST_PLAN));
       created = true; clock = start + 60000; return Response.json(target(), { status: 201 });
     }
-    if (path === `/branches/${RESTORE.target}`) return created ? Response.json(target()) : new Response(null, { status: 404 });
+    if (path === `/branches/${TEST_TARGET}`) return created ? Response.json(target()) : new Response(null, { status: 404 });
     if (path.endsWith('/reset')) {
       assert.ok(targetReads >= 3, 'no reset before all five pass together');
-      const role = roleRows(false).find(row => path === `/branches/${RESTORE.target}/roles/${row.id}/reset`);
+      const role = roleRows(false).find(row => path === `/branches/${TEST_TARGET}/roles/${row.id}/reset`);
       assert.ok(role, 'reset uses a discovered target API ID'); resets.push(role.base_username);
       return Response.json({ ...role, password: 'synthetic-password-only', access_host_url: 'aws.connect.psdb.cloud' });
     }
@@ -145,20 +158,22 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
     let rows;
     if (path === '/branches') rows = created ? [source,target()] : [source];
     else if (path === '/branches/main/roles') rows = roleRows(true);
-    else if (path === `/branches/${RESTORE.target}/roles`) {
+    else if (path === `/branches/${TEST_TARGET}/roles`) {
       if (page === 1) targetReads++;
       rows = roleRows(false, targetReads === 2); if (targetReads === 1) rows.shift();
       if (fault === 'contradictory_identity') rows[0].branch.id = RESTORE.sourceId;
     } else throw new Error('unexpected synthetic request');
     const next = page === 1 && rows.length > 3 ? 2 : null;
     return Response.json({ type: 'list', current_page: page, per_page: 100,
-      total_count: rows.length + (fault === 'partial_pagination' && path.endsWith(`${RESTORE.target}/roles`) && page === 2 ? 1 : 0),
+      total_count: rows.length + (fault === 'partial_pagination' && path.endsWith(`${TEST_TARGET}/roles`) && page === 2 ? 1 : 0),
       next_page: next, data: rows.slice((page - 1) * 3, page * 3) });
   });
   const sourceUrl = `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:synthetic-password-only@aws.connect.psdb.cloud/postgres?sslmode=verify-full`;
   const env = { RELEASE_SHA: qualificationSha, GITHUB_RUN_ID: '12345', RESTORE_CHECK_EXECUTE: 'true',
     PLANETSCALE_SCHEMA_READ_DATABASE_URL: sourceUrl,
-    RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: qualificationSha, backupId: RESTORE.backupId, target: RESTORE.target,
+    RESTORE_CHECK_PLAN_PINS_JSON: JSON.stringify({ backupId: TEST_BACKUP_ID, backupCompletedAt: TEST_BACKUP_COMPLETED_AT,
+      target: TEST_TARGET, targetBytes: TEST_PLAN.target.minimumStorageBytes }),
+    RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: qualificationSha, plan: TEST_PLAN, planSha256: testPlanSha(TEST_PLAN),
       maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
       reference: 'synthetic-owner-approval-reference', manualOperator: 'owner', expiresAt: time(150), actions: ACTIONS, roles: ROLE_NAMES,
       cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
@@ -209,8 +224,11 @@ test('cleanup and reconciliation reject missing or malformed dedicated access ev
     for (const token of [undefined, '', 'id-only', ':secret', 'id:', 'id:secret:extra', 'id:secret\n']) {
       const f = fixture(); f.options.api = undefined;
       Object.assign(f.env, { PLANETSCALE_API_TOKEN: 'sharedsynthetic:shared-synthetic-value', PLANETSCALE_RESTORE_API_TOKEN: token });
-      await assert.rejects(() => operation(f.options), /existing_service_token_pair_required/);
-      assert.equal(f.calls.length, 0); assert.equal(deletions(f), 0);
+      const result = await operation(f.options);
+      assert.equal(result.providerMutations, false);
+      assert.ok(result.blockers.includes('existing_service_token_pair_required'));
+      assert.equal(result.state, operation === deleteReviewedTarget ? 'BLOCKED_WITHOUT_DELETE' : 'TARGET_PRESENT_OR_BINDING_UNCERTAIN');
+      assert.equal(f.providerCalls.length, 0); assert.equal(deletions(f), 0);
     }
   }
   assert.equal(request.mock.callCount(), 0);
@@ -222,7 +240,7 @@ test('dedicated access cannot bypass separate deletion consent; reconciliation u
   delete f.env.CLEANUP_APPROVAL_JSON;
   const request = t.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(options.method, 'GET'); assert.equal(options.headers.authorization, pair);
-    assert.equal(url, `https://api.planetscale.com/v1/organizations/${RESTORE.organization}/databases/${RESTORE.database}/branches/${RESTORE.target}`);
+    assert.equal(url, `https://api.planetscale.com/v1/organizations/${RESTORE.organization}/databases/${RESTORE.database}/branches/${TEST_TARGET}`);
     return Response.json(branch());
   });
   const cleanup = await deleteReviewedTarget(f.options);
@@ -262,7 +280,7 @@ for (const boundary of ['provider preflight', 'main recheck', 'pending checkpoin
       const request = f.options.api.request; let reads = 0;
       f.options.api.request = async (path, options) => {
         const row = await request(path, options);
-        if (path === `/branches/${RESTORE.target}` && !options?.method && ++reads === 2) clock = start + 36 * 60000;
+        if (path === `/branches/${TEST_TARGET}` && !options?.method && ++reads === 2) clock = start + 36 * 60000;
         return row;
       };
     }
@@ -312,7 +330,7 @@ for (const boundary of ['pending checkpoint', 'main recheck']) test(`same-name r
   const f = fixture(), request = f.options.api.request; let replaced = false, mainChecks = 0;
   f.options.api.request = async (path, options) => {
     const row = await request(path, options);
-    return replaced && path === `/branches/${RESTORE.target}` && options?.method !== 'DELETE'
+    return replaced && path === `/branches/${TEST_TARGET}` && options?.method !== 'DELETE'
       ? { ...row, id: 'replacementid' } : row;
   };
   if (boundary === 'pending checkpoint') f.options.checkpoint = receipt => { if (receipt.state === 'DELETE_PENDING') replaced = true; };
@@ -327,7 +345,7 @@ test('post-DELETE readback converges GET-only under the original deadline withou
   f.options.api.request = async (path, options = {}) => {
     if (options.method === 'DELETE') sent = true;
     const row = await request(path, options);
-    return sent && path === `/branches/${RESTORE.target}` && options.method !== 'DELETE' && ++reads < 3 ? branch() : row;
+    return sent && path === `/branches/${TEST_TARGET}` && options.method !== 'DELETE' && ++reads < 3 ? branch() : row;
   };
   const result = await deleteReviewedTarget(f.options);
   assert.equal(result.deletionVerified, true); assert.equal(deletions(f), 1);
@@ -339,7 +357,7 @@ test('post-DELETE replacement is terminal and cannot trigger a second DELETE', a
   f.options.api.request = async (path, options = {}) => {
     if (options.method === 'DELETE') sent = true;
     const row = await request(path, options);
-    return sent && path === `/branches/${RESTORE.target}` && options.method !== 'DELETE' ? { ...branch(), id: 'replacementid' } : row;
+    return sent && path === `/branches/${TEST_TARGET}` && options.method !== 'DELETE' ? { ...branch(), id: 'replacementid' } : row;
   };
   const result = await deleteReviewedTarget(f.options);
   assert.equal(result.deletionVerified, false); assert.equal(deletions(f), 1);
@@ -353,7 +371,7 @@ test('post-DELETE polling cannot create a new cleanup window or issue reads afte
   f.options.api.request = async (path, options = {}) => {
     if (options.method === 'DELETE') sent = true;
     const row = await request(path, options);
-    if (sent && path === `/branches/${RESTORE.target}` && options.method !== 'DELETE') { reads++; return branch(); }
+    if (sent && path === `/branches/${TEST_TARGET}` && options.method !== 'DELETE') { reads++; return branch(); }
     return row;
   };
   const result = await deleteReviewedTarget(f.options);
@@ -365,10 +383,10 @@ for (const [name, change] of [
   ['artifact bytes changed', f => { f.options.downloadedQualification = Buffer.from('{}'); }],
   ['hash mismatch', f => { f.record.evidenceSha256 = 'f'.repeat(64); }],
   ['record hash mismatch', f => { f.record.recordSha256 = 'f'.repeat(64); }],
-  ['unacknowledged creation', f => { f.report.creation.acknowledged = false; f.refresh(); }],
+  ['unacknowledged creation', f => { f.report.creation.acknowledged = false; f.refresh({ refreshPending: false }); }],
   ['discovered target without create acknowledgment', f => { f.report.providerMutations = []; f.refresh(); }],
   ['target ID changed', f => { f.record.restoredBranch.id = 'other'; f.refresh(); }],
-  ['source changed', f => { f.report.sourceBranchId = 'other'; f.refresh(); }],
+  ['source changed', f => { f.report.sourceBranchId = 'other'; f.refresh({ refreshPending: false }); }],
   ['backup changed', f => { f.record.selectedBackupId = 'other'; f.refresh(); }],
   ['qualification SHA changed', f => { f.record.nativeRestoreCleanup.qualificationSha = 'f'.repeat(40); f.refresh(); }],
   ['different cleanup permit', f => { f.record.nativeRestoreCleanup.runNumber = 2; f.refresh(); }],
@@ -480,7 +498,7 @@ for (const [name, change] of malformed) test(`malformed readback cannot certify 
   const f = fixture(), original = f.options.api.request; let attempted = false;
   f.options.api.request = async (suffix, options = {}) => {
     if (options.method === 'DELETE') attempted = true;
-    if (suffix === `/branches/${RESTORE.target}` && options.absent && attempted)
+    if (suffix === `/branches/${TEST_TARGET}` && options.absent && attempted)
       return change({ ...branch(), deleted_at: time(30) });
     return original(suffix, options);
   };
@@ -488,14 +506,15 @@ for (const [name, change] of malformed) test(`malformed readback cannot certify 
   assert.equal(result.deletionVerified, false); assert.match(result.state, /UNCERTAIN/); assert.equal(deletions(f), 1);
 });
 test('explicit exact deletion timestamp succeeds, but incomplete inventory and GET 204 fail closed', async () => {
-  const f = fixture(), context = { creation: f.report.creation }, row = { ...branch(), deleted_at: time(30) };
-  const api = { request: async suffix => suffix.includes('/backups/') ? { id: RESTORE.backupId,
-    database_branch: { id: RESTORE.sourceId, name: 'main' }, restored_branches: [{ id: targetId, name: RESTORE.target }] } : row,
+  const f = fixture(), context = { report: f.report, creation: f.report.creation }, row = { ...branch(), deleted_at: time(30) };
+  const api = { request: async suffix => suffix.includes('/backups/') ? { id: TEST_BACKUP_ID,
+    database_branch: { id: RESTORE.sourceId, name: 'main' },
+    restored_branches: [{ id: targetId, name: TEST_TARGET, deleted_at: null }] } : row,
   list: async () => [row] };
   assert.equal((await observeOwnedTarget(api, context, instant, true)).deletionObserved, true);
-  api.list = async () => [{ id: targetId, name: RESTORE.target }];
+  api.list = async () => [{ id: targetId, name: TEST_TARGET }];
   await assert.rejects(() => observeOwnedTarget(api, context, instant, true), /target_identity_still_present/);
-  const transport = new RestoreCleanupApi('fixture-id:fixture-token', async () => new Response(null, { status: 204 }));
+  const transport = new TestRestoreCleanupApi('fixture-id:fixture-token', async () => new Response(null, { status: 204 }));
   await assert.rejects(() => observeOwnedTarget(transport, context, instant, true), /provider_response_invalid/);
 });
 test('authority or provider identity changes stop before DELETE', async () => {
@@ -504,7 +523,7 @@ test('authority or provider identity changes stop before DELETE', async () => {
     if (mode === 'authority') f.options.api.authority = async () => { throw new RestoreFailure('provider_access_denied', 'DENIED'); };
     else f.options.api.request = async (suffix, options) => {
       const row = await original(suffix, options);
-      return mode === 'target' && suffix.endsWith(RESTORE.target) ? { ...row, id: 'replacement' }
+      return mode === 'target' && suffix.endsWith(TEST_TARGET) ? { ...row, id: 'replacement' }
         : mode === 'backup' && suffix.includes('/backups/') ? { ...row, id: 'different' } : row;
     };
     const result = await deleteReviewedTarget(f.options); assert.equal(result.providerMutations, false); assert.equal(deletions(f), 0);
@@ -516,7 +535,7 @@ test('canonical evidence must be tracked, regular, committed and byte-identical;
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const git = args => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore','pipe','ignore'] });
   git(['init', '-q']);
-  for (const [name, bytes] of [[RECORD_PATH, f.evidence.recordBytes], [artifactPath('12345'), f.evidence.bytes]]) {
+  for (const [name, bytes] of [[recordPath(TEST_PLAN), f.evidence.recordBytes], [artifactPath('12345'), f.evidence.bytes]]) {
     const file = path.join(root, name); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, bytes);
   }
   assert.throws(() => readTrackedEvidence(root, '12345'), /not_tracked_regular_file/);
@@ -524,7 +543,7 @@ test('canonical evidence must be tracked, regular, committed and byte-identical;
   assert.deepEqual(readTrackedEvidence(root, '12345').bytes, f.evidence.bytes);
   fs.appendFileSync(path.join(root, artifactPath('12345')), ' ');
   assert.throws(() => readTrackedEvidence(root, '12345'), /worktree_modified/);
-  fs.unlinkSync(path.join(root, artifactPath('12345'))); fs.symlinkSync(path.join(root, RECORD_PATH), path.join(root, artifactPath('12345')));
+  fs.unlinkSync(path.join(root, artifactPath('12345'))); fs.symlinkSync(path.join(root, recordPath(TEST_PLAN)), path.join(root, artifactPath('12345')));
   assert.throws(() => readTrackedEvidence(root, '12345'), /file_invalid/);
 });
 test('interrupted qualification finalizes once as retained UNKNOWN; final bytes cannot be rewritten by cleanup', t => {
@@ -543,7 +562,7 @@ test('interrupted create without a bound acknowledged target is manual reconcili
     { outcome: 'PENDING_OR_UNKNOWN', creation: null, createdTargetId: null },
     { outcome: 'UNKNOWN_MUTATION_OUTCOME', creation: null, createdTargetId: null },
     { outcome: 'ACKNOWLEDGED', creation: null, createdTargetId: 'newrestore123' },
-    { outcome: 'ACKNOWLEDGED', creation: { acknowledged: true, id: 'otherTarget', name: RESTORE.target }, createdTargetId: 'newrestore123' },
+    { outcome: 'ACKNOWLEDGED', creation: { acknowledged: true, id: 'otherTarget', name: TEST_TARGET }, createdTargetId: 'newrestore123' },
   ];
   for (const [index, scenario] of cases.entries()) {
     const f = fixture(), root = fs.mkdtempSync(path.join(os.tmpdir(), `restore-create-finalize-${index}-`));
@@ -568,12 +587,12 @@ test('interrupted create without a bound acknowledged target is manual reconcili
 test('provider capabilities separate qualification from deletion; cleanup cannot create, reset or protect', async () => {
   let calls = 0;
   const fetch = async () => { calls++; throw new Error('must never reach provider'); };
-  const qualifier = new RestoreApi('fixture-id:fixture-token', fetch), cleanup = new RestoreCleanupApi('fixture-id:fixture-token', fetch);
-  await assert.rejects(() => qualifier.request(`/branches/${RESTORE.target}`, { method: 'DELETE' }), /fixed_provider_operation/);
+  const qualifier = new TestRestoreApi('fixture-id:fixture-token', fetch), cleanup = new TestRestoreCleanupApi('fixture-id:fixture-token', fetch);
+  await assert.rejects(() => qualifier.request(`/branches/${TEST_TARGET}`, { method: 'DELETE' }), /fixed_provider_operation/);
   for (const [suffix, options] of [
-    ['/branches', { method: 'POST', body: CREATE_TARGET_BODY }],
-    [`/branches/${RESTORE.target}/roles/role0/reset`, { method: 'POST' }],
-    [`/branches/main/backups/${RESTORE.backupId}`, { method: 'PATCH', body: { protected: true } }],
+    ['/branches', { method: 'POST', body: createTargetBody(TEST_PLAN) }],
+    [`/branches/${TEST_TARGET}/roles/role0/reset`, { method: 'POST' }],
+    [`/branches/main/backups/${TEST_BACKUP_ID}`, { method: 'PATCH', body: { protected: true } }],
     ['/branches/main', { method: 'DELETE' }],
   ]) await assert.rejects(() => cleanup.request(suffix, options), /fixed_provider_operation/);
   assert.equal(calls, 0);
@@ -683,7 +702,7 @@ test('GET-only reconciliation preserves historical phase metadata without treati
   assert.equal(blocked.state, 'BLOCKED_WITHOUT_DELETE'); assert.equal(deletions(f), 0);
 });
 for (const [name, change] of [
-  ['uncertain original create', f => { f.report.creation.acknowledged = false; f.refresh(); }],
+  ['uncertain original create', f => { f.report.creation.acknowledged = false; f.refresh({ refreshPending: false }); }],
   ['changed downloaded qualification bytes', f => { f.options.downloadedQualification = Buffer.from('{}'); }],
   ['unproven protected-main ancestry', f => { f.overrides.set(`/compare/${evidenceSha}...${f.env.RELEASE_SHA}`, { merge_base_commit: { sha: 'f'.repeat(40) } }); }],
 ]) test(`read-only reconciliation refuses unproven provenance: ${name}`, async () => {

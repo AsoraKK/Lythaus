@@ -29,8 +29,9 @@ export async function buildRestoreSmoke(signal) {
   return scripts;
 }
 
-export async function runRestoreSmoke(connections, branchId, baseline, scripts, runtimeFactory, signal) {
+export async function runRestoreSmoke(connections, branchId, baseline, scripts, runtimeFactory, signal, plan) {
   signal?.throwIfAborted();
+  requireThat(typeof plan?.target?.name === 'string' && plan.target.name.length > 0, 'restore_plan_identity_invalid');
   const { Miniflare, convertV4MiniflareOptions, Log, LogLevel } = require('miniflare');
   const names = ['runtime', 'admin', 'jobs', 'privacy'];
   for (const name of names) {
@@ -40,7 +41,7 @@ export async function runRestoreSmoke(connections, branchId, baseline, scripts, 
   const token = randomBytes(32).toString('hex');
   const version = '01900000-0000-7000-8000-000000000001';
   const common = { ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'restore.lythaus.test', DATABASE_READINESS_TOKEN: token,
-    EXPECTED_DATABASE_TARGET: RESTORE.target, EXPECTED_DATABASE_SCHEMA_FINGERPRINT: baseline.schemaFingerprint,
+    EXPECTED_DATABASE_TARGET: plan.target.name, EXPECTED_DATABASE_SCHEMA_FINGERPRINT: baseline.schemaFingerprint,
     EXPECTED_DATABASE_RELATION_COUNT: String(baseline.relationCount), EXPECTED_DATABASE_SCHEMA_VERSION: baseline.schemaVersion,
     EXPECTED_DATABASE_ROLE_CLASS: 'login_non_superuser', AUTHENTICATED_ACCEPTANCE_PROVEN: 'false',
     PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'), PII_HMAC_KEY_V1: randomBytes(32).toString('base64'),
@@ -72,7 +73,7 @@ export async function runRestoreSmoke(connections, branchId, baseline, scripts, 
     requireThat(databases.length === (name === 'public' ? 1 : 2) && body.readiness === 'pass'
       && databases.every(row => row.readiness === 'pass' && row.readyForAuthentication === false
         && row.schemaFingerprint === baseline.schemaFingerprint && row.schemaVersion === baseline.schemaVersion
-        && row.databaseEnvironment === RESTORE.target && row.relationCount === baseline.relationCount)
+        && row.databaseEnvironment === plan.target.name && row.relationCount === baseline.relationCount)
       && (name !== 'admin' || body.emailBinding?.bindingVerified === true), `isolated_application_${name}_contract_failed`);
   };
   const runGroup = async (group, names) => {

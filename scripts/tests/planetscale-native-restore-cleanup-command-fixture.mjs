@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { RECORD_PATH, artifactPath, sha256 } from '../ci/planetscale-native-restore-evidence.mjs';
+import { recordPath, artifactPath, sha256 } from '../ci/planetscale-native-restore-evidence.mjs';
 import { dispatchUnmergedCleanupStage } from '../ci/planetscale-native-restore-unmerged-cleanup-command-prototype.mjs';
 import { fixture } from './planetscale-native-restore-unmerged-cleanup-fixture.mjs';
 
@@ -27,7 +27,7 @@ export function rehearsal(t, outcome = 'PASSED', { artifactKind = 'valid' } = {}
   const archives = new Map([['51', fs.readFileSync(qualificationZip)]]), uploadedMetadata = new Map();
   f.record.nativeRestoreCleanup.artifactArchiveSha256 = sha256(archives.get('51')); f.refresh();
   git(root, ['clone', '--shared', '--quiet', code, evidence]); git(evidence, ['switch', '-c', 'evidence']);
-  for (const [relative, bytes] of [[RECORD_PATH, f.evidence.recordBytes], [artifactPath(f.report.runId), f.evidence.bytes]]) {
+  for (const [relative, bytes] of [[recordPath(f.report.plan), f.evidence.recordBytes], [artifactPath(f.report.runId), f.evidence.bytes]]) {
     const file = path.join(evidence, relative); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, bytes, { mode: 0o600 });
   }
   git(evidence, ['add', 'docs']); commit(evidence, 'Synthetic exact evidence data');

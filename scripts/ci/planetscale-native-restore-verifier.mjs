@@ -13,16 +13,18 @@ export function sourceConnection(raw, expectedOrigin) {
   return raw;
 }
 
-export function restoredConnectionMetadata(row, branchId, expectedRole, sourceRow) {
+export function restoredConnectionMetadata(row, branchId, expectedRole, sourceRow, plan) {
+  const targetName = branchId === RESTORE.sourceId ? 'main' : plan?.target?.name;
   requireThat(branchId !== RESTORE.sourceId && row?.base_username === expectedRole && ROLE_NAMES.includes(expectedRole)
-    && row.username === `${expectedRole}.${branchId}` && row.branch?.id === branchId && row.branch.name === RESTORE.target
+    && typeof targetName === 'string' && row.username === `${expectedRole}.${branchId}`
+    && row.branch?.id === branchId && row.branch.name === targetName
     && row.database_name === 'postgres'
     && typeof row.access_host_url === 'string' && /^[a-z0-9.-]+\.psdb\.cloud$/.test(row.access_host_url), 'restored_credential_identity_invalid');
-  checkCopiedRoleMetadata(row, branchId, expectedRole, sourceRow);
+  checkCopiedRoleMetadata(row, branchId, expectedRole, sourceRow, plan);
 }
 
-export function restoredConnection(row, branchId, expectedRole, sourceRow) {
-  restoredConnectionMetadata(row, branchId, expectedRole, sourceRow);
+export function restoredConnection(row, branchId, expectedRole, sourceRow, plan) {
+  restoredConnectionMetadata(row, branchId, expectedRole, sourceRow, plan);
   requireThat(typeof row.password === 'string' && row.password.length >= 16, 'restored_credential_identity_invalid');
   const url = new URL(`postgresql://${row.access_host_url}:5432/postgres?sslmode=verify-full`);
   url.username = row.username; url.password = row.password;

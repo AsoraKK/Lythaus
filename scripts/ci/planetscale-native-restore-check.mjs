@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { RESTORE, ROLE_NAMES, EXTENSIONS, CREATE_TARGET_BODY, RestoreApi, RestoreFailure, requireThat, failureCode, hash,
+import { RESTORE, ROLE_NAMES, EXTENSIONS, createTargetBody, RestoreApi, RestoreFailure, requireThat, failureCode, hash,
   approvalRecord, checkBackup, checkBranch, checkOwnedBranch, checkedRoles, copiedRoleReadiness, safeId, object,
   restoreSchemaMode, restoreSchemaVersion } from './planetscale-native-restore-contract.mjs';
+import { parseRestorePlanPins, buildRestorePlan, restorePlanSha256, planErrorCode } from './planetscale-native-restore-plan.mjs';
 import { sourceConnection, restoredConnection, restoredConnectionMetadata, readOnly, collectRestoreCatalog, inspectExtensionAuthority,
   installMissingExtensions, checkedExtensionSpecifications } from './planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
@@ -12,8 +13,10 @@ import { inspectCleanupReservation, finalizeQualificationEvidence, sha256 } from
 import { RUN12, verifyRun12ReviewedCleanup } from './planetscale-native-restore-run12-reconciliation.mjs';
 
 const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
-const targetPath = `/branches/${RESTORE.target}`;
-const backupPath = `/branches/main/backups/${RESTORE.backupId}`;
+const targetPath = plan => `/branches/${plan.target.name}`;
+const backupPath = plan => `/branches/main/backups/${plan.backup.id}`;
+const targetPathFromPins = pins => `/branches/${pins.target}`;
+const backupPathFromPins = pins => `/branches/main/backups/${pins.backupId}`;
 const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
 const workflowId = 394786946;
 const pinnedCancelledExecution = Object.freeze({ runId: '40184823787', runNumber: 7, runAttempt: 1,
@@ -278,7 +281,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     runId: /^[1-9]\d*$/.test(environment.GITHUB_RUN_ID ?? '') ? environment.GITHUB_RUN_ID : null,
     phase: 'qualification', mode: execute ? 'execute' : 'read-only-plan', status: 'BLOCKED', state: 'NO_TARGET_CREATED',
     qualificationOutcome: 'FAILED', startedAt: new Date(started).toISOString(),
-    sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target,
+    sourceBranchId: RESTORE.sourceId, backupId: null, targetName: null, plan: null, planSha256: null,
     expectedTargetProduction: RESTORE.targetProduction, createdTargetId: null,
     providerMutations: [], credentialActions: [], phases: [], productRowsRead: false, cleanup: 'NOT_NEEDED', blockers: [],
     recoveryAcceptance: 'NOT_CERTIFIED', independentRecovery: 'DEFERRED_BY_OWNER_EXCEPTION', deploymentAuthorized: false,
@@ -286,7 +289,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     qualificationStopAt: new Date(started + RESTORE.qualificationStopMs).toISOString(),
     escalationAt: new Date(started + RESTORE.escalationMs).toISOString(), reviewByAt: new Date(started + RESTORE.reviewMs).toISOString(),
     cleanupStartByAt: new Date(started + RESTORE.cleanupStartMs).toISOString() };
-  let owned = false, approval, scripts, setup, sourceUrl, schemaMode, catalogReader;
+  let owned = false, approval, plan, planPins, scripts, setup, sourceUrl, schemaMode, catalogReader;
   const connections = {};
   const save = async () => { await checkpoint(structuredClone(report)); };
   const assertProtectedMain = async () => {
@@ -301,6 +304,11 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     return readiness;
   };
   const time = () => requireThat(now() < Date.parse(report.qualificationStopAt), 'qualification_phase_review_reserve_reached');
+  const checkBackupForExercise = (backup, plan, options = {}) => {
+    const checkedAt = now(), remaining = Date.parse(report.cleanupDeadlineAt) - checkedAt;
+    requireThat(Number.isSafeInteger(remaining) && remaining > 0, 'qualification_deadline_elapsed');
+    return checkBackup(backup, checkedAt, plan, { ...options, maximumMs: remaining });
+  };
   const phase = async (name, operation, maximumMs = 120000, mutation = false) => {
     time();
     const budgetMs = Math.min(maximumMs, phaseBudgetMs, Date.parse(report.qualificationStopAt) - now());
@@ -323,18 +331,19 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     requireThat(reservation.workflowId === report.cleanupPermit.workflowId && reservation.runNumber === report.cleanupPermit.runNumber,
       'reserved_cleanup_run_number_consumed');
     if (label === 'create_fixed_restore') {
-      checkBackup(await api.request(backupPath), now());
-      const directTarget = await api.request(targetPath, { absent: true });
+      checkBackupForExercise(await api.request(backupPath(plan)), plan);
+      const directTarget = await api.request(targetPath(plan), { absent: true });
       requireThat(directTarget === null, 'preexisting_target_refused');
       const branches = await api.list('/branches');
-      requireThat(!branches.some(row => row.name === RESTORE.target || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
-      const protectedBackup = await api.request(backupPath); checkBackup(protectedBackup, now());
+      requireThat(!branches.some(row => row.name === plan.target.name || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
+      const protectedBackup = await api.request(backupPath(plan));
+      checkBackupForExercise(protectedBackup, plan);
       requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
       requireThat(Array.isArray(protectedBackup.restored_branches)
-        && !protectedBackup.restored_branches.some(row => row.name === RESTORE.target), 'backup_target_history_unexpected');
+        && !protectedBackup.restored_branches.some(row => row.name === plan.target.name), 'backup_target_history_unexpected');
       if (report.executionHistoryReconciliation) {
         report.executionHistoryReconciliation.targetReconciliation = { databaseId: RESTORE.databaseId,
-          sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId, targetName: RESTORE.target,
+          sourceBranchId: RESTORE.sourceId, backupId: plan.backup.id, targetName: plan.target.name,
           directGetReturnedNotFound: true, completeBranchInventoryExcludedTarget: true,
           backupRestoreHistoryExcludedTarget: true, checkedAt: new Date(now()).toISOString() };
       }
@@ -360,14 +369,15 @@ export async function runNativeRestore({ environment = process.env, api, now = D
   };
   const boundTarget = async (configuration = true, signal) => {
     signal?.throwIfAborted();
-    const branch = await api.request(targetPath, { signal });
+    const branch = await api.request(targetPath(plan), { signal });
     signal?.throwIfAborted();
-    if (configuration) checkBranch(branch, report.createdTargetId); else checkOwnedBranch(branch, report.createdTargetId);
-    const backup = await api.request(backupPath, { signal });
+    if (configuration) checkBranch(branch, report.createdTargetId, false, plan); else checkOwnedBranch(branch, report.createdTargetId, plan);
+    const backup = await api.request(backupPath(plan), { signal });
     signal?.throwIfAborted();
-    requireThat(backup.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
+    checkBackupForExercise(backup, plan, { allowedRestoredTarget: { id: report.createdTargetId, name: plan.target.name } });
+    requireThat(backup.id === plan.backup.id && backup.database_branch?.id === RESTORE.sourceId
       && Array.isArray(backup.restored_branches) && backup.restored_branches.some(row => row.id === report.createdTargetId
-        && row.name === RESTORE.target), 'backup_to_new_target_binding_unproven');
+        && row.name === plan.target.name), 'backup_to_new_target_binding_unproven');
     return branch;
   };
   const verifyAuthority = () => api.authority(async evidence => { report.authorityDiagnostic = evidence; await save(); }, false,
@@ -377,8 +387,14 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     schemaMode = restoreSchemaMode(environment.RESTORE_CHECK_SCHEMA_MODE);
     report.schemaMode = schemaMode;
     catalogReader = client => readCatalog(client, schemaMode);
+    try { planPins = parseRestorePlanPins(environment.RESTORE_CHECK_PLAN_PINS_JSON); }
+    catch (error) { throw new RestoreFailure(planErrorCode(error)); }
     if (execute) {
       approval = approvalRecord(environment.RESTORE_CHECK_APPROVAL_JSON, environment, started);
+      plan = approval.plan;
+      requireThat(planPins.backupId === plan.backup.id && planPins.backupCompletedAt === plan.backup.completedAt
+        && planPins.target === plan.target.name && planPins.targetBytes === plan.target.minimumStorageBytes
+        && plan.target.minimumStorageBytes === plan.target.maximumStorageBytes, 'restore_plan_pins_approval_mismatch');
       report.approvalSha256 = hash(approval); report.approvalExpiresAt = approval.expiresAt;
       report.reviewWindow = approval.reviewWindow; report.retention = approval.retention;
     }
@@ -386,24 +402,45 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     report.cleanupPermit = await reserveCleanup();
     if (execute) requireThat(report.cleanupPermit.workflowId === approval.cleanupPermit.workflowId
       && report.cleanupPermit.runNumber === approval.cleanupPermit.runNumber, 'cleanup_reservation_not_approved');
-    api ??= new RestoreApi(environment.PLANETSCALE_RESTORE_API_TOKEN);
+    api ??= new RestoreApi(environment.PLANETSCALE_RESTORE_API_TOKEN, fetch, undefined, plan ?? planPins);
     await verifyAuthority();
     const source = await api.request('/branches/main');
     requireThat(source.id === RESTORE.sourceId && source.name === 'main' && source.kind === 'postgresql'
       && source.default === true && source.deleted_at === null && source.ready === true, 'source_branch_identity_changed');
-    const backup = await api.request(backupPath); checkBackup(backup, now());
-    requireThat(backup.protected === true, 'protected_backup_with_finite_retention_plan_is_manual_prerequisite');
-    const branches = await api.list('/branches');
-    requireThat(!branches.some(row => row.name === RESTORE.target || row.id === report.createdTargetId
-      || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
-    requireThat(await api.request(targetPath, { absent: true }) === null, 'preexisting_target_refused');
-    requireThat(Array.isArray(backup.restored_branches)
-      && !backup.restored_branches.some(row => row.name === RESTORE.target), 'backup_target_history_unexpected');
-    const sourceRoles = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId);
+    const backup = await api.request(plan ? backupPath(plan) : backupPathFromPins(planPins));
+    if (!plan) plan = buildRestorePlan(planPins, backup, { releaseSha: environment.RELEASE_SHA,
+      schemaMode, sourceBranchId: RESTORE.sourceId });
+    checkBackupForExercise(backup, plan, { requireProtected: false });
+    report.plan = plan; report.planSha256 = restorePlanSha256(plan, { releaseSha: environment.RELEASE_SHA,
+      schemaMode, sourceBranchId: RESTORE.sourceId });
+    report.backupId = plan.backup.id; report.targetName = plan.target.name;
+    report.targetStorageBytes = plan.target.minimumStorageBytes;
     report.backup = { id: backup.id, restoreMode: 'SPECIFIED_BACKUP_SNAPSHOT', protected: backup.protected,
-      completedAt: backup.completed_at, expiresAt: backup.expires_at,
-      pvcBytes: backup.pvc_size, logicalBytes: backup.uncompressed_size };
-    report.cost = { maximumUsd: 5, computeStorageBackupEstimateBeforeTaxUsd: 0.038604429, maximumExerciseSeconds: 7200,
+      completedAt: backup.completed_at, expiresAt: backup.expires_at, pvcBytes: backup.pvc_size,
+      logicalBytes: backup.uncompressed_size, restoreHistorySha256: hash(plan.backup.restoredBranches) };
+    const branches = await api.list('/branches');
+    requireThat(!branches.some(row => row.name === plan.target.name || row.id === report.createdTargetId
+      || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
+    requireThat(await api.request(targetPath(plan), { absent: true }) === null, 'preexisting_target_refused');
+    requireThat(Array.isArray(backup.restored_branches)
+      && !backup.restored_branches.some(row => row.name === plan.target.name), 'backup_target_history_unexpected');
+    const sourceRoles = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId, undefined, plan);
+    const billableStorageGb = Math.max(plan.target.minimumStorageBytes / 1_000_000_000 - 10, 0);
+    const monthlyComputeUsd = 5; // PlanetScale single-instance PS-5 ARM replica_rate.
+    const storageRateUsdPerGbMonth = 0.149; // Conservative current PlanetScale Frankfurt gp3 docs rate.
+    const monthlyStorageUsd = billableStorageGb * storageRateUsdPerGbMonth;
+    const monthlyKnownComponentUsd = monthlyComputeUsd + monthlyStorageUsd;
+    report.cost = { maximumUsd: 5,
+      knownTwoHourComputeAndDiskEstimateUsd: Number((monthlyKnownComponentUsd * 2 / (30 * 24)).toFixed(9)),
+      targetDailyKnownComputeAndDiskRunRateUsd: Number((monthlyKnownComponentUsd / 30).toFixed(9)),
+      targetMonthlyKnownComputeAndDiskRunRateUsd: Number(monthlyKnownComponentUsd.toFixed(9)),
+      estimateAsOf: '2026-11-09', knownPriceInputs: { computeSku: 'PS-5 ARM single instance', computeMonthlyUsd: monthlyComputeUsd,
+        storageRegion: 'eu-central', storageRateUsdPerGbMonth, storageBytes: plan.target.minimumStorageBytes,
+        storageGb: plan.target.minimumStorageBytes / 1_000_000_000, includedDiskGb: 10, billableStorageGb, monthlyStorageUsd,
+        instanceCount: 1, runtimeSeconds: 7200, billingMonthDays: 30 },
+      backupRetentionAndWalEstimateRequired: true, liveQuoteRequiredBeforeDispatch: true,
+      unpricedCostDrivers: ['retained_target_beyond_two_hour_exercise', 'backup_and_wal_protection',
+        'taxes_and_fees', 'egress_if_applicable'], maximumExerciseSeconds: 7200,
       enforcedProviderHardCap: false, allInReviewedEstimateUsd: approval ? approval.estimatedSubtotalUsd + approval.taxAndFeeAllowanceUsd : null,
       cumulativeOwnerBound: approval ? { evidenceSha256: approval.cumulativeBudget.evidenceSha256,
         priorSpendUpperBoundUsd: approval.cumulativeBudget.priorSpendUpperBoundUsd,
@@ -412,6 +449,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
           + approval.estimatedSubtotalUsd + approval.taxAndFeeAllowanceUsd,
         basis: 'EXPLICIT_OWNER_REVIEWED_UPPER_BOUND_NOT_PROVIDER_BILLING_VERIFICATION' } : null };
     await save();
+    requireThat(backup.protected === true, 'protected_backup_with_finite_retention_plan_is_manual_prerequisite');
     if (!execute) { report.status = 'PLAN_ONLY_OWNER_ACTIONS_AND_LIVE_QUALIFICATION_REQUIRED'; return report; }
     sourceUrl = sourceConnection(environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL, reviewedOriginFingerprint);
     const baseline = await phase('source_catalog', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', catalogReader, undefined, signal));
@@ -419,24 +457,24 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     requireThat(baseline.extensionCount === 3, 'source_required_extensions_incomplete');
     checkedExtensionSpecifications(baseline.extensionSpecifications);
     report.sourceBaseline = baseline;
-    scripts = await phase('build', signal => prepareSmoke(signal));
-    const created = await mutate('create_fixed_restore', () => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }), verifyAuthority);
+    scripts = await phase('build', signal => prepareSmoke(signal, plan));
+    const created = await mutate('create_fixed_restore', () => api.request('/branches', { method: 'POST', body: createTargetBody(plan) }), verifyAuthority);
     report.cleanup = 'UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED';
-    requireThat(safeId(created.id) && created.id !== RESTORE.sourceId && created.name === RESTORE.target
+    requireThat(safeId(created.id) && created.id !== RESTORE.sourceId && created.name === plan.target.name
       && Date.parse(created.created_at) >= started - 60000 && Date.parse(created.created_at) <= now(), 'create_ack_identity_invalid', 'UNKNOWN_MUTATION_OUTCOME');
     report.createdTargetId = created.id;
-    checkOwnedBranch(created, created.id); owned = true;
+    checkOwnedBranch(created, created.id, plan); owned = true;
     report.creation = { acknowledged: true, id: created.id, name: created.name, createdAt: created.created_at,
       sourceBranchId: created.restored_from_branch.id, kind: created.kind, default: created.default, production: created.production };
     report.state = 'TARGET_RETAINED_PENDING_REVIEW'; report.cleanup = 'TARGET_RETAINED_PENDING_REVIEW'; await save();
-    checkBranch(created, created.id);
+    checkBranch(created, created.id, false, plan);
     let branch;
     for (let count = 0; count < 180; count++) {
       time(); branch = await boundTarget();
       if (branch.ready === true && branch.state === 'ready') break;
       await sleep(10000);
     }
-    checkBranch(branch, created.id, true); report.restoreReadyAt = new Date(now()).toISOString();
+    checkBranch(branch, created.id, true, plan); report.restoreReadyAt = new Date(now()).toISOString();
     report.roleInventoryObservations = [];
     const roles = await phase('copied_roles', async signal => {
       const seen = new Map(), stopAt = Math.min(now() + Math.min(120000, phaseBudgetMs), Date.parse(report.qualificationStopAt));
@@ -446,11 +484,11 @@ export async function runNativeRestore({ environment = process.env, api, now = D
         const observation = { attempt, observedAt: new Date(now()).toISOString(), outcome: 'PENDING' };
         try {
           await boundTarget(true, signal); signal.throwIfAborted();
-          const rows = await api.list(`${targetPath}/roles`, { signal });
+          const rows = await api.list(`${targetPath(plan)}/roles`, { signal });
           observation.rowCount = Array.isArray(rows) ? rows.length : null;
-          const state = copiedRoleReadiness(rows, created.id, sourceRoles);
+          const state = copiedRoleReadiness(rows, created.id, sourceRoles, plan);
           if (state.ready) for (const name of ROLE_NAMES) restoredConnectionMetadata(
-            rows.find(row => row.base_username === name), created.id, name, sourceRoles.get(name));
+            rows.find(row => row.base_username === name), created.id, name, sourceRoles.get(name), plan);
           for (const [name, row] of state.roles) {
             requireThat(!seen.has(name) || seen.get(name) === row.id, 'copied_role_identity_changed_during_readiness');
             seen.set(name, row.id);
@@ -460,7 +498,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
           report.roleInventoryObservations.push(observation); await save();
           signal.throwIfAborted(); time();
           requireThat(now() < stopAt, 'copied_role_readiness_timeout');
-          if (state.ready) return checkedRoles(rows, created.id, sourceRoles);
+          if (state.ready) return checkedRoles(rows, created.id, sourceRoles, plan);
         } catch (error) {
           if (!report.roleInventoryObservations.includes(observation)) report.roleInventoryObservations.push(observation);
           observation.outcome = 'BLOCKED'; observation.errorCode = failureCode(error);
@@ -473,20 +511,20 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     });
     const reset = async name => {
       await boundTarget();
-      checkedRoles(await api.list(`${targetPath}/roles`), created.id, sourceRoles);
+      checkedRoles(await api.list(`${targetPath(plan)}/roles`), created.id, sourceRoles, plan);
       const row = await mutate(`reset_copied_${name}`,
-        () => api.request(`${targetPath}/roles/${roles.get(name).id}/reset`, { method: 'POST' }), async () => {
-        const inventory = await api.list(`${targetPath}/roles`);
-        const currentRoles = checkedRoles(inventory, created.id, sourceRoles);
+        () => api.request(`${targetPath(plan)}/roles/${roles.get(name).id}/reset`, { method: 'POST' }), async () => {
+        const inventory = await api.list(`${targetPath(plan)}/roles`);
+        const currentRoles = checkedRoles(inventory, created.id, sourceRoles, plan);
         for (const role of ROLE_NAMES) restoredConnectionMetadata(
-          inventory.find(row => row.base_username === role), created.id, role, sourceRoles.get(role));
+          inventory.find(row => row.base_username === role), created.id, role, sourceRoles.get(role), plan);
         requireThat(ROLE_NAMES.every(role => currentRoles.get(role).id === roles.get(role).id),
           'copied_role_identity_changed_before_reset');
         await verifyAuthority();
         await boundTarget();
       });
       requireThat(row.id === roles.get(name).id, 'reset_role_id_changed');
-      const connection = restoredConnection(row, created.id, name, sourceRoles.get(name));
+      const connection = restoredConnection(row, created.id, name, sourceRoles.get(name), plan);
       report.credentialActions.push({ role: name, targetBranchId: created.id, outcome: 'RESET_ACKNOWLEDGED_MEMORY_ONLY' }); await save();
       return connection;
     };
@@ -500,7 +538,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     report.restoredVerification = restored;
     for (const name of ['runtime', 'admin', 'jobs', 'privacy']) connections[name] = await reset(RESTORE[name]);
     time(); await boundTarget();
-    report.applicationSmoke = await phase('smoke', signal => smoke(connections, created.id, baseline, scripts, undefined, signal));
+    report.applicationSmoke = await phase('smoke', signal => smoke(connections, created.id, baseline, scripts, undefined, signal, plan));
     requireThat(report.applicationSmoke?.readOnlyDatabaseIdentity === true && report.applicationSmoke?.distinctRoles === 4,
       'application_smoke_not_verified');
     const sourceAfter = await phase('source_readback', signal => readSession(sourceUrl, RESTORE.sourceId, 'pscale_api_qodocjs6vgrb', catalogReader, undefined, signal));

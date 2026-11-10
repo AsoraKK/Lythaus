@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
+import { canonicalRestorePlan, restorePlanSha256, assertLiveBackupMatchesPlan } from './planetscale-native-restore-plan.mjs';
 
 export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lythaus-core', databaseId: 'hzhe0cbn6rxi',
-  source: 'main', sourceId: 'vqa2g2xc9wsl', backupId: '6vew80jo0epr',
-  backupCompletedAt: '2026-10-27T02:27:08.161Z',
-  target: 'lythaus-0021-native-restore-check-20261027-01', targetProduction: true, cluster: 'PS_5_AWS_ARM', region: 'eu-central',
-  bytes: 21474836480, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
+  source: 'main', sourceId: 'vqa2g2xc9wsl', targetProduction: true, cluster: 'PS_5_AWS_ARM', region: 'eu-central',
+  minimumTargetBytes: 20 * 1024 ** 3,
+  bytes: 34359738368, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
   qualificationStopMs: 20 * 60000, escalationMs: 45 * 60000, reviewMs: 60 * 60000, cleanupStartMs: 105 * 60000,
   setup: 'pscale_api_47syed2xlt6p', runtime: 'pscale_api_ysl604shosjg', admin: 'pscale_api_3vzps7bu44vo',
   jobs: 'pscale_api_9jfbtij9y4b2', privacy: 'pscale_api_wv7rzyuejknl',
@@ -29,10 +29,15 @@ export const ROLE_SQL_MEMBERSHIP_BASELINE = Object.freeze([
   Object.freeze({ role: 'pg_write_all_data', member: RESTORE.setup }),
 ]);
 export const EXTENSIONS = Object.freeze(['pg_trgm', 'unaccent', 'pgcrypto']);
-export const CREATE_TARGET_BODY = Object.freeze({ name: RESTORE.target, backup_id: RESTORE.backupId,
-  region: RESTORE.region, cluster_size: RESTORE.cluster, replicas: 0,
-  major_version: '17', deletion_protected: false, create_database_if_missing: false,
-  storage: Object.freeze({ minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes }) });
+export function createTargetBody(plan) {
+  const target = canonicalRestorePlan(plan, { sourceBranchId: RESTORE.sourceId,
+    releaseSha: plan.releaseSha, schemaMode: plan.schemaMode, requireProtected: true });
+  return Object.freeze({ name: target.target.name, backup_id: target.backup.id,
+    region: RESTORE.region, cluster_size: RESTORE.cluster, replicas: 0,
+    major_version: '17', deletion_protected: false, create_database_if_missing: false,
+    storage: Object.freeze({ minimum_storage_bytes: target.target.minimumStorageBytes,
+      maximum_storage_bytes: target.target.maximumStorageBytes }) });
+}
 export const ACTIONS = Object.freeze(['restore_fixed_target', 'reset_five_copied_roles',
   'install_only_missing_named_extensions', 'retain_target_for_review', 'reserved_review_and_cost_watch']);
 export const apiBase = `https://api.planetscale.com/v1/organizations/${RESTORE.organization}/databases/${RESTORE.database}`;
@@ -59,12 +64,18 @@ export function approvalRecord(raw, environment, now) {
   const schemaMode = restoreSchemaMode(environment.RESTORE_CHECK_SCHEMA_MODE);
   let record;
   try { record = JSON.parse(raw); } catch { throw new RestoreFailure('explicit_owner_approval_record_required'); }
+  let plan;
+  try { plan = canonicalRestorePlan(record?.plan, { sourceBranchId: RESTORE.sourceId,
+    releaseSha: environment.RELEASE_SHA, schemaMode, requireProtected: true,
+    now, maximumMs: RESTORE.maximumMs, enforceFreshness: true }); }
+  catch (error) { throw new RestoreFailure(error?.code ?? 'restore_plan_invalid'); }
   requireThat(object(record) && Object.keys(record).sort().join(',') ===
     (schemaMode === 'post-0021'
-      ? 'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,schemaMode,target,taxAndFeeAllowanceUsd'
-      : 'actions,backupId,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,reference,releaseSha,retention,reviewWindow,roles,target,taxAndFeeAllowanceUsd'),
+      ? 'actions,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,plan,planSha256,reference,releaseSha,retention,reviewWindow,roles,schemaMode,taxAndFeeAllowanceUsd'
+      : 'actions,backupSnapshotAcknowledged,cleanupPermit,cumulativeBudget,estimatedSubtotalUsd,expiresAt,manualOperator,maximumUsd,plan,planSha256,reference,releaseSha,retention,reviewWindow,roles,taxAndFeeAllowanceUsd'),
   'approval_record_fields_invalid');
-  requireThat(record.releaseSha === environment.RELEASE_SHA && record.backupId === RESTORE.backupId && record.target === RESTORE.target
+  requireThat(record.releaseSha === environment.RELEASE_SHA && record.planSha256 === restorePlanSha256(plan, {
+    sourceBranchId: RESTORE.sourceId, releaseSha: environment.RELEASE_SHA, schemaMode })
     && (schemaMode !== 'post-0021' || record.schemaMode === schemaMode)
     && JSON.stringify(record.roles) === JSON.stringify(ROLE_NAMES) && JSON.stringify(record.actions) === JSON.stringify(ACTIONS)
     && record.maximumUsd === RESTORE.maximumUsd && record.backupSnapshotAcknowledged === true,
@@ -109,33 +120,29 @@ export function approvalRecord(raw, environment, now) {
   requireThat(budget.priorSpendUpperBoundUsd + budget.priorRetentionUpperBoundUsd
     + record.estimatedSubtotalUsd + record.taxAndFeeAllowanceUsd <= RESTORE.maximumUsd,
   'cumulative_exercise_budget_exceeded');
-  return record;
+  return Object.freeze({ ...record, plan });
 }
 
-export function checkBackup(backup, now) {
-  requireThat(backup?.id === RESTORE.backupId && backup.database_branch?.id === RESTORE.sourceId
-    && backup.database_branch.name === 'main' && backup.database_branch.deleted_at === null
-    && backup.state === 'success' && backup.deleted_at === null && typeof backup.protected === 'boolean', 'backup_identity_or_state_invalid');
-  const completed = Date.parse(backup.completed_at), expires = Date.parse(backup.expires_at);
-  requireThat(Number.isFinite(completed) && completed <= now && now + RESTORE.maximumMs <= completed + 24 * 3600000
-    && Number.isFinite(expires) && now + RESTORE.maximumMs < expires, 'backup_stale_or_test_window_too_short');
-  requireThat(backup.completed_at === RESTORE.backupCompletedAt, 'fixed_backup_completion_changed');
-  requireThat(Number.isSafeInteger(backup.pvc_size) && backup.pvc_size > 0 && backup.pvc_size <= RESTORE.bytes
-    && Number.isSafeInteger(backup.uncompressed_size) && backup.uncompressed_size <= RESTORE.bytes, 'backup_storage_not_bounded');
+export function checkBackup(backup, now, plan, options = {}) {
+  try { return assertLiveBackupMatchesPlan(plan, backup, { sourceBranchId: RESTORE.sourceId,
+    releaseSha: plan.releaseSha, schemaMode: plan.schemaMode, maximumMs: RESTORE.maximumMs, ...options, now }); }
+  catch (error) { throw new RestoreFailure(error?.code ?? 'restore_plan_invalid'); }
 }
 
-export function checkOwnedBranch(branch, id) {
-  requireThat(safeId(id) && id !== RESTORE.sourceId && branch?.id === id && branch.name === RESTORE.target
+export function checkOwnedBranch(branch, id, plan) {
+  const targetName = plan?.target?.name;
+  requireThat(typeof targetName === 'string' && safeId(id) && id !== RESTORE.sourceId && branch?.id === id && branch.name === targetName
     && branch.deleted_at === null && branch.default === false && branch.kind === 'postgresql'
     && branch.restored_from_branch?.id === RESTORE.sourceId && branch.deletion_protected === false,
   'created_target_ownership_changed');
 }
-export function checkBranch(branch, id, ready = false) {
-  checkOwnedBranch(branch, id);
+export function checkBranch(branch, id, ready = false, plan) {
+  checkOwnedBranch(branch, id, plan);
   requireThat(branch.production === RESTORE.targetProduction, 'created_target_classification_changed');
   requireThat(branch.cluster_name === RESTORE.cluster && branch.cluster_architecture === 'aarch64'
     && branch.region?.slug === RESTORE.region && branch.replicas === 0
-    && branch.minimum_storage_bytes === RESTORE.bytes && branch.maximum_storage_bytes === RESTORE.bytes,
+    && branch.minimum_storage_bytes === plan.target.minimumStorageBytes
+    && branch.maximum_storage_bytes === plan.target.maximumStorageBytes,
   'created_target_identity_or_configuration_changed');
   if (ready) requireThat(branch.ready === true && branch.state === 'ready' && branch.frozen === false, 'target_not_ready');
 }
@@ -164,7 +171,8 @@ function safeRoleField(row, key, matcher, expected) {
   return { present, type, expected, ...(type === 'BOOLEAN' || type === 'NULL' ? { observed: value } : {}), matches: matcher(value, present) };
 }
 
-function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow) {
+function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow, plan) {
+  const targetName = plan?.target?.name;
   const branch = object(row?.branch) ? row.branch : undefined;
   const recognizedBaseUsernameCounts = Object.fromEntries(ROLE_NAMES.map(role => [role, 0]));
   const recognizedRoutedUsernameCounts = Object.fromEntries(ROLE_NAMES.map(role => [role, 0]));
@@ -184,7 +192,7 @@ function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow) {
       baseUsernamePresent: Object.hasOwn(candidate, 'base_username'), baseUsernameType: safeType(candidate.base_username,
         Object.hasOwn(candidate, 'base_username')), baseUsernameMatches: candidate.base_username === (baseRole ?? routedRole),
       routedUsernameMatches: routedRole === (baseRole ?? routedRole), branchIdMatches: candidateBranch?.id === branchId,
-      branchNameMatches: candidateBranch?.name === (branchId === RESTORE.sourceId ? 'main' : RESTORE.target),
+      branchNameMatches: candidateBranch?.name === (branchId === RESTORE.sourceId ? 'main' : targetName),
       databaseNameMatches: candidate.database_name === 'postgres' });
   }
   const expectedReplication = name === RESTORE.setup;
@@ -206,8 +214,8 @@ function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow) {
       branchId: { present: !!branch && Object.hasOwn(branch, 'id'), type: safeType(branch?.id, !!branch && Object.hasOwn(branch, 'id')),
         expected: 'exact-bound-branch', matches: branch?.id === branchId },
       branchName: { present: !!branch && Object.hasOwn(branch, 'name'), type: safeType(branch?.name, !!branch && Object.hasOwn(branch, 'name')),
-        expected: branchId === RESTORE.sourceId ? 'main' : RESTORE.target,
-        matches: branch?.name === (branchId === RESTORE.sourceId ? 'main' : RESTORE.target) },
+        expected: branchId === RESTORE.sourceId ? 'main' : targetName,
+        matches: branch?.name === (branchId === RESTORE.sourceId ? 'main' : targetName) },
       branchDeletedAtNull: { present: !!branch && Object.hasOwn(branch, 'deleted_at'), type: safeType(branch?.deleted_at, !!branch && Object.hasOwn(branch, 'deleted_at')),
         expected: 'NULL', matches: branch?.deleted_at === null },
       username: safeRoleField(row, 'username', value => value === `${name}.${branchId}`, 'exact-bound-role'),
@@ -229,7 +237,7 @@ function roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow) {
   };
 }
 
-function inspectRoles(rows, branchId, sourceRoles, allowPending = false) {
+function inspectRoles(rows, branchId, sourceRoles, allowPending = false, plan) {
   requireThat(Array.isArray(rows), 'copied_role_inventory_invalid');
   const result = new Map();
   for (const name of ROLE_NAMES) {
@@ -237,7 +245,7 @@ function inspectRoles(rows, branchId, sourceRoles, allowPending = false) {
     if (allowPending && found.length === 0) continue;
     const row = found.length === 1 ? found[0] : undefined;
     const sourceRow = sourceRoles?.get(name);
-    const diagnostic = roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow);
+    const diagnostic = roleMetadataDiagnostic(name, branchId, rows, found, row, sourceRow, plan);
     const checks = Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches'
       && !(allowPending && key === 'ready' && typeof row?.ready === 'boolean'))
       .every(([, value]) => value.matches === true);
@@ -253,27 +261,27 @@ function inspectRoles(rows, branchId, sourceRoles, allowPending = false) {
   return result;
 }
 
-export function checkedRoles(rows, branchId, sourceRoles) { return inspectRoles(rows, branchId, sourceRoles); }
+export function checkedRoles(rows, branchId, sourceRoles, plan) { return inspectRoles(rows, branchId, sourceRoles, false, plan); }
 
-export function checkCopiedRoleMetadata(row, branchId, name, sourceRow) {
+export function checkCopiedRoleMetadata(row, branchId, name, sourceRow, plan) {
   requireThat(ROLE_NAMES.includes(name), 'copied_role_metadata_invalid');
-  const diagnostic = roleMetadataDiagnostic(name, branchId, [row], [row], row, sourceRow);
+  const diagnostic = roleMetadataDiagnostic(name, branchId, [row], [row], row, sourceRow, plan);
   if (!Object.entries(diagnostic.fields).filter(([key]) => key !== 'sourceInheritanceMatches').every(([, field]) => field.matches))
     throw new RestoreFailure('copied_role_metadata_invalid', 'BLOCKED', { version: 1, role: diagnostic });
   if (sourceRow && !diagnostic.fields.sourceInheritanceMatches.matches)
     throw new RestoreFailure('copied_role_authority_changed', 'BLOCKED', { version: 1, role: diagnostic });
 }
 
-export function copiedRoleReadiness(rows, branchId, sourceRoles) {
+export function copiedRoleReadiness(rows, branchId, sourceRoles, plan) {
   requireThat(Array.isArray(rows), 'copied_role_inventory_invalid');
   const shapeValid = rows.every(row => object(row) && safeId(row.id)
     && typeof row.base_username === 'string' && row.base_username.length > 0
     && row.username === `${row.base_username}.${branchId}` && typeof row.ready === 'boolean'
-    && row.branch?.id === branchId && row.branch.name === RESTORE.target && row.branch.deleted_at === null);
+    && row.branch?.id === branchId && row.branch.name === plan?.target?.name && row.branch.deleted_at === null);
   if (!shapeValid) throw new RestoreFailure('copied_role_metadata_invalid', 'BLOCKED',
     { version: 1, inventory: { rowCount: rows.length, identityShapeValid: false } });
   requireThat(new Set(rows.map(row => row.id)).size === rows.length, 'copied_role_inventory_invalid');
-  const roles = inspectRoles(rows, branchId, sourceRoles, true);
+  const roles = inspectRoles(rows, branchId, sourceRoles, true, plan);
   const missing = ROLE_NAMES.filter(name => !roles.has(name));
   const pending = ROLE_NAMES.filter(name => roles.get(name)?.ready === false);
   return { roles, missing, pending, ready: missing.length === 0 && pending.length === 0 };
@@ -453,22 +461,32 @@ async function providerFailureDiagnostic(response, method) {
 
 export class RestoreApi {
   #cleanupOnly;
-  constructor(token, fetchImpl = fetch, capability) {
+  constructor(token, fetchImpl = fetch, capability, plan) {
+    const identity = plan?.backup?.id && plan?.target?.name
+      ? { backupId: plan.backup.id, target: plan.target.name, targetBytes: plan.target.minimumStorageBytes }
+      : plan;
+    requireThat(object(identity) && safeId(identity.backupId)
+      && typeof identity.target === 'string' && /^lythaus-0021-native-restore-check-\d{8}-\d{2}$/.test(identity.target)
+      && Number.isSafeInteger(identity.targetBytes) && identity.targetBytes >= RESTORE.minimumTargetBytes
+      && identity.targetBytes <= RESTORE.bytes && identity.targetBytes % (1024 ** 3) === 0,
+    'restore_plan_pins_required');
     try { this.authorization = planetScaleServiceTokenAuthorizationHeader(token); }
     catch { throw new RestoreFailure('existing_service_token_pair_required'); }
     this.tokenId = this.authorization.split(':')[0]; this.fetchImpl = fetchImpl;
-    this.#cleanupOnly = capability === cleanupCapability;
+    this.#cleanupOnly = capability === cleanupCapability; this.plan = plan; this.identity = identity;
   }
   async request(path, { method = 'GET', body, absent = false, signal } = {}) {
-    const target = `/branches/${RESTORE.target}`, backup = `/branches/main/backups/${RESTORE.backupId}`;
+    const target = `/branches/${this.identity.target}`, backup = `/branches/main/backups/${this.identity.backupId}`;
     const grantsPage = /^\/\.\.\/service-tokens\/self\/grants\?page=([1-5])&per_page=100$/.exec(path);
     const getAllowed = ['', '/branches/main', target, backup, '/../service-tokens/self'].includes(path)
       || (!this.#cleanupOnly && grantsPage !== null)
       || /^\/branches(?:\/main\/roles)?\?page=[1-5]&per_page=100$/.test(path)
       || new RegExp(`^${target}/roles\\?page=[1-5]&per_page=100$`).test(path);
+    const allowedCreateBody = this.plan?.backup?.id ? createTargetBody(this.plan) : null;
     const writeAllowed = this.#cleanupOnly
       ? method === 'DELETE' && path === target && body === undefined
-      : (method === 'POST' && path === '/branches' && JSON.stringify(body) === JSON.stringify(CREATE_TARGET_BODY))
+      : (method === 'POST' && path === '/branches' && allowedCreateBody !== null
+        && JSON.stringify(body) === JSON.stringify(allowedCreateBody))
         || (method === 'POST' && new RegExp(`^${target}/roles/[a-z0-9]{1,64}/reset$`).test(path) && body === undefined);
     requireThat((method === 'GET' && getAllowed && body === undefined) || writeAllowed, 'fixed_provider_operation_required');
     const tokenUrl = 'https://api.planetscale.com/v1/organizations/' + RESTORE.organization + '/service-tokens/' + encodeURIComponent(this.tokenId);
@@ -594,5 +612,5 @@ export class RestoreApi {
 }
 
 export class RestoreCleanupApi extends RestoreApi {
-  constructor(token, fetchImpl = fetch) { super(token, fetchImpl, cleanupCapability); }
+  constructor(token, fetchImpl = fetch, plan) { super(token, fetchImpl, cleanupCapability, plan); }
 }

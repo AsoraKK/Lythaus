@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { RESTORE } from '../ci/planetscale-native-restore-contract.mjs';
-import { RECORD_PATH, artifactPath, sha256, QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW } from '../ci/planetscale-native-restore-evidence.mjs';
+import { recordPath, artifactPath, sha256, QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW } from '../ci/planetscale-native-restore-evidence.mjs';
 import { pendingReceipt, pendingName } from '../ci/planetscale-native-restore-cleanup.mjs';
 import { REQUIRED_0021_RESTORE_SCOPE, hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
 import { proveUnmergedCleanupContext, unmergedCleanupAttestation } from '../ci/planetscale-native-restore-unmerged-cleanup-prototype.mjs';
+import { TEST_BACKUP_ID, TEST_BACKUP_COMPLETED_AT, TEST_TARGET, testPlan, testPlanSha } from './planetscale-native-restore-test-plan.mjs';
 
-export const start = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000;
+export const start = Date.parse(TEST_BACKUP_COMPLETED_AT) + 90 * 60000;
 export const time = minutes => new Date(start + minutes * 60000).toISOString();
 export const codeSha = 'a'.repeat(40), evidenceSha = 'b'.repeat(40), targetId = 'newrestore123';
 export const repository = 'SyntheticOwner/Lythaus', repositoryId = 1010752912;
@@ -15,11 +16,13 @@ export const gitSha = bytes => createHash('sha1').update(`blob ${bytes.length}\0
 
 export function fixture(outcome = 'PASSED', { qualifiedSha = codeSha, reviewedSha = evidenceSha } = {}) {
   const codeSha = qualifiedSha; let evidenceSha = reviewedSha;
+  const plan = testPlan({ releaseSha: codeSha });
   const report = { phase: 'qualification', mode: 'execute', runId: '12345', sourceMainSha: codeSha,
-    startedAt: time(0), finishedAt: time(20), sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId,
-    targetName: RESTORE.target, createdTargetId: targetId, state: 'TARGET_RETAINED_PENDING_REVIEW',
+    startedAt: time(0), finishedAt: time(20), sourceBranchId: RESTORE.sourceId, schemaMode: plan.schemaMode,
+    plan, planSha256: testPlanSha(plan), targetStorageBytes: plan.target.minimumStorageBytes, backupId: TEST_BACKUP_ID,
+    targetName: TEST_TARGET, createdTargetId: targetId, state: 'TARGET_RETAINED_PENDING_REVIEW',
     cleanup: 'TARGET_RETAINED_PENDING_REVIEW', qualificationOutcome: outcome, recoveryAcceptance: 'NOT_CERTIFIED',
-    creation: { acknowledged: true, id: targetId, name: RESTORE.target, sourceBranchId: RESTORE.sourceId,
+    creation: { acknowledged: true, id: targetId, name: TEST_TARGET, sourceBranchId: RESTORE.sourceId,
       createdAt: time(1), kind: 'postgresql', default: false },
     providerMutations: [{ action: 'create_fixed_restore', outcome: 'ACKNOWLEDGED' }],
     cleanupPermit: { workflowId: 42, runNumber: 2 }, approvalExpiresAt: time(120),
@@ -28,7 +31,7 @@ export function fixture(outcome = 'PASSED', { qualifiedSha = codeSha, reviewedSh
     reviewWindow: { reviewer: 'reviewer', operator: 'owner' } };
   if (outcome === 'PASSED') report.verifiedAt = time(20);
   const record = { schemaVersion: 'lythaus-0021-restore-evidence-v1', sourceBranch: { id: RESTORE.sourceId, name: 'main' },
-    selectedBackupId: RESTORE.backupId, restoredBranch: { id: targetId, name: RESTORE.target,
+    selectedBackupId: TEST_BACKUP_ID, restoredBranch: { id: targetId, name: TEST_TARGET,
       state: outcome === 'PASSED' ? 'ready' : 'retained', createdAt: time(1) },
     verifiedAt: time(20), artifactPath: artifactPath(report.runId), verifiedScope: [],
     unresolvedGates: [...REQUIRED_0021_RESTORE_SCOPE],
@@ -42,7 +45,7 @@ export function fixture(outcome = 'PASSED', { qualifiedSha = codeSha, reviewedSh
     GITHUB_REPOSITORY: repository, PENDING_ARTIFACT_ID: '52', PENDING_ARTIFACT_DIGEST: 'e'.repeat(64) };
   const calls = [], checkpoints = [], overrides = new Map(), blobOverrides = new Map(), fileModes = new Map();
   let deleted = false, clock = start + 65 * 60000;
-  const fileBytes = () => new Map([[RECORD_PATH, evidence.recordBytes], [artifactPath(report.runId), evidence.bytes], ...blobOverrides]);
+  const fileBytes = () => new Map([[recordPath(plan), evidence.recordBytes], [artifactPath(report.runId), evidence.bytes], ...blobOverrides]);
   const blobFiles = () => [...fileBytes()].map(([filename, bytes]) => ({ filename, status: 'added', sha: gitSha(bytes) }));
   const treeData = () => {
     const root = new Map(), trees = new Map();
@@ -108,28 +111,31 @@ export function fixture(outcome = 'PASSED', { qualifiedSha = codeSha, reviewedSh
       const method = options.method ?? 'GET'; calls.push(`${method} ${suffix}`);
       if (method === 'DELETE') { deleted = true; return null; }
       assert.equal(method, 'GET');
-      if (suffix === `/branches/${RESTORE.target}`) return deleted ? null : { id: targetId, name: RESTORE.target,
+      if (suffix === `/branches/${TEST_TARGET}`) return deleted ? null : { id: targetId, name: TEST_TARGET,
         created_at: time(1), deleted_at: null, default: false, kind: 'postgresql', deletion_protected: false,
         restored_from_branch: { id: RESTORE.sourceId } };
-      if (suffix === `/branches/main/backups/${RESTORE.backupId}`) return { id: RESTORE.backupId,
+      if (suffix === `/branches/main/backups/${TEST_BACKUP_ID}`) return { id: TEST_BACKUP_ID,
         database_branch: { id: RESTORE.sourceId, name: 'main' }, protected: true,
-        restored_branches: [{ id: targetId, name: RESTORE.target }] };
+        restored_branches: [{ id: targetId, name: TEST_TARGET, deleted_at: null }] };
       throw Error('unexpected synthetic provider read');
     } };
   const options = { env, evidence, evidenceHead: evidenceSha, read, api, now: () => clock,
     assertMain: async () => { calls.push('MAIN'); assert.equal(env.RELEASE_SHA, codeSha); },
     checkpoint: receipt => checkpoints.push(receipt), sleep: async milliseconds => { clock += milliseconds; },
     proveContext: proveUnmergedCleanupContext };
-  const refresh = () => {
+  const refresh = ({ refreshPending = true } = {}) => {
     evidence.bytes = encode(report); record.evidenceSha256 = sha256(evidence.bytes);
     record.recordSha256 = hash0021RestoreEvidenceRecord(record); evidence.recordBytes = encode(record);
     env.CLEANUP_APPROVAL_JSON = JSON.stringify({ action: 'delete_only_original_acknowledged_target_once',
       cleanupSha: codeSha, evidenceSha, qualificationRunId: report.runId, targetId,
       recordSha256: record.recordSha256, operator: 'owner', maximumUsd: 5,
       reference: 'synthetic-separate-owner-deletion-consent', expiresAt: time(119) });
-    options.pendingBytes = encode(pendingReceipt({ report, record, creation: report.creation,
-      intent: record.nativeRestoreCleanup }, env));
-    options.downloadedPending = options.pendingBytes; options.downloadedQualification = evidence.bytes;
+    options.downloadedQualification = evidence.bytes;
+    if (refreshPending) {
+      options.pendingBytes = encode(pendingReceipt({ report, record, creation: report.creation,
+        intent: record.nativeRestoreCleanup }, env));
+      options.downloadedPending = options.pendingBytes;
+    }
   };
   refresh();
   return { report, record, evidence, env, options, calls, checkpoints, overrides, blobOverrides, fileModes, refresh,

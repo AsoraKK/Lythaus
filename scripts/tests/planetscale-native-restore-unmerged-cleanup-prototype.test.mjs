@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { RESTORE, RestoreFailure } from '../ci/planetscale-native-restore-contract.mjs';
-import { RECORD_PATH, artifactPath, sha256,
+import { recordPath, artifactPath, sha256,
   verifyReviewedEvidence } from '../ci/planetscale-native-restore-evidence.mjs';
 import { deleteReviewedTarget } from '../ci/planetscale-native-restore-cleanup.mjs';
 import { assess0021RestoreEvidence } from '../ci/planetscale-0021-only-contract.mjs';
@@ -49,8 +49,8 @@ for (const outcome of ['PASSED', 'FAILED']) test(`unmerged ${outcome} qualificat
 });
 
 for (const [label, mutate] of [
-  ['unacknowledged creation', f => { f.report.creation.acknowledged = false; f.refresh(); }],
-  ['uncertain creation', f => { f.report.creation.acknowledged = false; f.report.providerMutations[0].outcome = 'UNKNOWN_MUTATION_OUTCOME'; f.refresh(); }],
+  ['unacknowledged creation', f => { f.report.creation.acknowledged = false; f.refresh({ refreshPending: false }); }],
+  ['uncertain creation', f => { f.report.creation.acknowledged = false; f.report.providerMutations[0].outcome = 'UNKNOWN_MUTATION_OUTCOME'; f.refresh({ refreshPending: false }); }],
   ['wrong repository', f => f.overrides.set('/pulls/999', row => ({ ...row, head: { ...row.head, repo: { id: 3 } } }))],
   ['wrong workflow', f => f.overrides.set('/actions/runs/12345', row => ({ ...row, workflow_id: 3 }))],
   ['wrong run', f => f.overrides.set('/actions/runs/12345', row => ({ ...row, id: 7 }))],
@@ -62,8 +62,8 @@ for (const [label, mutate] of [
   ['wrong archive digest', f => f.overrides.set('/actions/artifacts/51', row => ({ ...row, digest: `sha256:${'f'.repeat(64)}` }))],
   ['changed uploaded bytes', f => { f.options.downloadedQualification = Buffer.from('{}'); }],
   ['changed PR qualification bytes', f => f.blobOverrides.set(artifactPath(f.report.runId), Buffer.from('{}'))],
-  ['symlink data file', f => f.fileModes.set(RECORD_PATH, '120000')],
-  ['executable data file', f => f.fileModes.set(RECORD_PATH, '100755')],
+  ['symlink data file', f => f.fileModes.set(recordPath(f.report.plan), '120000')],
+  ['executable data file', f => f.fileModes.set(recordPath(f.report.plan), '100755')],
   ['wrong Git commit', f => f.overrides.set(`/git/commits/${evidenceSha}`, row => ({ ...row, sha: 'f'.repeat(40) }))],
   ['moved PR head', f => f.overrides.set('/pulls/999', row => ({ ...row, head: { ...row.head, sha: 'f'.repeat(40) } }))],
   ['non-descendant PR', f => f.overrides.set(`/compare/${codeSha}...${evidenceSha}`, row => ({ ...row, merge_base_commit: { sha: 'f'.repeat(40) } }))],
@@ -86,10 +86,10 @@ for (const [label, mutate] of [
   ['changed cleanup source', f => { f.env.RELEASE_SHA = 'f'.repeat(40); f.options.assertMain = async () => {}; }],
   ['main drift', f => { f.options.assertMain = async () => { throw new RestoreFailure('current_protected_main_changed'); }; }],
   ['expired cleanup token', f => { f.options.api.authority = async () => { throw new RestoreFailure('existing_token_lifetime_insufficient_or_unverifiable'); }; }],
-  ['target ID drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${RESTORE.target}` ? { ...row, id: 'replacementid' } : row; }; }],
-  ['target creation-time drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${RESTORE.target}` ? { ...row, created_at: time(2) } : row; }; }],
-  ['target source drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${RESTORE.target}` ? { ...row, restored_from_branch: { id: 'othersource' } } : row; }; }],
-  ['target protection enabled', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${RESTORE.target}` ? { ...row, deletion_protected: true } : row; }; }],
+  ['target ID drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${f.report.plan.target.name}` ? { ...row, id: 'replacementid' } : row; }; }],
+  ['target creation-time drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${f.report.plan.target.name}` ? { ...row, created_at: time(2) } : row; }; }],
+  ['target source drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${f.report.plan.target.name}` ? { ...row, restored_from_branch: { id: 'othersource' } } : row; }; }],
+  ['target protection enabled', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p === `/branches/${f.report.plan.target.name}` ? { ...row, deletion_protected: true } : row; }; }],
   ['backup binding drift', f => { const request = f.options.api.request; f.options.api.request = async (p, o) => { const row = await request(p, o); return p.includes('/backups/') ? { ...row, restored_branches: [] } : row; }; }],
   ['cleanup starts at 105 minutes', f => f.setClock(start + 105 * 60000)],
   ['cleanup reaches deadline reserve', f => f.setClock(start + 119 * 60000)],
@@ -138,7 +138,7 @@ test('target replacement during the final PR verification await blocks DELETE', 
   };
   f.options.api.request = async (p, o) => {
     const row = await request(p, o);
-    return replaced && p === `/branches/${RESTORE.target}` ? { ...row, id: 'replacementid' } : row;
+    return replaced && p === `/branches/${f.report.plan.target.name}` ? { ...row, id: 'replacementid' } : row;
   };
   assert.ok((await blocked(f)).blockers.includes('created_target_ownership_changed'));
 });
@@ -175,8 +175,8 @@ test('FAILED qualification cannot pass the unchanged release evidence assessment
   const f = fixture('FAILED');
   const result = assess0021RestoreEvidence({ record: f.record, evidenceArtifact: { path: f.record.artifactPath,
     bytes: f.evidence.bytes, sha256: sha256(f.evidence.bytes) }, sourceBranch: { id: RESTORE.sourceId },
-    backup: { id: RESTORE.backupId, completed_at: time(-60), expires_at: time(1440) },
-    selectedBackupId: RESTORE.backupId, now: f.options.now() });
+    backup: { id: f.report.plan.backup.id, completed_at: time(-60), expires_at: time(1440) },
+    selectedBackupId: f.report.plan.backup.id, now: f.options.now() });
   assert.equal(result.ok, false); assert.ok(result.blockers.includes('restore_evidence_has_unresolved_gates'));
   assert.ok(result.blockers.includes('restore_evidence_scope_missing:effective_runtime_privileges'));
 });
@@ -188,9 +188,9 @@ test('release loader cannot consume evidence committed only to an unmerged branc
   const commit = message => git(['-c', 'user.name=Local Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', message]);
   git(['init', '--initial-branch=main']); fs.writeFileSync(path.join(root, 'baseline'), 'synthetic\n');
   git(['add', 'baseline']); commit('Synthetic main'); git(['switch', '-c', 'evidence']);
-  for (const [relative, bytes] of [[RECORD_PATH, f.evidence.recordBytes], [artifactPath(f.report.runId), f.evidence.bytes]]) {
+  for (const [relative, bytes] of [[recordPath(f.report.plan), f.evidence.recordBytes], [artifactPath(f.report.runId), f.evidence.bytes]]) {
     const destination = path.join(root, relative); fs.mkdirSync(path.dirname(destination), { recursive: true }); fs.writeFileSync(destination, bytes);
   }
   git(['add', 'docs']); commit('Synthetic unmerged evidence'); git(['switch', 'main']);
-  assert.equal(read0021RestoreEvidenceRecord(RESTORE.backupId, root).record, null);
+  assert.equal(read0021RestoreEvidenceRecord(f.report.plan.backup.id, root).record, null);
 });

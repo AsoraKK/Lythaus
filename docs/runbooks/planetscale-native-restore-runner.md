@@ -26,11 +26,18 @@ approval cannot authorize it. The qualification report records the selected
 mode. A pre-0021 qualification is not post-0021 evidence, and a passing
 qualification alone does not certify recovery or authorize release.
 
-The fixed backup and target below are historical pins. A future attempt still
-needs separately reviewed fresh pins, complete history reconciliation including
-the later successful qualification and cleanup, current access and budget
-admission, and a new explicit action packet. This source change does not
-authorize or make those changes, choose a backup, or waive any gate.
+Each new attempt must supply explicit per-run pins for one backup ID and exact
+completion timestamp, one unique target name, and a storage size from 20 to 32
+GiB. There is no default target, current-date target generation, or automatic
+“latest backup” selection. The read-only plan and execute modes both require
+those pins. The execute approval contains the complete canonical backup
+snapshot and history, target size, release SHA and schema mode, bound by
+`planSha256`; the workflow checks the supplied pins against that plan before
+dependencies or provider access. A changed backup, target, size, source, expiry,
+protection state or restore history blocks the run. Historical pins below are
+examples of past evidence, not current plan inputs or permission to act. A
+future attempt still needs complete history reconciliation, current access and
+budget admission, and a new explicit action packet. No gate is waived.
 
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
@@ -61,15 +68,17 @@ runner or step sequence, or after an uncertain provider mutation. Run #12 is
 bound to its original denied reset and reviewed cleanup #2 as described below;
 it remains FAILED and NOT_CERTIFIED.
 
-Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`), candidate backup
-`6vew80jo0epr` (provisional until a fresh API read confirms its exact metadata).
-The only target is `lythaus-0021-native-restore-check-20261027-01`: PS-5 ARM,
-Frankfurt, zero replicas, minimum and maximum 21474836480 bytes. Any preexisting
-target is refused. The runner creates no database, role, GitHub secret,
-Hyperdrive, binding, traffic route or application deployment. Source passwords
-are never reset. Migration 0021 is never applied. These source pins do not approve
-backup selection, protection or a restore. Run #9 remains bound independently to
-its original backup `zw0so7f5jbpu` and target
+Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`). The read-only inventory
+below recorded `muprxxetwfet` and
+`lythaus-0021-native-restore-check-20261027-01` as past candidate pins; neither
+is a default or current selection. Each attempt binds its explicit target name
+and storage size in the approved plan. Fixed PS-5 ARM, Frankfurt, zero replicas
+and production classification remain unchanged. Any preexisting target is
+refused. The runner creates no database, role, GitHub
+secret, Hyperdrive, binding, traffic route or application deployment. Source
+passwords are never reset. Migration 0021 is never applied. These source pins do
+not approve backup selection, protection or a restore. Run #9 remains bound
+independently to its original backup `zw0so7f5jbpu` and target
 `lythaus-0021-native-restore-check-20261022`; its evidence is unchanged.
 
 This qualification restores the exact backup snapshot by sending its
@@ -77,25 +86,38 @@ This qualification restores the exact backup snapshot by sending its
 restoring that backup's schema and data. `restore_point` is a separate optional
 PostgreSQL PITR request and is omitted from the fixed create body. The backup's
 completion time is validated from API `completed_at` metadata; it is distinct
-from the dashboard's snapshot label. The read-only inventory reports normalized
-`completedAt` as `2026-10-27T02:27:08.161Z` in inventory run `40455833265`
-on source `9e9759181069c3636af3ffefe1d8ec9a3de22f37`. Its collector normalizes timestamps
-to millisecond ISO strings and omits `restored_branches`; this is provisional pin
-preparation. Before execution, the dedicated read-only plan must confirm exact
-raw API `completed_at` equality, complete restore history and fresh target
-absence. Any difference blocks execution and requires a reviewed pin correction.
-Provider completion plus independent SQL checks must establish what was
-restored; all 17 previously approved privileges are tested directly. Neither
-backup timestamps nor the provider checklist certify restored grants.
+from the dashboard's snapshot label. The read-only inventory artifact from run
+`42577742585` was generated on 2026-11-09 at 07:12:38 UTC from source
+`88b42ec9918353aa23892a6960c7a142fbd57fb1` (artifact SHA-256
+`5129b6db45f6c4fb911c02ae8b563521738f688eb3f4e83e4b478a8a5e64cd91`). It
+reports candidate `muprxxetwfet` as successful and unprotected, with source
+branch `main`/`vqa2g2xc9wsl`, normalized completion time
+`2026-11-09T02:51:08.741Z`, expiry `2026-11-11T02:49:03.258Z`, PVC size
+27917287424 bytes (26 GiB), uncompressed size 53352281 bytes, and compressed
+size 9510195 bytes. This is metadata-only inventory, not a protected or restored
+backup; it omits `restored_branches`. The collector normalizes timestamps to
+millisecond ISO strings, so the dedicated read-only plan must confirm exact raw
+API `completed_at`, protection state, complete restore history, and fresh target
+absence immediately before any action. A read-only target GET returned 404 at
+2026-11-09 21:03 UTC; repeat it, read the complete branch inventory and check the
+backup's restore history before creation. Any difference blocks execution and
+requires a reviewed pin correction. Provider completion plus independent SQL
+checks must establish what was restored; all 17 previously approved privileges
+are tested directly. Neither backup timestamps nor the provider checklist
+certify restored grants.
 References: [backup GET](https://planetscale.com/docs/api/reference/get_backup),
 [branch creation](https://planetscale.com/docs/api/reference/create_branch).
 
 The whole two-hour window must fit before the backup reaches 24 hours old and
-before expiry. From the provisional completion, start before
-`2026-10-28T00:27:08.161Z` and finish before
-`2026-10-28T02:27:08.161Z`; the inventory reports expiry
-`2026-10-29T02:25:03.601Z`. Allow queue and setup time before that runner start;
-recompute these limits from a fresh API read.
+before expiry. From the provisional completion, the runner must start before
+`2026-11-10T00:51:08.741Z` and finish before
+`2026-11-10T02:51:08.741Z`; the inventory reports expiry
+`2026-11-11T02:49:03.258Z`. Reserve five minutes for setup, so the final
+preflight must begin by `2026-11-10T00:46:08.741Z`, plus any observed queue time.
+The 00:46 cutoff is for the pre-dependency admission step, not the dispatch
+time. Dispatch earlier to allow actual queue delay and the checkout, main-guard,
+and Node-setup steps. Recompute these limits from a fresh API read; this
+inventory's timestamp is not an authorization to act.
 Freshness and expiry are different gates. No replacement is silently chosen.
 The backup must already be protected under a separately approved, finite
 retention and end-action plan before qualification. Neither phase changes
@@ -289,10 +311,19 @@ one pinned pre-runner cancellation. Only the exact pinned run #8 pre-create
 failure and run #9's separately verified manual deletion described above can
 be reconciled after a runner starts. No later failure is automatically eligible.
 
-Known two-hour compute/storage plus a conservative 20-GiB additional backup/WAL
-day and 10-MiB egress is about US$0.038604429 before tax/fees. The packet must
-include a positive reviewed fee/uncertainty allowance; estimate plus allowance
-must be at most US$5. This is a metered allowance, not a provider hard cap.
+For the exact 32-GiB target with zero replicas, the best available known
+compute-and-disk component is about **US$0.023971114 for two hours**. It uses
+the verified PS-5 ARM single-instance rate of US$5/month, 10 decimal GB of
+included disk, 24.359738368 billable decimal GB at the conservative documented
+Frankfurt gp3 rate of US$0.149/GB-month, and a 30-day/720-hour proration. The
+known compute-and-disk run rate while retained is about US$0.287653367/day or
+US$8.629601017/month. These are component estimates, not an all-in quote. The
+two-hour component alone is below the runner's US$0.04 minimum approved subtotal.
+Actual cost for target retention, backup/WAL protection, egress if applicable,
+taxes and fees remains unpriced and must be resolved before approval. The packet
+must include a positive reviewed fee/uncertainty allowance; the complete new
+attempt estimate plus allowance must be at most US$5. This is a metered owner
+budget, not a provider hard cap.
 The observed US$10 email threshold is an alert. Previously denied Cloudflare
 billing reads are not retried. Existing older protected backups already bound
 the oldest WAL window; do not assume all incremental retention charges are zero
@@ -314,16 +345,40 @@ time; a future action needs separate authority and an end within 24 hours.
 The dedicated token's documented `expires_at` must cover the original cleanup
 deadline (or explicitly be null). This does not renew a token or authorize its use.
 
-`approval_json` fields (replace placeholders; arrays must preserve this order):
+`approval_json` fields (replace every placeholder with verified, owner-reviewed
+values; arrays must preserve this order). This is a schema sketch only, not an
+executable approval: the known compute/disk component is not a complete price
+and the following string placeholders deliberately fail numeric validation
+until the subtotal, retention charge, and separate fee allowance are supported
+by current evidence.
 
 ```json
 {
   "releaseSha": "EXACT_REVIEWED_MERGED_SHA",
-  "backupId": "tfqwht9d9bt4",
-  "target": "lythaus-0021-native-restore-check-20261026-01",
+  "planSha256": "SHA256_OF_CANONICAL_APPROVED_PLAN",
+  "plan": {
+    "schemaVersion": "lythaus-native-restore-plan-v1",
+    "releaseSha": "EXACT_REVIEWED_MERGED_SHA",
+    "schemaMode": "pre-0021",
+    "sourceBranchId": "vqa2g2xc9wsl",
+    "backup": {
+      "id": "EXACT_BACKUP_ID",
+      "completedAt": "EXACT_API_COMPLETION_TIME",
+      "expiresAt": "EXACT_API_EXPIRY_TIME",
+      "pvcBytes": 0,
+      "uncompressedBytes": 0,
+      "protected": true,
+      "restoredBranches": []
+    },
+    "target": {
+      "name": "EXACT_UNIQUE_APPROVED_TARGET_NAME",
+      "minimumStorageBytes": 34359738368,
+      "maximumStorageBytes": 34359738368
+    }
+  },
   "maximumUsd": 5,
-  "estimatedSubtotalUsd": 0.05,
-  "taxAndFeeAllowanceUsd": 1,
+  "estimatedSubtotalUsd": "REPLACE_WITH_REVIEWED_SUBTOTAL_USD",
+  "taxAndFeeAllowanceUsd": "REPLACE_WITH_POSITIVE_REVIEWED_ALLOWANCE_USD",
   "backupSnapshotAcknowledged": true,
   "reference": "EXACT_OWNER_APPROVAL_REFERENCE",
   "manualOperator": "OWNER_GITHUB_LOGIN",
@@ -335,8 +390,8 @@ deadline (or explicitly be null). This does not renew a token or authorize its u
     "operator": "OWNER_GITHUB_LOGIN", "priorQualificationRunId": "40212030891",
     "evidenceSha256": "SHA256_OF_PRIVATE_REVIEWED_PRIOR_COST_AND_RETENTION_EVIDENCE",
     "reference": "OWNER_REVIEWED_UPPER_BOUND_REFERENCE",
-    "priorSpendUpperBoundUsd": 0,
-    "priorRetentionUpperBoundUsd": 0,
+    "priorSpendUpperBoundUsd": "REPLACE_WITH_REVIEWED_UPPER_BOUND_USD",
+    "priorRetentionUpperBoundUsd": "REPLACE_WITH_REVIEWED_UPPER_BOUND_USD",
     "priorRetentionEndActionReference": "SEPARATE_PRIOR_RETENTION_END_ACTION_AUTHORITY_OR_RECEIPT",
     "priorRetentionEndsAt": "ACTUAL_OR_SEPARATELY_APPROVED_FINITE_END_TIME"
   },
@@ -349,15 +404,25 @@ deadline (or explicitly be null). This does not renew a token or authorize its u
     "manualEndActionApprovalReference": "SEPARATE_MANUAL_END_ACTION_APPROVAL",
     "endAction": "separately_approved_manual_decision_no_automatic_unprotect",
     "decisionBy": "UTC_WITHIN_TWO_HOURS", "endsAt": "UTC_WITHIN_24_HOURS",
-    "estimatedUsd": 0.015
+    "estimatedUsd": "REPLACE_WITH_REVIEWED_RETENTION_ESTIMATE_USD"
   }
 }
 ```
 
-`estimatedSubtotalUsd` is the reviewed known estimate, with `taxAndFeeAllowanceUsd`
-reserved on top for any remaining taxes/fees and uncertainty. Their sum is the
-new-attempt allowance; add both prior upper bounds for the cumulative ceiling.
-The zero prior-spend placeholder is deliberately rejected. No secret belongs in this record. The approver's
+The placeholders above are intentionally non-executable. For post-0021 mode,
+also include outer `"schemaMode": "post-0021"`. Dispatch input
+`plan_pins_json` must contain exactly `backupId`, `backupCompletedAt`, `target`,
+and `targetBytes`, and all four values must match the approved plan. The runner
+rebuilds the plan from the exact provider response and checks the pinned backup
+metadata and complete restore history; a plan hash never replaces live checks.
+
+`estimatedSubtotalUsd` must include the reviewed compute, disk, target-retention,
+and backup/WAL amounts; the component estimate above alone is insufficient.
+Reserve `taxAndFeeAllowanceUsd` on top for remaining taxes/fees and uncertainty.
+Their sum is the new-attempt allowance; add both prior upper bounds for the
+cumulative ceiling. The string placeholders are deliberately rejected until
+replaced with finite, evidence-backed numbers, and unknown prior spend or
+retention must not be represented as zero. No secret belongs in this record. The approver's
 actual GitHub review history must match `manualOperator`; supplying JSON does
 not substitute for normal protected production review. Placeholder zero permit
 values are rejected. Read the active cleanup workflow's numeric ID and next
@@ -463,7 +528,7 @@ After qualification completes, use this operator-controlled sequence:
 1. Verify the successful immutable artifact upload and preserve its exact
    `qualification.json` bytes at
    `docs/evidence/production-cutover/0021-restore-evidence/artifacts/qualification-<run-id>.json`.
-   Commit it with the canonical `6vew80jo0epr.json` record in a same-repository
+   Commit it with the canonical `<backup-id>.json` record in a same-repository
    evidence-only PR descended from the exact qualification source SHA. Preserve
    the original `zw0so7f5jbpu.json` and run-9 qualification/manual-cleanup files
    unchanged. Keep protected main at that qualified SHA through cleanup; reserve exclusive
