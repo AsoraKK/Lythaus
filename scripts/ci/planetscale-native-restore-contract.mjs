@@ -430,12 +430,18 @@ function grantsDiagnostic(rows, pages) {
 
 const providerErrorCodes = new Set(['access_denied', 'permission_denied', 'insufficient_permissions', 'forbidden',
   'unauthorized', 'not_found', 'bad_request', 'invalid_request', 'unprocessable_entity', 'internal_server_error']);
-async function providerFailureDiagnostic(response, method) {
+const providerOperationClass = (path, method) => {
+  if (method !== 'GET') return 'other_provider_operation';
+  if (path === '') return 'database_metadata_read';
+  if (path === '/../service-tokens/self') return 'service_token_metadata_read';
+  return 'other_provider_operation';
+};
+async function providerFailureDiagnostic(response, method, operationClass) {
   const requestIds = ['x-request-id', 'x-planetscale-request-id', 'x-pscale-request-id']
     .map(name => response.headers?.get?.(name)).filter(value => value !== null && value !== undefined);
   const requestId = requestIds.length > 0 && requestIds.every(value => value === requestIds[0])
     && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestIds[0]) ? requestIds[0] : null;
-  const diagnostic = { version: 1, method, httpStatus: response.status, requestId,
+  const diagnostic = { version: 1, method, operationClass, httpStatus: response.status, requestId,
     error: { bodyFormat: 'UNAVAILABLE', code: null } };
   const reader = response.body?.getReader?.();
   if (!reader) return diagnostic;
@@ -506,7 +512,7 @@ export class RestoreApi {
       const error = new RestoreFailure([401, 403].includes(response.status) ? 'provider_access_denied' : 'provider_request_failed',
         method === 'GET' || [400, 401, 403, 404, 409, 422].includes(response.status) ? 'DENIED' : 'UNKNOWN_MUTATION_OUTCOME');
       if (Number.isInteger(response.status) && response.status >= 100 && response.status <= 599) error.httpStatus = response.status;
-      error.providerDiagnostic = await providerFailureDiagnostic(response, method);
+      error.providerDiagnostic = await providerFailureDiagnostic(response, method, providerOperationClass(path, method));
       throw error;
     }
     if (response.status === 204) {

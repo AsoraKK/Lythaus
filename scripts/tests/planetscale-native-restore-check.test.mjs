@@ -867,6 +867,31 @@ test('qualification target absence accepts only the provider GET 404 and uses th
   await assert.rejects(() => api(new Response(null, { status: 204 })).request(path, { absent: true }), /provider_response_invalid/);
   assert.equal((await api(Response.json({ id: 'existing', name: TEST_TARGET })).request(path, { absent: true })).name, TEST_TARGET);
 });
+test('provider failure diagnostics classify only the initial read endpoint and never expose the token or URL', async () => {
+  const requestId = 'abcdefab-1234-4234-8234-abcdefabcdef';
+  const tokenId = 'synthetic-token-id-never-output';
+  for (const [path, operationClass] of [
+    ['', 'database_metadata_read'],
+    ['/../service-tokens/self', 'service_token_metadata_read'],
+    ['/branches/main', 'other_provider_operation'],
+  ]) {
+    const api = new TestRestoreApi(tokenId + ':' + password, async () => Response.json({
+      error: { code: 'not_found', message: password }, token: password,
+      connection: 'postgresql://' + password + '@private.invalid',
+    }, { status: 404, headers: { 'x-request-id': requestId } }));
+    await assert.rejects(() => api.request(path), error => {
+      const diagnostic = error.providerDiagnostic;
+      assert.equal(diagnostic.operationClass, operationClass);
+      assert.equal(diagnostic.method, 'GET');
+      assert.equal(diagnostic.httpStatus, 404);
+      assert.equal(diagnostic.requestId, requestId);
+      assert.deepEqual(diagnostic.error, { bodyFormat: 'JSON_OBJECT', code: 'not_found' });
+      assert.doesNotMatch(JSON.stringify(diagnostic), /synthetic-token-id-never-output|synthetic-secret-never-output|private[.]invalid|https?:|service-tokens|lythaus-core/);
+      return error.code === 'provider_request_failed';
+    });
+  }
+});
+
 test('execution stops before provider reads or mutations when protected-run reconciliation fails', async () => {
   const f = fixture(); f.options.assertMain = async () => { throw new RestoreFailure('prior_execution_runner_or_step_evidence_present'); };
   const report = await runNativeRestore(f.options);
@@ -1083,8 +1108,8 @@ test('reset denial retains numeric status and safe provider correlation without 
     ? api.request(path, options) : request(path, options);
   const report = await runNativeRestore(f.options);
   assert.equal(report.status, 'DENIED'); assert.equal(report.cleanup, 'TARGET_RETAINED_PENDING_REVIEW');
-  assert.deepEqual(report.providerFailure, { version: 1, method: 'POST', httpStatus: 403, requestId,
-    error: { bodyFormat: 'JSON_OBJECT', code: 'permission_denied' } });
+  assert.deepEqual(report.providerFailure, { version: 1, method: 'POST', operationClass: 'other_provider_operation',
+    httpStatus: 403, requestId, error: { bodyFormat: 'JSON_OBJECT', code: 'permission_denied' } });
   assert.deepEqual(report.providerMutations.at(-1).providerDiagnostic, report.providerFailure);
   assert.equal(attempts, 1); assert.deepEqual(report.credentialActions, []);
   assert.doesNotMatch(JSON.stringify(f.checkpoints), /synthetic-secret|private_product_rows|private\.invalid|set-cookie/);
