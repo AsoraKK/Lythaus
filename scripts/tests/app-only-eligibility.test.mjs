@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import {
   REVIEWED_APP_INPUTS,
@@ -38,6 +40,27 @@ function observations() {
 test('reviewed input inventory accepts exact blob, tree, and mode identities', () => {
   assert.doesNotThrow(() => assertReviewedEntries(structuredClone(REVIEWED_APP_INPUTS)));
   assert.ok(Object.isFrozen(REVIEWED_APP_INPUTS.lib));
+});
+
+test('the focused navigation and reload changes match the exact reviewed input identities', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'lythaus-app-only-pins-'));
+  const env = { ...process.env, GIT_INDEX_FILE: path.join(directory, 'index') };
+  const git = (...args) => execFileSync('git', args, { env, encoding: 'utf8' }).trim();
+  try {
+    git('read-tree', 'HEAD');
+    git('add', '--', 'lib/core/config/web_release_reload_gate.dart',
+      'test/core/config/web_release_reload_gate_test.dart', 'scripts/tests/flutter-auth.browser.mjs');
+    const tree = git('write-tree');
+    const entries = git('ls-tree', tree, '--', 'lib', 'test', 'scripts/tests/flutter-auth.browser.mjs');
+    for (const line of entries.split('\n')) {
+      const match = /^(\d+) (\w+) ([a-f0-9]{40})\t(.+)$/.exec(line);
+      assert.ok(match, 'valid staged-tree record');
+      assert.deepEqual([match[1], match[2], match[3]], REVIEWED_APP_INPUTS[match[4]], match[4]);
+    }
+    assert.equal(entries.split('\n').length, 3);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('reviewed root lock changes only follow-redirects to the approved 1.16.2 artifact', () => {

@@ -121,7 +121,8 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
       await target.locator('flt-semantics-placeholder').evaluate(node=>node.click());
     }
     async function openSettingsFromReadyProfile() {
-      await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
+      await page.getByRole('button',{name:'Menu',exact:true}).click();
+      await page.getByRole('button',{name:'Profile',exact:true}).click();
       const settings=page.getByRole('button',{name:'Open settings',exact:true});
       await settings.waitFor();
       if(width<700){

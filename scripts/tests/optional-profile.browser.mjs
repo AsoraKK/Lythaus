@@ -143,7 +143,8 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
       await page.getByRole('button', { name: 'Save profile', exact: true }).waitFor();
     }
     async function ownProfile() {
-      await page.getByRole('button', { name: /^Profile(?:\b|$)/ }).first().click();
+      await page.getByRole('button', { name: 'Menu', exact: true }).click();
+      await page.getByRole('button', { name: 'Profile', exact: true }).click();
       await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ }).waitFor();
     }
     async function shot(state) {
@@ -209,7 +210,8 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await skipPage.getByRole('button', { name: 'Skip and explore', exact: true }).click();
     await skipPage.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
     assert.equal(patches.length, 2, 'Skip must not write profile data');
-    await skipPage.getByRole('button', { name: /^Profile(?:\b|$)/ }).first().click();
+    await skipPage.getByRole('button', { name: 'Menu', exact: true }).click();
+    await skipPage.getByRole('button', { name: 'Profile', exact: true }).click();
     await skipPage.getByRole('button', { name: /^Complete your profile(?:\b|$)/ }).waitFor();
     await shot('skipped');
     assert.equal(errors.length, 0, errors.join('\n'));

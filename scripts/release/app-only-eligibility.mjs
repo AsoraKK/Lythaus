@@ -14,7 +14,7 @@ export const REVIEWED_APP_INPUTS = Object.freeze({
   assets: ['040000', 'tree', 'fb36838c65b1e2467fe5198031db94a3b125215c'],
   'cloudflare/pages-release.sh': ['100644', 'blob', '3f2a7d2e3fe8a39a53531684557768444d4d9070'],
   integration_test: ['040000', 'tree', 'b26618289337c2c20d8e0001b3f86a9fce0b92ce'],
-  lib: ['040000', 'tree', 'c0a15b3e25515f95ccf83f24a89bb0f40634218f'],
+  lib: ['040000', 'tree', '45107f731039265033cc558eb7acbce4e5cae6b8'],
   // PR #1133's reviewed follow-redirects fix updates only its version, registry
   // URL, and integrity in the root lockfile; the test below freezes all other bytes.
   'package-lock.json': ['100644', 'blob', 'c2f497fda82aee9ed291c179748ba5c0b0f7459c'],
@@ -35,13 +35,13 @@ export const REVIEWED_APP_INPUTS = Object.freeze({
   'scripts/tests/auth-request-lifecycle.mjs': ['100644', 'blob', 'e34e36c8222a66cd8ec4a18e11753b567d60a7ff'],
   'scripts/tests/auth-request-lifecycle.test.mjs': ['100644', 'blob', '6f2f758b172726a87ac6843d99823646445d9498'],
   'scripts/tests/app-only-auth.browser.mjs': ['100644', 'blob', '2c8a32662e210f04d0d6684e29bf929eeaef426f'],
-  'scripts/tests/flutter-auth.browser.mjs': ['100644', 'blob', '6f1d58c6f182aab5e6a1870a316adbfe856b9759'],
+  'scripts/tests/flutter-auth.browser.mjs': ['100644', 'blob', 'acb42105796a23b568fe5918136fd343e6adda82'],
   'scripts/tests/flutter-engine-font-fixture.mjs': ['100644', 'blob', '6990ffbd823a3a62cb8ce4385c216480a17fb96d'],
   'scripts/tests/fixtures/flutter-engine-fonts.json': ['100644', 'blob', 'a8864812f31e0b7754f373a140911d43a8cd86a3'],
   'scripts/tests/fresh-owner-read.mjs': ['100644', 'blob', 'bf40b17b79dc23531af23c1066dbf063ecc07cf3'],
   'scripts/tests/fresh-owner-read.test.mjs': ['100644', 'blob', '9196cc1bc9c4a1357fc1c39d3056c6f6789aee75'],
   'scripts/tests/local-auth-browser-server.mjs': ['100644', 'blob', '222c3f2b54c38ee7628a043a2efdb19b705de27c'],
-  test: ['040000', 'tree', 'fcc706fae7d6b86a14606d366296d5f8d8491faa'],
+  test: ['040000', 'tree', '9a2ccfa8ae6ac542ad9d75784bcced989e7814f1'],
   web: ['040000', 'tree', 'e232e4dd862e5ad559e5783f9ba34fbb2453dfd3'],
 });
 for (const identity of Object.values(REVIEWED_APP_INPUTS)) Object.freeze(identity);

@@ -25,6 +25,35 @@ class _Storage implements ContentRecoveryStorage {
 
 void main() {
   test(
+    'a failed focus lookup keeps reload closed until a later safe check',
+    () async {
+      final registry = ContentMutationRegistry()..activate(null);
+      await registry.ready;
+      final bridgeValues = <bool>[];
+      var focusUnavailable = true;
+      final gate = WebReleaseReloadGate(
+        registry: registry,
+        authSessionRevision: () => 0,
+        authLoading: () => false,
+        hasPendingAuthenticatedWork: () => false,
+        postCanSafelyReload: () => true,
+        hasFocusedTextEntry: () {
+          if (focusUnavailable) throw StateError('focus tree is unavailable');
+          return false;
+        },
+        setCanReload: bridgeValues.add,
+      );
+
+      await gate.schedule();
+      expect(bridgeValues, [false]);
+      focusUnavailable = false;
+      await gate.schedule();
+      expect(bridgeValues.last, isTrue);
+      gate.dispose();
+    },
+  );
+
+  test(
     'dirty, focused, auth-loading and pending work close the bridge',
     () async {
       final registry = ContentMutationRegistry()..activate(null);

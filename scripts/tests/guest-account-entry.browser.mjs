@@ -89,28 +89,29 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
     await open();
     await button('Continue as guest').click();
     await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
+    await button('Menu').click();
     await button('Trending').click();
     await text('Trending is not available yet.').waitFor();
     assert.equal(await button('Retry').count(), 0);
     await button('Back').click();
     await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
     for (const [label, tab] of [['Profile', 'profile'], ['Rewards', 'rewards'], ['Create', 'create']]) {
-      if (width < 768 && label !== 'Profile') {
-        await page.getByRole('button', { name: /^Feed(?:\b|$)/ }).click();
-        await button('Account menu').click();
+      if (label === 'Create') {
+        await button('Create').click();
+      } else {
+        await button('Menu').click();
+        await button(label).click();
       }
-      await page.getByRole('button', { name: new RegExp('^' + label + '(?:\\b|$)') }).first().click();
       await waitPath('/?tab=' + tab);
       await cancelEntry('/?tab=' + tab);
     }
     if (width === 1440) {
+      await button('Menu').click();
       await button('Settings').click();
       await text('Notifications').click();
       await text('Sign in to view your notifications.').waitFor();
       await cancelEntry('/notifications');
       await button('Back').click();
-    } else {
-      await page.getByRole('button', { name: /^Feed(?:\b|$)/ }).click();
     }
     await button('Search').click();
     const query = page.getByRole('textbox', { name: 'Search tags', exact: true });
