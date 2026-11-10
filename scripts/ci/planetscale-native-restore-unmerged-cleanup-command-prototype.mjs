@@ -3,7 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { RestoreFailure, requireThat } from './planetscale-native-restore-contract.mjs';
-import { readTrackedEvidence, sha256, decimal } from './planetscale-native-restore-evidence.mjs';
+import { readTrackedEvidence, qualificationRestorePlan, recordPath, sha256, decimal } from './planetscale-native-restore-evidence.mjs';
 import { assertDownloadedQualification, assertUploadedArtifact, pendingReceipt, pendingName,
   provePendingUpload, deleteReviewedTarget, reconcileReviewedTarget } from './planetscale-native-restore-cleanup.mjs';
 import { CLEANUP_PROTOTYPE_STATUS, proveUnmergedCleanupContext } from './planetscale-native-restore-unmerged-cleanup-prototype.mjs';
@@ -59,9 +59,12 @@ function archiveData(bytes, filename, directory) {
 }
 
 function binding(env, evidence) {
+  const plan = qualificationRestorePlan(evidence.report, env.QUALIFICATION_RUN_ID);
   return { mode: env.CLEANUP_MODE, cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID,
     evidenceSha: env.EVIDENCE_SHA, qualificationRunId: evidence.report.runId,
     recordSha256: evidence.record.recordSha256, qualificationSha256: evidence.record.evidenceSha256,
+    sourceBranchId: plan.sourceBranchId, backupId: plan.backup.id, targetName: plan.target.name,
+    planSha256: evidence.report.planSha256, recordPath: recordPath(plan),
     targetId: evidence.report.createdTargetId, artifactId: String(evidence.record.nativeRestoreCleanup.artifactId),
     archiveSha256: evidence.record.nativeRestoreCleanup.artifactArchiveSha256 };
 }
@@ -102,6 +105,8 @@ export async function dispatchUnmergedCleanupStage({ stage, argv = [], env, tran
   const reconcile = env.CLEANUP_MODE === 'reconcile';
   const context = await proveUnmergedCleanupContext({ env, evidence, evidenceHead, now: now(),
     read: transports.read, assertMain, reconcile });
+  context.plan = qualificationRestorePlan(evidence.report, env.QUALIFICATION_RUN_ID);
+  transports.bindPlan?.(context.plan);
   const directory = env.EVIDENCE_DIR;
   privateDirectory(directory);
   const expected = binding(env, evidence);

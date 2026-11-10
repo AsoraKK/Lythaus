@@ -8,6 +8,10 @@ on:
         description: Exact reviewed current protected main commit
         required: true
         type: string
+      plan_pins_json:
+        description: Exact backup ID, completion timestamp, target name and storage bytes; no automatic selection
+        required: true
+        type: string
       execute:
         description: Restore and target-only qualification; retains target for separate reviewed cleanup
         required: true
@@ -45,6 +49,7 @@ jobs:
       REF_PROTECTED: ${{ github.ref_protected }}
       RESTORE_CHECK_EXECUTE: ${{ inputs.execute }}
       RESTORE_CHECK_SCHEMA_MODE: ${{ inputs.schema_mode }}
+      RESTORE_CHECK_PLAN_PINS_JSON: ${{ inputs.plan_pins_json }}
       RESTORE_CHECK_APPROVAL_JSON: ${{ inputs.approval_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -100,7 +105,7 @@ jobs:
         run: |
           report="$EVIDENCE_DIR/qualification.json"
           if [[ -s "$report" ]]; then
-            jq '{sourceMainSha,schemaMode,status,state,qualificationOutcome,blockers,backupId,targetName,createdTargetId,cleanup,qualificationStopAt,escalationAt,reviewByAt,cleanupStartByAt,cleanupDeadlineAt,costEscalationRequired,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
+            jq '{sourceMainSha,schemaMode,planSha256,targetStorageBytes,status,state,qualificationOutcome,blockers,backupId,targetName,createdTargetId,cleanup,qualificationStopAt,escalationAt,reviewByAt,cleanupStartByAt,cleanupDeadlineAt,costEscalationRequired,recoveryAcceptance}' "$report" >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload immutable qualification evidence
         id: qualification_artifact

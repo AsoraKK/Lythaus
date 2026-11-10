@@ -56,7 +56,7 @@ function production(t, outcome = 'PASSED', options = {}) {
       return Response.json({ error: 'private provider response' }, { status: 503 });
     }
     const row = await f.transports.api.request(suffix, { method: request.method });
-    if (fault.finishReadback && suffix === `/branches/${RESTORE.target}`) f.setClock(start + 120 * 60000);
+    if (fault.finishReadback && suffix === `/branches/${f.report.plan.target.name}`) f.setClock(start + 120 * 60000);
     if (request.method === 'DELETE') return new Response(null, { status: 204 });
     return row === null ? new Response(null, { status: 404 }) : Response.json(row);
   };

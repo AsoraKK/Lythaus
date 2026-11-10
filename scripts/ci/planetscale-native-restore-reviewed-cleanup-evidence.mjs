@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { RESTORE, requireThat, RestoreFailure } from './planetscale-native-restore-contract.mjs';
 import { githubReadiness } from './planetscale-native-restore-check.mjs';
 import { githubRead, validateCleanupEvidence, QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW,
-  RECORD_PATH, artifactPath, decimal, sha256 } from './planetscale-native-restore-evidence.mjs';
+  recordPath, artifactPath, decimal, sha256 } from './planetscale-native-restore-evidence.mjs';
 import { assertUploadedArtifact } from './planetscale-native-restore-cleanup.mjs';
 
 export const REVIEWED_CLEANUP_POLICY_STATUS = 'REVIEWED_EVIDENCE_REQUIRES_SEPARATE_ACTION_APPROVAL';
@@ -99,7 +99,7 @@ export async function proveReviewedCleanupContext({ env, evidence, evidenceHead,
     && decimal(env.EVIDENCE_PR) && decimal(env.REVIEW_COMMENT_ID) && decimal(env.QUALIFICATION_RUN_ID)
     && decimal(env.GITHUB_RUN_ID) && decimal(env.GITHUB_RUN_NUMBER) && env.GITHUB_RUN_ATTEMPT === '1',
   'reviewed_cleanup_execution_context_invalid');
-  const { intent, creation, deadline } = validateCleanupEvidence({ ...evidence,
+  const { intent, creation, deadline, plan } = validateCleanupEvidence({ ...evidence,
     qualificationRunId: env.QUALIFICATION_RUN_ID, now, reconcile });
   if (reconcile) {
     const lineage = await read(`/compare/${report.sourceMainSha}...${env.RELEASE_SHA}`);
@@ -115,14 +115,15 @@ export async function proveReviewedCleanupContext({ env, evidence, evidenceHead,
   const pr = await read(`/pulls/${env.EVIDENCE_PR}`);
   assertPinnedPr(pr, env, report, reconcile);
   const comparison = await read(`/compare/${report.sourceMainSha}...${env.EVIDENCE_SHA}`);
-  const paths = [RECORD_PATH, artifactPath(report.runId)];
+  const canonicalRecordPath = recordPath(plan);
+  const paths = [canonicalRecordPath, artifactPath(report.runId)];
   requireThat(comparison.merge_base_commit?.sha === report.sourceMainSha && comparison.status === 'ahead'
     && comparison.ahead_by >= 1 && Array.isArray(comparison.files) && comparison.files.length === 2
     && new Set(comparison.files.map(file => file.filename)).size === 2
     && comparison.files.every(file => paths.includes(file.filename) && ['added', 'modified'].includes(file.status)),
   'reviewed_pr_must_contain_only_canonical_data');
   await assertRegularDataFiles(env.EVIDENCE_SHA, comparison.files, read);
-  const recordData = await readBlob(comparison.files.find(file => file.filename === RECORD_PATH), read);
+  const recordData = await readBlob(comparison.files.find(file => file.filename === canonicalRecordPath), read);
   const qualificationData = await readBlob(comparison.files.find(file => file.filename === artifactPath(report.runId)), read);
   let parsedRecord, parsedReport;
   try { parsedRecord = JSON.parse(recordData); parsedReport = JSON.parse(qualificationData); }
@@ -174,6 +175,6 @@ export async function proveReviewedCleanupContext({ env, evidence, evidenceHead,
     assertPinnedComment(await read(`/issues/comments/${env.REVIEW_COMMENT_ID}`), env, record, report);
   };
   await assertEvidenceUnchanged();
-  return { intent, creation, deadline, report, record, current, reviewer: record.review.reviewedBy,
+  return { intent, creation, deadline, plan, report, record, current, reviewer: record.review.reviewedBy,
     evidence, assertEvidenceUnchanged, policyStatus: REVIEWED_CLEANUP_POLICY_STATUS };
 }

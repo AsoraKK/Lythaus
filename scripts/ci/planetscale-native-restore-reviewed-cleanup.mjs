@@ -3,7 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { RestoreFailure, requireThat, failureCode, RestoreCleanupApi } from './planetscale-native-restore-contract.mjs';
-import { readTrackedEvidence, sha256, decimal, githubRead } from './planetscale-native-restore-evidence.mjs';
+import { readTrackedEvidence, qualificationRestorePlan, recordPath, sha256, decimal, githubRead } from './planetscale-native-restore-evidence.mjs';
 import { assertDownloadedQualification, assertUploadedArtifact, pendingReceipt, pendingName,
   provePendingUpload, deleteReviewedTarget, reconcileReviewedTarget } from './planetscale-native-restore-cleanup.mjs';
 import { REVIEWED_CLEANUP_POLICY_STATUS, proveReviewedCleanupContext } from './planetscale-native-restore-reviewed-cleanup-evidence.mjs';
@@ -60,9 +60,12 @@ function archiveData(bytes, filename, directory) {
 }
 
 function binding(env, evidence) {
+  const plan = qualificationRestorePlan(evidence.report, env.QUALIFICATION_RUN_ID);
   return { mode: env.CLEANUP_MODE, cleanupSha: env.RELEASE_SHA, cleanupRunId: env.GITHUB_RUN_ID,
     evidenceSha: env.EVIDENCE_SHA, qualificationRunId: evidence.report.runId,
     recordSha256: evidence.record.recordSha256, qualificationSha256: evidence.record.evidenceSha256,
+    sourceBranchId: plan.sourceBranchId, backupId: plan.backup.id, targetName: plan.target.name,
+    planSha256: evidence.report.planSha256, recordPath: recordPath(plan),
     targetId: evidence.report.createdTargetId, artifactId: String(evidence.record.nativeRestoreCleanup.artifactId),
     archiveSha256: evidence.record.nativeRestoreCleanup.artifactArchiveSha256 };
 }
@@ -103,6 +106,7 @@ export async function dispatchReviewedCleanupStage({ stage, argv = [], env, tran
   const reconcile = env.CLEANUP_MODE === 'reconcile';
   const context = await proveReviewedCleanupContext({ env, evidence, evidenceHead, now: now(),
     read: transports.read, assertMain, reconcile });
+  transports.bindPlan?.(context.plan);
   const directory = env.EVIDENCE_DIR;
   privateDirectory(directory);
   const expected = binding(env, evidence);
@@ -170,13 +174,21 @@ export async function dispatchReviewedCleanupStage({ stage, argv = [], env, tran
 }
 
 export function reviewedCleanupTransports(env, stage, fetchImpl = fetch) {
-  let provider;
+  let provider, originalPlan;
+  const bindPlan = plan => {
+    // Binding happens only after the original qualification and reviewed evidence are proved.
+    recordPath(plan);
+    requireThat(originalPlan === undefined || JSON.stringify(originalPlan) === JSON.stringify(plan),
+      'reviewed_provider_plan_changed');
+    originalPlan = plan;
+  };
   const api = () => {
     requireThat(['delete', 'reconcile'].includes(stage), 'reviewed_provider_access_not_permitted_in_stage');
-    provider ??= new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN, fetchImpl);
+    requireThat(originalPlan !== undefined, 'reviewed_original_qualification_plan_required');
+    provider ??= new RestoreCleanupApi(env.PLANETSCALE_RESTORE_API_TOKEN, fetchImpl, originalPlan);
     return provider;
   };
-  return { read: suffix => githubRead(env, suffix, fetchImpl), assertMain: () => githubReadiness(env, fetchImpl),
+  return { bindPlan, read: suffix => githubRead(env, suffix, fetchImpl), assertMain: () => githubReadiness(env, fetchImpl),
     downloadArtifact: githubArtifactDownloader(env, fetchImpl),
     api: { request: (...args) => api().request(...args), list: (...args) => api().list(...args),
       authority: (...args) => api().authority(...args) } };

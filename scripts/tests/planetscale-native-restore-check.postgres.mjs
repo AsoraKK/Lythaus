@@ -6,8 +6,17 @@ import pg from 'pg';
 import { publicationControlTarget } from '../ci/run-publication-pg17.mjs';
 import { loadApprovedMigrations } from '../ci/planetscale-migration-manifest.mjs';
 import { RESTORE, ROLE_NAMES } from '../ci/planetscale-native-restore-contract.mjs';
+import { RESTORE_PLAN_SCHEMA } from '../ci/planetscale-native-restore-plan.mjs';
 import { collectRestoreCatalog, inspectExtensionAuthority, installMissingExtensions } from '../ci/planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from '../ci/planetscale-native-restore-smoke.mjs';
+
+const TEST_RESTORE_PLAN = Object.freeze({ schemaVersion: RESTORE_PLAN_SCHEMA, releaseSha: 'a'.repeat(40),
+  schemaMode: 'pre-0021', sourceBranchId: RESTORE.sourceId,
+  backup: Object.freeze({ id: 'syntheticrestore', completedAt: '2026-11-09T02:51:08.741Z',
+    expiresAt: '2026-11-11T02:51:08.741Z', pvcBytes: RESTORE.bytes, uncompressedBytes: 1,
+    protected: true, restoredBranches: Object.freeze([]) }),
+  target: Object.freeze({ name: 'lythaus-0021-native-restore-check-20261109-01',
+    minimumStorageBytes: RESTORE.bytes, maximumStorageBytes: RESTORE.bytes }) });
 
 test('disposable PG17 verifies actual catalog SQL, all 17 restored privileges and actual Worker read-only readiness routes', { timeout: 120000 }, async () => {
   const controlUrl = publicationControlTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '');
@@ -112,13 +121,13 @@ test('disposable PG17 verifies actual catalog SQL, all 17 restored privileges an
       const mf = new Miniflare(convertV4MiniflareOptions(options));
       return mf;
     };
-    const result = await runRestoreSmoke(urls, branch, baseline, scripts, targetRuntime);
+    const result = await runRestoreSmoke(urls, branch, baseline, scripts, targetRuntime, undefined, TEST_RESTORE_PLAN);
     assert.equal(result.services, 3); assert.equal(result.distinctRoles, 4); assert.equal(result.externalHttpRequests, 0);
     const version = '0020_auth_recovery_delivery.sql';
     const checksum = (await targetClient.query('SELECT checksum FROM system.schema_migrations WHERE version=$1', [version])).rows[0].checksum;
     await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', ['target-only-readiness-canary', version]);
     assert.deepEqual(await collectRestoreCatalog(client), baseline, 'source remains healthy while only the target is broken');
-    await assert.rejects(() => runRestoreSmoke(urls, branch, baseline, scripts, targetRuntime), /isolated_application_(?:public_contract|readiness)_failed/);
+    await assert.rejects(() => runRestoreSmoke(urls, branch, baseline, scripts, targetRuntime, undefined, TEST_RESTORE_PLAN), /isolated_application_(?:public_contract|readiness)_failed/);
     await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', [checksum, version]);
     assert.deepEqual(await collectRestoreCatalog(targetClient), baseline);
     const staged = loadApprovedMigrations().migrations.at(-1);
@@ -176,13 +185,13 @@ test('disposable PG17 verifies actual catalog SQL, all 17 restored privileges an
     assert.equal(postSource.schemaVersion, staged.name);
     assert.equal(postSource.schemaFingerprint, '7fdff3474c152317336d2201626b3b69aac79387264e6481576e103f82e8342d');
     assert.deepEqual(await collectRestoreCatalog(targetClient, 'post-0021'), postSource);
-    const postSmoke = await runRestoreSmoke(urls, branch, postSource, scripts, targetRuntime);
+    const postSmoke = await runRestoreSmoke(urls, branch, postSource, scripts, targetRuntime, undefined, TEST_RESTORE_PLAN);
     assert.equal(postSmoke.services, 3); assert.equal(postSmoke.distinctRoles, 4); assert.equal(postSmoke.externalHttpRequests, 0);
     await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', ['post-target-only-canary', staged.name]);
     try {
       assert.deepEqual(await collectRestoreCatalog(client, 'post-0021'), postSource,
         'post-0021 source remains healthy while only the target is broken');
-      await assert.rejects(() => runRestoreSmoke(urls, branch, postSource, scripts, targetRuntime),
+      await assert.rejects(() => runRestoreSmoke(urls, branch, postSource, scripts, targetRuntime, undefined, TEST_RESTORE_PLAN),
         /isolated_application_(?:public_contract|readiness)_failed/);
     } finally {
       await targetClient.query('UPDATE system.schema_migrations SET checksum=$1 WHERE version=$2', [staged.checksum, staged.name]);

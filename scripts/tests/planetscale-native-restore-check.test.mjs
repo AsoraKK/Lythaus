@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import test from 'node:test';
 import fs from 'node:fs';
-import { RESTORE, ROLE_NAMES, ACTIONS, CREATE_TARGET_BODY, ROLE_SQL_SECURITY_BASELINE,
+import { RESTORE, ROLE_NAMES, ACTIONS, createTargetBody, ROLE_SQL_SECURITY_BASELINE,
   ROLE_SQL_MEMBERSHIP_BASELINE, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
   checkedRoles, assertRestoreRoleSqlBaseline, apiBase, requireResetPermissions } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore, githubReadiness, assertPinnedManualCleanupProof } from '../ci/planetscale-native-restore-check.mjs';
@@ -13,13 +13,26 @@ import { checkSetupWindow, DEPENDENCY_SETUP_RESERVE_MS } from '../ci/planetscale
 import { expectedMigrationPrefix } from '../ci/planetscale-migration-manifest.mjs';
 import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
 import { syntheticRun12Metadata } from './planetscale-native-restore-run12-fixture.mjs';
+import { TEST_RELEASE_SHA, TEST_BACKUP_ID, TEST_BACKUP_COMPLETED_AT, TEST_TARGET, TEST_TARGET_BYTES,
+  TEST_PINS, TEST_PLAN, testBackup, testPlan, testPlanSha } from './planetscale-native-restore-test-plan.mjs';
 
-const instant = Date.parse(RESTORE.backupCompletedAt) + 90 * 60000;
+const instant = Date.parse(TEST_BACKUP_COMPLETED_AT) + 90 * 60000;
 const time = minutes => new Date(instant + minutes * 60000).toISOString();
-const sha = 'a'.repeat(40), newId = 'newrestore123', password = 'synthetic-secret-never-output';
-const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GITHUB_RUN_ID: '12345',
+const sha = TEST_RELEASE_SHA, newId = 'newrestore123', password = 'synthetic-secret-never-output';
+const backup = testBackup;
+const planFor = (pins = TEST_PINS, snapshot = backup(), schemaMode = 'pre-0021') => testPlan({ pins, backup: snapshot, schemaMode, releaseSha: sha });
+class TestRestoreApi extends RestoreApi {
+  constructor(token, fetchImpl = fetch, capability) { super(token, fetchImpl, capability, TEST_PLAN); }
+}
+class TestRestoreCleanupApi extends RestoreCleanupApi {
+  constructor(token, fetchImpl = fetch) { super(token, fetchImpl, TEST_PLAN); }
+}
+const environment = () => {
+  const plan = planFor();
+  return { RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GITHUB_RUN_ID: '12345',
+  RESTORE_CHECK_PLAN_PINS_JSON: JSON.stringify(TEST_PINS),
   PLANETSCALE_SCHEMA_READ_DATABASE_URL: `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:${password}@aws.connect.psdb.cloud/postgres?sslmode=verify-full`,
-  RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, backupId: RESTORE.backupId, target: RESTORE.target,
+  RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, plan, planSha256: testPlanSha(plan),
     maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
     reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: time(240),
     cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
@@ -29,19 +42,25 @@ const environment = () => ({ RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GI
     reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: time(-60), availableUntil: time(240) },
     retention: { operator: 'owner', reference: 'finite-retention-approval', manualEndActionApprovalReference: 'manual-decision-approval',
       endAction: 'separately_approved_manual_decision_no_automatic_unprotect', endsAt: time(23 * 60),
-      decisionBy: time(60), estimatedUsd: 0.01 } }) });
+      decisionBy: time(60), estimatedUsd: 0.01 } }) };
+};
+function setApprovedSchemaMode(env, schemaMode) {
+  env.RESTORE_CHECK_SCHEMA_MODE = schemaMode;
+  const record = JSON.parse(env.RESTORE_CHECK_APPROVAL_JSON), plan = planFor(TEST_PINS, backup(), schemaMode);
+  record.plan = plan;
+  record.planSha256 = testPlanSha(plan, schemaMode);
+  if (schemaMode === 'post-0021') record.schemaMode = schemaMode; else delete record.schemaMode;
+  env.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+}
 const roleRows = (id = newId) => ROLE_NAMES.map((name, index) => ({ id: `role${index}`, base_username: name,
   access_host_url: 'aws.connect.psdb.cloud',
   username: `${name}.${id}`, database_name: 'postgres', ready: true, expired: false, deleted_at: null, disabled_at: null,
   dropped_at: null, expires_at: null, with_replication: name === RESTORE.setup, inherited_roles: ['pg_read_all_settings'],
-  branch: { id, name: id === RESTORE.sourceId ? 'main' : RESTORE.target, deleted_at: null } }));
-const target = () => ({ id: newId, name: RESTORE.target, created_at: time(0), deleted_at: null,
+  branch: { id, name: id === RESTORE.sourceId ? 'main' : TEST_TARGET, deleted_at: null } }));
+const target = () => ({ id: newId, name: TEST_TARGET, created_at: time(0), deleted_at: null,
   default: false, production: true, kind: 'postgresql', restored_from_branch: { id: RESTORE.sourceId }, deletion_protected: false,
   cluster_name: RESTORE.cluster, cluster_architecture: 'aarch64', region: { slug: RESTORE.region }, replicas: 0,
-  minimum_storage_bytes: RESTORE.bytes, maximum_storage_bytes: RESTORE.bytes, ready: true, state: 'ready', frozen: false });
-const backup = () => ({ id: RESTORE.backupId, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
-  state: 'success', deleted_at: null, protected: true, completed_at: RESTORE.backupCompletedAt,
-  expires_at: time(48 * 60), pvc_size: RESTORE.bytes, uncompressed_size: 53237514, restored_branches: [] });
+  minimum_storage_bytes: TEST_TARGET_BYTES, maximum_storage_bytes: TEST_TARGET_BYTES, ready: true, state: 'ready', frozen: false });
 const extensionSpecifications = () => ['pg_trgm','pgcrypto','unaccent'].map(extname => ({ extname, extversion: '1.0',
   schema: 'public', owner: 'postgres', extrelocatable: true }));
 const extensionPlanRows = (missing = ['unaccent']) => extensionSpecifications().map(row => ({ ...row,
@@ -52,8 +71,8 @@ const baseline = () => ({ catalogSha256: 'b'.repeat(64), schemaFingerprint: 'c'.
   schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: 3,
   extensionSpecifications: extensionSpecifications() });
 
-function fixture(mode = '') {
-  const calls = [], checkpoints = [], b = backup(); let created = false, resets = 0, branchInventories = 0, clock = instant;
+function fixture(mode = '', backupValue = backup()) {
+  const calls = [], checkpoints = [], b = backupValue; let created = false, resets = 0, branchInventories = 0, clock = instant;
   const api = {
     authority: async () => { calls.push('authority'); if (mode === 'authority_denied') throw new RestoreFailure('provider_access_denied', 'DENIED'); },
     list: async path => {
@@ -74,11 +93,11 @@ function fixture(mode = '') {
       assert.notEqual(method, 'PATCH', 'qualification must never change backup protection');
       assert.notEqual(method, 'DELETE', 'qualification must never delete on any path');
       if (method === 'POST' && path === '/branches') {
-        assert.equal(options.body.backup_id, RESTORE.backupId); assert.equal(options.body.storage.maximum_storage_bytes, RESTORE.bytes);
+        assert.equal(options.body.backup_id, TEST_BACKUP_ID); assert.equal(options.body.storage.maximum_storage_bytes, RESTORE.bytes);
         assert.equal(Object.hasOwn(options.body, 'restore_point'), false);
         assert.equal(options.body.create_database_if_missing, false); created = true;
         if (mode === 'unknown_create') throw new RestoreFailure('provider_transport_failed', 'UNKNOWN_MUTATION_OUTCOME');
-        b.restored_branches = [{ id: newId, name: RESTORE.target }];
+        b.restored_branches = [{ id: newId, name: TEST_TARGET, deleted_at: null }];
         return { ...target(), ...(mode === 'wrong_config' ? { replicas: 2 } : {}) };
       }
       if (method === 'POST' && path.endsWith('/reset')) {
@@ -88,15 +107,15 @@ function fixture(mode = '') {
         return { ...row, password, access_host_url: 'aws.connect.psdb.cloud' };
       }
       if (path === '/branches/main') return { id: RESTORE.sourceId, name: 'main', kind: 'postgresql', default: true, deleted_at: null, ready: true };
-      if (path.endsWith(`/backups/${RESTORE.backupId}`)) {
+      if (path.endsWith(`/backups/${TEST_BACKUP_ID}`)) {
         if (mode === 'unprotected') b.protected = false;
         if (mode === 'stale') b.completed_at = time(-36 * 60);
-        if (mode === 'completion_mismatch') b.completed_at = new Date(Date.parse(RESTORE.backupCompletedAt) + 60000).toISOString();
-        if (mode === 'binding_mismatch' && created) b.restored_branches = [{ id: 'other', name: RESTORE.target }];
-        if (mode === 'backup_target_history') b.restored_branches = [{ id: 'oldrestore', name: RESTORE.target }];
+        if (mode === 'completion_mismatch') b.completed_at = new Date(Date.parse(TEST_BACKUP_COMPLETED_AT) + 60000).toISOString();
+        if (mode === 'binding_mismatch' && created) b.restored_branches = [{ id: 'other', name: TEST_TARGET, deleted_at: null }];
+        if (mode === 'backup_target_history') b.restored_branches = [{ id: 'oldrestore', name: TEST_TARGET, deleted_at: null }];
         return b;
       }
-      if (path === `/branches/${RESTORE.target}`) {
+      if (path === `/branches/${TEST_TARGET}`) {
         if (!created && options.absent === true) {
           if (mode === 'direct_target_present') return target();
           if (mode === 'direct_target_error') throw new RestoreFailure('provider_request_failed');
@@ -124,6 +143,31 @@ function fixture(mode = '') {
   return { calls, checkpoints, options, setNow: value => { clock = value; } };
 }
 
+test('fresh inventory candidate fits 32 GiB but is blocked until protected', async () => {
+  assert.equal(TEST_BACKUP_ID, 'muprxxetwfet');
+  assert.equal(TEST_BACKUP_COMPLETED_AT, '2026-11-09T02:51:08.741Z');
+  assert.equal(RESTORE.bytes, 34359738368);
+  assert.equal(createTargetBody(TEST_PLAN).backup_id, TEST_BACKUP_ID);
+  assert.equal(createTargetBody(TEST_PLAN).storage.minimum_storage_bytes, 34359738368);
+  assert.equal(createTargetBody(TEST_PLAN).storage.maximum_storage_bytes, 34359738368);
+  const candidate = { ...backup(), protected: false, expires_at: '2026-11-11T02:49:03.258Z' };
+  assert.equal(candidate.pvc_size, 27917287424);
+  assert.equal(candidate.uncompressed_size, 53352281);
+  assert.equal(candidate.expires_at, '2026-11-11T02:49:03.258Z');
+  assert.ok(candidate.pvc_size > 21474836480, 'the old 20-GiB target cannot fit this snapshot');
+  const candidatePlan = planFor(TEST_PINS, candidate);
+  assert.doesNotThrow(() => checkBackup(candidate, instant, candidatePlan, { requireProtected: false }));
+  assert.throws(() => checkBackup({ ...candidate, pvc_size: 34359738369 }, instant, candidatePlan, { requireProtected: false }), /restore_plan_target_too_small/);
+  assert.throws(() => checkBackup({ ...candidate, uncompressed_size: 34359738369 }, instant, candidatePlan, { requireProtected: false }), /restore_plan_target_too_small/);
+  assert.throws(() => checkBackup({ ...candidate, id: '6vew80jo0epr' }, instant, candidatePlan, { requireProtected: false }), /restore_plan_live_backup_mismatch/);
+  const f = fixture('unprotected', candidate); f.options.environment.RESTORE_CHECK_EXECUTE = 'false';
+  f.options.environment.RESTORE_CHECK_PLAN_PINS_JSON = JSON.stringify(TEST_PINS);
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('protected_backup_with_finite_retention_plan_is_manual_prerequisite'));
+  assert.equal(report.providerMutations.length, 0);
+  assert.equal(f.calls.filter(value => /^(POST|PATCH|DELETE) /.test(value)).length, 0);
+});
+
 test('qualification restores the specified backup snapshot, exercises five copied credentials and retains target for review', async () => {
   const f = fixture(); f.options.assertMain = async () => ({ executionHistoryReconciliation: {
     status: 'PINNED_PRE_RUNNER_CANCELLATION_RECONCILED', runId: '40184823787' } });
@@ -135,15 +179,24 @@ test('qualification restores the specified backup snapshot, exercises five copie
   assert.equal(report.expectedTargetProduction, true); assert.equal(report.creation.production, true);
   assert.equal(report.backup.restoreMode, 'SPECIFIED_BACKUP_SNAPSHOT');
   assert.deepEqual(report.executionHistoryReconciliation, { status: 'PINNED_PRE_RUNNER_CANCELLATION_RECONCILED', runId: '40184823787',
-    targetReconciliation: { databaseId: RESTORE.databaseId, sourceBranchId: RESTORE.sourceId, backupId: RESTORE.backupId,
-      targetName: RESTORE.target, directGetReturnedNotFound: true,
+    targetReconciliation: { databaseId: RESTORE.databaseId, sourceBranchId: RESTORE.sourceId, backupId: TEST_BACKUP_ID,
+      targetName: TEST_TARGET, directGetReturnedNotFound: true,
       completeBranchInventoryExcludedTarget: true, backupRestoreHistoryExcludedTarget: true,
       checkedAt: new Date(instant).toISOString() } });
   assert.equal(report.credentialActions.length, 5); assert.equal(report.sourceBaseline.approvedPrivilegeChecks, 17);
   assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED'); assert.equal(report.deploymentAuthorized, false);
+  assert.equal(report.cost.knownTwoHourComputeAndDiskEstimateUsd, 0.023971114);
+  assert.equal(report.cost.knownPriceInputs.computeMonthlyUsd, 5);
+  assert.equal(report.cost.knownPriceInputs.storageRateUsdPerGbMonth, 0.149);
+  assert.equal(report.cost.targetDailyKnownComputeAndDiskRunRateUsd, 0.287653367);
+  assert.equal(report.cost.targetMonthlyKnownComputeAndDiskRunRateUsd, 8.629601017);
+  assert.equal(report.cost.backupRetentionAndWalEstimateRequired, true);
+  assert.equal(report.cost.liveQuoteRequiredBeforeDispatch, true);
+  assert.deepEqual(report.cost.unpricedCostDrivers, ['retained_target_beyond_two_hour_exercise',
+    'backup_and_wal_protection', 'taxes_and_fees', 'egress_if_applicable']);
   assert.equal(f.calls.filter(value => value.startsWith('POST /branches')).length, 6);
   assert.equal(f.calls.filter(value => /^(DELETE|PATCH)/.test(value)).length, 0);
-  assert.ok(f.calls.indexOf('extension_authority') < f.calls.indexOf(`POST /branches/${RESTORE.target}/roles/role1/reset`));
+  assert.ok(f.calls.indexOf('extension_authority') < f.calls.indexOf(`POST /branches/${TEST_TARGET}/roles/role1/reset`));
   assert.equal(JSON.stringify(f.checkpoints).includes(password), false);
   assert.doesNotMatch(JSON.stringify(f.checkpoints), /connectionString|postgresql:\/\/|access_host_url/);
 });
@@ -208,9 +261,7 @@ test('synthetic post-0021 catalog rejects ledger drift, incomplete objects and r
 
 test('post-0021 workflow mode is explicitly approved and reaches every catalog and smoke stage', async () => {
   const f = fixture(), seen = [];
-  f.options.environment.RESTORE_CHECK_SCHEMA_MODE = 'post-0021';
-  const approval = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
-  approval.schemaMode = 'post-0021'; f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(approval);
+  setApprovedSchemaMode(f.options.environment, 'post-0021');
   f.options.readSession = async (_raw, branchId, _role, work) => work({ branchId });
   f.options.readCatalog = async (client, mode) => {
     seen.push([client.branchId, mode]); return { ...baseline(), schemaVersion: '0021_media_quarantine_cleanup.sql' };
@@ -234,7 +285,7 @@ test('post-0021 workflow mode is explicitly approved and reaches every catalog a
 
 test('wrong mode, unapproved mode and wrong source schema stop before provider calls or creation', async () => {
   for (const [mode, approved, expected] of [['bad', undefined, 'restore_schema_mode_invalid'],
-    ['post-0021', undefined, 'approval_record_fields_invalid'], ['post-0021', 'pre-0021', 'approval_scope_mismatch'],
+    ['post-0021', undefined, 'restore_plan_identity_invalid'], ['post-0021', 'pre-0021', 'restore_plan_identity_invalid'],
     ['pre-0021', 'post-0021', 'approval_record_fields_invalid']]) {
     const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
     f.options.environment.RESTORE_CHECK_SCHEMA_MODE = mode;
@@ -243,9 +294,7 @@ test('wrong mode, unapproved mode and wrong source schema stop before provider c
     const report = await runNativeRestore(f.options);
     assert.deepEqual(report.blockers, [expected]); assert.deepEqual(f.calls, []); assert.deepEqual(report.providerMutations, []);
   }
-  const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
-  f.options.environment.RESTORE_CHECK_SCHEMA_MODE = 'post-0021'; record.schemaMode = 'post-0021';
-  f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  const f = fixture(); setApprovedSchemaMode(f.options.environment, 'post-0021');
   const report = await runNativeRestore(f.options);
   assert.deepEqual(report.blockers, ['source_restore_schema_mode_mismatch']);
   assert.equal(report.createdTargetId, null); assert.deepEqual(report.providerMutations, []);
@@ -259,9 +308,7 @@ test('wrong mode, unapproved mode and wrong source schema stop before provider c
 
 test('post-0021 target and final source schema drift prevent qualification', async () => {
   for (const drift of ['target', 'source_readback']) {
-    const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
-    f.options.environment.RESTORE_CHECK_SCHEMA_MODE = 'post-0021'; record.schemaMode = 'post-0021';
-    f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+    const f = fixture(); setApprovedSchemaMode(f.options.environment, 'post-0021');
     let sourceReads = 0;
     f.options.readSession = async (_raw, branchId, _role, work) => work({ branchId });
     f.options.readCatalog = async (client, mode) => {
@@ -350,7 +397,7 @@ test('readiness smoke uses sequential Miniflare groups with unique Hyperdrive pr
   const branchId = newId;
   const connections = Object.fromEntries(['runtime','admin','jobs','privacy'].map(name => [name,
     restoredConnection({ ...roleRows().find(row => row.base_username === RESTORE[name]), password,
-      access_host_url: 'aws.connect.psdb.cloud' }, branchId, RESTORE[name])]));
+      access_host_url: 'aws.connect.psdb.cloud' }, branchId, RESTORE[name], undefined, TEST_PLAN)]));
   const groups = []; let active = 0;
   const runtimeFactory = options => {
     assert.equal(active, 0, 'Miniflare groups must not overlap');
@@ -362,7 +409,7 @@ test('readiness smoke uses sequential Miniflare groups with unique Hyperdrive pr
     return {
       getWorker: async name => ({ fetch: async () => {
         const row = { readiness: 'pass', readyForAuthentication: false, schemaFingerprint: baseline().schemaFingerprint,
-          schemaVersion: baseline().schemaVersion, databaseEnvironment: RESTORE.target, relationCount: baseline().relationCount };
+          schemaVersion: baseline().schemaVersion, databaseEnvironment: TEST_TARGET, relationCount: baseline().relationCount };
         const body = name === 'public' ? row : { readiness: 'pass', databases: { primary: row, privacy: row },
           ...(name === 'admin' ? { emailBinding: { bindingVerified: true } } : {}) };
         return Response.json(body, { status: 200 });
@@ -370,7 +417,7 @@ test('readiness smoke uses sequential Miniflare groups with unique Hyperdrive pr
       dispose: async () => { current.disposed = true; active--; },
     };
   };
-  const result = await runRestoreSmoke(connections, branchId, baseline(), {}, runtimeFactory);
+  const result = await runRestoreSmoke(connections, branchId, baseline(), {}, runtimeFactory, undefined, TEST_PLAN);
   assert.deepEqual(groups.map(group => group.names), [['public', 'admin'], ['jobs']]);
   assert.ok(groups.every(group => group.disposed));
   assert.equal(active, 0);
@@ -467,16 +514,16 @@ for (const [mode, blocker, cleanup] of [
   ['authority_denied','provider_access_denied','NOT_NEEDED'], ['preexisting','preexisting_target_refused','NOT_NEEDED'],
   ['direct_target_present','preexisting_target_refused','NOT_NEEDED'], ['direct_target_error','provider_request_failed','NOT_NEEDED'],
   ['target_found_before_create','preexisting_target_refused','NOT_NEEDED'], ['backup_target_history','backup_target_history_unexpected','NOT_NEEDED'],
-  ['stale','backup_stale_or_test_window_too_short','NOT_NEEDED'],
-  ['completion_mismatch','fixed_backup_completion_changed','NOT_NEEDED'],
+  ['stale','restore_plan_live_backup_mismatch','NOT_NEEDED'],
+  ['completion_mismatch','restore_plan_live_backup_mismatch','NOT_NEEDED'],
   ['unknown_create','provider_transport_failed','UNBOUND_CREATE_OUTCOME_MANUAL_RECONCILIATION_REQUIRED'],
-  ['unprotected','protected_backup_with_finite_retention_plan_is_manual_prerequisite','NOT_NEEDED'],
+  ['unprotected','restore_plan_live_metadata_changed','NOT_NEEDED'],
   ['copied_role_mismatch','copied_role_metadata_invalid','TARGET_RETAINED_PENDING_REVIEW'],
   ['extension_denied','missing_extension_install_authority_unproven','TARGET_RETAINED_PENDING_REVIEW'],
   ['catalog_mismatch','restored_catalog_registry_acl_or_grants_mismatch','TARGET_RETAINED_PENDING_REVIEW'],
   ['partial_reset','provider_transport_failed','TARGET_RETAINED_PENDING_REVIEW'],
   ['wrong_config','created_target_identity_or_configuration_changed','TARGET_RETAINED_PENDING_REVIEW'],
-  ['binding_mismatch','backup_to_new_target_binding_unproven','TARGET_RETAINED_PENDING_REVIEW'],
+  ['binding_mismatch','restore_plan_created_target_binding_invalid','TARGET_RETAINED_PENDING_REVIEW'],
 ]) test(`fails closed without mutation retry: ${mode}`, async () => {
   const f = fixture(mode), report = await runNativeRestore(f.options);
   assert.ok(report.blockers.includes(blocker), JSON.stringify(report)); assert.equal(report.cleanup, cleanup);
@@ -499,7 +546,7 @@ test('copied roles converge read-only and all five must pass together before any
   const f = fixture(), list = f.options.api.list; let reads = 0, clock = instant;
   f.options.api.list = async path => {
     const rows = await list(path);
-    if (!path.endsWith(`${RESTORE.target}/roles`)) return rows;
+    if (!path.endsWith(`${TEST_TARGET}/roles`)) return rows;
     reads++;
     assert.equal(f.calls.filter(call => call.endsWith('/reset')).length, 0);
     if (reads === 1) return rows.slice(1);
@@ -520,7 +567,7 @@ for (const mode of ['absent', 'pending', 'expired', 'malformed', 'identity_drift
     const f = fixture(), list = f.options.api.list; let reads = 0, clock = instant;
     f.options.api.list = async path => {
       const rows = await list(path);
-      if (!path.endsWith(`${RESTORE.target}/roles`)) return rows;
+      if (!path.endsWith(`${TEST_TARGET}/roles`)) return rows;
       reads++;
       if (mode === 'denied') throw new RestoreFailure('provider_access_denied', 'DENIED');
       if (mode === 'malformed') { delete rows[0].base_username; return rows; }
@@ -605,7 +652,7 @@ test('dependency admission checks actual remaining time plus the configured setu
   env.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
   assert.throws(() => checkSetupWindow(env, instant), /approval_expired_or_unbounded/);
   const late = environment(), lateRecord = JSON.parse(late.RESTORE_CHECK_APPROVAL_JSON);
-  const lateNow = Date.parse(RESTORE.backupCompletedAt) + 22 * 3600000 - DEPENDENCY_SETUP_RESERVE_MS + 1;
+  const lateNow = Date.parse(TEST_BACKUP_COMPLETED_AT) + 22 * 3600000 - DEPENDENCY_SETUP_RESERVE_MS + 1;
   lateRecord.expiresAt = new Date(lateNow + 3 * 3600000).toISOString();
   lateRecord.reviewWindow.availableUntil = lateRecord.expiresAt;
   lateRecord.retention.endsAt = new Date(lateNow + 23 * 3600000).toISOString();
@@ -616,6 +663,28 @@ test('dependency admission checks actual remaining time plus the configured setu
   const workflow = fs.readFileSync('.github/workflows/planetscale-native-restore-check.yml', 'utf8');
   assert.ok(workflow.indexOf('planetscale-native-restore-admission.mjs') < workflow.indexOf('npm ci'));
   assert.equal(DEPENDENCY_SETUP_RESERVE_MS, (1 + 4) * 60000);
+});
+
+test('a run requires explicit pins that exactly match its owner-approved plan before provider access', async () => {
+  const missing = fixture(); delete missing.options.environment.RESTORE_CHECK_PLAN_PINS_JSON;
+  missing.options.environment.RESTORE_CHECK_EXECUTE = 'false';
+  const missingReport = await runNativeRestore(missing.options);
+  assert.deepEqual(missingReport.blockers, ['restore_plan_pins_required']);
+  assert.deepEqual(missing.calls, []);
+  for (const field of ['backupId', 'backupCompletedAt', 'target', 'targetBytes']) {
+    const f = fixture(), pins = JSON.parse(f.options.environment.RESTORE_CHECK_PLAN_PINS_JSON);
+    pins[field] = field === 'backupId' ? 'different123'
+      : field === 'backupCompletedAt' ? new Date(Date.parse(pins[field]) + 60000).toISOString()
+      : field === 'target' ? 'lythaus-0021-native-restore-check-20261109-02' : pins[field] - 1024 ** 3;
+    f.options.environment.RESTORE_CHECK_PLAN_PINS_JSON = JSON.stringify(pins);
+    const report = await runNativeRestore(f.options);
+    assert.deepEqual(report.blockers, ['restore_plan_pins_approval_mismatch'], field);
+    assert.deepEqual(f.calls, [], field);
+  }
+  const workflow = fs.readFileSync('.github/workflows/planetscale-native-restore-check.yml', 'utf8');
+  assert.match(workflow, /plan_pins_json:[\s\S]*?required: true[\s\S]*?type: string/);
+  assert.match(workflow, /RESTORE_CHECK_PLAN_PINS_JSON: \$\{\{ inputs\.plan_pins_json \}\}/);
+  assert.ok(workflow.indexOf('planetscale-native-restore-admission.mjs') < workflow.indexOf('npm ci'));
 });
 
 for (const [label, change, code] of [
@@ -648,7 +717,7 @@ test('role-readiness cancellation reaches the bound GET and starts no subsequent
   const f = fixture(), request = f.options.api.request; let canceled = false, laterBackupReads = 0;
   f.options.phaseBudgetMs = 30;
   f.options.api.request = async (path, options = {}) => {
-    if (options.signal && path === `/branches/${RESTORE.target}`) return new Promise((_resolve, reject) => {
+    if (options.signal && path === `/branches/${TEST_TARGET}`) return new Promise((_resolve, reject) => {
       options.signal.addEventListener('abort', () => { canceled = true; reject(options.signal.reason); }, { once: true });
     });
     if (options.signal && path.includes('/backups/')) laterBackupReads++;
@@ -665,7 +734,7 @@ test('pending-role sleep observes phase cancellation instead of waiting a full p
   f.options.phaseBudgetMs = 30; delete f.options.sleep;
   f.options.api.list = async path => {
     const rows = await list(path);
-    if (path.endsWith(`${RESTORE.target}/roles`)) rows[0].ready = false;
+    if (path.endsWith(`${TEST_TARGET}/roles`)) rows[0].ready = false;
     return rows;
   };
   const began = Date.now(), report = await runNativeRestore(f.options);
@@ -678,7 +747,7 @@ test('a changed API role ID in final reset admission blocks before that reset is
   const f = fixture(), list = f.options.api.list; let roleReads = 0;
   f.options.api.list = async path => {
     const rows = await list(path);
-    if (path.endsWith(`${RESTORE.target}/roles`) && ++roleReads === 3) rows[0].id = 'replacementrole';
+    if (path.endsWith(`${TEST_TARGET}/roles`) && ++roleReads === 3) rows[0].id = 'replacementrole';
     return rows;
   };
   const report = await runNativeRestore(f.options);
@@ -731,7 +800,7 @@ test('readiness polling crossing the qualification stop retains ownership and ne
   f.options.sleep = async () => { clock = instant + RESTORE.qualificationStopMs; };
   f.options.api.request = async (suffix, options) => {
     const row = await original(suffix, options);
-    return suffix === `/branches/${RESTORE.target}` && !options?.method && !options?.absent ? { ...row, ready: false, state: 'pending' } : row;
+    return suffix === `/branches/${TEST_TARGET}` && !options?.method && !options?.absent ? { ...row, ready: false, state: 'pending' } : row;
   };
   const report = await runNativeRestore(f.options);
   assert.ok(report.blockers.includes('qualification_phase_review_reserve_reached'));
@@ -763,24 +832,24 @@ test('provider transport refuses redirects, denied/oversized responses and unkno
     [new Response('bad', { status: 201 }), 'UNKNOWN_MUTATION_OUTCOME'],
     [new Response('x'.repeat(1048577)), 'UNKNOWN_MUTATION_OUTCOME'],
   ]) {
-    let count = 0; const api = new RestoreApi('fixture-id:fixture-token', async (_url, options) => {
+    let count = 0; const api = new TestRestoreApi('fixture-id:fixture-token', async (_url, options) => {
       count++; assert.equal(options.redirect, 'error'); return response;
     });
-    await assert.rejects(() => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }), error => error.outcome === outcome);
+    await assert.rejects(() => api.request('/branches', { method: 'POST', body: createTargetBody(TEST_PLAN) }), error => error.outcome === outcome);
     assert.equal(count, 1);
   }
-  const api = new RestoreApi('fixture-id:fixture-token', async () => { throw new Error(password); });
-  await assert.rejects(() => api.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }), error => error.outcome === 'UNKNOWN_MUTATION_OUTCOME' && !error.message.includes(password));
+  const api = new TestRestoreApi('fixture-id:fixture-token', async () => { throw new Error(password); });
+  await assert.rejects(() => api.request('/branches', { method: 'POST', body: createTargetBody(TEST_PLAN) }), error => error.outcome === 'UNKNOWN_MUTATION_OUTCOME' && !error.message.includes(password));
   await assert.rejects(() => api.request('/branches/main', { method: 'DELETE' }), /fixed_provider_operation_required/);
-  await assert.rejects(() => api.request('/branches', { method: 'POST', body: { ...CREATE_TARGET_BODY, name: 'main' } }), /fixed_provider_operation_required/);
-  const redirect = new RestoreApi('fixture-id:fixture-token', async () => ({ status: 201, redirected: true }));
-  await assert.rejects(() => redirect.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }),
+  await assert.rejects(() => api.request('/branches', { method: 'POST', body: { ...createTargetBody(TEST_PLAN), name: 'main' } }), /fixed_provider_operation_required/);
+  const redirect = new TestRestoreApi('fixture-id:fixture-token', async () => ({ status: 201, redirected: true }));
+  await assert.rejects(() => redirect.request('/branches', { method: 'POST', body: createTargetBody(TEST_PLAN) }),
     error => error.code === 'provider_redirect_rejected' && error.outcome === 'UNKNOWN_MUTATION_OUTCOME');
 });
 test('only an explicit absent GET 404 is translated to null; GET 204 or null JSON is never deletion evidence', async () => {
-  const path = `/branches/${RESTORE.target}`;
+  const path = `/branches/${TEST_TARGET}`;
   let calls = 0;
-  const api = response => new RestoreCleanupApi('fixture-id:fixture-token', async () => { calls++; return response; });
+  const api = response => new TestRestoreCleanupApi('fixture-id:fixture-token', async () => { calls++; return response; });
   assert.equal(await api(new Response(null, { status: 404 })).request(path, { absent: true }), null);
   await assert.rejects(() => api(new Response(null, { status: 404 })).request(path), /provider_request_failed/);
   for (const absent of [false, true]) {
@@ -791,12 +860,12 @@ test('only an explicit absent GET 404 is translated to null; GET 204 or null JSO
   assert.equal(calls, 7);
 });
 test('qualification target absence accepts only the provider GET 404 and uses the normal restore API', async () => {
-  const path = `/branches/${RESTORE.target}`;
-  const api = response => new RestoreApi('fixture-id:fixture-token', async () => response);
+  const path = `/branches/${TEST_TARGET}`;
+  const api = response => new TestRestoreApi('fixture-id:fixture-token', async () => response);
   assert.equal(await api(new Response(null, { status: 404 })).request(path, { absent: true }), null);
   await assert.rejects(() => api(new Response(null, { status: 404 })).request(path), /provider_request_failed/);
   await assert.rejects(() => api(new Response(null, { status: 204 })).request(path, { absent: true }), /provider_response_invalid/);
-  assert.equal((await api(Response.json({ id: 'existing', name: RESTORE.target })).request(path, { absent: true })).name, RESTORE.target);
+  assert.equal((await api(Response.json({ id: 'existing', name: TEST_TARGET })).request(path, { absent: true })).name, TEST_TARGET);
 });
 test('execution stops before provider reads or mutations when protected-run reconciliation fails', async () => {
   const f = fixture(); f.options.assertMain = async () => { throw new RestoreFailure('prior_execution_runner_or_step_evidence_present'); };
@@ -807,7 +876,7 @@ test('execution stops before provider reads or mutations when protected-run reco
 test('provider permissions require existing database scope, not a branch-specific or differently named resource', async () => {
   for (const resource of [{ id: RESTORE.sourceId, name: 'main', type: 'Branch' },
     { id: RESTORE.databaseId, name: 'other', type: 'Database' }]) {
-    const api = new RestoreApi('fixture-id:fixture-token', async url => Response.json(url === apiBase
+    const api = new TestRestoreApi('fixture-id:fixture-token', async url => Response.json(url === apiBase
       ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
       : { id: 'fixture-id', service_token_accesses: ['read_branch','create_branch','delete_branch','read_backups','write_backups','connect_branch']
         .map(access => ({ access, resource_id: resource.id, resource_type: resource.type,
@@ -820,7 +889,7 @@ test('authority diagnostic proves candidate identity and describes unbound permi
   const token = { id: 'estjkwtxzsmh', token: password, plain_text_refresh_token: password, name: password,
     service_token_accesses: ['read_database', 'read_branch', 'read_backups', 'restore_production_branch_backup']
       .map(access => ({ access, resource_id: null, resource_type: 'Database', resource: null, description: password })) };
-  const api = new RestoreApi(`estjkwtxzsmh:${password}`, async (url, options) => {
+  const api = new TestRestoreApi(`estjkwtxzsmh:${password}`, async (url, options) => {
     calls.push({ url, method: options.method });
     return Response.json(url === apiBase ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' } : token);
   });
@@ -841,7 +910,7 @@ test('authority diagnostic preserves missing, null, organization and exact datab
     { access: 'read_databases', resource_id: 'organization123', resource_type: 'Organization',
       resource: { id: 'organization123', name: RESTORE.organization } });
   let evidence;
-  const api = new RestoreApi(`v6pg9b7rz38a:${password}`, async url => Response.json(url === apiBase
+  const api = new TestRestoreApi(`v6pg9b7rz38a:${password}`, async url => Response.json(url === apiBase
     ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
     : { id: 'v6pg9b7rz38a', service_token_accesses: rows }));
   await api.authority(value => { evidence = value; });
@@ -858,7 +927,7 @@ test('provider token expiry must cover the original cleanup window and is retain
   for (const expiry of [undefined, null, 'bad-synthetic-date', new Date(instant + RESTORE.maximumMs - 1000).toISOString(),
     new Date(instant + RESTORE.maximumMs).toISOString(), afterDeadline]) {
     let evidence;
-    const api = new RestoreApi('syntheticid:synthetic-value', async url => Response.json(url === apiBase
+    const api = new TestRestoreApi('syntheticid:synthetic-value', async url => Response.json(url === apiBase
       ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
       : { id: 'syntheticid', ...(expiry === undefined ? {} : { expires_at: expiry }), token: password,
         service_token_accesses: ['read_database','read_branch','delete_branch','delete_production_branch','read_backups',
@@ -888,7 +957,7 @@ test('authority diagnostic retains unknown and unrelated rows as bounded enums w
       resource_type: password, resource: { id: 'otherdatabase', name: password, deleted_at: null } },
     ...Array.from({ length: 70 }, () => ({ access: 'read_database', resource_id: null, resource_type: password,
       resource: null, resource_name: password, token: password }))];
-  const api = new RestoreApi(`unknownid:${password}`, async url => Response.json(url === apiBase
+  const api = new TestRestoreApi(`unknownid:${password}`, async url => Response.json(url === apiBase
     ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
     : { id: 'unknownid', name: password, token: password, plain_text_refresh_token: password, service_token_accesses: rows }));
   await assert.rejects(() => api.authority(value => { evidence = value; }), /existing_token_missing_read_database/);
@@ -920,7 +989,7 @@ test('authority diagnostics require verified database and self identity and neve
     const token = { id: mode === 'wrong_self' ? 'differentid' : 'estjkwtxzsmh', token: password,
       service_token_accesses: mode === 'missing_access_array' ? null : [{ access: 'read_database',
         resource_id: 'organization123', resource_type: 'Organization', resource: { name: RESTORE.organization, deleted_at: null } }] };
-    const api = new RestoreApi(`estjkwtxzsmh:${password}`, async url => Response.json(url === apiBase
+    const api = new TestRestoreApi(`estjkwtxzsmh:${password}`, async url => Response.json(url === apiBase
       ? { id: mode === 'wrong_database' ? 'differentdatabase' : RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' } : token));
     await assert.rejects(() => api.authority(value => evidence.push(value)), new RegExp(mode === 'wrong_database'
       ? 'database_identity_changed' : mode === 'organization_only' ? 'existing_token_missing_read_database' : 'existing_token_authority_unverifiable'));
@@ -943,7 +1012,7 @@ test('role reset requires connect AND password-delete for the target classificat
       assert.throws(() => requireResetPermissions(new Set(accesses), production), /existing_token_missing_/);
     }
     if (!production) continue;
-    const api = new RestoreApi('syntheticid:synthetic-value', async url => Response.json(url === apiBase
+    const api = new TestRestoreApi('syntheticid:synthetic-value', async url => Response.json(url === apiBase
       ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
       : { id: 'syntheticid', service_token_accesses: authorityRows().filter(row =>
         !row.access.includes('branch_password')).concat([{ access: remove, resource_id: RESTORE.databaseId,
@@ -960,7 +1029,7 @@ test('role reset requires connect AND password-delete for the target classificat
 for (const mode of ['missing', 'wrong_class', 'wrong_resource', 'revoked_before_create']) {
   test(`production reset permission blocks paid creation: ${mode}`, async () => {
     const f = fixture(); let tokenReads = 0;
-    const api = new RestoreApi('syntheticid:synthetic-value', async url => {
+    const api = new TestRestoreApi('syntheticid:synthetic-value', async url => {
       if (url === apiBase) return Response.json({ id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' });
       tokenReads++;
       const rows = authorityRows().filter(row => row.access !== 'delete_production_branch_password');
@@ -986,7 +1055,7 @@ test('actual target classification drift during reset admission stops before any
   f.options.api.authority = async () => { authorities++; };
   f.options.api.request = async (path, options) => {
     const value = await request(path, options);
-    return path === `/branches/${RESTORE.target}` && authorities >= 3 ? { ...value, production: false } : value;
+    return path === `/branches/${TEST_TARGET}` && authorities >= 3 ? { ...value, production: false } : value;
   };
   const report = await runNativeRestore(f.options);
   assert.deepEqual(report.blockers, ['created_target_classification_changed']);
@@ -996,15 +1065,15 @@ test('actual target classification drift during reset admission stops before any
 
 test('target branch classification is mandatory and cannot be inferred from source main', () => {
   for (const production of [false, undefined, null, 'true']) {
-    assert.throws(() => checkBranch({ ...target(), production }, newId), /created_target_classification_changed/);
+    assert.throws(() => checkBranch({ ...target(), production }, newId, false, TEST_PLAN), /created_target_classification_changed/);
   }
-  assert.doesNotThrow(() => checkBranch(target(), newId));
+  assert.doesNotThrow(() => checkBranch(target(), newId, false, TEST_PLAN));
 });
 
 test('reset denial retains numeric status and safe provider correlation without leaking response data or retrying', async () => {
   const f = fixture(), request = f.options.api.request; let attempts = 0;
   const requestId = '11111111-2222-4333-8444-555555555555';
-  const api = new RestoreApi('syntheticid:' + password, async () => {
+  const api = new TestRestoreApi('syntheticid:' + password, async () => {
     attempts++;
     return Response.json({ error: { code: 'permission_denied', message: password, credentials: { password } },
       token: password, sql: 'SELECT private_product_rows', connection: 'postgresql://private.invalid' },
@@ -1025,10 +1094,10 @@ test('provider error diagnostics redact unknown codes, headers, non-JSON and exc
   for (const [body, bodyFormat, code] of [[JSON.stringify({ code: password }), 'JSON_OBJECT', 'REDACTED'],
     [password, 'UNREADABLE_OR_NON_JSON', null], ['x'.repeat(8193), 'OVERSIZED', null]]) {
     let attempts = 0;
-    const api = new RestoreApi('syntheticid:' + password, async () => {
+    const api = new TestRestoreApi('syntheticid:' + password, async () => {
       attempts++; return new Response(body, { status: 401, headers: { 'x-request-id': password } });
     });
-    await assert.rejects(() => api.request(`/branches/${RESTORE.target}/roles/role0/reset`, { method: 'POST' }), error => {
+    await assert.rejects(() => api.request(`/branches/${TEST_TARGET}/roles/role0/reset`, { method: 'POST' }), error => {
       assert.equal(error.httpStatus, 401); assert.equal(error.providerDiagnostic.requestId, null);
       assert.deepEqual(error.providerDiagnostic.error, { bodyFormat, code });
       assert.doesNotMatch(JSON.stringify(error.providerDiagnostic), /synthetic-secret/); return error.outcome === 'DENIED';
@@ -1039,7 +1108,7 @@ test('provider error diagnostics redact unknown codes, headers, non-JSON and exc
 
 test('reset request allowlist continues to exclude main and other targets', async () => {
   let attempts = 0;
-  const api = new RestoreApi('syntheticid:synthetic-value', async () => { attempts++; return Response.json({}); });
+  const api = new TestRestoreApi('syntheticid:synthetic-value', async () => { attempts++; return Response.json({}); });
   for (const branch of ['main', RESTORE.sourceId, 'other-target']) {
     await assert.rejects(() => api.request(`/branches/${branch}/roles/role0/reset`, { method: 'POST' }), /fixed_provider_operation_required/);
   }
@@ -1049,10 +1118,10 @@ test('reset request allowlist continues to exclude main and other targets', asyn
 test('numeric mutation failure status is retained without turning uncertain failures into retry permission', async () => {
   for (const status of [400, 401, 403, 404, 409, 422, 429, 500]) {
     let attempts = 0;
-    const api = new RestoreApi('syntheticid:synthetic-value', async () => {
+    const api = new TestRestoreApi('syntheticid:synthetic-value', async () => {
       attempts++; return Response.json({ code: 'forbidden', message: password }, { status });
     });
-    await assert.rejects(() => api.request(`/branches/${RESTORE.target}/roles/role0/reset`, { method: 'POST' }), error => {
+    await assert.rejects(() => api.request(`/branches/${TEST_TARGET}/roles/role0/reset`, { method: 'POST' }), error => {
       assert.equal(error.httpStatus, status); assert.equal(error.providerDiagnostic.httpStatus, status);
       assert.equal(error.providerDiagnostic.requestId, null);
       return error.outcome === ([429, 500].includes(status) ? 'UNKNOWN_MUTATION_OUTCOME' : 'DENIED');
@@ -1063,7 +1132,7 @@ test('numeric mutation failure status is retained without turning uncertain fail
 
 function grantDiagnosticFixture({ rows = [], pages, mode = '', validAuthority = false, selfFields = {} } = {}) {
   const calls = [], evidence = [];
-  const api = new RestoreApi('estjkwtxzsmh:' + password, async (url, options) => {
+  const api = new TestRestoreApi('estjkwtxzsmh:' + password, async (url, options) => {
     calls.push({ url, method: options.method });
     if (url === apiBase) return Response.json({ id: mode === 'wrong_database' ? 'differentdatabase' : RESTORE.databaseId,
       name: RESTORE.database, kind: 'postgresql' });
@@ -1273,7 +1342,7 @@ test('diagnostic output limits are explicit and cannot certify complete grant co
 });
 test('grants reads remain fixed to the existing token and cannot be used by cleanup or issue mutations', async () => {
   let calls = 0;
-  const api = new RestoreApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
+  const api = new TestRestoreApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
   for (const path of ['/../service-tokens/other/grants?page=1&per_page=100',
     '/../service-tokens/self/grants?page=6&per_page=100', '/../service-tokens/self/grants?page=1&per_page=101',
     '/../service-tokens/self/grants?page=1&per_page=100&extra=secret']) {
@@ -1281,7 +1350,7 @@ test('grants reads remain fixed to the existing token and cannot be used by clea
   }
   for (const method of ['POST', 'PATCH', 'DELETE']) await assert.rejects(
     () => api.request('/../service-tokens/self/grants?page=1&per_page=100', { method }), /fixed_provider_operation_required/);
-  const cleanup = new RestoreCleanupApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
+  const cleanup = new TestRestoreCleanupApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
   await assert.rejects(() => cleanup.request('/../service-tokens/self/grants?page=1&per_page=100'), /fixed_provider_operation_required/);
   assert.equal(calls, 0);
 });
@@ -1304,19 +1373,19 @@ test('diagnostics wait for database/self identity and neither workflow mode requ
 });
 test('credential projection rejects main, mismatched role, host and password; never creates a role', () => {
   const row = { ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' };
-  assert.match(restoredConnection(row, newId, RESTORE.setup), /sslmode=verify-full/);
+  assert.match(restoredConnection(row, newId, RESTORE.setup, undefined, TEST_PLAN), /sslmode=verify-full/);
   for (const mutated of [{ ...row, access_host_url: 'https://evil.invalid' }, { ...row, password: '' },
-    { ...row, username: `${RESTORE.setup}.${RESTORE.sourceId}` }]) assert.throws(() => restoredConnection(mutated, newId, RESTORE.setup));
-  assert.throws(() => restoredConnection(row, RESTORE.sourceId, RESTORE.setup));
-  assert.throws(() => checkedRoles(roleRows().slice(1), newId));
-  assert.throws(() => checkBranch({ ...target(), name: 'main' }, newId));
-  assert.throws(() => checkBackup({ ...backup(), pvc_size: RESTORE.bytes + 1 }, instant));
+    { ...row, username: `${RESTORE.setup}.${RESTORE.sourceId}` }]) assert.throws(() => restoredConnection(mutated, newId, RESTORE.setup, undefined, TEST_PLAN));
+  assert.throws(() => restoredConnection(row, RESTORE.sourceId, RESTORE.setup, undefined, TEST_PLAN));
+  assert.throws(() => checkedRoles(roleRows().slice(1), newId, undefined, TEST_PLAN));
+  assert.throws(() => checkBranch({ ...target(), name: 'main' }, newId, false, TEST_PLAN));
+  assert.throws(() => checkBackup({ ...backup(), pvc_size: RESTORE.bytes + 1 }, instant, TEST_PLAN));
 });
 test('all five nonsecret connection metadata records must decode before the first reset', async () => {
   const f = fixture(), original = f.options.api.list;
   f.options.api.list = async path => {
     const rows = await original(path);
-    if (path === `/branches/${RESTORE.target}/roles`) rows[4].access_host_url = 'aws.connect.psdb.cloud:5432';
+    if (path === `/branches/${TEST_TARGET}/roles`) rows[4].access_host_url = 'aws.connect.psdb.cloud:5432';
     return rows;
   };
   const report = await runNativeRestore(f.options);
@@ -1340,11 +1409,11 @@ for (const [field, value] of [['ready', false], ['expired', true], ['deleted_at'
 test('role-class checks accept only the exact observed setup baseline and strict application-role baseline', () => {
   const sourceRows = roleRows(RESTORE.sourceId);
   const source = new Map(sourceRows.map(row => [row.base_username, row]));
-  assert.equal(checkedRoles(sourceRows, RESTORE.sourceId).size, ROLE_NAMES.length);
-  assert.equal(checkedRoles(roleRows(), newId, source).size, ROLE_NAMES.length);
+  assert.equal(checkedRoles(sourceRows, RESTORE.sourceId, undefined, TEST_PLAN).size, ROLE_NAMES.length);
+  assert.equal(checkedRoles(roleRows(), newId, source, TEST_PLAN).size, ROLE_NAMES.length);
 
   const wrongSetupReplication = roleRows(); wrongSetupReplication[0].with_replication = false;
-  assert.throws(() => checkedRoles(wrongSetupReplication, newId), error => {
+  assert.throws(() => checkedRoles(wrongSetupReplication, newId, undefined, TEST_PLAN), error => {
     assert.equal(error.code, 'copied_role_metadata_invalid');
     assert.equal(error.safeDiagnostic.role.roleClass, 'setup');
     assert.deepEqual(error.safeDiagnostic.role.fields.withReplication,
@@ -1352,13 +1421,13 @@ test('role-class checks accept only the exact observed setup baseline and strict
     return true;
   });
   const privilegedApplication = roleRows(); privilegedApplication[1].with_replication = true;
-  assert.throws(() => checkedRoles(privilegedApplication, newId), error => {
+  assert.throws(() => checkedRoles(privilegedApplication, newId, undefined, TEST_PLAN), error => {
     assert.equal(error.safeDiagnostic.role.roleClass, 'application');
     assert.equal(error.safeDiagnostic.role.fields.withReplication.matches, false);
     return true;
   });
   const malformedInheritance = roleRows(); malformedInheritance[0].inherited_roles = { password: 'synthetic-password-canary' };
-  assert.throws(() => checkedRoles(malformedInheritance, newId), error => {
+  assert.throws(() => checkedRoles(malformedInheritance, newId, undefined, TEST_PLAN), error => {
     const diagnostic = JSON.stringify(error.safeDiagnostic);
     assert.equal(error.safeDiagnostic.role.fields.inheritedRoles.type, 'OBJECT');
     assert.equal(error.safeDiagnostic.role.fields.inheritedRoles.matches, false);
@@ -1366,7 +1435,7 @@ test('role-class checks accept only the exact observed setup baseline and strict
     return true;
   });
   const missingBaseUsername = roleRows(); delete missingBaseUsername[0].base_username;
-  assert.throws(() => checkedRoles(missingBaseUsername, newId), error => {
+  assert.throws(() => checkedRoles(missingBaseUsername, newId, undefined, TEST_PLAN), error => {
     const inventory = error.safeDiagnostic.role.inventory;
     assert.equal(error.safeDiagnostic.role.candidateCount, 0);
     assert.equal(inventory.rowCount, ROLE_NAMES.length);
@@ -1379,7 +1448,7 @@ test('role-class checks accept only the exact observed setup baseline and strict
     return true;
   });
   const changedInheritance = roleRows(); changedInheritance[0].inherited_roles.push('unexpected_role');
-  assert.throws(() => checkedRoles(changedInheritance, newId, source), error => error.code === 'copied_role_authority_changed');
+  assert.throws(() => checkedRoles(changedInheritance, newId, source, TEST_PLAN), error => error.code === 'copied_role_authority_changed');
 });
 
 test('raw REST role discovery preserves documented identities across pages and reissued API IDs', async t => {
@@ -1404,13 +1473,13 @@ test('raw REST role discovery preserves documented identities across pages and r
   ];
   for (const [label, change, expectedCode, candidateCount] of cases) await t.test(label, async () => {
     const rows = change(structuredClone(targetRows)), calls = [];
-    const api = new RestoreApi('syntheticid:synthetic-value', async (rawUrl, options) => {
+    const api = new TestRestoreApi('syntheticid:synthetic-value', async (rawUrl, options) => {
       const url = new URL(rawUrl), page = Number(url.searchParams.get('page'));
       calls.push(rawUrl); assert.equal(options.method, 'GET');
       assert.equal(url.searchParams.get('per_page'), '100');
       assert.equal(url.searchParams.has('q'), false); assert.equal(url.searchParams.has('status'), false);
       const source = url.pathname.endsWith('/main/roles');
-      assert.ok(source || url.pathname.endsWith(`/branches/${RESTORE.target}/roles`));
+      assert.ok(source || url.pathname.endsWith(`/branches/${TEST_TARGET}/roles`));
       const data = source ? sourceRows : rows;
       const next = page === 1 && data.length > 3 ? 2 : null;
       return Response.json({ type: 'list', current_page: page, per_page: 100, total_count: data.length,
@@ -1418,8 +1487,8 @@ test('raw REST role discovery preserves documented identities across pages and r
         next_page_url: next ? 'https://untrusted.invalid/ignored' : null,
         data: data.slice((page - 1) * 3, page * 3) });
     });
-    const source = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId);
-    const run = async () => checkedRoles(await api.list(`/branches/${RESTORE.target}/roles`), newId, source);
+    const source = checkedRoles(await api.list('/branches/main/roles'), RESTORE.sourceId, undefined, TEST_PLAN);
+    const run = async () => checkedRoles(await api.list(`/branches/${TEST_TARGET}/roles`), newId, source, TEST_PLAN);
     if (expectedCode) await assert.rejects(run, error => {
       assert.equal(error.code, expectedCode);
       if (candidateCount !== undefined) assert.equal(error.safeDiagnostic.role.candidateCount, candidateCount);
@@ -1704,7 +1773,7 @@ test('GitHub preconditions reconcile only the four pinned prior runs with comple
 });
 
 test('SQL sessions prove identity and roll back; authority failure never reaches DDL', async () => {
-  const calls = []; const raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup);
+  const calls = []; const raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup, undefined, TEST_PLAN);
   const factory = () => ({ connect: async () => {}, end: async () => {}, query: async sql => {
     calls.push(sql);
     if (sql.includes('current_setting')) return { rows: [{ database: 'postgres', username: RESTORE.setup, session: RESTORE.setup, read_only: 'on', version: '170005' }] };
@@ -1717,7 +1786,7 @@ test('SQL sessions prove identity and roll back; authority failure never reaches
   await assert.rejects(() => installMissingExtensions(raw, newId, ['postgis'], factory));
 });
 test('lost extension COMMIT acknowledgment never retries or attempts a committed rollback', async () => {
-  const calls = [], raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup); let installed = false;
+  const calls = [], raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup, undefined, TEST_PLAN); let installed = false;
   const factory = () => ({ connect: async () => {}, end: async () => {}, query: async sql => {
     calls.push(sql); if (sql === 'COMMIT') throw new Error(password);
     if (sql.startsWith('CREATE EXTENSION')) installed = true;
@@ -1728,7 +1797,7 @@ test('lost extension COMMIT acknowledgment never retries or attempts a committed
   assert.equal(calls.filter(sql => sql === 'CREATE EXTENSION "unaccent" WITH SCHEMA "public" VERSION \'1.0\'').length, 1); assert.ok(!calls.includes('ROLLBACK'));
 });
 test('SQL phase cancellation closes the active connection before returning and never retries a possibly committed extension', async () => {
-  const raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup);
+  const raw = restoredConnection({ ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE.setup, undefined, TEST_PLAN);
   for (const ddl of [false, true]) {
     const controller = new AbortController(), calls = []; let rejectPending, closed = false, installed = false;
     const factory = () => ({ connect: async () => {}, end: async () => { calls.push('END'); closed = true; rejectPending?.(controller.signal.reason); },
@@ -1752,11 +1821,11 @@ test('SQL phase cancellation closes the active connection before returning and n
 test('application smoke cancellation disposes its Worker runtime before returning', async () => {
   const controller = new AbortController(); let rejectPending, disposed = false;
   const connections = Object.fromEntries(['runtime','admin','jobs','privacy'].map(name => [name,
-    restoredConnection({ ...roleRows().find(row => row.base_username === RESTORE[name]), password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE[name])]));
+    restoredConnection({ ...roleRows().find(row => row.base_username === RESTORE[name]), password, access_host_url: 'aws.connect.psdb.cloud' }, newId, RESTORE[name], undefined, TEST_PLAN)]));
   const runtime = () => ({ getWorker: async () => new Promise((resolve, reject) => {
     rejectPending = reject; controller.abort(new Error('synthetic-runtime-deadline'));
   }), dispose: async () => { disposed = true; rejectPending?.(controller.signal.reason); } });
-  await assert.rejects(() => runRestoreSmoke(connections, newId, baseline(), {}, runtime, controller.signal));
+  await assert.rejects(() => runRestoreSmoke(connections, newId, baseline(), {}, runtime, controller.signal, TEST_PLAN));
   assert.equal(disposed, true);
   await assert.rejects(() => buildRestoreSmoke(controller.signal));
 });
@@ -1769,7 +1838,7 @@ test('in-flight build cancellation disposes its context before returning', async
 test('actual isolated Worker bundles build before spending; main and crossed credentials are rejected before workerd starts', async () => {
   const scripts = await buildRestoreSmoke(); assert.deepEqual(Object.keys(scripts), ['public','admin','jobs']);
   assert.ok(Object.values(scripts).every(value => value.length > 1000));
-  await assert.rejects(() => runRestoreSmoke({ runtime: environment().PLANETSCALE_SCHEMA_READ_DATABASE_URL }, RESTORE.sourceId, baseline(), scripts), /smoke_target_mismatch/);
+  await assert.rejects(() => runRestoreSmoke({ runtime: environment().PLANETSCALE_SCHEMA_READ_DATABASE_URL }, RESTORE.sourceId, baseline(), scripts, undefined, undefined, TEST_PLAN), /smoke_target_mismatch/);
 });
 test('main-only verifier and release gates stay intact; new workflow has no scheduled or push mutation trigger', () => {
   const source = fs.readFileSync('scripts/ci/verify-planetscale-production-schema.mjs', 'utf8');
