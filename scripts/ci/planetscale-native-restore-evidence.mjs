@@ -14,6 +14,18 @@ const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 export const decimal = value => typeof value === 'string' && /^[1-9]\d{0,17}$/.test(value) && Number.isSafeInteger(Number(value));
 
+function githubReadFailure(response, url) {
+  if (!object(response) || !Number.isInteger(response.status) || response.status < 100 || response.status > 599
+    || response.redirected !== undefined && typeof response.redirected !== 'boolean'
+    || response.url !== undefined && typeof response.url !== 'string') return 'github_evidence_response_invalid';
+  if (response.redirected || response.url && response.url !== url) return 'github_evidence_read_failed_redirect';
+  if (response.status === 200) return null;
+  if (response.status >= 300 && response.status < 400 && response.status !== 304) return 'github_evidence_read_failed_redirect';
+  if (response.status >= 400 && response.status < 500) return 'github_evidence_read_failed_http_4xx';
+  if (response.status >= 500 && response.status < 600) return 'github_evidence_read_failed_http_5xx';
+  return 'github_evidence_read_failed_http_non_200';
+}
+
 export function finalizeQualificationEvidence(directory, now = Date.now()) {
   const destination = path.join(directory, 'qualification.json');
   if (fs.existsSync(destination)) return sha256(fs.readFileSync(destination));
@@ -53,10 +65,11 @@ export async function githubRead(env, suffix, fetchImpl = fetch) {
   requireThat(/^\/(?:actions|pulls|issues|compare|git)\//.test(suffix), 'github_evidence_path_invalid');
   const url = `https://api.github.com/repos/${env.GITHUB_REPOSITORY}${suffix}`;
   let response;
-  try { response = await fetchImpl(url, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(15000),
+  try { response = await fetchImpl(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(15000),
     headers: { authorization: `Bearer ${env.GH_TOKEN}`, accept: 'application/vnd.github+json' } }); }
   catch { throw new RestoreFailure('github_evidence_transport_failed'); }
-  requireThat(response.status === 200 && !response.redirected && (!response.url || response.url === url), 'github_evidence_read_failed');
+  const responseFailure = githubReadFailure(response, url);
+  if (responseFailure) throw new RestoreFailure(responseFailure);
   const chunks = []; let size = 0;
   try {
     for await (const chunk of response.body) { size += chunk.byteLength; if (size > 1048576) throw new Error(); chunks.push(chunk); }

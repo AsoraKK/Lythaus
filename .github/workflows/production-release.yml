@@ -50,6 +50,7 @@ on:
           - app_only
           - owner_testing
           - owner_testing_native_recovery_exception
+          - owner_testing_subject_diagnostic_exception
       confirm_production:
         description: Confirm the four-surface production deployment
         required: true
@@ -106,7 +107,7 @@ jobs:
       DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
       SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
-      FORCE_AUTH_CRITICAL: ${{ inputs.release_mode == 'force_auth_critical' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+      FORCE_AUTH_CRITICAL: ${{ inputs.release_mode == 'force_auth_critical' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
       GH_TOKEN: ${{ github.token }}
       REF_PROTECTED: ${{ github.ref_protected }}
     steps:
@@ -118,7 +119,8 @@ jobs:
         run: test "${{ inputs.confirm_production }}" = true
       - name: Restrict owner testing to authentication deployment
         env:
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
           AUTHENTICITY_BETA_RELEASE_RECEIPT_PRESENT: ${{ vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' }}
         run: node scripts/ci/verify-owner-testing-auth-scope.mjs
       - name: Resolve canonical Pages configuration from protected production variables
@@ -329,8 +331,8 @@ jobs:
       - name: Require fresh protected native recovery and public independent recovery readiness
         id: recovery
         env:
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
-          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
           PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
@@ -352,7 +354,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
-          FORCE_AUTH_CRITICAL: ${{ inputs.release_mode == 'force_auth_critical' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+          FORCE_AUTH_CRITICAL: ${{ inputs.release_mode == 'force_auth_critical' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -362,7 +364,7 @@ jobs:
             --output "$RUNNER_TEMP/release-plan.json"
           jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/release-plan.json" >/dev/null
       - name: Require an Admin auth-critical candidate for the subject diagnostic
-        if: inputs.release_mode == 'automatic_subject_diagnostic' || inputs.release_mode == 'force_auth_critical_subject_diagnostic'
+        if: inputs.release_mode == 'automatic_subject_diagnostic' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception'
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
           CHANGED_COMPONENTS_JSON: ${{ steps.release_plan.outputs.changed_components_json }}
@@ -373,14 +375,22 @@ jobs:
           test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
           test "$RELEASE_MODE" != owner_testing
           test "$RELEASE_MODE" != owner_testing_native_recovery_exception
-          jq -e 'type == "array" and index("admin") != null' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
+          if [[ "$RELEASE_MODE" == owner_testing_subject_diagnostic_exception ]]; then
+            jq -e 'type == "array" and (sort == ["admin", "coordinator"])' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null || {
+              echo 'Owner-testing subject diagnostic requires exactly the Admin and acceptance-coordinator candidates.' >&2
+              exit 1
+            }
+          else
+            jq -e 'type == "array" and index("admin") != null' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
+          fi
       - name: Validate owner-testing deployment scope
-        if: (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception')
+        if: (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception')
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
           ACCEPTANCE_RUN_ID: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
           CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -396,11 +406,15 @@ jobs:
             echo 'Owner testing requires explicit confirm_production=true.' >&2
             exit 1
           }
+          if [[ "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then
+            echo 'This remains AUTH_CRITICAL_RELEASE with exactly the Admin and acceptance-coordinator candidates. It requires normal exact-candidate authenticated acceptance in this same first-attempt run, enables only the temporary read-only Admin subject diagnostic, defers only independent recovery, and must publish NO-GO.' >> "$GITHUB_STEP_SUMMARY"
+          else
           {
             echo '## Owner authentication testing deployment'
             echo
             echo "This remains AUTH_CRITICAL_RELEASE. It deploys the reviewed app for the owner's ordinary signup test only; no Keeper evidence is created, authenticated acceptance remains PENDING, and the canonical manifest must remain NO-GO."
           } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Require authorized independent acceptance mailboxes for critical releases
         if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && (inputs.release_mode != 'owner_testing' && inputs.release_mode != 'owner_testing_native_recovery_exception')
         env:
@@ -424,7 +438,7 @@ jobs:
           CHANGED_FILES_JSON: ${{ steps.release_plan.outputs.changed_files_json }}
           RELEASE_CLASSIFICATION_RULES_VERSION: ${{ steps.release_plan.outputs.classification_rules_version }}
           FORCE_AUTH_CRITICAL: ${{ steps.release_plan.outputs.force_auth_critical }}
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
           INDEPENDENT_RECOVERY_STATUS: ${{ steps.recovery.outputs.independent_recovery_status }}
           RECOVERY_READINESS_STATUS: ${{ steps.recovery.outputs.recovery_readiness_status }}
       - name: Create sanitized manifest integrity digest
@@ -594,8 +608,8 @@ jobs:
       release_sha: ${{ inputs.release_sha }}
       deployment_class: production
       source_evidence_verified: true
-      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
-      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
       ci_run_id: ${{ inputs.ci_run_id }}
       codeql_run_id: ${{ inputs.codeql_run_id }}
       dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
@@ -613,8 +627,8 @@ jobs:
       release_mode: ${{ inputs.release_mode }}
       target_environment: production
       source_evidence_verified: true
-      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
-      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
       pages_project: lythaus-web
       pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
       web_base_url: https://app.lythaus.co
@@ -634,8 +648,8 @@ jobs:
       release_sha: ${{ inputs.release_sha }}
       pages_project: ${{ needs.preflight.outputs.admin_pages_project }}
       source_evidence_verified: true
-      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
-      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
       ci_run_id: ${{ inputs.ci_run_id }}
       codeql_run_id: ${{ inputs.codeql_run_id }}
       dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
@@ -651,12 +665,13 @@ jobs:
     with:
       release_sha: ${{ inputs.release_sha }}
       acceptance_run_id: ${{ fromJSON(inputs.release_resume_context_json).acceptance_run_id || '' }}
-      enable_subject_diagnostic: ${{ inputs.release_mode == 'automatic_subject_diagnostic' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' }}
+      enable_subject_diagnostic: ${{ inputs.release_mode == 'automatic_subject_diagnostic' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
       previous_production_sha: ${{ inputs.previous_production_sha }}
       source_evidence_verified: true
-      force_auth_critical: ${{ inputs.release_mode == 'force_auth_critical' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' }}
-      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
-      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+      force_auth_critical: ${{ inputs.release_mode == 'force_auth_critical' || inputs.release_mode == 'force_auth_critical_subject_diagnostic' || inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
+      owner_testing_deployment: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+      owner_testing_recovery_exception: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
+      owner_testing_subject_diagnostic: ${{ inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
       ci_run_id: ${{ inputs.ci_run_id }}
       codeql_run_id: ${{ inputs.codeql_run_id }}
       dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
@@ -699,7 +714,7 @@ jobs:
       contents: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
-      OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+      OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
       WEB_BASE_URL: https://app.lythaus.co
       API_BASE_URL: https://api.lythaus.co
       ADMIN_API_URL: https://admin-api.lythaus.co
@@ -1126,7 +1141,7 @@ jobs:
           ROLLBACK_RESULT: ${{ needs.rollback.result }}
           ROLLBACK_STATE: ${{ needs.rollback.outputs.rollback_state || needs.workers.outputs.rollback_state || 'READY' }}
           ROLLBACK_HISTORY_JSON: ${{ needs.rollback.outputs.release_state_history_json || '' }}
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1180,34 +1195,73 @@ jobs:
           RELEASE_STATE: ${{ steps.app_only_state.outputs.state || steps.verified_state.outputs.state || 'BLOCKED' }}
           RELEASE_STATE_HISTORY_JSON: ${{ steps.app_only_state.outputs.history_json || steps.verified_state.outputs.history_json || '[]' }}
           FAILURE_DOMAIN_EVIDENCE_JSON: ${{ steps.app_only_failure_domain.outputs.failure_domain_evidence_json || steps.upstream_failure_domain.outputs.failure_domain_evidence_json || needs.workers.outputs.failure_domain_evidence_json || '[]' }}
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.release_mode == 'owner_testing_subject_diagnostic_exception' }}
           INDEPENDENT_RECOVERY_STATUS: ${{ needs.preflight.outputs.independent_recovery_status || 'BLOCKED' }}
           RECOVERY_READINESS_STATUS: ${{ needs.preflight.outputs.recovery_readiness_status || 'BLOCKED' }}
         run: node scripts/ci/build-release-manifest.mjs
       - name: Assert owner testing remains uncertified
-        if: always() && (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception')
+        if: always() && (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception')
+        env:
+          RELEASE_MODE: ${{ inputs.release_mode }}
         run: |
           set -euo pipefail
-          jq -e '
-            .status == "NO-GO" and .productionStatus == "NO-GO" and
-            .releaseClass == "AUTH_CRITICAL_RELEASE" and
-            .authAcceptance.required == true and
-            .authAcceptance.status == "OWNER_TEST_PENDING" and
-            .authAcceptance.acceptanceRunId == null and
-            .authAcceptance.ownerTesting.enabled == true and
-            .authAcceptance.ownerTesting.status ==
-              (if .state == "OWNER_TEST_DEPLOYED_UNCERTIFIED" then "DEPLOYED_UNCERTIFIED" else "PENDING" end)
-          ' .artifacts/release/release-manifest.json >/dev/null
-          {
-            echo '## Authentication certification status'
-            echo
-            if jq -e '.state == "OWNER_TEST_DEPLOYED_UNCERTIFIED"' .artifacts/release/release-manifest.json >/dev/null; then
-              echo 'Owner-test deployment and smoke checks completed. Authentication certification remains PENDING; this release is explicitly NO-GO until real owner journey evidence is collected and independently verified.'
-            else
-              state="$(jq -r '.state' .artifacts/release/release-manifest.json)"
-              echo "Owner-test release did not complete deployment and smoke checks (state: ${state}). Authentication certification remains PENDING and this release remains NO-GO. Original failure evidence is preserved in the manifest."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$RELEASE_MODE" == owner_testing_subject_diagnostic_exception ]]; then
+            jq -e '
+              .status == "NO-GO" and .productionStatus == "NO-GO" and
+              .releaseClass == "AUTH_CRITICAL_RELEASE" and
+              .authAcceptance.required == true and
+              .authAcceptance.status == "PASSED" and
+              .authAcceptance.candidateDependenciesVerified == true and
+              .authAcceptance.acceptanceRunId != null and
+              (.changedComponents == ["admin", "coordinator"]) and
+              .authAcceptance.ownerTesting.enabled == true and
+              .authAcceptance.ownerTesting.status ==
+                (if .state == "OWNER_TEST_DEPLOYED_UNCERTIFIED" then "DEPLOYED_UNCERTIFIED" else "AUTHENTICATED_UNCERTIFIED" end) and
+              .subjectDiagnostic.enabled == true and
+              .subjectDiagnostic.adminSourceSha == .releaseSha and
+              .subjectDiagnostic.adminVersionId == .authAcceptance.candidateDependencies.admin.versionId and
+              (.subjectDiagnostic.status == "ACTIVE_UNCERTIFIED" or .subjectDiagnostic.status == "EXPIRED" or .subjectDiagnostic.status == "ROLLED_BACK" or .subjectDiagnostic.status == "NOT_ACTIVATED") and
+              .authAcceptance.candidateDependencies.admin.sourceSha == .releaseSha and
+              .authAcceptance.candidateDependencies.admin.status == "NEW_CANDIDATE" and
+              .authAcceptance.candidateDependencies.coordinator.sourceSha == .releaseSha and
+              .authAcceptance.candidateDependencies.coordinator.status == "NEW_CANDIDATE" and
+              .subjectDiagnostic.expiresAt == .authAcceptance.candidateDependencies.subjectDiagnosticExpiresAt and
+              .recovery.independentRecoveryStatus == "DEFERRED_BY_OWNER_EXCEPTION" and
+              (.recovery.publicReleaseBlockers | index("independent_recovery_destination")) != null
+            ' .artifacts/release/release-manifest.json >/dev/null
+            echo 'Owner diagnostic acceptance passed for the exact candidate. The release remains NO-GO because independent recovery is unresolved; the temporary diagnostic expires automatically.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            jq -e '
+              .status == "NO-GO" and .productionStatus == "NO-GO" and
+              .releaseClass == "AUTH_CRITICAL_RELEASE" and
+              .authAcceptance.required == true and
+              .authAcceptance.status == "OWNER_TEST_PENDING" and
+              .authAcceptance.acceptanceRunId == null and
+              .authAcceptance.ownerTesting.enabled == true and
+              .authAcceptance.ownerTesting.status ==
+                (if .state == "OWNER_TEST_DEPLOYED_UNCERTIFIED" then "DEPLOYED_UNCERTIFIED" else "PENDING" end)
+            ' .artifacts/release/release-manifest.json >/dev/null
+          fi
+            {
+              echo '## Authentication certification status'
+              echo
+            if [[ "$RELEASE_MODE" == owner_testing_subject_diagnostic_exception ]]; then
+              if jq -e '.state == "OWNER_TEST_DEPLOYED_UNCERTIFIED" and .authAcceptance.status == "PASSED"' .artifacts/release/release-manifest.json >/dev/null; then
+                echo 'Owner authentication acceptance passed for the exact candidate. The release remains NO-GO because independent recovery is unresolved; the temporary diagnostic expires automatically.'
+              else
+                state="$(jq -r '.state' .artifacts/release/release-manifest.json)"
+                echo "Owner diagnostic release did not complete (state: ${state}); the release remains NO-GO and independent recovery is unresolved. Original failure evidence is preserved in the manifest."
+              fi
+              else
+              if jq -e '.state == "OWNER_TEST_DEPLOYED_UNCERTIFIED"' .artifacts/release/release-manifest.json >/dev/null; then
+                echo 'Owner-test deployment and smoke checks completed. Authentication certification remains PENDING; this release is explicitly NO-GO until real owner journey evidence is collected and independently verified.'
+              else
+                state="$(jq -r '.state' .artifacts/release/release-manifest.json)"
+                echo "Owner-test release did not complete deployment and smoke checks (state: ${state}). Authentication certification remains PENDING and this release remains NO-GO. Original failure evidence is preserved in the manifest."
+              fi
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
       - name: Create sanitized manifest integrity digest
         if: always()
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256

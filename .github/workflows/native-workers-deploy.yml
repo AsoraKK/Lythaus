@@ -78,6 +78,11 @@ on:
         required: false
         default: false
         type: boolean
+      owner_testing_subject_diagnostic:
+        description: Canonical owner-testing mode that retains exact-candidate acceptance while enabling the temporary Admin diagnostic
+        required: false
+        default: false
+        type: boolean
       enable_subject_diagnostic:
         description: Enable the repeatable read-only Admin identity diagnostic for up to three hours
         required: false
@@ -178,19 +183,19 @@ on:
         value: ${{ jobs.deploy.outputs.public_worker_status }}
       admin_worker_status:
         description: Admin Worker candidate or reuse status
-        value: ${{ jobs.deploy.outputs.admin_worker_status }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.admin_worker_status || jobs.deploy.outputs.admin_worker_status }}
       jobs_worker_status:
         description: Jobs Worker candidate or reuse status
         value: ${{ jobs.deploy.outputs.jobs_worker_status }}
       coordinator_worker_status:
         description: Coordinator Worker candidate or reuse status
-        value: ${{ jobs.deploy.outputs.coordinator_worker_status }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.coordinator_worker_status || jobs.deploy.outputs.coordinator_worker_status }}
       rollback_artifacts_proven:
         description: Exact predeployment Worker and route snapshots were captured for rollback
-        value: ${{ jobs.deploy.outputs.rollback_artifacts_proven }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.rollback_artifacts_proven || jobs.deploy.outputs.rollback_artifacts_proven }}
       rollback_state:
         description: Rollback outcome for changed components
-        value: ${{ jobs.deploy.outputs.rollback_state }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.rollback_state || jobs.deploy.outputs.rollback_state }}
       release_class:
         description: Deterministically computed release class
         value: ${{ jobs.deploy.outputs.release_class }}
@@ -208,16 +213,16 @@ on:
         value: ${{ jobs.deploy.outputs.acceptance_evidence_path }}
       activation_state:
         description: Explicit activation state
-        value: ${{ jobs.deploy.outputs.activation_state }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.activation_state || jobs.deploy.outputs.activation_state }}
       release_state:
         description: Explicit five-gate release state
-        value: ${{ jobs.deploy.outputs.release_state }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.release_state || jobs.deploy.outputs.release_state }}
       release_state_history_json:
         description: Sanitized five-gate state history
-        value: ${{ jobs.deploy.outputs.release_state_history_json }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.release_state_history_json || jobs.deploy.outputs.release_state_history_json }}
       failure_domain_evidence_json:
         description: Sanitized failure-domain evidence
-        value: ${{ jobs.deploy.outputs.failure_domain_evidence_json }}
+        value: ${{ inputs.owner_testing_subject_diagnostic == true && jobs.activate.outputs.failure_domain_evidence_json || jobs.deploy.outputs.failure_domain_evidence_json }}
 
 permissions:
   contents: read
@@ -230,9 +235,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
-    timeout-minutes: 35
+    timeout-minutes: ${{ inputs.owner_testing_subject_diagnostic == true && 105 || 35 }}
     env:
       OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+      OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
       AUTHENTICITY_BETA_RELEASE_RECEIPT_PRESENT: ${{ vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' }}
     outputs:
       public_worker_version: ${{ steps.release_metadata.outputs.public_worker_version }}
@@ -273,6 +279,7 @@ jobs:
       admin_worker_status: ${{ steps.release_metadata.outputs.admin_worker_status }}
       jobs_worker_status: ${{ steps.release_metadata.outputs.jobs_worker_status }}
       coordinator_worker_status: ${{ steps.release_metadata.outputs.coordinator_worker_status }}
+      activation_handoff_json: ${{ steps.activation_handoff.outputs.handoff_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -299,6 +306,21 @@ jobs:
             echo "Refusing deployment: checked-out main is not current origin/main." >&2
             exit 1
           fi
+      - name: Require canonical owner diagnostic mode to be exact and bounded
+        if: inputs.owner_testing_subject_diagnostic == true
+        env:
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.owner_testing_recovery_exception }}
+          ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
+          FORCE_AUTH_CRITICAL: ${{ inputs.force_auth_critical }}
+          EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+        run: |
+          set -euo pipefail
+          test "$OWNER_TESTING_DEPLOYMENT" = true
+          test "$OWNER_TESTING_RECOVERY_EXCEPTION" = true
+          test "$ENABLE_SUBJECT_DIAGNOSTIC" = true
+          test "$FORCE_AUTH_CRITICAL" = true
+          test -z "$EXISTING_ACCEPTANCE_RUN_ID"
       - name: Restrict owner testing to authentication deployment
         run: node scripts/ci/verify-owner-testing-auth-scope.mjs
       - name: SOURCE - Require exact successful CI and security evidence
@@ -344,8 +366,34 @@ jobs:
         run: |
           set -euo pipefail
           test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
-          test "$OWNER_TESTING_DEPLOYMENT" != true
-          jq -e 'type == "array" and index("admin") != null' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
+          if [[ "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then
+            test "${{ inputs.owner_testing_recovery_exception }}" = true
+            test "${{ inputs.force_auth_critical }}" = true
+            test -z "${{ inputs.acceptance_run_id }}"
+            jq -e 'type == "array" and (sort == ["admin", "coordinator"])' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
+          else
+            test "$OWNER_TESTING_DEPLOYMENT" != true
+            jq -e 'type == "array" and index("admin") != null' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
+          fi
+      - name: Require owner diagnostic acceptance coordinator candidate
+        if: inputs.owner_testing_subject_diagnostic == true
+        env:
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+          CHANGED_COMPONENTS_JSON: ${{ steps.release_plan.outputs.changed_components_json }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.owner_testing_recovery_exception }}
+          ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
+          FORCE_AUTH_CRITICAL: ${{ inputs.force_auth_critical }}
+          ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+        run: |
+          set -euo pipefail
+          test "$OWNER_TESTING_DEPLOYMENT" = true
+          test "$OWNER_TESTING_RECOVERY_EXCEPTION" = true
+          test "$ENABLE_SUBJECT_DIAGNOSTIC" = true
+          test "$FORCE_AUTH_CRITICAL" = true
+          test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
+          test -z "$ACCEPTANCE_RUN_ID"
+          jq -e 'type == "array" and (sort == ["admin", "coordinator"])' <<< "$CHANGED_COMPONENTS_JSON" >/dev/null
       - name: Require no manual release-class downgrade
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
@@ -507,6 +555,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
@@ -546,7 +595,7 @@ jobs:
           node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/public-before.json" PUBLIC "$RUNNER_TEMP/production-cutover/public-before-versions.json"
           node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/admin-before.json" ADMIN "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
           node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/jobs-before.json" JOBS "$RUNNER_TEMP/production-cutover/jobs-before-versions.json"
-          if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+          if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
             printf '{"status":"NOT_INSPECTED_OWNER_TEST","reason":"component deployment deferred"}\n' > "$RUNNER_TEMP/production-cutover/coordinator-parent-before.json"
             printf '{"status":"NOT_INSPECTED_OWNER_TEST","reason":"component deployment deferred"}\n' > "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json"
             printf '{"status":"NOT_INSPECTED_OWNER_TEST","reason":"component deployment deferred"}\n' > "$RUNNER_TEMP/production-cutover/coordinator-before.json"
@@ -580,6 +629,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
@@ -588,7 +638,7 @@ jobs:
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
             "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
             'admin.lythaus.co/api/admin/*'
-          if [[ "${{ inputs.owner_testing_deployment }}" == true ]]; then
+          if [[ "${{ inputs.owner_testing_deployment }}" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
             printf '{"status":"NOT_TOUCHED_OWNER_TEST"}\n' > "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
           else
             node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
@@ -599,6 +649,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
           EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
@@ -648,7 +699,7 @@ jobs:
               --run "$run_summary" --output "$snapshot"
           else
             defer_coordinator_args=()
-            if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then defer_coordinator_args+=(--defer-coordinator); fi
+            if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then defer_coordinator_args+=(--defer-coordinator); fi
             node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
               --public "$RUNNER_TEMP/production-cutover/public-before.json" \
               --admin "$RUNNER_TEMP/production-cutover/admin-before.json" \
@@ -668,6 +719,12 @@ jobs:
             fi
             jq -c --arg component "$component" '{versions: .workers[$component].versions | map({version_id: .versionId, percentage: .percentage})}' "$snapshot" > "$RUNNER_TEMP/production-cutover/${component}-before.json"
           done
+          if [[ "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then
+            jq -e '.workers.coordinator.versions | length > 0' "$snapshot" >/dev/null || {
+              echo 'The protected approval split requires an existing positive Coordinator rollback target.' >&2
+              exit 1
+            }
+          fi
           jq -c '{route: .routes.adminApi}' "$snapshot" > "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
           jq -c '{route: .routes.coordinator}' "$snapshot" > "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
           echo 'ROLLBACK_ARTIFACTS_PROVEN=true' >> "$GITHUB_ENV"
@@ -766,12 +823,13 @@ jobs:
           PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN: ${{ inputs.enable_subject_diagnostic == true && vars.PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN || '' }}
           EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT: cee241b59a461d2c0199404312504688a92949276b74b1a2364464bf8554810c
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          AUTH_ACCEPTANCE_EMAIL_BASE: ${{ inputs.owner_testing_deployment != true && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_EMAIL || '' }}
-          AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE: ${{ inputs.owner_testing_deployment != true && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_SECONDARY_EMAIL || '' }}
-          CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ inputs.owner_testing_deployment != true && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CLOUDFLARE_API_TOKEN || '' }}
+          AUTH_ACCEPTANCE_EMAIL_BASE: ${{ (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true) && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_EMAIL || '' }}
+          AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE: ${{ (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true) && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_SECONDARY_EMAIL || '' }}
+          CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true) && contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CLOUDFLARE_API_TOKEN || '' }}
           AUTHENTICITY_BETA_DISPATCH_SECRET: ${{ secrets.AUTHENTICITY_BETA_DISPATCH_SECRET }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
           ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
@@ -785,7 +843,7 @@ jobs:
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
           coordinator_managed() {
-            component_changed coordinator && [[ "${OWNER_TESTING_DEPLOYMENT:-false}" != true ]]
+            component_changed coordinator && { [[ "${OWNER_TESTING_DEPLOYMENT:-false}" != true ]] || [[ "${OWNER_TESTING_SUBJECT_DIAGNOSTIC:-false}" == true ]]; }
           }
           test -n "$DATABASE_READINESS_TOKEN"
           if coordinator_managed; then test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"; fi
@@ -895,7 +953,7 @@ jobs:
           if component_changed public; then upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log" "$public_secrets_file"; fi
           if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true ]]; then
             component_changed admin || { echo 'Subject diagnostic requires an Admin Worker candidate.' >&2; exit 1; }
-            [[ "$OWNER_TESTING_DEPLOYMENT" != true ]] || { echo 'Subject diagnostic requires standard exact-candidate acceptance.' >&2; exit 1; }
+            [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]] || { echo 'Owner testing requires the explicit same-run authenticated diagnostic mode.' >&2; exit 1; }
             cp "$diagnostic_policy_module" "$diagnostic_policy_backup"
             SUBJECT_DIAGNOSTIC_POLICY_MODULE_PATH="$diagnostic_policy_module" \
             SUBJECT_DIAGNOSTIC_POLICY_OUTPUT_PATH="$diagnostic_policy_output" \
@@ -903,7 +961,11 @@ jobs:
             node --experimental-strip-types scripts/ci/prepare-subject-diagnostic-policy.mjs
             diagnostic_expiry_epoch="$(jq -er '.expiresAt' "$diagnostic_policy_output")"
             diagnostic_expiry="$(date -u -d "@$diagnostic_expiry_epoch" +%Y-%m-%dT%H:%M:%S.000Z)"
-            echo "SUBJECT_DIAGNOSTIC_EXPIRES_AT=$diagnostic_expiry" >> "$GITHUB_ENV"
+            diagnostic_not_before="$(jq -er '.notBefore' "$diagnostic_policy_output")"
+            {
+              echo "SUBJECT_DIAGNOSTIC_EXPIRES_AT=$diagnostic_expiry"
+              echo "SUBJECT_DIAGNOSTIC_NOT_BEFORE=$diagnostic_not_before"
+            } >> "$GITHUB_ENV"
           fi
           if component_changed admin; then upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$base_secrets_file"; fi
           if component_changed jobs; then upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"; fi
@@ -926,6 +988,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
@@ -991,7 +1054,7 @@ jobs:
           if component_changed public; then resolve_candidate public lythaus-public-api-development PUBLIC; else reuse_production PUBLIC; fi
           if component_changed admin; then resolve_candidate admin lythaus-admin-api-development ADMIN; else reuse_production ADMIN; fi
           if component_changed jobs; then resolve_candidate jobs lythaus-jobs-development JOBS; else reuse_production JOBS; fi
-          if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+          if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
             {
               echo 'COORDINATOR_WORKER_VERSION_ID='
               echo 'COORDINATOR_WORKER_PROVENANCE=OWNER_TEST_DEPLOYMENT_DEFERRED'
@@ -1005,6 +1068,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
@@ -1025,6 +1089,7 @@ jobs:
             echo "ADMIN_WORKER_STAGED=true" >> "$GITHUB_ENV"
             npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS "${ADMIN_WORKER_VERSION_ID}@0" \
               --name lythaus-admin-api-development --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
+            node scripts/ci/wait-for-owner-testing-admin-zero-traffic.mjs
           fi
           # Queue consumers do not accept a per-request Worker-version override.
           # The exact Jobs candidate must therefore be active before any real
@@ -1034,7 +1099,7 @@ jobs:
               --name lythaus-jobs-development --yes --message "Activate exact Jobs lifecycle consumer for changed candidate"
             echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
           fi
-          if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]; then
+          if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then
             npx --yes wrangler@4.123.0 versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100" \
               --name lythaus-auth-acceptance-coordinator-development --yes --message "Activate protected exact-SHA acceptance coordinator candidate"
             echo "COORDINATOR_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
@@ -1042,7 +1107,7 @@ jobs:
             npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc \
               --name lythaus-auth-acceptance-coordinator-development
           fi
-          if component_changed public || (component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]) || [[ "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE ]]; then
+          if component_changed public || (component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]) || [[ "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE ]]; then
             candidate_staged_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
             echo "ADR003_CANDIDATE_STAGED_AT=$candidate_staged_at" >> "$GITHUB_ENV"
           fi
@@ -1219,7 +1284,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=standard release acceptance state transition failed' >> "$GITHUB_ENV"
           node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_NOT_REQUIRED
       - name: PRODUCT_ACCEPTANCE - Keep owner authentication pending
-        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment == true
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment == true && inputs.owner_testing_subject_diagnostic != true
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
           ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
@@ -1239,11 +1304,12 @@ jobs:
             echo 'The exact reviewed release may proceed through production smoke for owner-led testing. No Keeper run or authentication evidence is created; authentication certification remains pending and the canonical manifest must be NO-GO.'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Validate or create the exact-candidate Keeper acceptance run (PRODUCT_ACCEPTANCE gate)
-        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment != true
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true)
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
           ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
@@ -1419,11 +1485,15 @@ jobs:
             echo
             echo "Exact candidate: \`$PUBLIC_WORKER_VERSION_ID\` from source \`$candidate_source_sha\`, certified for release \`$RELEASE_SHA\`."
             echo "Keeper URL (Cloudflare Access required): $keeper_url"
-            echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
+            if [[ "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then
+              echo 'Complete the real Turnstile and mailbox actions before this Keeper run expires. The workflow waits in this same first-attempt release run; it does not require or permit a second release dispatch for the owner exception.'
+            else
+              echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
       - name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence
         id: auth_acceptance_observation
-        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment != true
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true)
         continue-on-error: true
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -1435,6 +1505,10 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CLOUDFLARE_API_TOKEN: ${{ inputs.owner_testing_subject_diagnostic == true && secrets.CLOUDFLARE_API_TOKEN || '' }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
+          AUTH_ACCEPTANCE_EXPIRES_AT: ${{ env.AUTH_ACCEPTANCE_EXPIRES_AT }}
         run: |
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
@@ -1446,9 +1520,13 @@ jobs:
           export ADR003_CANDIDATE_UPLOADED_AT="$ADR003_CANDIDATE_UPLOADED_AT"
           export ADR003_CANDIDATE_STAGED_AT="$ADR003_CANDIDATE_STAGED_AT"
           export ADR003_CANDIDATE_DEPENDENCIES_JSON="$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
-          node scripts/ci/collect-auth-acceptance-evidence.mjs
+          if [[ "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then
+            node scripts/ci/wait-for-auth-acceptance-evidence.mjs
+          else
+            node scripts/ci/collect-auth-acceptance-evidence.mjs
+          fi
       - name: PRODUCT_ACCEPTANCE - Run authenticated acceptance against public candidate
-        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment != true && steps.auth_acceptance_observation.outcome == 'success'
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true) && steps.auth_acceptance_observation.outcome == 'success'
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           ADR003_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
@@ -1497,7 +1575,7 @@ jobs:
         if: ${{ failure() && steps.auth_acceptance_observation.outcome != 'failure' }}
         run: echo 'PRIOR_GATE_FAILURE=true' >> "$GITHUB_ENV"
       - name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance
-        if: always() && steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment != true
+        if: always() && steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && (inputs.owner_testing_deployment != true || inputs.owner_testing_subject_diagnostic == true)
         env:
           OBSERVER_OUTCOME: ${{ steps.auth_acceptance_observation.outcome }}
         run: |
@@ -1548,6 +1626,7 @@ jobs:
             echo "DATABASE_IDENTITY_VERIFIED=true"
             echo "BUDGET_ENFORCEMENT_VERIFIED=true"
             echo "AUTHENTICATED_ACCEPTANCE_PROVEN=true"
+            echo "AUTH_ACCEPTANCE_STATUS=PASSED"
             echo "PLANETSCALE_GRANTS_VERIFIED=true"
           } >> "$GITHUB_ENV"
           node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_PASSED
@@ -1574,13 +1653,111 @@ jobs:
             echo 'BUDGET_ENFORCEMENT_VERIFIED=true'
             echo 'PLANETSCALE_GRANTS_VERIFIED=true'
           } >> "$GITHUB_ENV"
+      - name: Restore acceptance-only Coordinator before activation approval
+        id: restore_acceptance_coordinator
+        if: inputs.owner_testing_subject_diagnostic == true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/production-cutover/activation-approval-boundary"
+          mkdir -p "$work"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$work/jobs.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$work/coordinator.json"
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/admin-route.json" 'admin.lythaus.co/api/admin/*'
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/coordinator-route.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*'
+          node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
+            --public "$work/public.json" --admin "$work/admin.json" --jobs "$work/jobs.json" --coordinator "$work/coordinator.json" \
+            --admin-route "$work/admin-route.json" --coordinator-route "$work/coordinator-route.json" --output "$work/current-before-cleanup.json"
+          ROLLBACK_ATTEMPTED_COMPONENTS_JSON='["coordinator"]' \
+          ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg id "$COORDINATOR_WORKER_VERSION_ID" '{coordinator:$id}')" \
+          ROLLBACK_ATTEMPTED_ROUTES_JSON='["coordinator"]' \
+          ROLLBACK_CANDIDATE_ROUTE_TARGETS_JSON='{"coordinator":{"pattern":"admin.lythaus.co/api/admin/production-auth-acceptance/*","script":"lythaus-auth-acceptance-coordinator-development"}}' \
+            node scripts/ci/assert-owner-testing-rollback-safe.mjs \
+              --expected "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" --current "$work/current-before-cleanup.json"
+          node scripts/ci/manage-cloudflare-worker-route.mjs restore \
+            "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" \
+            'admin.lythaus.co/api/admin/production-auth-acceptance/*'
+          npx --yes wrangler@4.123.0 versions deploy $COORDINATOR_ROLLBACK_SPECS \
+            --name lythaus-auth-acceptance-coordinator-development --yes \
+            --message 'Restore exact pre-acceptance Coordinator before owner activation approval'
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public-after.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin-after.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$work/jobs-after.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$work/coordinator-after.json"
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/admin-route-after.json" 'admin.lythaus.co/api/admin/*'
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/coordinator-route-after.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*'
+          node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
+            --public "$work/public-after.json" --admin "$work/admin-after.json" --jobs "$work/jobs-after.json" --coordinator "$work/coordinator-after.json" \
+            --admin-route "$work/admin-route-after.json" --coordinator-route "$work/coordinator-route-after.json" --output "$work/current-after-cleanup.json"
+          node --input-type=module - "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" "$work/current-after-cleanup.json" <<'NODE'
+          import fs from 'node:fs';
+          import { assertRollbackStateMatchesBaseline } from './scripts/release/owner-testing-activation-handoff.mjs';
+          assertRollbackStateMatchesBaseline(JSON.parse(fs.readFileSync(process.argv[2], 'utf8')), JSON.parse(fs.readFileSync(process.argv[3], 'utf8')));
+          NODE
+          echo 'Acceptance-only Coordinator and route restored to the exact predeployment snapshot before the second production approval.'
+      - name: Create exact same-run activation handoff
+        id: activation_handoff
+        if: inputs.owner_testing_subject_diagnostic == true
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_CLASS: ${{ env.RELEASE_CLASS }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.owner_testing_recovery_exception }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
+          CHANGED_COMPONENTS_JSON: ${{ env.CHANGED_COMPONENTS_JSON }}
+          PUBLIC_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
+          ADMIN_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID }}
+          JOBS_WORKER_VERSION_ID: ${{ env.JOBS_WORKER_VERSION_ID }}
+          COORDINATOR_WORKER_VERSION_ID: ${{ env.COORDINATOR_WORKER_VERSION_ID }}
+          PUBLIC_WORKER_SOURCE_SHA: ${{ env.PUBLIC_WORKER_SOURCE_SHA }}
+          ADMIN_WORKER_SOURCE_SHA: ${{ env.ADMIN_WORKER_SOURCE_SHA }}
+          JOBS_WORKER_SOURCE_SHA: ${{ env.JOBS_WORKER_SOURCE_SHA }}
+          COORDINATOR_WORKER_SOURCE_SHA: ${{ env.COORDINATOR_WORKER_SOURCE_SHA }}
+          PUBLIC_WORKER_STATUS: ${{ env.PUBLIC_WORKER_STATUS }}
+          ADMIN_WORKER_STATUS: ${{ env.ADMIN_WORKER_STATUS }}
+          JOBS_WORKER_STATUS: ${{ env.JOBS_WORKER_STATUS }}
+          COORDINATOR_WORKER_STATUS: ${{ env.COORDINATOR_WORKER_STATUS }}
+          PUBLIC_WORKER_PROVENANCE: ${{ env.PUBLIC_WORKER_PROVENANCE }}
+          ADMIN_WORKER_PROVENANCE: ${{ env.ADMIN_WORKER_PROVENANCE }}
+          JOBS_WORKER_PROVENANCE: ${{ env.JOBS_WORKER_PROVENANCE }}
+          COORDINATOR_WORKER_PROVENANCE: ${{ env.COORDINATOR_WORKER_PROVENANCE }}
+          AUTH_ACCEPTANCE_STATUS: ${{ env.AUTH_ACCEPTANCE_STATUS }}
+          AUTH_ACCEPTANCE_RUN_ID: ${{ env.AUTH_ACCEPTANCE_RUN_ID }}
+          AUTH_ACCEPTANCE_EXPIRES_AT: ${{ env.AUTH_ACCEPTANCE_EXPIRES_AT }}
+          AUTH_ACCEPTANCE_DEPENDENCIES_JSON: ${{ env.AUTH_ACCEPTANCE_DEPENDENCIES_JSON }}
+          SUBJECT_DIAGNOSTIC_NOT_BEFORE: ${{ env.SUBJECT_DIAGNOSTIC_NOT_BEFORE }}
+          SUBJECT_DIAGNOSTIC_EXPIRES_AT: ${{ env.SUBJECT_DIAGNOSTIC_EXPIRES_AT }}
+          ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH: ${{ env.ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH }}
+          HYPERDRIVE_VERIFIED_MAIN: ${{ env.HYPERDRIVE_VERIFIED_MAIN }}
+          DATABASE_IDENTITY_VERIFIED: ${{ env.DATABASE_IDENTITY_VERIFIED }}
+          BUDGET_ENFORCEMENT_VERIFIED: ${{ env.BUDGET_ENFORCEMENT_VERIFIED }}
+          PLANETSCALE_GRANTS_VERIFIED: ${{ env.PLANETSCALE_GRANTS_VERIFIED }}
+          RELEASE_STATE_HISTORY_JSON: ${{ env.RELEASE_STATE_HISTORY_JSON }}
+        run: node scripts/ci/create-owner-testing-activation-handoff.mjs
       - name: ACTIVATION - Validate final production gates before activation
+        if: inputs.owner_testing_subject_diagnostic != true
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
-          AUTH_ACCEPTANCE_STATUS: ${{ inputs.owner_testing_deployment == true && 'OWNER_TEST_PENDING' || '' }}
-          AUTH_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
+          AUTH_ACCEPTANCE_STATUS: ${{ inputs.owner_testing_deployment == true && inputs.owner_testing_subject_diagnostic != true && 'OWNER_TEST_PENDING' || env.AUTH_ACCEPTANCE_STATUS || '' }}
+          AUTH_ACCEPTANCE_RUN_ID: ${{ env.AUTH_ACCEPTANCE_RUN_ID || '' }}
+          AUTH_ACCEPTANCE_EXPIRES_AT: ${{ env.AUTH_ACCEPTANCE_EXPIRES_AT || '' }}
+          AUTH_ACCEPTANCE_DEPENDENCIES_JSON: ${{ env.AUTH_ACCEPTANCE_DEPENDENCIES_JSON || '' }}
+          SUBJECT_DIAGNOSTIC_EXPIRES_AT: ${{ env.SUBJECT_DIAGNOSTIC_EXPIRES_AT || '' }}
+          ADMIN_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID || '' }}
+          ADMIN_WORKER_SOURCE_SHA: ${{ env.ADMIN_WORKER_SOURCE_SHA || '' }}
+          COORDINATOR_WORKER_VERSION_ID: ${{ env.COORDINATOR_WORKER_VERSION_ID || '' }}
+          COORDINATOR_WORKER_SOURCE_SHA: ${{ env.COORDINATOR_WORKER_SOURCE_SHA || '' }}
         run: |
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
@@ -1588,6 +1765,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=final production safety gates failed before activation' >> "$GITHUB_ENV"
           npm run validate:production-gates:final
       - name: ACTIVATION - Reverify fresh recovery and bounded owner exception before activation
+        if: inputs.owner_testing_subject_diagnostic != true
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
@@ -1604,10 +1782,12 @@ jobs:
           } >> "$GITHUB_ENV"
           node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Activate exact candidate Worker versions (ACTIVATION gate; changed components only)
+        if: inputs.owner_testing_subject_diagnostic != true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
           ENABLE_SUBJECT_DIAGNOSTIC: ${{ inputs.enable_subject_diagnostic }}
           SUBJECT_DIAGNOSTIC_EXPIRES_AT: ${{ env.SUBJECT_DIAGNOSTIC_EXPIRES_AT }}
           AUTH_ACCEPTANCE_DEPENDENCIES_JSON: ${{ env.AUTH_ACCEPTANCE_DEPENDENCIES_JSON }}
@@ -1640,10 +1820,11 @@ jobs:
             echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
           fi
           if component_changed jobs; then echo "JOBS_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"; fi
-          if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"; fi
+          if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"; fi
           echo "ACTIVATION_STATE=ACTIVATED" >> "$GITHUB_ENV"
           node scripts/ci/transition-release-state.mjs ACTIVATED
       - name: Publish and verify same-origin admin API route (ACTIVATION gate; changed components only)
+        if: inputs.owner_testing_subject_diagnostic != true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -1669,9 +1850,11 @@ jobs:
           fi
       - name: ACTIVATION - Export candidate, reuse, and activation metadata
         id: validate_release_metadata
+        if: inputs.owner_testing_subject_diagnostic != true
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
@@ -1684,17 +1867,17 @@ jobs:
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
           coordinator_managed() {
-            component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]
+            component_changed coordinator && { [[ "$OWNER_TESTING_DEPLOYMENT" != true ]] || [[ "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; }
           }
           test -n "${PUBLIC_WORKER_VERSION_ID:-}"
           test -n "${ADMIN_WORKER_VERSION_ID:-}"
           test -n "${JOBS_WORKER_VERSION_ID:-}"
-          if [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]; then test -n "${COORDINATOR_WORKER_VERSION_ID:-}"; fi
+          if [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]]; then test -n "${COORDINATOR_WORKER_VERSION_ID:-}"; fi
           check_worker_provenance() {
             local component="$1"; local prefix="$2"
             local source_var="${prefix}_WORKER_SOURCE_SHA"; local provenance_var="${prefix}_WORKER_PROVENANCE"; local status_var="${prefix}_WORKER_STATUS"
             local source="${!source_var:-}"; local provenance="${!provenance_var:-}"; local status="${!status_var:-}"
-            if [[ "$component" == coordinator && "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            if [[ "$component" == coordinator && "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
               test "$provenance" = OWNER_TEST_DEPLOYMENT_DEFERRED
               test "$status" = DEFERRED_OWNER_TEST
               return 0
@@ -1722,7 +1905,7 @@ jobs:
           test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
           test -s "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
-          if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true && -z "${{ inputs.acceptance_run_id }}" ]]; then
+          if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true ]] && [[ -z "${{ inputs.acceptance_run_id }}" ]]; then
             test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-after.json"
           fi
           lifecycle_evidence="$RUNNER_TEMP/production-cutover/email-lifecycle-infrastructure.json"
@@ -1730,23 +1913,23 @@ jobs:
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
           if component_changed public || component_changed jobs || coordinator_managed; then
             test -s "$scoped_key_evidence"
-            jq -e --argjson changed "$CHANGED_COMPONENTS_JSON" --arg owner "$OWNER_TESTING_DEPLOYMENT" '
+            jq -e --argjson changed "$CHANGED_COMPONENTS_JSON" --arg owner "$OWNER_TESTING_DEPLOYMENT" --arg diag "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" '
               .status == "VERIFIED"
               and .transactionalEmail.compatibilityProbeRequired == true
               and (.transactionalEmail.action == "bootstrap" or .transactionalEmail.action == "preserve")
-              and ((.acceptanceState.action == "bootstrap" or .acceptanceState.action == "preserve") or (((($changed | index("coordinator")) == null) or $owner == "true") and .acceptanceState.action == "reuse_not_touched"))
+              and (($diag == "true" and .acceptanceState.action == "preserve") or ($diag != "true" and ((.acceptanceState.action == "bootstrap" or .acceptanceState.action == "preserve") or (((($changed | index("coordinator")) == null) or $owner == "true") and .acceptanceState.action == "reuse_not_touched"))))
               and .secretValuesIncluded == false
             ' "$scoped_key_evidence" >/dev/null
           fi
           if component_changed public || component_changed admin || component_changed jobs || coordinator_managed; then
             test -s "$scoped_binding_evidence"
-            jq -e --argjson changed "$CHANGED_COMPONENTS_JSON" --arg owner "$OWNER_TESTING_DEPLOYMENT" '
+            jq -e --argjson changed "$CHANGED_COMPONENTS_JSON" --arg owner "$OWNER_TESTING_DEPLOYMENT" --arg diag "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" '
               .status == "VERIFIED"
               and .source == "cloudflare_secret_binding_names"
               and (.publicApi.requiredBindingsPresent | index("TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"))
               and .jobs.requiredBindingsPresent == ["TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"]
               and (.jobs.forbiddenProductBindingsAbsent | sort) == ["PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
-              and (((($changed | index("coordinator")) != null and $owner != "true") and .acceptanceCoordinator.requiredBindingsPresent == ["AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1"]) or (((($changed | index("coordinator")) == null) or $owner == "true") and .acceptanceCoordinator.requiredBindingsPresent == []))
+              and (((($changed | index("coordinator")) != null and ($owner != "true" or $diag == "true")) and .acceptanceCoordinator.requiredBindingsPresent == ["AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1"]) or (((($changed | index("coordinator")) == null) or ($owner == "true" and $diag != "true")) and .acceptanceCoordinator.requiredBindingsPresent == []))
               and (.acceptanceCoordinator.forbiddenProductBindingsAbsent | sort) == ["ACCESS_SUBJECT_HMAC_KEY", "PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
               and .secretValuesIncluded == false
             ' "$scoped_binding_evidence" >/dev/null
@@ -1778,7 +1961,7 @@ jobs:
             echo "database_identity_verified=${DATABASE_IDENTITY_VERIFIED:-false}"
             echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
             echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
-            if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
               echo 'authenticated_acceptance_status=OWNER_TEST_PENDING'
               echo 'acceptance_run_id='
               echo 'acceptance_expires_at='
@@ -1802,7 +1985,7 @@ jobs:
             fi
             echo "release_class=$RELEASE_CLASS"
             echo "changed_components_json=$CHANGED_COMPONENTS_JSON"
-            if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
               rollback_components="$(jq -c 'map(select(. != "coordinator"))' <<< "$CHANGED_COMPONENTS_JSON")"
               echo "rollback_components_json=$rollback_components"
             else
@@ -1865,10 +2048,42 @@ jobs:
             echo 'No complete rollback snapshot was proven; production was left untouched.' >&2
             exit 0
           fi
-          if [[ "${AUTH_ACCEPTANCE_PENDING:-false}" == "true" ]]; then
+          if [[ "${AUTH_ACCEPTANCE_PENDING:-false}" == "true" && "${OWNER_TESTING_SUBJECT_DIAGNOSTIC:-false}" != "true" ]]; then
             echo 'HUMAN_ACCEPTANCE_REQUIRED: preserving exact candidate Jobs/coordinator state for resume.'
             echo 'ROLLBACK_STATE=PRESERVED_FOR_ACCEPTANCE' >> "$GITHUB_ENV"
             exit 0
+          fi
+          if [[ "${OWNER_TESTING_SUBJECT_DIAGNOSTIC:-false}" == "true" ]]; then
+            drift_dir="$RUNNER_TEMP/production-cutover/rollback-drift-check"
+            mkdir -p "$drift_dir"
+            npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$drift_dir/public.json" || rollback_failed=1
+            npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$drift_dir/admin.json" || rollback_failed=1
+            npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$drift_dir/jobs.json" || rollback_failed=1
+            npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$drift_dir/coordinator.json" || rollback_failed=1
+            node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$drift_dir/admin-route.json" 'admin.lythaus.co/api/admin/*' || rollback_failed=1
+            node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$drift_dir/coordinator-route.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*' || rollback_failed=1
+            if [[ "$rollback_failed" -ne 0 ]] || ! node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
+              --public "$drift_dir/public.json" --admin "$drift_dir/admin.json" --jobs "$drift_dir/jobs.json" --coordinator "$drift_dir/coordinator.json" \
+              --admin-route "$drift_dir/admin-route.json" --coordinator-route "$drift_dir/coordinator-route.json" --output "$drift_dir/current.json"; then
+              echo 'ROLLBACK_STATE=BLOCKED_EXTERNAL_DRIFT' >> "$GITHUB_ENV"
+              echo 'Could not obtain an unambiguous current-state snapshot; no Cloudflare rollback mutation was attempted.' >&2
+              exit 0
+            fi
+            attempted_components='[]'
+            attempted_routes='[]'
+            if [[ "${COORDINATOR_WORKER_DEPLOYED:-false}" == true ]]; then attempted_components='["coordinator"]'; fi
+            if [[ "${COORDINATOR_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then attempted_routes='["coordinator"]'; fi
+            export ROLLBACK_ATTEMPTED_COMPONENTS_JSON="$attempted_components"
+            export ROLLBACK_ATTEMPTED_ROUTES_JSON="$attempted_routes"
+            ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg id "${COORDINATOR_WORKER_VERSION_ID:-}" '{coordinator:$id}')"
+            export ROLLBACK_CANDIDATE_VERSIONS_JSON
+            export ROLLBACK_CANDIDATE_ROUTE_TARGETS_JSON='{"coordinator":{"pattern":"admin.lythaus.co/api/admin/production-auth-acceptance/*","script":"lythaus-auth-acceptance-coordinator-development"}}'
+            if ! node scripts/ci/assert-owner-testing-rollback-safe.mjs \
+              --expected "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" --current "$drift_dir/current.json"; then
+              echo 'ROLLBACK_STATE=BLOCKED_EXTERNAL_DRIFT' >> "$GITHUB_ENV"
+              echo 'Live Worker or route state drifted outside this run; rollback was blocked to avoid overwriting it.' >&2
+              exit 0
+            fi
           fi
           if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == "true" ]]; then
             node scripts/ci/manage-cloudflare-worker-route.mjs restore \
@@ -1912,13 +2127,14 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
         shell: bash
         run: |
           set -u
           release_class="${RELEASE_CLASS:-AUTH_CRITICAL_RELEASE}"
           acceptance_status="NOT_REQUIRED"
           if [[ "$release_class" == 'AUTH_CRITICAL_RELEASE' ]]; then
-            if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
               acceptance_status='OWNER_TEST_PENDING'
             else
               acceptance_status='BLOCKED'
@@ -1942,14 +2158,14 @@ jobs:
             echo "acceptance_expires_at=${AUTH_ACCEPTANCE_EXPIRES_AT:-}"
             echo "acceptance_keeper_url=${AUTH_ACCEPTANCE_KEEPER_URL:-}"
             echo "acceptance_dependencies_json=${AUTH_ACCEPTANCE_DEPENDENCIES_JSON:-}"
-            if [[ "$release_class" == 'AUTH_CRITICAL_RELEASE' && "$OWNER_TESTING_DEPLOYMENT" != true ]]; then
+            if [[ "$release_class" == 'AUTH_CRITICAL_RELEASE' && ("$OWNER_TESTING_DEPLOYMENT" != true || "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true) ]]; then
               echo "acceptance_evidence_path=$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json"
             else
               echo 'acceptance_evidence_path='
             fi
             echo "release_class=$release_class"
             echo "changed_components_json=${CHANGED_COMPONENTS_JSON:-[]}"
-            if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            if [[ "$OWNER_TESTING_DEPLOYMENT" == true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
               rollback_components="$(jq -c 'map(select(. != "coordinator"))' <<<"${CHANGED_COMPONENTS_JSON:-[]}")"
               echo "rollback_components_json=$rollback_components"
             else
@@ -1988,3 +2204,13 @@ jobs:
           name: production-cutover-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/production-cutover
           if-no-files-found: ignore
+
+  activate:
+    name: Owner-approved candidate activation
+    if: ${{ inputs.owner_testing_subject_diagnostic == true && needs.deploy.result == 'success' }}
+    needs: [deploy]
+    uses: ./.github/workflows/native-workers-owner-testing-activate.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      activation_handoff_json: ${{ needs.deploy.outputs.activation_handoff_json }}
+    secrets: inherit

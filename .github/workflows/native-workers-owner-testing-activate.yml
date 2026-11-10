@@ -1,0 +1,292 @@
+name: native-workers-owner-testing-activate
+
+on:
+  workflow_call:
+    inputs:
+      release_sha:
+        required: true
+        type: string
+      activation_handoff_json:
+        required: true
+        type: string
+    outputs:
+      admin_worker_status:
+        value: ${{ jobs.activate.outputs.admin_worker_status }}
+      coordinator_worker_status:
+        value: ${{ jobs.activate.outputs.coordinator_worker_status }}
+      activation_state:
+        value: ${{ jobs.activate.outputs.activation_state }}
+      release_state:
+        value: ${{ jobs.activate.outputs.release_state }}
+      release_state_history_json:
+        value: ${{ jobs.activate.outputs.release_state_history_json }}
+      rollback_state:
+        value: ${{ jobs.activate.outputs.rollback_state }}
+      rollback_artifacts_proven:
+        value: ${{ jobs.activate.outputs.rollback_artifacts_proven }}
+      failure_domain_evidence_json:
+        value: ${{ jobs.activate.outputs.failure_domain_evidence_json }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-production-workers-owner-activation
+  cancel-in-progress: false
+
+jobs:
+  activate:
+    name: Activate accepted owner-test candidates
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 35
+    outputs:
+      admin_worker_status: ${{ steps.release_metadata.outputs.admin_worker_status }}
+      coordinator_worker_status: ${{ steps.release_metadata.outputs.coordinator_worker_status }}
+      activation_state: ${{ steps.release_metadata.outputs.activation_state }}
+      release_state: ${{ steps.release_metadata.outputs.release_state }}
+      release_state_history_json: ${{ steps.release_metadata.outputs.release_state_history_json }}
+      rollback_state: ${{ steps.release_metadata.outputs.rollback_state }}
+      rollback_artifacts_proven: ${{ steps.release_metadata.outputs.rollback_artifacts_proven }}
+      failure_domain_evidence_json: ${{ steps.release_metadata.outputs.failure_domain_evidence_json }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      OWNER_TESTING_DEPLOYMENT: 'true'
+      OWNER_TESTING_RECOVERY_EXCEPTION: 'true'
+      OWNER_TESTING_SUBJECT_DIAGNOSTIC: 'true'
+      ENABLE_SUBJECT_DIAGNOSTIC: 'true'
+      FORCE_AUTH_CRITICAL: 'true'
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: Revalidate exact current protected main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          checked_out_sha="$(git rev-parse HEAD)"
+          remote_main_sha="$(git rev-parse origin/main)"
+          test "$RELEASE_SHA" = "$checked_out_sha"
+          test "$checked_out_sha" = "$remote_main_sha"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install exact release dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate same-run first-attempt handoff after activation approval
+        id: handoff
+        env:
+          OWNER_TESTING_ACTIVATION_HANDOFF_JSON: ${{ inputs.activation_handoff_json }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/validate-owner-testing-activation-handoff.mjs
+      - name: Materialize validated rollback snapshot for following steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ROLLBACK_SNAPSHOT_JSON"
+          mkdir -p "$RUNNER_TEMP/production-cutover"
+          printf '%s\n' "$ROLLBACK_SNAPSHOT_JSON" > "$RUNNER_TEMP/production-cutover/acceptance-rollback-snapshot.json"
+          echo 'ROLLBACK_ARTIFACTS_PROVEN=true' >> "$GITHUB_ENV"
+          echo "ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH=$RUNNER_TEMP/production-cutover/acceptance-rollback-snapshot.json" >> "$GITHUB_ENV"
+      - name: Revalidate exact candidate versions and source tags
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/admin-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/coordinator-versions.json"
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/admin-versions.json" "$RELEASE_SHA" ADMIN "$ADMIN_WORKER_VERSION_ID"
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/coordinator-versions.json" "$RELEASE_SHA" COORDINATOR "$COORDINATOR_WORKER_VERSION_ID"
+          test "$ADMIN_WORKER_SOURCE_SHA" = "$RELEASE_SHA"
+          test "$COORDINATOR_WORKER_SOURCE_SHA" = "$RELEASE_SHA"
+          test "$AUTH_ACCEPTANCE_STATUS" = PASSED
+      - name: Revalidate final production and diagnostic runway gates after approval
+        run: |
+          set -euo pipefail
+          node scripts/ci/verify-subject-diagnostic-expiry.mjs
+          npm run validate:production-gates:final
+      - name: Reverify fresh recovery readiness and exact owner exception after approval
+        env:
+          PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/production-cutover/recovery-readiness-before-activation.json
+        run: node scripts/ci/verify-production-recovery-readiness.mjs
+      - name: Capture and compare live Workers and routes immediately before activation
+        id: live_snapshot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/production-cutover/before-owner-activation"
+          mkdir -p "$work"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$work/jobs.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$work/coordinator.json"
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/admin-route.json" 'admin.lythaus.co/api/admin/*'
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/coordinator-route.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*'
+          node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
+            --public "$work/public.json" --admin "$work/admin.json" --jobs "$work/jobs.json" --coordinator "$work/coordinator.json" \
+            --admin-route "$work/admin-route.json" --coordinator-route "$work/coordinator-route.json" --output "$work/current.json"
+          node --input-type=module - "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" "$work/current.json" <<'NODE'
+          import fs from 'node:fs';
+          import { assertRollbackStateMatchesBaseline } from './scripts/release/owner-testing-activation-handoff.mjs';
+          assertRollbackStateMatchesBaseline(JSON.parse(fs.readFileSync(process.argv[2], 'utf8')), JSON.parse(fs.readFileSync(process.argv[3], 'utf8')));
+          NODE
+          echo 'The exact predeployment Worker percentages and routes remain unchanged after Keeper acceptance and activation approval.'
+      - name: Activate exact Admin and Coordinator candidates after second approval
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo 'RELEASE_FAILURE_GATE=ACTIVATION'
+            echo 'RELEASE_FAILURE_CODE=candidate_activation_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=accepted owner-test candidate activation failed'
+          } >> "$GITHUB_ENV"
+          echo 'ADMIN_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy "${ADMIN_WORKER_VERSION_ID}@100" \
+            --name lythaus-admin-api-development --yes --message "Activate exact accepted owner-test Admin candidate $RELEASE_SHA"
+          echo 'ADMIN_WORKER_STATUS=ACTIVATED' >> "$GITHUB_ENV"
+          echo 'ADMIN_ROUTE_TRIGGER_ATTEMPTED=true' >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-admin-api/wrangler.jsonc --name lythaus-admin-api-development
+          node scripts/ci/manage-cloudflare-worker-route.mjs verify \
+            "$RUNNER_TEMP/production-cutover/admin-route-after.json" \
+            'admin.lythaus.co/api/admin/*' lythaus-admin-api-development
+          echo 'COORDINATOR_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100" \
+            --name lythaus-auth-acceptance-coordinator-development --yes --message "Activate exact accepted owner-test Coordinator candidate $RELEASE_SHA"
+          echo 'COORDINATOR_WORKER_STATUS=ACTIVATED' >> "$GITHUB_ENV"
+          echo 'COORDINATOR_ROUTE_TRIGGER_ATTEMPTED=true' >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc \
+            --name lythaus-auth-acceptance-coordinator-development
+          node scripts/ci/manage-cloudflare-worker-route.mjs verify \
+            "$RUNNER_TEMP/production-cutover/coordinator-route-after.json" \
+            'admin.lythaus.co/api/admin/production-auth-acceptance/*' lythaus-auth-acceptance-coordinator-development
+          echo 'ACTIVATION_STATE=ACTIVATED' >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs ACTIVATED
+      - name: Safely roll back partial activation only from known in-run states
+        if: ${{ always() && (failure() || cancelled()) }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+        shell: bash
+        run: |
+          set +e
+          if [[ "${ROLLBACK_ARTIFACTS_PROVEN:-false}" != true || ! -s "${ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH:-}" ]]; then
+            echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'No verified rollback snapshot is available; no rollback mutation was attempted.' >&2
+            exit 0
+          fi
+          work="$RUNNER_TEMP/production-cutover/rollback-check"
+          mkdir -p "$work"
+          block_rollback_without_verified_live_state() {
+            echo 'ROLLBACK_STATE=BLOCKED_UNVERIFIED_LIVE_STATE' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'Current state could not be read unambiguously; no rollback mutation was attempted.' >&2
+            RELEASE_STATE_HISTORY_JSON="${RELEASE_STATE_HISTORY_JSON:-[]}" node scripts/ci/transition-release-state.mjs BLOCKED || true
+            exit 0
+          }
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public.json" || block_rollback_without_verified_live_state
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin.json" || block_rollback_without_verified_live_state
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$work/jobs.json" || block_rollback_without_verified_live_state
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$work/coordinator.json" || block_rollback_without_verified_live_state
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/admin-route.json" 'admin.lythaus.co/api/admin/*' || block_rollback_without_verified_live_state
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/coordinator-route.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*' || block_rollback_without_verified_live_state
+          node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
+            --public "$work/public.json" --admin "$work/admin.json" --jobs "$work/jobs.json" --coordinator "$work/coordinator.json" \
+            --admin-route "$work/admin-route.json" --coordinator-route "$work/coordinator-route.json" --output "$work/current.json" || block_rollback_without_verified_live_state
+          attempted_components='[]'
+          attempted_routes='[]'
+          if [[ "${ADMIN_WORKER_DEPLOYED:-false}" == true ]]; then attempted_components='["admin"]'; fi
+          if [[ "${COORDINATOR_WORKER_DEPLOYED:-false}" == true ]]; then attempted_components='["admin","coordinator"]'; fi
+          if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then attempted_routes='["adminApi"]'; fi
+          if [[ "${COORDINATOR_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then attempted_routes='["adminApi","coordinator"]'; fi
+          if [[ "$attempted_components" == '[]' && "$attempted_routes" == '[]' ]]; then
+            echo 'ROLLBACK_STATE=NOT_NEEDED' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
+            RELEASE_STATE_HISTORY_JSON="$RELEASE_STATE_HISTORY_JSON" node scripts/ci/transition-release-state.mjs BLOCKED || true
+            exit 0
+          fi
+          export ROLLBACK_ATTEMPTED_COMPONENTS_JSON="$attempted_components"
+          export ROLLBACK_ATTEMPTED_ROUTES_JSON="$attempted_routes"
+          ROLLBACK_CANDIDATE_VERSIONS_JSON="$(jq -cn --arg admin "$ADMIN_WORKER_VERSION_ID" --arg coordinator "$COORDINATOR_WORKER_VERSION_ID" '{admin:$admin,coordinator:$coordinator}')"
+          export ROLLBACK_CANDIDATE_VERSIONS_JSON
+          export ROLLBACK_CANDIDATE_ROUTE_TARGETS_JSON='{"adminApi":{"pattern":"admin.lythaus.co/api/admin/*","script":"lythaus-admin-api-development"},"coordinator":{"pattern":"admin.lythaus.co/api/admin/production-auth-acceptance/*","script":"lythaus-auth-acceptance-coordinator-development"}}'
+          if ! node scripts/ci/assert-owner-testing-rollback-safe.mjs --expected "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" --current "$work/current.json"; then
+            echo 'ROLLBACK_STATE=BLOCKED_EXTERNAL_DRIFT' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'Live state contains an unrelated change; rollback was blocked to avoid overwriting it.' >&2
+            RELEASE_STATE_HISTORY_JSON="$RELEASE_STATE_HISTORY_JSON" node scripts/ci/transition-release-state.mjs BLOCKED || true
+            exit 0
+          fi
+          rollback_failed=0
+          jq -c '{route:.routes.adminApi}' "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" > "$work/admin-route-before.json"
+          jq -c '{route:.routes.coordinator}' "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH" > "$work/coordinator-route-before.json"
+          if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then
+            node scripts/ci/manage-cloudflare-worker-route.mjs restore "$work/admin-route-before.json" 'admin.lythaus.co/api/admin/*' || rollback_failed=1
+          fi
+          if [[ "${COORDINATOR_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then
+            node scripts/ci/manage-cloudflare-worker-route.mjs restore "$work/coordinator-route-before.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*' || rollback_failed=1
+          fi
+          if [[ "${COORDINATOR_WORKER_DEPLOYED:-false}" == true ]]; then
+            coordinator_specs="$(jq -r '.workers.coordinator.versions | map(\"\(.versionId)@\(.percentage)\") | join(" ")' "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH")"
+            npx --yes wrangler@4.123.0 versions deploy $coordinator_specs --name lythaus-auth-acceptance-coordinator-development --yes --message 'Restore exact owner-test Coordinator baseline' || rollback_failed=1
+          fi
+          if [[ "${ADMIN_WORKER_DEPLOYED:-false}" == true ]]; then
+            admin_specs="$(jq -r '.workers.admin.versions | map(\"\(.versionId)@\(.percentage)\") | join(" ")' "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH")"
+            npx --yes wrangler@4.123.0 versions deploy $admin_specs --name lythaus-admin-api-development --yes --message 'Restore exact owner-test Admin baseline' || rollback_failed=1
+          fi
+          if [[ "$rollback_failed" == 0 ]]; then
+            {
+              echo 'ROLLBACK_STATE=ROLLED_BACK'
+              echo 'ACTIVATION_STATE=ROLLED_BACK'
+              echo 'RELEASE_STATE_HISTORY_JSON<<LYTHAUS_ROLLBACK_HISTORY'
+              echo "$RELEASE_STATE_HISTORY_JSON"
+              echo 'LYTHAUS_ROLLBACK_HISTORY'
+            } >> "$GITHUB_ENV"
+            node scripts/ci/transition-release-state.mjs ROLLED_BACK || rollback_failed=1
+          else
+            echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
+            RELEASE_STATE_HISTORY_JSON="$RELEASE_STATE_HISTORY_JSON" node scripts/ci/transition-release-state.mjs BLOCKED || true
+          fi
+          exit "$rollback_failed"
+      - name: Export protected activation result
+        id: release_metadata
+        if: always()
+        shell: bash
+        run: |
+          state="${RELEASE_STATE:-BLOCKED}"
+          activation="${ACTIVATION_STATE:-BLOCKED}"
+          admin_status="${ADMIN_WORKER_STATUS:-NEW_CANDIDATE}"
+          coordinator_status="${COORDINATOR_WORKER_STATUS:-NEW_CANDIDATE}"
+          rollback="${ROLLBACK_STATE:-READY}"
+          history="${RELEASE_STATE_HISTORY_JSON:-[]}" 
+          {
+            echo "admin_worker_status=$admin_status"
+            echo "coordinator_worker_status=$coordinator_status"
+            echo "activation_state=$activation"
+            echo "release_state=$state"
+            echo "release_state_history_json=$history"
+            echo "rollback_state=$rollback"
+            echo "rollback_artifacts_proven=${ROLLBACK_ARTIFACTS_PROVEN:-false}"
+            echo 'failure_domain_evidence_json=[]'
+          } >> "$GITHUB_OUTPUT"

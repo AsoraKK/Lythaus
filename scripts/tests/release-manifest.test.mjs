@@ -250,6 +250,135 @@ test('owner-test release remains NO-GO with authentication acceptance pending', 
   assert.equal(manifest.candidate.components.coordinator.provenance, 'OWNER_TEST_DEPLOYMENT_DEFERRED');
 });
 
+test('owner diagnostic can record exact same-run acceptance while public readiness remains NO-GO', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-owner-diagnostic-manifest-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const output = path.join(directory, 'release-manifest.json');
+  const diagnosticExpiry = new Date(Math.floor((Date.now() + 90 * 60_000) / 1000) * 1000).toISOString();
+  const adminVersion = '11111111-1111-4111-8111-111111111111';
+  const coordinatorVersion = '22222222-2222-4222-8222-222222222222';
+  const dependencies = {
+    public: { workerName: 'lythaus-public-api-development', versionId: '33333333-3333-4333-8333-333333333333', sourceSha: 'f'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+    admin: { workerName: 'lythaus-admin-api-development', versionId: adminVersion, sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    jobs: { workerName: 'lythaus-jobs-development', versionId: '44444444-4444-4444-8444-444444444444', sourceSha: 'e'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+    coordinator: { workerName: 'lythaus-auth-acceptance-coordinator-development', versionId: coordinatorVersion, sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    subjectDiagnosticExpiresAt: diagnosticExpiry,
+  };
+  const history = [
+    'PREFLIGHT', 'INFRASTRUCTURE_VERIFIED', 'CANDIDATE_READY', 'PRODUCT_ACCEPTANCE_REQUIRED',
+    'PRODUCT_ACCEPTANCE_PASSED', 'ACTIVATED', 'OWNER_TEST_DEPLOYED_UNCERTIFIED',
+  ].map((state, index) => ({ state, at: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString() }));
+  const env = {
+    ...process.env,
+    RELEASE_SHA: releaseSha,
+    RELEASE_CLASS: 'AUTH_CRITICAL_RELEASE',
+    OWNER_TESTING_DEPLOYMENT: 'true',
+    OWNER_TESTING_SUBJECT_DIAGNOSTIC: 'true',
+    INDEPENDENT_RECOVERY_STATUS: 'DEFERRED_BY_OWNER_EXCEPTION',
+    RECOVERY_READINESS_STATUS: 'PASS',
+    AUTHENTICATED_ACCEPTANCE_PROVEN: 'true',
+    AUTH_ACCEPTANCE_STATUS: 'PASSED',
+    AUTH_ACCEPTANCE_RUN_ID: '55555555-5555-4555-8555-555555555555',
+    AUTH_ACCEPTANCE_EXPIRES_AT: new Date(Date.now() + 30 * 60_000).toISOString(),
+    AUTH_ACCEPTANCE_DEPENDENCIES_JSON: JSON.stringify(dependencies),
+    CHANGED_COMPONENTS_JSON: '["admin","coordinator"]',
+    REUSED_COMPONENTS_JSON: '["control-panel","flutter-web","jobs","marketing","public"]',
+    ADMIN_API_WORKER_VERSION: adminVersion,
+    ADMIN_API_WORKER_SOURCE_SHA: releaseSha,
+    ADMIN_API_WORKER_STATUS: 'ACTIVATED',
+    ADMIN_API_WORKER_PROVENANCE: 'BUILT_FROM_RELEASE_SHA',
+    COORDINATOR_WORKER_VERSION: coordinatorVersion,
+    COORDINATOR_WORKER_SOURCE_SHA: releaseSha,
+    COORDINATOR_WORKER_STATUS: 'ACTIVATED',
+    COORDINATOR_WORKER_PROVENANCE: 'BUILT_FROM_RELEASE_SHA',
+    PUBLIC_API_WORKER_VERSION: dependencies.public.versionId,
+    PUBLIC_API_WORKER_SOURCE_SHA: dependencies.public.sourceSha,
+    JOBS_WORKER_VERSION: dependencies.jobs.versionId,
+    JOBS_WORKER_SOURCE_SHA: dependencies.jobs.sourceSha,
+    RELEASE_STATE: 'OWNER_TEST_DEPLOYED_UNCERTIFIED',
+    RELEASE_STATE_HISTORY_JSON: JSON.stringify(history),
+    LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true',
+    CI: 'false',
+  };
+  execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], { cwd: root, env, stdio: 'pipe' });
+  const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.equal(manifest.status, 'NO-GO');
+  assert.equal(manifest.productionStatus, 'NO-GO');
+  assert.equal(manifest.readinessStatus, 'owner-test-authenticated-uncertified');
+  assert.equal(manifest.authAcceptance.status, 'PASSED');
+  assert.equal(manifest.authAcceptance.candidateDependenciesVerified, true);
+  assert.equal(manifest.authAcceptance.ownerTesting.status, 'DEPLOYED_UNCERTIFIED');
+  assert.deepEqual(manifest.authAcceptance.ownerTesting.deferredComponents, []);
+  assert.equal(manifest.subjectDiagnostic.enabled, true);
+  assert.equal(manifest.subjectDiagnostic.adminVersionId, adminVersion);
+  assert.equal(manifest.subjectDiagnostic.adminSourceSha, releaseSha);
+  assert.equal(manifest.subjectDiagnostic.expiresAt, diagnosticExpiry);
+  assert.equal(manifest.recovery.independentRecoveryStatus, 'DEFERRED_BY_OWNER_EXCEPTION');
+  assert.deepEqual(manifest.recovery.publicReleaseBlockers, ['independent_recovery_destination']);
+
+  const expiredExpiry = new Date(Math.floor((Date.now() - 60_000) / 1000) * 1000).toISOString();
+  const expiredDependencies = { ...dependencies, subjectDiagnosticExpiresAt: expiredExpiry };
+  const expiredOutput = path.join(directory, 'expired-release-manifest.json');
+  execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', expiredOutput], {
+    cwd: root,
+    env: {
+      ...env,
+      SUBJECT_DIAGNOSTIC_EXPIRES_AT: expiredExpiry,
+      AUTH_ACCEPTANCE_DEPENDENCIES_JSON: JSON.stringify(expiredDependencies),
+    },
+    stdio: 'pipe',
+  });
+  const expiredManifest = JSON.parse(fs.readFileSync(expiredOutput, 'utf8'));
+  assert.equal(expiredManifest.authAcceptance.status, 'PASSED');
+  assert.equal(expiredManifest.authAcceptance.candidateDependenciesVerified, true);
+  assert.equal(expiredManifest.subjectDiagnostic.status, 'EXPIRED');
+  assert.equal(expiredManifest.status, 'NO-GO');
+  assert.equal(expiredManifest.productionStatus, 'NO-GO');
+  assert.equal(expiredManifest.recovery.independentRecoveryStatus, 'DEFERRED_BY_OWNER_EXCEPTION');
+  assert.deepEqual(expiredManifest.recovery.publicReleaseBlockers, ['independent_recovery_destination']);
+
+  const workflow = fs.readFileSync('.github/workflows/production-release.yml', 'utf8');
+  const assertion = workflow.split('- name: Assert owner testing remains uncertified')[1].split('\n      - name:')[0]
+    .split('run: |\n')[1].split('\n').map(line => line.replace(/^          /, '')).join('\n');
+  const assertionDirectory = path.join(directory, 'assertion');
+  const manifestDirectory = path.join(assertionDirectory, '.artifacts', 'release');
+  fs.mkdirSync(manifestDirectory, { recursive: true });
+  const assertionManifest = path.join(manifestDirectory, 'release-manifest.json');
+  const summary = path.join(directory, 'summary.md');
+  fs.writeFileSync(assertionManifest, JSON.stringify(manifest));
+  execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], {
+    cwd: assertionDirectory,
+    env: { ...process.env, RELEASE_MODE: 'owner_testing_subject_diagnostic_exception', GITHUB_STEP_SUMMARY: summary },
+    stdio: 'pipe',
+  });
+  assert.match(fs.readFileSync(summary, 'utf8'), /exact candidate.*NO-GO.*independent recovery is unresolved/i);
+  fs.writeFileSync(assertionManifest, JSON.stringify(expiredManifest));
+  execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], {
+    cwd: assertionDirectory,
+    env: { ...process.env, RELEASE_MODE: 'owner_testing_subject_diagnostic_exception', GITHUB_STEP_SUMMARY: summary },
+    stdio: 'pipe',
+  });
+  assert.match(fs.readFileSync(summary, 'utf8'), /exact candidate.*NO-GO.*independent recovery is unresolved/i);
+  for (const tampered of [
+    { ...manifest, status: 'GO' },
+    { ...manifest, recovery: { ...manifest.recovery, independentRecoveryStatus: 'VERIFIED', publicReleaseBlockers: [] } },
+    { ...manifest, authAcceptance: { ...manifest.authAcceptance, candidateDependenciesVerified: false } },
+  ]) {
+    fs.writeFileSync(assertionManifest, JSON.stringify(tampered));
+    assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], {
+      cwd: assertionDirectory,
+      env: { ...process.env, RELEASE_MODE: 'owner_testing_subject_diagnostic_exception', GITHUB_STEP_SUMMARY: summary },
+      stdio: 'pipe',
+    }));
+  }
+
+  assert.throws(() => execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], {
+    cwd: root,
+    env: { ...env, CHANGED_COMPONENTS_JSON: '["admin"]' },
+    stdio: 'pipe',
+  }), /requires exactly Admin and coordinator candidates/);
+});
+
 test('owner-test mode rejects any acceptance proof or acceptance run', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-owner-test-forged-'));
   const output = path.join(directory, 'release-manifest.json');
@@ -301,15 +430,15 @@ for (const state of ['ROLLED_BACK', 'BLOCKED']) {
     const assertion = workflow.split('- name: Assert owner testing remains uncertified')[1].split('\n      - name:')[0]
       .split('run: |\n')[1].split('\n').map((line) => line.replace(/^          /, '')).join('\n');
     const summary = path.join(directory, 'summary.md');
-    execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, stdio: 'pipe' });
+    execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary, RELEASE_MODE: 'owner_testing' }, stdio: 'pipe' });
     assert.match(fs.readFileSync(summary, 'utf8'), /did not complete deployment/);
     assert.doesNotMatch(fs.readFileSync(summary, 'utf8'), /smoke checks completed/);
     for (const field of ['status', 'productionStatus']) {
       fs.writeFileSync(output, JSON.stringify({ ...manifest, [field]: 'GO' }));
-      assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, stdio: 'pipe' }));
+      assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary, RELEASE_MODE: 'owner_testing' }, stdio: 'pipe' }));
     }
     fs.writeFileSync(output, JSON.stringify({ ...manifest, authAcceptance: { ...manifest.authAcceptance, status: 'PASSED' } }));
-    assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, stdio: 'pipe' }));
+    assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary, RELEASE_MODE: 'owner_testing' }, stdio: 'pipe' }));
     for (const name of ['Create sanitized manifest integrity digest', 'Upload canonical release manifest']) {
       const step = workflow.split('\n  manifest:')[1].split(`- name: ${name}`)[1].split('\n      - name:')[0];
       assert.match(step, /if: always\(\)/);

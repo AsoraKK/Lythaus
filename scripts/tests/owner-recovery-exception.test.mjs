@@ -210,7 +210,7 @@ test('both scoped migration and persistent release gates use protected exception
   const workers = fs.readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
   assert.equal(migration.split('PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}').length - 1, 3);
   assert.match(release, /default: automatic[\s\S]*?- owner_testing_native_recovery_exception/);
-  assert.match(release, /OWNER_TESTING_RECOVERY_EXCEPTION: \$\{\{ inputs\.release_mode == 'owner_testing_native_recovery_exception' \}\}/);
+  assert.match(release, /OWNER_TESTING_RECOVERY_EXCEPTION: \$\{\{ inputs\.release_mode == 'owner_testing_native_recovery_exception' \|\| inputs\.release_mode == 'owner_testing_subject_diagnostic_exception' \}\}/);
   assert.ok(!release.slice(0, release.indexOf('\npermissions:')).includes('owner_testing_recovery_exception:'));
   const recoveryStep = release.indexOf('Require fresh protected native recovery and public independent recovery readiness');
   assert.ok(release.indexOf('Require current main and exact successful evidence runs') < recoveryStep);

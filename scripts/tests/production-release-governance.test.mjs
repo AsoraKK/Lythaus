@@ -289,7 +289,7 @@ test('STANDARD_RELEASE bypasses human acceptance and reuses an unchanged Coordin
   assert.match(workersWorkflow, /coordinator_managed\(\)[\s\S]*component_changed coordinator[\s\S]*OWNER_TESTING_DEPLOYMENT/);
   assert.match(workersWorkflow, /if coordinator_managed; then upload_candidate/);
   assert.match(workersWorkflow, /if coordinator_managed; then list_coordinator_secrets/);
-  assert.match(workersWorkflow, /if component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \]\]; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED"/);
+  assert.match(workersWorkflow, /if component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \|\| "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true \]\]; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED"/);
   assert.match(workersWorkflow, /SKIP_ACCEPTANCE_COORDINATOR="\$\(if coordinator_managed; then echo false; else echo true; fi\)"/);
   assert.match(workersWorkflow, /Reverify scoped secret evidence for acceptance resume/);
   assert.match(workersWorkflow, /write-scoped-worker-secret-evidence\.mjs/);
@@ -351,7 +351,7 @@ test('the canonical v2 manifest has no competing push-triggered manifest workflo
   assert.match(workflow, /build-release-manifest\.mjs/);
 });
 
-test('owner testing remains an AUTH_CRITICAL deployment without mailbox secrets or Keeper certification', () => {
+test('ordinary owner testing remains uncertified while diagnostic owner testing requires exact-candidate acceptance', () => {
   const workerDispatchInputs = workersWorkflow.slice(workersWorkflow.indexOf('on:'), workersWorkflow.indexOf('workflow_call:'));
   const keeper = workersWorkflow.slice(
     workersWorkflow.indexOf('- name: Validate or create the exact-candidate Keeper acceptance run'),
@@ -374,10 +374,26 @@ test('owner testing remains an AUTH_CRITICAL deployment without mailbox secrets 
   assert.match(workflow, /test -z "\$ACCEPTANCE_RUN_ID"/);
   assert.match(workflow, /test "\$CONFIRM_PRODUCTION" = true/);
   assert.match(workflow, /Require authorized independent acceptance mailboxes for critical releases[\s\S]*inputs\.release_mode != 'owner_testing'/);
-  assert.match(keeper, /inputs\.owner_testing_deployment != true/);
-  assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence[\s\S]*inputs\.owner_testing_deployment != true/);
-  assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance[\s\S]*inputs\.owner_testing_deployment != true/);
-  assert.match(coordinatorActivation, /component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \]\]/);
+  const ownerDiagnosticAcceptanceCondition = /if: steps\.release_plan\.outputs\.release_class == 'AUTH_CRITICAL_RELEASE' && \(inputs\.owner_testing_deployment != true \|\| inputs\.owner_testing_subject_diagnostic == true\)/;
+  assert.match(keeper, ownerDiagnosticAcceptanceCondition);
+  const collectAcceptance = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence'),
+    workersWorkflow.indexOf('\n      - name:', workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence') + 1),
+  );
+  const requireAcceptance = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance'),
+    workersWorkflow.indexOf('\n      - name:', workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance') + 1),
+  );
+  const keepOwnerPending = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Keep owner authentication pending'),
+    workersWorkflow.indexOf('\n      - name:', workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Keep owner authentication pending') + 1),
+  );
+  assert.match(collectAcceptance, ownerDiagnosticAcceptanceCondition);
+  assert.match(requireAcceptance, /inputs\.owner_testing_deployment != true \|\| inputs\.owner_testing_subject_diagnostic == true/);
+  assert.match(keepOwnerPending, /inputs\.owner_testing_deployment == true && inputs\.owner_testing_subject_diagnostic != true/);
+  assert.match(keepOwnerPending, /AUTH_ACCEPTANCE_STATUS=OWNER_TEST_PENDING/);
+  assert.match(coordinatorActivation, /component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \|\| "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" == true \]\]/);
+  assert.match(workersWorkflow, /inputs\.owner_testing_deployment != true \|\| inputs\.owner_testing_subject_diagnostic == true/);
   assert.match(rollbackSnapshotStep, /OWNER_TESTING_DEPLOYMENT: \$\{\{ inputs\.owner_testing_deployment \}\}/);
   assert.match(coordinatorActivation, /component_changed public/);
   assert.match(coordinatorActivation, /component_changed admin/);
