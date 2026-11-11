@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import test from 'node:test';
 import fs from 'node:fs';
-import { RESTORE, ROLE_NAMES, ACTIONS, createTargetBody, ROLE_SQL_SECURITY_BASELINE,
+import { RESTORE, ROLE_NAMES, ACTIONS, MAX_PRIOR_RETENTION_HORIZON_MS, createTargetBody, ROLE_SQL_SECURITY_BASELINE,
   ROLE_SQL_MEMBERSHIP_BASELINE, RestoreApi, RestoreCleanupApi, RestoreFailure, approvalRecord, checkBackup, checkBranch,
   checkedRoles, assertRestoreRoleSqlBaseline, apiBase, requireResetPermissions } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore, githubReadiness, assertPinnedManualCleanupProof } from '../ci/planetscale-native-restore-check.mjs';
@@ -20,6 +20,24 @@ const instant = Date.parse(TEST_BACKUP_COMPLETED_AT) + 90 * 60000;
 const time = minutes => new Date(instant + minutes * 60000).toISOString();
 const sha = TEST_RELEASE_SHA, newId = 'newrestore123', password = 'synthetic-secret-never-output';
 const backup = testBackup;
+const priorRetentionEvidence = () => {
+  const expiries = [23 * 60, 45 * 60, 46 * 60, 44 * 60, 60, 45 * 60 + 30].map(time);
+  return { inventoryRunId: '12345678', inventoryArtifactId: 8765, inventoryArtifactSha256: 'd'.repeat(64),
+    observedAt: time(-30), sourceMainSha: sha, sourceBranchId: RESTORE.sourceId, unprotectedBackupCount: 6,
+    unprotectedBackups: ['priorbackup01', 'priorbackup02', 'priorbackup03', 'priorbackup04', 'priorbackup05', 'priorbackup06'].map((id, index) => ({
+      id, completedAt: time(-60), deletedAt: null, expiresAt: expiries[index], protected: false, sourceBranchId: RESTORE.sourceId,
+      state: 'success', successful: true, providerReportedSizes: { pvc_size: 20 * 1024 ** 3,
+        size: 9_000_000 + index, uncompressed_size: 50_000_000 + index },
+    })) };
+};
+const liveBackupInventory = (evidence = priorRetentionEvidence(), selected = backup()) => [
+  ...evidence.unprotectedBackups.map(row => ({ id: row.id, state: row.state,
+    database_branch: { id: row.sourceBranchId, name: 'main', deleted_at: null }, completed_at: row.completedAt,
+    expires_at: row.expiresAt, deleted_at: row.deletedAt, protected: row.protected,
+    pvc_size: row.providerReportedSizes.pvc_size, size: row.providerReportedSizes.size,
+    uncompressed_size: row.providerReportedSizes.uncompressed_size })),
+  selected,
+];
 const planFor = (pins = TEST_PINS, snapshot = backup(), schemaMode = 'pre-0021') => testPlan({ pins, backup: snapshot, schemaMode, releaseSha: sha });
 class TestRestoreApi extends RestoreApi {
   constructor(token, fetchImpl = fetch, capability) { super(token, fetchImpl, capability, TEST_PLAN); }
@@ -28,7 +46,8 @@ class TestRestoreCleanupApi extends RestoreCleanupApi {
   constructor(token, fetchImpl = fetch) { super(token, fetchImpl, TEST_PLAN); }
 }
 const environment = () => {
-  const plan = planFor();
+  const plan = planFor(), prior = priorRetentionEvidence();
+  const priorRetentionEndsAt = Math.max(...prior.unprotectedBackups.map(row => Date.parse(row.expiresAt)));
   return { RELEASE_SHA: sha, RESTORE_CHECK_EXECUTE: 'true', GITHUB_RUN_ID: '12345',
   RESTORE_CHECK_PLAN_PINS_JSON: JSON.stringify(TEST_PINS),
   PLANETSCALE_SCHEMA_READ_DATABASE_URL: `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:${password}@aws.connect.psdb.cloud/postgres?sslmode=verify-full`,
@@ -37,7 +56,8 @@ const environment = () => {
     reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: time(240),
     cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
       reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
-      priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: time(23 * 60) },
+      priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: new Date(priorRetentionEndsAt).toISOString(),
+      priorRetentionEvidence: prior },
     actions: ACTIONS, roles: ROLE_NAMES, cleanupPermit: { workflowId: 42, runNumber: 1 },
     reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true, availableFrom: time(-60), availableUntil: time(240) },
     retention: { operator: 'owner', reference: 'finite-retention-approval', manualEndActionApprovalReference: 'manual-decision-approval',
@@ -77,6 +97,13 @@ function fixture(mode = '', backupValue = backup()) {
     authority: async () => { calls.push('authority'); if (mode === 'authority_denied') throw new RestoreFailure('provider_access_denied', 'DENIED'); },
     list: async path => {
       calls.push(`LIST ${path}`);
+      if (path === '/branches/main/backups') {
+        const rows = liveBackupInventory(priorRetentionEvidence(), b);
+        if (mode === 'prior_backup_added') rows.push({ ...rows[0], id: 'unexpectedprior01' });
+        if (mode === 'prior_backup_changed') { rows[0].expires_at = time(42 * 60); rows[0].size += 1; }
+        if (mode === 'extra_protected_prior') rows[0].protected = true;
+        return rows;
+      }
       if (path === '/branches') {
         branchInventories++;
         if (mode === 'target_found_before_create' && branchInventories === 2) return [target()];
@@ -191,6 +218,12 @@ test('qualification restores the specified backup snapshot, exercises five copie
   assert.equal(report.cost.knownPriceInputs.storageRateUsdPerGbMonth, 0.149);
   assert.equal(report.cost.targetDailyKnownComputeAndDiskRunRateUsd, 0.287653367);
   assert.equal(report.cost.targetMonthlyKnownComputeAndDiskRunRateUsd, 8.629601017);
+  assert.ok(Date.parse(report.cost.cumulativeOwnerBound.priorRetentionEndsAt) - instant > 24 * 3600000);
+  assert.equal(report.cost.cumulativeOwnerBound.priorRetentionInventory.unprotectedBackupCount, 6);
+  assert.equal(report.cost.cumulativeOwnerBound.priorRetentionInventory.inventoryArtifactSha256, 'd'.repeat(64));
+  assert.equal(report.cost.cumulativeOwnerBound.priorRetentionInventory.liveProviderRecheck.status, 'MATCHED');
+  assert.equal(report.cost.cumulativeOwnerBound.priorRetentionInventory.liveProviderRecheck.unprotectedBackupCount, 6);
+  assert.equal(report.cost.cumulativeOwnerBound.totalUpperBoundUsd, 1.07);
   assert.equal(report.cost.backupRetentionAndWalEstimateRequired, true);
   assert.equal(report.cost.liveQuoteRequiredBeforeDispatch, true);
   assert.deepEqual(report.cost.unpricedCostDrivers, ['retained_target_beyond_two_hour_exercise',
@@ -658,7 +691,11 @@ test('dependency admission checks actual remaining time plus the configured setu
   lateRecord.reviewWindow.availableUntil = lateRecord.expiresAt;
   lateRecord.retention.endsAt = new Date(lateNow + 23 * 3600000).toISOString();
   lateRecord.retention.decisionBy = new Date(lateNow + 3600000).toISOString();
-  lateRecord.cumulativeBudget.priorRetentionEndsAt = lateRecord.retention.endsAt;
+  lateRecord.cumulativeBudget.priorRetentionEvidence.observedAt = new Date(lateNow - 30 * 60000).toISOString();
+  lateRecord.cumulativeBudget.priorRetentionEvidence.unprotectedBackups.forEach((row, index) => {
+    row.expiresAt = new Date(lateNow + (46 - index) * 3600000).toISOString();
+  });
+  lateRecord.cumulativeBudget.priorRetentionEndsAt = new Date(lateNow + 46 * 3600000).toISOString();
   late.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(lateRecord);
   assert.throws(() => checkSetupWindow(late, lateNow), /pinned_backup_window_exhausted_before_setup/);
   const workflow = fs.readFileSync('.github/workflows/planetscale-native-restore-check.yml', 'utf8');
@@ -692,15 +729,90 @@ for (const [label, change, code] of [
   ['missing prior liabilities', budget => { delete budget.priorSpendUpperBoundUsd; }, 'reviewed_prior_exercise_liability_bound_required'],
   ['zero prior paid spend', budget => { budget.priorSpendUpperBoundUsd = 0; }, 'reviewed_prior_exercise_liability_bound_required'],
   ['negative retention liability', budget => { budget.priorRetentionUpperBoundUsd = -1; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['zero prior retention allowance', budget => { budget.priorRetentionUpperBoundUsd = 0; }, 'reviewed_prior_exercise_liability_bound_required'],
   ['missing evidence digest', budget => { delete budget.evidenceSha256; }, 'reviewed_prior_exercise_liability_bound_required'],
   ['wrong attesting operator', budget => { budget.operator = 'other'; }, 'reviewed_prior_exercise_liability_bound_required'],
-  ['unbounded prior retention', budget => { budget.priorRetentionEndsAt = '2126-10-25T00:00:00Z'; }, 'reviewed_prior_exercise_liability_bound_required'],
+  ['missing inventory snapshot', budget => { budget.priorRetentionEvidence = {}; }, 'prior_retention_inventory_evidence_invalid'],
+  ['inventory bound to another release', budget => { budget.priorRetentionEvidence.sourceMainSha = 'f'.repeat(40); }, 'prior_retention_inventory_evidence_invalid'],
+  ['stale inventory snapshot', budget => { budget.priorRetentionEvidence.observedAt = time(-25 * 60); }, 'prior_retention_inventory_stale'],
+  ['incomplete unprotected backup set', budget => { budget.priorRetentionEvidence.unprotectedBackups.pop(); }, 'prior_retention_inventory_evidence_invalid'],
+  ['protected prior backup', budget => { budget.priorRetentionEvidence.unprotectedBackups[0].protected = true; }, 'prior_retention_backup_state_unverified'],
+  ['deleted prior backup', budget => { budget.priorRetentionEvidence.unprotectedBackups[0].deletedAt = time(-1); }, 'prior_retention_backup_state_unverified'],
+  ['wrong prior backup source', budget => { budget.priorRetentionEvidence.unprotectedBackups[0].sourceBranchId = 'wrongbranch'; }, 'prior_retention_backup_state_unverified'],
+  ['prior end differs from latest expiry', budget => { budget.priorRetentionEndsAt = time(45 * 60); }, 'prior_retention_horizon_mismatch'],
+  ['prior expiry exceeds finite horizon', budget => {
+    budget.priorRetentionEvidence.unprotectedBackups[0].expiresAt = time(73 * 60);
+    budget.priorRetentionEndsAt = time(73 * 60);
+  }, 'prior_retention_horizon_unbounded'],
+  ['prior expiry already passed', budget => {
+    budget.priorRetentionEvidence.unprotectedBackups.forEach(row => { row.expiresAt = time(-1); });
+    budget.priorRetentionEndsAt = time(-1);
+  }, 'prior_retention_backup_metadata_invalid'],
   ['exceeded cumulative ceiling', budget => { budget.priorSpendUpperBoundUsd = 9; }, 'cumulative_exercise_budget_exceeded'],
 ]) test(`cumulative budget admission blocks ${label} before any provider call`, async () => {
   const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
   change(record.cumulativeBudget); f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
   const report = await runNativeRestore(f.options);
   assert.deepEqual(report.blockers, [code]); assert.deepEqual(f.calls, []); assert.deepEqual(report.providerMutations, []);
+});
+
+test('prior expiry can exceed 24 hours only to a fresh, exact provider horizon; new target retention stays within 24 hours', async () => {
+  const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  const priorEndsAt = Date.parse(record.cumulativeBudget.priorRetentionEndsAt);
+  assert.ok(priorEndsAt > instant + 24 * 3600000);
+  assert.ok(priorEndsAt <= instant + MAX_PRIOR_RETENTION_HORIZON_MS);
+  assert.ok(Date.parse(record.retention.endsAt) <= instant + 24 * 3600000);
+  const report = await runNativeRestore(f.options);
+  assert.equal(report.status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
+  assert.equal(report.cost.cumulativeOwnerBound.priorRetentionEndsAt, record.cumulativeBudget.priorRetentionEndsAt);
+  assert.deepEqual(report.cost.cumulativeOwnerBound.priorRetentionInventory.unprotectedBackupExpiries,
+    record.cumulativeBudget.priorRetentionEvidence.unprotectedBackups.map(({ id, expiresAt }) => ({ id, expiresAt })));
+  const overlong = fixture(), overlongRecord = JSON.parse(overlong.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  overlongRecord.retention.endsAt = time(25 * 60);
+  overlong.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(overlongRecord);
+  const blocked = await runNativeRestore(overlong.options);
+  assert.deepEqual(blocked.blockers, ['finite_separately_approved_backup_retention_plan_required']);
+  assert.deepEqual(overlong.calls, []);
+});
+
+test('live complete backup inventory rejects a caller-omitted row even when count and horizon are adjusted', async () => {
+  const f = fixture();
+  const record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
+  const rows = record.cumulativeBudget.priorRetentionEvidence.unprotectedBackups;
+  rows.splice(2, 1);
+  record.cumulativeBudget.priorRetentionEvidence.unprotectedBackupCount = rows.length;
+  record.cumulativeBudget.priorRetentionEndsAt = new Date(Math.max(...rows.map(row => Date.parse(row.expiresAt))).valueOf()).toISOString();
+  f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('prior_retention_live_inventory_mismatch'));
+  assert.ok(f.calls.includes('LIST /branches/main/backups'));
+  assert.ok(!f.calls.includes('POST /branches'));
+  assert.equal(report.providerMutations.at(-1).action, 'create_fixed_restore');
+  assert.equal(report.providerMutations.at(-1).outcome, 'BLOCKED');
+});
+
+test('live backup inventory blocks new, changed or newly protected prior liabilities before restore creation', async () => {
+  for (const mode of ['prior_backup_added', 'prior_backup_changed', 'extra_protected_prior']) {
+    const f = fixture(mode);
+    const report = await runNativeRestore(f.options);
+    const expectedBlocker = mode === 'extra_protected_prior'
+      ? 'prior_retention_unaccounted_protected_backup' : 'prior_retention_live_inventory_mismatch';
+    assert.ok(report.blockers.includes(expectedBlocker));
+    assert.ok(!f.calls.includes('POST /branches'));
+    assert.equal(report.providerMutations.at(-1).outcome, 'BLOCKED');
+  }
+});
+
+test('protected main is rechecked after the live prior-backup inventory and before the create request', async () => {
+  const f = fixture(); let checks = 0;
+  f.options.assertMain = async () => {
+    if (++checks === 4) throw new RestoreFailure('current_protected_main_changed');
+  };
+  const report = await runNativeRestore(f.options);
+  assert.ok(report.blockers.includes('current_protected_main_changed'));
+  assert.ok(f.calls.includes('LIST /branches/main/backups'));
+  assert.ok(!f.calls.includes('POST /branches'));
+  assert.equal(report.providerMutations.at(-1).outcome, 'BLOCKED');
 });
 
 test('a final GitHub read rejection is blocked admission, never an unknown submitted create', async () => {
@@ -1382,7 +1494,11 @@ test('diagnostic output limits are explicit and cannot certify complete grant co
 });
 test('grants reads remain fixed to the existing token and cannot be used by cleanup or issue mutations', async () => {
   let calls = 0;
-  const api = new TestRestoreApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
+  const api = new TestRestoreApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({
+    data: [], current_page: 1, total_count: 0, next_page: null }); });
+  assert.deepEqual(await api.list('/branches/main/backups'), []);
+  assert.equal(calls, 1);
+  calls = 0;
   for (const path of ['/../service-tokens/other/grants?page=1&per_page=100',
     '/../service-tokens/self/grants?page=6&per_page=100', '/../service-tokens/self/grants?page=1&per_page=101',
     '/../service-tokens/self/grants?page=1&per_page=100&extra=secret']) {
@@ -1392,6 +1508,7 @@ test('grants reads remain fixed to the existing token and cannot be used by clea
     () => api.request('/../service-tokens/self/grants?page=1&per_page=100', { method }), /fixed_provider_operation_required/);
   const cleanup = new TestRestoreCleanupApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
   await assert.rejects(() => cleanup.request('/../service-tokens/self/grants?page=1&per_page=100'), /fixed_provider_operation_required/);
+  await assert.rejects(() => cleanup.request('/branches/main/backups?page=1&per_page=100'), /fixed_provider_operation_required/);
   assert.equal(calls, 0);
 });
 test('diagnostics wait for database/self identity and neither workflow mode requests optional grants', async () => {

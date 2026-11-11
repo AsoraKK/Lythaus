@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
 import {regionPixels} from './full-login-pixels.mjs';
 
+export function loginFirstPaintReady() {
+  if (!Number.isFinite(window.__brandFirstFrameAt) || typeof window.__readBrandLoginLayout !== 'function' ||
+      document.getElementById('lythaus-startup') !== null || document.querySelectorAll('flt-semantics').length !== 0) return false;
+  const layout = JSON.parse(window.__readBrandLoginLayout());
+  return layout.semanticsEnabled === false && layout.brands?.length === 1
+    && layout.fields?.Email?.length === 1 && layout.fields?.Password?.length === 1;
+}
+
 export function assertLoginLayout(layout, scale) {
   assert.equal(layout.semanticsEnabled, false, 'First paint precedes Dart semantics');
   assert.equal(layout.brands.length, 1, 'One real brand layout box');
