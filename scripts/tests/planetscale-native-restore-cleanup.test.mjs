@@ -130,6 +130,7 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
   const source = { id: RESTORE.sourceId, name: 'main', kind: 'postgresql', default: true, deleted_at: null, ready: true };
   const api = new TestRestoreApi('syntheticid:synthetic-value', async (url, options) => {
     const parsed = new URL(url), path = parsed.pathname.slice(new URL(apiBase).pathname.length);
+    const page = Number(parsed.searchParams.get('page'));
     requests.push({ path, method: options.method });
     if (url === apiBase) return Response.json({ id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' });
     if (url.endsWith('/service-tokens/syntheticid')) return Response.json({ id: 'syntheticid', expires_at: time(180),
@@ -143,6 +144,19 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
       protected: true, completed_at: TEST_BACKUP_COMPLETED_AT, expires_at: TEST_PLAN.backup.expiresAt,
       pvc_size: TEST_PLAN.backup.pvcBytes, uncompressed_size: TEST_PLAN.backup.uncompressedBytes,
       restored_branches: created ? [{ id: targetId, name: TEST_TARGET, deleted_at: null }] : [] });
+    if (path === '/branches/main/backups') {
+      const evidence = JSON.parse(env.RESTORE_CHECK_APPROVAL_JSON).cumulativeBudget.priorRetentionEvidence;
+      const prior = evidence.unprotectedBackups[0];
+      return Response.json({ type: 'list', current_page: page, per_page: 100, total_count: 2, next_page: null,
+        data: [{ id: prior.id, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
+          state: prior.state, deleted_at: prior.deletedAt, protected: prior.protected, completed_at: prior.completedAt,
+          expires_at: prior.expiresAt, pvc_size: prior.providerReportedSizes.pvc_size,
+          size: prior.providerReportedSizes.size, uncompressed_size: prior.providerReportedSizes.uncompressed_size },
+        { id: TEST_BACKUP_ID, database_branch: { id: RESTORE.sourceId, name: 'main', deleted_at: null },
+          state: 'success', deleted_at: null, protected: true, completed_at: TEST_BACKUP_COMPLETED_AT,
+          expires_at: TEST_PLAN.backup.expiresAt, pvc_size: TEST_PLAN.backup.pvcBytes,
+          size: 9000000, uncompressed_size: TEST_PLAN.backup.uncompressedBytes }] });
+    }
     if (options.method === 'POST' && path === '/branches') {
       assert.deepEqual(JSON.parse(options.body), createTargetBody(TEST_PLAN));
       created = true; clock = start + 60000; return Response.json(target(), { status: 201 });
@@ -154,7 +168,6 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
       assert.ok(role, 'reset uses a discovered target API ID'); resets.push(role.base_username);
       return Response.json({ ...role, password: 'synthetic-password-only', access_host_url: 'aws.connect.psdb.cloud' });
     }
-    const page = Number(parsed.searchParams.get('page'));
     let rows;
     if (path === '/branches') rows = created ? [source,target()] : [source];
     else if (path === '/branches/main/roles') rows = roleRows(true);
@@ -178,7 +191,13 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
       reference: 'synthetic-owner-approval-reference', manualOperator: 'owner', expiresAt: time(150), actions: ACTIONS, roles: ROLE_NAMES,
       cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
         reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
-        priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: time(1380) },
+        priorRetentionEndActionReference: 'synthetic-separate-prior-retention-end-action', priorRetentionEndsAt: time(1380),
+        priorRetentionEvidence: { inventoryRunId: '12345678', inventoryArtifactId: 8765,
+          inventoryArtifactSha256: 'f'.repeat(64), observedAt: time(-30), sourceMainSha: qualificationSha,
+          sourceBranchId: RESTORE.sourceId, unprotectedBackupCount: 1,
+          unprotectedBackups: [{ id: 'priorbackup01', completedAt: time(-60), deletedAt: null,
+            expiresAt: time(1380), protected: false, sourceBranchId: RESTORE.sourceId, state: 'success', successful: true,
+            providerReportedSizes: { pvc_size: 2000000000, size: 9000000, uncompressed_size: 50000000 } }] } },
       cleanupPermit: { workflowId: 42, runNumber: 1 }, reviewWindow: { reviewer: 'owner', operator: 'owner', reserved: true,
         availableFrom: time(0), availableUntil: time(150) }, retention: { operator: 'owner', reference: 'synthetic-retention-approval',
         manualEndActionApprovalReference: 'synthetic-end-action', endAction: 'separately_approved_manual_decision_no_automatic_unprotect',
@@ -193,6 +212,8 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
     sleep: async milliseconds => { clock += milliseconds; }, prepareSmoke: async () => ({}),
     readSession: async (_url, id) => { sourceReads.push(id); return baseline; }, extensionAuthority: async () => [],
     smoke: async connections => { assert.equal(Object.keys(connections).length, 4); return { readOnlyDatabaseIdentity: true, distinctRoles: 4 }; } });
+  assert.equal(requests.filter(row => row.method === 'GET' && row.path === '/branches/main/backups').length, 1,
+    'pre-create admission compares the provider backup inventory with the approval-bound retention evidence');
   if (fault) {
     assert.equal(qualification.qualificationOutcome, 'FAILED'); assert.deepEqual(resets, []);
     assert.equal(qualification.cleanup, 'TARGET_RETAINED_PENDING_REVIEW');
