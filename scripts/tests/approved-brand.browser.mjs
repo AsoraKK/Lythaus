@@ -12,7 +12,7 @@ import {compareApprovedArtwork} from './brand-reference.mjs';
 import {brandPresentation,containedBrandRect,selectedIconAssets} from './brand-presentation-contract.mjs';
 import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
-import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
+import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintReady,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
 import {installLoginDraftTrace,captureLoginDraftTrace,loginEmailReady,loginDraftAccepted} from './brand-login-draft.mjs';
 import {runOnboardingCase,onboardingInventory} from './brand-onboarding.browser.mjs';
@@ -74,11 +74,11 @@ const results = [];
 const { PNG } = createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const readLoginLayout = page => page.evaluate(() => JSON.parse(window.__readBrandLoginLayout()));
 async function firstPaint(page, name, scale, theme) {
-  const record = {status:'pending', protocol:'One original PNG before semantics, interaction or resize; real fractional layout, no ink-derived crop'};
+  const record = {status:'pending', protocol:'First visible login PNG after startup presentation, before semantics, interaction or resize; real fractional layout, no ink-derived crop'};
   try {
-    await waitForLoginFunction(page,'first-frame-and-brand-geometry',() => window.__brandFirstFrameAt !== null && typeof window.__readBrandLoginLayout === 'function' &&
-      JSON.parse(window.__readBrandLoginLayout()).brands.length === 1);
+    await waitForLoginFunction(page,'visible-login-first-paint',loginFirstPaintReady);
     record.firstFrameAt = await page.evaluate(() => window.__brandFirstFrameAt);
+    record.startupDismissalObservedAt = await page.evaluate(() => performance.now());
     await page.waitForTimeout(Math.max(0, 250 - (await page.evaluate(() => performance.now()) - record.firstFrameAt)));
     record.before = await readLoginLayout(page);
     assertLoginLayout(record.before, scale);

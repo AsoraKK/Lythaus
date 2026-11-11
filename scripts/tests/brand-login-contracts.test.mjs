@@ -1,11 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {runInNewContext} from 'node:vm';
 import {prepareBrandLoginSource,geometryImport,geometryInstall} from './brand-login-source.mjs';
 import {originalRunApp,wrappedRunApp} from './full-login-scale-source.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertBrandCaseMatrix,brandCaseKeys} from './brand-case-matrix.mjs';
-import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
+import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintReady,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
 test('login fixture preserves production outside scale and read-only layout setup',async()=>{
  const source=await readFile('lib/main.dart','utf8');
@@ -58,6 +59,18 @@ test('first-paint validation retains fractional contained geometry and rejects c
  assert.throws(()=>assertMatchingLoginLayout(layout,changed),/Email.y/);
  assert.throws(()=>assertLoginLayout({...layout,semanticsEnabled:true},2),/precedes/);
  assert.throws(()=>assertLoginLayout(layout,1),/scale/);
+});
+test('login first-paint waits for the visible app, not the startup overlay or semantics',()=>{
+ const layout={brands:[{}],fields:{Email:[{}],Password:[{}]},semanticsEnabled:false};
+ const evaluate=({frame=100,overlay=null,value=layout}={})=>runInNewContext(`(${loginFirstPaintReady.toString()})()`,{
+  window:{__brandFirstFrameAt:frame,__readBrandLoginLayout:()=>JSON.stringify(value)},
+  document:{getElementById:id=>id==='lythaus-startup'?overlay:null,querySelectorAll:()=>[]},
+ });
+ assert.equal(evaluate({frame:null}),false);
+ assert.equal(evaluate({overlay:{hidden:false}}),false);
+ assert.equal(evaluate({value:{...layout,semanticsEnabled:true}}),false);
+ assert.equal(evaluate({value:{...layout,fields:{Email:[],Password:[{}]}}}),false);
+ assert.equal(evaluate(),true);
 });
 test('a brand alone cannot certify first-paint form pixels; saved blanks remain failures',()=>{
  const {png,layout}=paintFixture();
