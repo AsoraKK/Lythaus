@@ -60,7 +60,7 @@ jobs:
       - name: Require immutable action pins
         run: npm run validate:workflow-action-pins
       - name: Verify Flutter SDK cache isolation and fallback
-        run: node --test scripts/tests/flutter-sdk-cache.test.mjs scripts/tests/workflow-action-pins.test.mjs
+        run: node --test scripts/tests/flutter-sdk-cache.test.mjs scripts/tests/workflow-action-pins.test.mjs scripts/tests/oasdiff-install.test.mjs
       - name: Validate production release contract
         run: npm run validate:production-release-contract
       - name: Validate bounded Jobs Hyperdrive origin diagnostic
@@ -346,7 +346,11 @@ jobs:
           set -euo pipefail
           archive="$RUNNER_TEMP/oasdiff.tar.gz"
           curl --fail --silent --show-error --location \
-            "https://github.com/Tufin/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            --retry 4 \
+            --retry-max-time 60 \
+            --connect-timeout 15 \
+            --max-time 45 \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
             --output "$archive"
           echo "${OASDIFF_SHA256}  $archive" | sha256sum --check --strict
           tar -xzf "$archive" -C "$RUNNER_TEMP" oasdiff

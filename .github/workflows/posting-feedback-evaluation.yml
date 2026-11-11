@@ -3,8 +3,42 @@ name: Posting feedback evaluation
 on:
   pull_request:
     branches: [main, 'codex/**']
+    paths:
+      - '.github/workflows/posting-feedback-evaluation.yml'
+      - '.github/actions/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'tools/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '.npmrc'
+      - '**/.npmrc'
+      - 'tsconfig.native.json'
+      - 'tsconfig*.json'
+      - '**/tsconfig*.json'
+      - '.gitignore'
+      - '.gitattributes'
   push:
     branches: [main]
+    paths:
+      - '.github/workflows/posting-feedback-evaluation.yml'
+      - '.github/actions/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'tools/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '.npmrc'
+      - '**/.npmrc'
+      - 'tsconfig.native.json'
+      - 'tsconfig*.json'
+      - '**/tsconfig*.json'
+      - '.gitignore'
+      - '.gitattributes'
 
 permissions:
   contents: read
