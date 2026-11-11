@@ -430,7 +430,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     const storageRateUsdPerGbMonth = 0.149; // Conservative current PlanetScale Frankfurt gp3 docs rate.
     const monthlyStorageUsd = billableStorageGb * storageRateUsdPerGbMonth;
     const monthlyKnownComponentUsd = monthlyComputeUsd + monthlyStorageUsd;
-    report.cost = { maximumUsd: 5,
+    report.cost = { maximumUsd: RESTORE.maximumUsd,
       knownTwoHourComputeAndDiskEstimateUsd: Number((monthlyKnownComponentUsd * 2 / (30 * 24)).toFixed(9)),
       targetDailyKnownComputeAndDiskRunRateUsd: Number((monthlyKnownComponentUsd / 30).toFixed(9)),
       targetMonthlyKnownComputeAndDiskRunRateUsd: Number(monthlyKnownComponentUsd.toFixed(9)),

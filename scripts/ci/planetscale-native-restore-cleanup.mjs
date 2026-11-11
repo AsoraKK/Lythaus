@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
-import { RestoreCleanupApi, RestoreFailure, requireThat, failureCode, checkOwnedBranch } from './planetscale-native-restore-contract.mjs';
+import { RESTORE, RestoreCleanupApi, RestoreFailure, requireThat, failureCode, checkOwnedBranch } from './planetscale-native-restore-contract.mjs';
 import { githubReadiness } from './planetscale-native-restore-check.mjs';
 import { githubRead, readTrackedEvidence, validateCleanupEvidence, verifyReviewedEvidence,
   QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, recordPath, qualificationRestorePlan, artifactPath, decimal, sha256 } from './planetscale-native-restore-evidence.mjs';
@@ -42,7 +42,7 @@ function cleanupConsent(env, evidence, now) {
     && consent.cleanupSha === env.RELEASE_SHA && consent.evidenceSha === env.EVIDENCE_SHA
     && consent.qualificationRunId === report.runId && consent.targetId === report.createdTargetId
     && consent.recordSha256 === record.recordSha256 && consent.operator === report.reviewWindow?.operator
-    && consent.maximumUsd === 5 && typeof consent.reference === 'string' && consent.reference.length >= 8
+    && consent.maximumUsd === RESTORE.maximumUsd && typeof consent.reference === 'string' && consent.reference.length >= 8
     && Date.parse(consent.expiresAt) > now && Date.parse(consent.expiresAt) <= Date.parse(report.cleanupDeadlineAt),
   'cleanup_owner_approval_binding_invalid');
   return consent;

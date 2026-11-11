@@ -322,20 +322,20 @@ two-hour component alone is below the runner's US$0.04 minimum approved subtotal
 Actual cost for target retention, backup/WAL protection, egress if applicable,
 taxes and fees remains unpriced and must be resolved before approval. The packet
 must include a positive reviewed fee/uncertainty allowance; the complete new
-attempt estimate plus allowance must be at most US$5. This is a metered owner
+attempt estimate plus allowance must be at most US$10. This is a metered owner
 budget, not a provider hard cap.
 The observed US$10 email threshold is an alert. Previously denied Cloudflare
-billing reads are not retried. Existing older protected backups already bound
+billing reads are not retried. Existing older retained backups can bind
 the oldest WAL window; do not assume all incremental retention charges are zero
 or promise indefinite protection fits this exercise budget. Before creation,
 the named operator needs a separately approved retention end action, decision
 time within two hours, end time no later than 24 hours from start, and positive
-incremental retention estimate included in the US$5 total. The runner validates
+incremental retention estimate included in the US$10 total. The runner validates
 this finite plan but cannot enforce provider billing or perform its end action.
 If retention must continue past that end time, obtain a separately bounded
 retention/cost decision; the exercise does not approve indefinite protection.
 No automatic unprotect, backup deletion or denied billing-read workaround exists.
-The US$5 ceiling is cumulative across this exercise, including run `40212030891`
+The US$10 ceiling is cumulative across this exercise, including run `40212030891`
 and any continuing protected-backup liability. The packet must bind an explicit
 owner-reviewed upper bound to private supporting evidence by SHA256 and reference.
 The runner checks the arithmetic and human approval, not the underlying bill.
@@ -376,7 +376,7 @@ by current evidence.
       "maximumStorageBytes": 34359738368
     }
   },
-  "maximumUsd": 5,
+  "maximumUsd": 10,
   "estimatedSubtotalUsd": "REPLACE_WITH_REVIEWED_SUBTOTAL_USD",
   "taxAndFeeAllowanceUsd": "REPLACE_WITH_POSITIVE_REVIEWED_ALLOWANCE_USD",
   "backupSnapshotAcknowledged": true,
@@ -593,7 +593,7 @@ Separate cleanup approval JSON (all fields bind the reviewed record):
   "cleanupSha": "QUALIFIED_CURRENT_PROTECTED_MAIN_SHA", "evidenceSha": "PINNED_REVIEWED_EVIDENCE_PR_HEAD_SHA",
   "qualificationRunId": "ORIGINAL_RUN_ID", "targetId": "ACKNOWLEDGED_NEW_PROVIDER_ID",
   "recordSha256": "CANONICAL_RECORD_HASH", "operator": "OWNER_GITHUB_LOGIN",
-  "maximumUsd": 5, "reference": "SEPARATE_OWNER_DELETION_APPROVAL",
+  "maximumUsd": 10, "reference": "SEPARATE_OWNER_DELETION_APPROVAL",
   "expiresAt": "UTC_NO_LATER_THAN_ORIGINAL_TWO_HOUR_DEADLINE"
 }
 ```

@@ -128,7 +128,7 @@ export function fixture(outcome = 'PASSED', { qualifiedSha = codeSha, reviewedSh
     record.recordSha256 = hash0021RestoreEvidenceRecord(record); evidence.recordBytes = encode(record);
     env.CLEANUP_APPROVAL_JSON = JSON.stringify({ action: 'delete_only_original_acknowledged_target_once',
       cleanupSha: codeSha, evidenceSha, qualificationRunId: report.runId, targetId,
-      recordSha256: record.recordSha256, operator: 'owner', maximumUsd: 5,
+      recordSha256: record.recordSha256, operator: 'owner', maximumUsd: RESTORE.maximumUsd,
       reference: 'synthetic-separate-owner-deletion-consent', expiresAt: time(119) });
     options.downloadedQualification = evidence.bytes;
     if (refreshPending) {
