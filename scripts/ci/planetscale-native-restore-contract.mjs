@@ -10,6 +10,8 @@ export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lytha
   setup: 'pscale_api_47syed2xlt6p', runtime: 'pscale_api_ysl604shosjg', admin: 'pscale_api_3vzps7bu44vo',
   jobs: 'pscale_api_9jfbtij9y4b2', privacy: 'pscale_api_wv7rzyuejknl',
 });
+export const MAX_PRIOR_RETENTION_EVIDENCE_AGE_MS = 24 * 60 * 60 * 1000;
+export const MAX_PRIOR_RETENTION_HORIZON_MS = 72 * 60 * 60 * 1000;
 export const ROLE_NAMES = Object.freeze([RESTORE.setup, RESTORE.runtime, RESTORE.admin, RESTORE.jobs, RESTORE.privacy]);
 export const ROLE_SQL_SECURITY_BASELINE = Object.freeze({
   [RESTORE.setup]: Object.freeze({ rolsuper: false, rolbypassrls: true, rolcreaterole: true, rolcreatedb: true,
@@ -59,6 +61,52 @@ export function restoreSchemaMode(value = 'pre-0021') {
 export function restoreSchemaVersion(mode) {
   return restoreSchemaMode(mode) === 'post-0021' ? '0021_media_quarantine_cleanup.sql' : '0020_auth_recovery_delivery.sql';
 }
+function canonicalTimestamp(value) {
+  if (typeof value !== 'string') return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value ? parsed : null;
+}
+
+function validatePriorRetentionEvidence(budget, environment, now) {
+  const evidence = budget?.priorRetentionEvidence;
+  requireThat(object(evidence) && Object.keys(evidence).sort().join(',') ===
+    'inventoryArtifactId,inventoryArtifactSha256,inventoryRunId,observedAt,sourceBranchId,sourceMainSha,unprotectedBackupCount,unprotectedBackups'
+    && typeof evidence.inventoryRunId === 'string' && /^[1-9][0-9]{0,19}$/.test(evidence.inventoryRunId)
+    && Number.isSafeInteger(evidence.inventoryArtifactId) && evidence.inventoryArtifactId > 0
+    && /^[a-f0-9]{64}$/.test(evidence.inventoryArtifactSha256 ?? '')
+    && /^[a-f0-9]{40}$/.test(evidence.sourceMainSha ?? '') && evidence.sourceMainSha === environment.RELEASE_SHA
+    && evidence.sourceBranchId === RESTORE.sourceId
+    && Number.isInteger(evidence.unprotectedBackupCount) && evidence.unprotectedBackupCount > 0
+    && evidence.unprotectedBackupCount <= 100 && Array.isArray(evidence.unprotectedBackups)
+    && evidence.unprotectedBackups.length === evidence.unprotectedBackupCount,
+  'prior_retention_inventory_evidence_invalid');
+  const observedAt = canonicalTimestamp(evidence.observedAt);
+  requireThat(observedAt !== null && observedAt <= now && now - observedAt <= MAX_PRIOR_RETENTION_EVIDENCE_AGE_MS,
+    'prior_retention_inventory_stale');
+  const backups = evidence.unprotectedBackups;
+  const ids = backups.map(backup => backup?.id);
+  requireThat(ids.every(safeId) && new Set(ids).size === ids.length, 'prior_retention_backup_set_invalid');
+  const expiries = backups.map(backup => {
+    requireThat(object(backup) && Object.keys(backup).sort().join(',') ===
+      'completedAt,deletedAt,expiresAt,id,protected,providerReportedSizes,sourceBranchId,state,successful'
+      && backup.deletedAt === null && backup.protected === false && backup.successful === true && backup.state === 'success'
+      && backup.sourceBranchId === RESTORE.sourceId,
+    'prior_retention_backup_state_unverified');
+    const completedAt = canonicalTimestamp(backup.completedAt), expiresAt = canonicalTimestamp(backup.expiresAt);
+    const sizes = backup.providerReportedSizes;
+    requireThat(completedAt !== null && expiresAt !== null && completedAt <= observedAt && expiresAt > completedAt
+      && expiresAt > now && object(sizes)
+      && Object.keys(sizes).sort().join(',') === 'pvc_size,size,uncompressed_size'
+      && ['pvc_size', 'size', 'uncompressed_size'].every(key => Number.isSafeInteger(sizes[key]) && sizes[key] > 0),
+    'prior_retention_backup_metadata_invalid');
+    return expiresAt;
+  });
+  const horizon = canonicalTimestamp(budget.priorRetentionEndsAt);
+  const latestExpiry = Math.max(...expiries);
+  requireThat(horizon !== null && horizon === latestExpiry, 'prior_retention_horizon_mismatch');
+  requireThat(horizon <= observedAt + MAX_PRIOR_RETENTION_HORIZON_MS, 'prior_retention_horizon_unbounded');
+  return evidence;
+}
 const cleanupCapability = Symbol('fixed_target_cleanup');
 export function approvalRecord(raw, environment, now) {
   const schemaMode = restoreSchemaMode(environment.RESTORE_CHECK_SCHEMA_MODE);
@@ -106,17 +154,17 @@ export function approvalRecord(raw, environment, now) {
   'finite_separately_approved_backup_retention_plan_required');
   const budget = record.cumulativeBudget;
   requireThat(object(budget) && Object.keys(budget).sort().join(',') ===
-    'evidenceSha256,operator,priorQualificationRunId,priorRetentionEndActionReference,priorRetentionEndsAt,priorRetentionUpperBoundUsd,priorSpendUpperBoundUsd,reference'
+    'evidenceSha256,operator,priorQualificationRunId,priorRetentionEndActionReference,priorRetentionEndsAt,priorRetentionEvidence,priorRetentionUpperBoundUsd,priorSpendUpperBoundUsd,reference'
     && budget.operator === record.manualOperator && budget.priorQualificationRunId === '40212030891'
     && /^[a-f0-9]{64}$/.test(budget.evidenceSha256 ?? '')
     && typeof budget.reference === 'string' && budget.reference.length >= 8 && budget.reference.length <= 250
     && typeof budget.priorRetentionEndActionReference === 'string' && budget.priorRetentionEndActionReference.length >= 8
     && budget.priorRetentionEndActionReference.length <= 250
-    && Number.isFinite(Date.parse(budget.priorRetentionEndsAt))
-    && Date.parse(budget.priorRetentionEndsAt) <= now + 24 * 3600000
+    && canonicalTimestamp(budget.priorRetentionEndsAt) !== null
     && Number.isFinite(budget.priorSpendUpperBoundUsd) && budget.priorSpendUpperBoundUsd > 0
-    && Number.isFinite(budget.priorRetentionUpperBoundUsd) && budget.priorRetentionUpperBoundUsd >= 0,
+    && Number.isFinite(budget.priorRetentionUpperBoundUsd) && budget.priorRetentionUpperBoundUsd > 0,
   'reviewed_prior_exercise_liability_bound_required');
+  validatePriorRetentionEvidence(budget, environment, now);
   requireThat(budget.priorSpendUpperBoundUsd + budget.priorRetentionUpperBoundUsd
     + record.estimatedSubtotalUsd + record.taxAndFeeAllowanceUsd <= RESTORE.maximumUsd,
   'cumulative_exercise_budget_exceeded');
@@ -487,6 +535,7 @@ export class RestoreApi {
     const getAllowed = ['', '/branches/main', target, backup, '/../service-tokens/self'].includes(path)
       || (!this.#cleanupOnly && grantsPage !== null)
       || /^\/branches(?:\/main\/roles)?\?page=[1-5]&per_page=100$/.test(path)
+      || (!this.#cleanupOnly && /^\/branches\/main\/backups\?page=[1-5]&per_page=100$/.test(path))
       || new RegExp(`^${target}/roles\\?page=[1-5]&per_page=100$`).test(path);
     const allowedCreateBody = this.plan?.backup?.id ? createTargetBody(this.plan) : null;
     const writeAllowed = this.#cleanupOnly

@@ -19,6 +19,59 @@ const targetPathFromPins = pins => `/branches/${pins.target}`;
 const backupPathFromPins = pins => `/branches/main/backups/${pins.backupId}`;
 const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
 const workflowId = 394786946;
+function normalizedProviderTimestamp(value, required = false) {
+  if (value === null || value === undefined) { requireThat(!required, 'prior_retention_live_metadata_invalid'); return null; }
+  requireThat(typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(value),
+    'prior_retention_live_metadata_invalid');
+  const parsed = Date.parse(value);
+  requireThat(Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 19) === value.slice(0, 19),
+    'prior_retention_live_metadata_invalid');
+  return new Date(parsed).toISOString();
+}
+
+export function assertPriorRetentionEvidenceMatchesLive(evidence, rows, selectedBackupId, now = Date.now()) {
+  requireThat(Array.isArray(rows) && rows.length <= 500 && safeId(selectedBackupId), 'prior_retention_live_inventory_invalid');
+  const seen = new Set(), unprotected = [];
+  for (const row of rows) {
+    requireThat(object(row) && safeId(row.id) && !seen.has(row.id)
+      && row.database_branch?.id === RESTORE.sourceId && row.database_branch?.name === 'main'
+      && row.database_branch?.deleted_at === null && Object.hasOwn(row, 'deleted_at')
+      && typeof row.protected === 'boolean' && ['pending', 'running', 'success', 'failed', 'canceled', 'cancelled'].includes(row.state),
+    'prior_retention_live_metadata_invalid');
+    seen.add(row.id);
+    const deletedAt = normalizedProviderTimestamp(row.deleted_at);
+    const completedAt = normalizedProviderTimestamp(row.completed_at, row.state === 'success' && deletedAt === null);
+    const expiresAt = normalizedProviderTimestamp(row.expires_at, row.state === 'success' && deletedAt === null);
+    if (deletedAt !== null) continue;
+    requireThat(row.state === 'success', 'prior_retention_live_state_unresolved');
+    requireThat(Date.parse(completedAt) <= now && Date.parse(expiresAt) > now, 'prior_retention_live_expiry_unbounded');
+    if (row.protected) {
+      requireThat(row.id === selectedBackupId, 'prior_retention_unaccounted_protected_backup');
+      continue;
+    }
+    const providerReportedSizes = { pvc_size: row.pvc_size, size: row.size, uncompressed_size: row.uncompressed_size };
+    requireThat(Object.values(providerReportedSizes).every(value => Number.isSafeInteger(value) && value > 0),
+      'prior_retention_live_metadata_invalid');
+    unprotected.push({ id: row.id, completedAt, deletedAt, expiresAt, protected: false,
+      sourceBranchId: RESTORE.sourceId, state: 'success', successful: true, providerReportedSizes });
+  }
+  const canonicalRow = row => ({ id: row.id, completedAt: row.completedAt, deletedAt: row.deletedAt,
+    expiresAt: row.expiresAt, protected: row.protected, sourceBranchId: row.sourceBranchId,
+    state: row.state, successful: row.successful, providerReportedSizes: {
+      pvc_size: row.providerReportedSizes?.pvc_size, size: row.providerReportedSizes?.size,
+      uncompressed_size: row.providerReportedSizes?.uncompressed_size } });
+  const sorted = values => values.map(canonicalRow).sort((a, b) => a.id.localeCompare(b.id));
+  requireThat(Array.isArray(evidence?.unprotectedBackups)
+    && JSON.stringify(sorted(unprotected)) === JSON.stringify(sorted(evidence.unprotectedBackups))
+    && unprotected.length === evidence.unprotectedBackupCount,
+  'prior_retention_live_inventory_mismatch');
+  const latestExpiry = Math.max(...unprotected.map(row => Date.parse(row.expiresAt)));
+  const evidenceLatestExpiry = Math.max(...evidence.unprotectedBackups.map(row => Date.parse(row.expiresAt)));
+  requireThat(Number.isFinite(latestExpiry) && latestExpiry === evidenceLatestExpiry,
+    'prior_retention_live_inventory_mismatch');
+  return { status: 'MATCHED', checkedAt: new Date(now).toISOString(), unprotectedBackupCount: unprotected.length,
+    latestExpiry: new Date(latestExpiry).toISOString() };
+}
 const pinnedCancelledExecution = Object.freeze({ runId: '40184823787', runNumber: 7, runAttempt: 1,
   headSha: '43829abc3424a88a22826695bbfdc7be4a116e62', jobId: 121143288424 });
 const pinnedPrecreateFailure = Object.freeze({ runId: '40193991312', runNumber: 8, runAttempt: 1,
@@ -352,7 +405,19 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       requireThat(hash(currentSource) === hash(report.sourceBaseline), 'source_metadata_changed_before_restore');
     }
     report.providerMutations.push({ action: label, outcome: 'PENDING_OR_UNKNOWN' }); await save();
-    try { await assertProtectedMain(); await beforeSubmit?.(); time(); }
+    try {
+      await assertProtectedMain();
+      await beforeSubmit?.();
+      if (label === 'create_fixed_restore') {
+        const currentBackups = await api.list('/branches/main/backups');
+        const liveInventory = assertPriorRetentionEvidenceMatchesLive(approval.cumulativeBudget.priorRetentionEvidence,
+          currentBackups, plan.backup.id, now());
+        report.cost.cumulativeOwnerBound.priorRetentionInventory.liveProviderRecheck = liveInventory;
+        await save();
+        await assertProtectedMain();
+      }
+      time();
+    }
     catch (error) {
       report.providerMutations.at(-1).outcome = 'BLOCKED'; await save();
       if (error instanceof RestoreFailure) throw error;
@@ -445,6 +510,16 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       cumulativeOwnerBound: approval ? { evidenceSha256: approval.cumulativeBudget.evidenceSha256,
         priorSpendUpperBoundUsd: approval.cumulativeBudget.priorSpendUpperBoundUsd,
         priorRetentionUpperBoundUsd: approval.cumulativeBudget.priorRetentionUpperBoundUsd,
+        priorRetentionEndsAt: approval.cumulativeBudget.priorRetentionEndsAt,
+        priorRetentionInventory: { inventoryRunId: approval.cumulativeBudget.priorRetentionEvidence.inventoryRunId,
+          inventoryArtifactId: approval.cumulativeBudget.priorRetentionEvidence.inventoryArtifactId,
+          inventoryArtifactSha256: approval.cumulativeBudget.priorRetentionEvidence.inventoryArtifactSha256,
+          observedAt: approval.cumulativeBudget.priorRetentionEvidence.observedAt,
+          sourceMainSha: approval.cumulativeBudget.priorRetentionEvidence.sourceMainSha,
+          sourceBranchId: approval.cumulativeBudget.priorRetentionEvidence.sourceBranchId,
+          unprotectedBackupCount: approval.cumulativeBudget.priorRetentionEvidence.unprotectedBackupCount,
+          unprotectedBackupExpiries: approval.cumulativeBudget.priorRetentionEvidence.unprotectedBackups
+            .map(({ id, expiresAt }) => ({ id, expiresAt })) },
         totalUpperBoundUsd: approval.cumulativeBudget.priorSpendUpperBoundUsd + approval.cumulativeBudget.priorRetentionUpperBoundUsd
           + approval.estimatedSubtotalUsd + approval.taxAndFeeAllowanceUsd,
         basis: 'EXPLICIT_OWNER_REVIEWED_UPPER_BOUND_NOT_PROVIDER_BILLING_VERIFICATION' } : null };

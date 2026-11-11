@@ -332,16 +332,45 @@ the named operator needs a separately approved retention end action, decision
 time within two hours, end time no later than 24 hours from start, and positive
 incremental retention estimate included in the US$10 total. The runner validates
 this finite plan but cannot enforce provider billing or perform its end action.
-If retention must continue past that end time, obtain a separately bounded
-retention/cost decision; the exercise does not approve indefinite protection.
-No automatic unprotect, backup deletion or denied billing-read workaround exists.
+That 24-hour limit applies to the new protected restore backup. Pre-existing
+unprotected backups may extend `cumulativeBudget.priorRetentionEndsAt` beyond
+24 hours only to the exact latest provider expiry in a fresh, release-bound
+inventory snapshot. Include every unprotected successful backup row from that
+snapshot, its exact ID, source branch, protection state, completion/expiry
+times and provider-reported sizes, plus the inventory run ID, artifact ID,
+artifact SHA-256, generation time and source main SHA. The snapshot must be no
+more than 24 hours old, its source main SHA must equal the executing release SHA,
+and its complete unprotected-backup count must match the included rows. Each row
+must still be unprotected and unexpired, and `priorRetentionEndsAt` must equal
+the latest listed `expiresAt`, no more than 72 hours after the inventory time.
+The cost packet must provide a positive prior-retention upper bound and the cumulative total
+must remain at or below US$10. This uses provider-reported expiry; it does not
+claim a provider-enforced billing cap. Incomplete, stale, or mismatched inventory
+remains blocked. Immediately before the restore-create request, the runner also
+reads the complete paginated main-backup inventory with the existing restore
+token and derives the current unprotected set itself. It requires an exact match
+to every submitted unprotected row, the count, provider-reported sizes and latest
+expiry; a new, omitted, changed, newly protected or unresolved row blocks before
+the create request. Other protected successful backups are also blocked as
+unaccounted liabilities. This read is metadata-only and fail-closed if the
+existing token cannot list the backups. The run/artifact IDs and archive digest
+are owner-reviewed provenance references; the runner does not download the
+historical archive. The live complete provider list, not those reference fields,
+enforces the set and expiry used for admission. The runner rechecks protected
+main after that paginated read before issuing the create request.
+If retention must continue past the new target's end time,
+obtain a separately bounded retention/cost decision; the exercise does not
+approve indefinite protection. No automatic unprotect, backup deletion or
+denied billing-read workaround exists.
 The US$10 ceiling is cumulative across this exercise, including run `40212030891`
 and any continuing protected-backup liability. The packet must bind an explicit
 owner-reviewed upper bound to private supporting evidence by SHA256 and reference.
 The runner checks the arithmetic and human approval, not the underlying bill.
 Unknown prior spend or unbounded retention cannot be represented as zero. A
-completed prior retention end action may be recorded with its actual past end
-time; a future action needs separate authority and an end within 24 hours.
+pre-existing unprotected backup's finite provider expiry is represented by the
+inventory evidence above and does not waive the positive cost allowance or the
+cumulative ceiling. The new protected backup's manual end action still needs
+separate authority and an end within 24 hours.
 The dedicated token's documented `expires_at` must cover the original cleanup
 deadline (or explicitly be null). This does not renew a token or authorize its use.
 
@@ -393,7 +422,27 @@ by current evidence.
     "priorSpendUpperBoundUsd": "REPLACE_WITH_REVIEWED_UPPER_BOUND_USD",
     "priorRetentionUpperBoundUsd": "REPLACE_WITH_REVIEWED_UPPER_BOUND_USD",
     "priorRetentionEndActionReference": "SEPARATE_PRIOR_RETENTION_END_ACTION_AUTHORITY_OR_RECEIPT",
-    "priorRetentionEndsAt": "ACTUAL_OR_SEPARATELY_APPROVED_FINITE_END_TIME"
+    "priorRetentionEndsAt": "EXACT_LATEST_EXPIRY_FROM_FRESH_INVENTORY",
+    "priorRetentionEvidence": {
+      "inventoryRunId": "EXACT_INVENTORY_RUN_ID",
+      "inventoryArtifactId": 0,
+      "inventoryArtifactSha256": "SHA256_OF_INVENTORY_ARCHIVE_WITHOUT_PREFIX",
+      "observedAt": "UTC_GENERATED_AT_WITHIN_24_HOURS",
+      "sourceMainSha": "EXACT_REVIEWED_MERGED_SHA",
+      "sourceBranchId": "vqa2g2xc9wsl",
+      "unprotectedBackupCount": 1,
+      "unprotectedBackups": [{
+        "id": "EXACT_UNPROTECTED_BACKUP_ID",
+        "completedAt": "EXACT_PROVIDER_COMPLETION_TIME",
+        "expiresAt": "EXACT_PROVIDER_EXPIRY_TIME",
+        "deletedAt": null,
+        "protected": false,
+        "sourceBranchId": "vqa2g2xc9wsl",
+        "state": "success",
+        "successful": true,
+        "providerReportedSizes": {"pvc_size": 1, "size": 1, "uncompressed_size": 1}
+      }]
+    }
   },
   "reviewWindow": {
     "reviewer": "REVIEWER_GITHUB_LOGIN", "operator": "OWNER_GITHUB_LOGIN", "reserved": true,
