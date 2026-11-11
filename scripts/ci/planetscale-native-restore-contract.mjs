@@ -5,7 +5,7 @@ import { canonicalRestorePlan, restorePlanSha256, assertLiveBackupMatchesPlan } 
 export const RESTORE = Object.freeze({ organization: 'lythaus', database: 'lythaus-core', databaseId: 'hzhe0cbn6rxi',
   source: 'main', sourceId: 'vqa2g2xc9wsl', targetProduction: true, cluster: 'PS_5_AWS_ARM', region: 'eu-central',
   minimumTargetBytes: 20 * 1024 ** 3,
-  bytes: 34359738368, replicas: 0, maximumUsd: 5, maximumMs: 2 * 60 * 60 * 1000,
+  bytes: 34359738368, replicas: 0, maximumUsd: 10, maximumMs: 2 * 60 * 60 * 1000,
   qualificationStopMs: 20 * 60000, escalationMs: 45 * 60000, reviewMs: 60 * 60000, cleanupStartMs: 105 * 60000,
   setup: 'pscale_api_47syed2xlt6p', runtime: 'pscale_api_ysl604shosjg', admin: 'pscale_api_3vzps7bu44vo',
   jobs: 'pscale_api_9jfbtij9y4b2', privacy: 'pscale_api_wv7rzyuejknl',

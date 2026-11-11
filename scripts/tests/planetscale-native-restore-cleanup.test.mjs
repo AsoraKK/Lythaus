@@ -103,7 +103,7 @@ function fixture() {
     record.recordSha256 = hash0021RestoreEvidenceRecord(record); evidence.recordBytes = encode(record);
     env.CLEANUP_APPROVAL_JSON = JSON.stringify({ action: 'delete_only_original_acknowledged_target_once',
       cleanupSha, evidenceSha, qualificationRunId: report.runId, targetId, recordSha256: record.recordSha256,
-      operator: 'owner', maximumUsd: 5, reference: 'separate-owner-deletion-consent', expiresAt: time(119) });
+      operator: 'owner', maximumUsd: 10, reference: 'separate-owner-deletion-consent', expiresAt: time(119) });
     options.downloadedQualification = evidence.bytes;
     if (refreshPending) {
       const context = { report, record, creation: report.creation, intent: record.nativeRestoreCleanup };
@@ -174,7 +174,7 @@ for (const fault of [null, 'partial_pagination', 'contradictory_identity']) test
     RESTORE_CHECK_PLAN_PINS_JSON: JSON.stringify({ backupId: TEST_BACKUP_ID, backupCompletedAt: TEST_BACKUP_COMPLETED_AT,
       target: TEST_TARGET, targetBytes: TEST_PLAN.target.minimumStorageBytes }),
     RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: qualificationSha, plan: TEST_PLAN, planSha256: testPlanSha(TEST_PLAN),
-      maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
+      maximumUsd: 10, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
       reference: 'synthetic-owner-approval-reference', manualOperator: 'owner', expiresAt: time(150), actions: ACTIONS, roles: ROLE_NAMES,
       cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
         reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
@@ -394,6 +394,8 @@ for (const [name, change] of [
   ['pending bytes changed', f => { f.options.pendingBytes = Buffer.from('{}'); }],
   ['pending downloaded bytes changed', f => { f.options.downloadedPending = Buffer.from('{}'); }],
   ['missing separate irreversible deletion approval', f => { delete f.env.CLEANUP_APPROVAL_JSON; }],
+  ['old five-dollar cleanup ceiling', f => { const consent = JSON.parse(f.env.CLEANUP_APPROVAL_JSON); consent.maximumUsd = 5; f.env.CLEANUP_APPROVAL_JSON = JSON.stringify(consent); }],
+  ['overstated cleanup ceiling', f => { const consent = JSON.parse(f.env.CLEANUP_APPROVAL_JSON); consent.maximumUsd = 11; f.env.CLEANUP_APPROVAL_JSON = JSON.stringify(consent); }],
   ['wrong evidence commit', f => { f.options.evidenceHead = 'f'.repeat(40); }],
   ['rerun same run ID', f => { f.env.GITHUB_RUN_ATTEMPT = '2'; }],
   ['new dispatch cannot reuse permit', f => { f.env.GITHUB_RUN_NUMBER = '2'; f.env.GITHUB_RUN_ID = '23457'; f.refresh(); }],

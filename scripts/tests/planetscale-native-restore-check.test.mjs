@@ -33,7 +33,7 @@ const environment = () => {
   RESTORE_CHECK_PLAN_PINS_JSON: JSON.stringify(TEST_PINS),
   PLANETSCALE_SCHEMA_READ_DATABASE_URL: `postgresql://pscale_api_qodocjs6vgrb.${RESTORE.sourceId}:${password}@aws.connect.psdb.cloud/postgres?sslmode=verify-full`,
   RESTORE_CHECK_APPROVAL_JSON: JSON.stringify({ releaseSha: sha, plan, planSha256: testPlanSha(plan),
-    maximumUsd: 5, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
+    maximumUsd: 10, estimatedSubtotalUsd: 0.04, taxAndFeeAllowanceUsd: 1, backupSnapshotAcknowledged: true,
     reference: 'owner-specific-approval-reference', manualOperator: 'owner', expiresAt: time(240),
     cumulativeBudget: { operator: 'owner', priorQualificationRunId: '40212030891', evidenceSha256: 'e'.repeat(64),
       reference: 'synthetic-owner-reviewed-cost-upper-bound', priorSpendUpperBoundUsd: 0.01, priorRetentionUpperBoundUsd: 0.02,
@@ -185,6 +185,7 @@ test('qualification restores the specified backup snapshot, exercises five copie
       checkedAt: new Date(instant).toISOString() } });
   assert.equal(report.credentialActions.length, 5); assert.equal(report.sourceBaseline.approvedPrivilegeChecks, 17);
   assert.equal(report.recoveryAcceptance, 'NOT_CERTIFIED'); assert.equal(report.deploymentAuthorized, false);
+  assert.equal(report.cost.maximumUsd, 10);
   assert.equal(report.cost.knownTwoHourComputeAndDiskEstimateUsd, 0.023971114);
   assert.equal(report.cost.knownPriceInputs.computeMonthlyUsd, 5);
   assert.equal(report.cost.knownPriceInputs.storageRateUsdPerGbMonth, 0.149);
@@ -694,7 +695,7 @@ for (const [label, change, code] of [
   ['missing evidence digest', budget => { delete budget.evidenceSha256; }, 'reviewed_prior_exercise_liability_bound_required'],
   ['wrong attesting operator', budget => { budget.operator = 'other'; }, 'reviewed_prior_exercise_liability_bound_required'],
   ['unbounded prior retention', budget => { budget.priorRetentionEndsAt = '2126-10-25T00:00:00Z'; }, 'reviewed_prior_exercise_liability_bound_required'],
-  ['exceeded cumulative ceiling', budget => { budget.priorSpendUpperBoundUsd = 4; }, 'cumulative_exercise_budget_exceeded'],
+  ['exceeded cumulative ceiling', budget => { budget.priorSpendUpperBoundUsd = 9; }, 'cumulative_exercise_budget_exceeded'],
 ]) test(`cumulative budget admission blocks ${label} before any provider call`, async () => {
   const f = fixture(), record = JSON.parse(f.options.environment.RESTORE_CHECK_APPROVAL_JSON);
   change(record.cumulativeBudget); f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
@@ -760,8 +761,9 @@ test('only proven missing named extensions are installed', async () => {
   assert.equal(f.calls.filter(value => value.startsWith('INSTALL')).length, 1);
 });
 test('missing, stale, wrong-target, broader-role and unbounded tax/budget records block before any API call', async () => {
-  for (const change of [() => undefined, record => ({ ...record, maximumUsd: 6 }), record => ({ ...record, taxAndFeeAllowanceUsd: 0 }),
-    record => ({ ...record, estimatedSubtotalUsd: 5 }), record => ({ ...record, target: 'main' }),
+  for (const change of [() => undefined, record => ({ ...record, maximumUsd: 5 }), record => ({ ...record, maximumUsd: 11 }),
+    record => ({ ...record, taxAndFeeAllowanceUsd: 0 }),
+    record => ({ ...record, estimatedSubtotalUsd: 10 }), record => ({ ...record, target: 'main' }),
     record => ({ ...record, roles: [...ROLE_NAMES, 'postgres'] }), record => ({ ...record, expiresAt: time(-600) }),
     record => ({ ...record, reviewWindow: { ...record.reviewWindow, reserved: false } }),
     record => ({ ...record, retention: { ...record.retention, endsAt: '2026-11-23T18:00:00Z' } }),
@@ -770,6 +772,19 @@ test('missing, stale, wrong-target, broader-role and unbounded tax/budget record
     f.options.environment.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(change(record));
     const report = await runNativeRestore(f.options); assert.equal(report.status, 'BLOCKED'); assert.equal(f.calls.length, 0);
   }
+});
+
+test('the owner-reviewed cumulative ceiling accepts exactly ten dollars and rejects one cent over', () => {
+  const env = environment(), record = JSON.parse(env.RESTORE_CHECK_APPROVAL_JSON);
+  record.estimatedSubtotalUsd = 6.7;
+  record.taxAndFeeAllowanceUsd = 0.39;
+  record.cumulativeBudget.priorSpendUpperBoundUsd = 2.81;
+  record.cumulativeBudget.priorRetentionUpperBoundUsd = 0.1;
+  record.retention.estimatedUsd = 0.05;
+  env.RESTORE_CHECK_APPROVAL_JSON = JSON.stringify(record);
+  assert.equal(approvalRecord(env.RESTORE_CHECK_APPROVAL_JSON, env, instant).maximumUsd, 10);
+  record.taxAndFeeAllowanceUsd = 0.40;
+  assert.throws(() => approvalRecord(JSON.stringify(record), env, instant), /cumulative_exercise_budget_exceeded/);
 });
 test('deadline reserves cleanup time and changed protected main blocks before spending', async () => {
   const f = fixture(); let counter = 0;
