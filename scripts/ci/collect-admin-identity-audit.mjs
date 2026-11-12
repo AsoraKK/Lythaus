@@ -46,11 +46,12 @@ export async function collectAdminIdentityAudit({ environment = process.env, fet
     sourceSha: /^[a-f0-9]{40}$/.test(environment.GITHUB_SHA ?? '') ? environment.GITHUB_SHA : null,
     capturedAt: validNow ? new Date(now).toISOString() : null,
     status: 'BLOCKED', providerMutations: false, databaseWrites: false,
-    rawIdentitiesEmitted: false, rootCauseCertified: false, blockers: [],
+    rawIdentitiesEmitted: false, rootCauseCertified: false, blockers: [], lastReadKind: null,
     currentIdentity: { exists: null, createdAfterBootstrap: null },
     previousIdentity: { historicalSoleAllowlistObserved: false, exists: null, createdBeforeBootstrap: null },
     identityIdentifiersDiffer: null,
     auditHistory: { since: HISTORY_START, before: null, pages: 0, records: 0, paginationExhausted: false,
+      terminalCursorForm: null, responseShape: null,
       providerRetentionCoversWindow: 'NOT_ESTABLISHED', workerUploadEventsObserved: 0,
       secretWriteEvents: [], policyWriteEventsObserved: 0 },
     keyValueContinuity: 'NOT_ESTABLISHED_FROM_METADATA',
@@ -75,6 +76,9 @@ export async function collectAdminIdentityAudit({ environment = process.env, fet
       const url = new URL(input);
       requireThat(url.origin === 'https://api.cloudflare.com' && url.href.startsWith(`${BASE}/`)
         && !url.username && !url.password && !url.hash && (options.method ?? 'GET') === 'GET', 'audit_request_scope_invalid');
+      report.lastReadKind = url.pathname.endsWith('/logs/audit') ? 'ACCOUNT_AUDIT_HISTORY'
+        : url.pathname.endsWith('/access/users') ? (report.previousIdentity.historicalSoleAllowlistObserved ? 'PREVIOUS_IDENTITY_METADATA' : 'CURRENT_IDENTITY_METADATA')
+          : url.pathname.endsWith('/policies') ? 'ACCESS_POLICIES' : 'ACCESS_APPLICATIONS';
       let response;
       try {
         response = await fetchImpl(url.href, { method: 'GET', redirect: 'error', cache: 'no-store',
@@ -146,8 +150,16 @@ export async function collectAdminIdentityAudit({ environment = process.env, fet
         direction: 'desc', limit: String(LIMIT) });
       if (cursor) query.set('cursor', cursor);
       const body = await read(`${BASE}/logs/audit?${query}`);
+      const info = body.result_info;
+      const hasAfter = object(info) && Object.hasOwn(info, 'cursors');
+      const hasFlat = object(info) && Object.hasOwn(info, 'cursor');
+      report.auditHistory.responseShape = { resultIsArray: Array.isArray(body.result),
+        resultInfoIsObject: object(info), cursorContainerPresent: hasAfter, flatCursorPresent: hasFlat,
+        afterFieldPresent: object(info?.cursors) && Object.hasOwn(info.cursors, 'after') };
       requireThat(Array.isArray(body.result) && body.result.length <= LIMIT
-        && object(body.result_info?.cursors) && Object.hasOwn(body.result_info.cursors, 'after'), 'audit_pagination_unverified');
+        && object(info) && !(hasAfter && hasFlat) && (!hasAfter || object(info.cursors)), 'audit_pagination_unverified');
+      const next = hasFlat ? info.cursor : info.cursors?.after;
+      requireThat(next === undefined || next === null || typeof next === 'string', 'audit_cursor_invalid');
       for (const event of body.result) {
         const at = time(event?.action?.time);
         requireThat(object(event) && typeof event.id === 'string' && event.id.length > 0 && !seen.has(event.id)
@@ -176,8 +188,13 @@ export async function collectAdminIdentityAudit({ environment = process.env, fet
         }
       }
       report.auditHistory.pages = page; report.auditHistory.records = seen.size;
-      const next = body.result_info.cursors.after;
-      if (next === null || next === '') { report.auditHistory.paginationExhausted = true; checkpoint(report); break; }
+      if (next === undefined || next === null || next === '') {
+        if (Object.hasOwn(info, 'total_count')) requireThat(Number.isSafeInteger(info.total_count)
+          && info.total_count === seen.size, 'audit_terminal_count_mismatch');
+        report.auditHistory.paginationExhausted = true;
+        report.auditHistory.terminalCursorForm = next === undefined ? 'DOCUMENTED_CURSOR_OMISSION' : hasFlat ? 'FLAT_CURSOR_END' : 'AFTER_CURSOR_END';
+        checkpoint(report); break;
+      }
       requireThat(typeof next === 'string' && next.length <= 4096 && !cursors.has(next)
         && body.result.length > 0, 'audit_cursor_invalid');
       cursors.add(next); cursor = next; checkpoint(report);

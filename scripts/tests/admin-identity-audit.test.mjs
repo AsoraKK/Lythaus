@@ -177,10 +177,37 @@ test('rejects duplicate, cross-account, out-of-window and out-of-order audit row
   }
 });
 
-test('missing terminal cursor metadata and cursor replay remain incomplete rather than certifying history', async () => {
-  const missing = await run({ intercept: url => url.pathname.endsWith('/logs/audit')
-    ? json([], { result_info: { cursors: {} } }) : undefined });
-  assert.deepEqual(missing.report.blockers, ['audit_pagination_unverified']);
+test('documented terminal cursor omission is accepted without claiming retention or key continuity', async () => {
+  for (const result_info of [{ cursors: {} }, {}]) {
+    const { report } = await run({ intercept: url => url.pathname.endsWith('/logs/audit')
+      ? json(events(), { result_info }) : undefined });
+    assert.equal(report.status, 'READ_ONLY_METADATA_COLLECTED_NOT_ROOT_CAUSE_CERTIFICATION');
+    assert.equal(report.auditHistory.terminalCursorForm, 'DOCUMENTED_CURSOR_OMISSION');
+    assert.equal(report.auditHistory.providerRetentionCoversWindow, 'NOT_ESTABLISHED');
+    assert.equal(report.keyValueContinuity, 'NOT_ESTABLISHED_FROM_METADATA'); sanitized(report);
+  }
+});
+
+test('flat Cloudflare cursor pages are bounded and record their actual terminal form', async () => {
+  let pages = 0;
+  const { report } = await run({ intercept: url => {
+    if (!url.pathname.endsWith('/logs/audit')) return undefined;
+    pages++;
+    const rows = events();
+    return json(pages === 1 ? rows.slice(0, 3) : rows.slice(3),
+      { result_info: { cursor: pages === 1 ? 'flat-next' : null } });
+  } });
+  assert.equal(pages, 2); assert.equal(report.auditHistory.records, 6);
+  assert.equal(report.auditHistory.terminalCursorForm, 'FLAT_CURSOR_END'); sanitized(report);
+});
+
+test('missing or conflicting pagination containers, contradictory totals and cursor replay remain blocked', async () => {
+  for (const extra of [{}, { result_info: { cursors: null } },
+    { result_info: { cursors: {}, cursor: 'ambiguous' } }, { result_info: { total_count: 100 } }]) {
+    const { report } = await run({ intercept: url => url.pathname.endsWith('/logs/audit') ? json([], extra) : undefined });
+    assert.equal(report.status, 'BLOCKED'); assert.equal(report.auditHistory.paginationExhausted, false); sanitized(report);
+    assert.equal(report.lastReadKind, 'ACCOUNT_AUDIT_HISTORY');
+  }
   const repeated = await run({ auditPages: [{ rows: [events()[0]], after: 'repeat' }, { rows: [events()[1]], after: 'repeat' }] });
   assert.deepEqual(repeated.report.blockers, ['audit_cursor_invalid']);
   assert.equal(repeated.report.auditHistory.paginationExhausted, false); sanitized(repeated.report);
