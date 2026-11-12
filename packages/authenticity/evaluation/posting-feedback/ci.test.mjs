@@ -13,10 +13,11 @@ test('CI receipt requires the exact reviewed source head and rejects missing or 
     assert.throws(() => assertEvaluationHead(actual, expected, ci), /evaluation_ci_head_mismatch/);
 });
 
-test('allocated CI executes the offline suite at the PR source head without privileged triggers or secrets', async () => {
+test('allocated CI executes the offline suite at source head without privileged triggers or secrets', async () => {
   const source = await readFile(new URL('../../../../.github/workflows/posting-feedback-evaluation.yml', import.meta.url), 'utf8');
   const workflow = parseDocument(source).toJS();
-  assert.deepEqual(Object.keys(workflow.on).sort(), ['pull_request', 'push']);
+  assert.deepEqual(Object.keys(workflow.on).sort(), ['pull_request', 'push', 'workflow_dispatch']);
+  assert.equal(workflow.on.workflow_dispatch, null);
   assert.deepEqual(workflow.permissions, { contents: 'read' });
   const job = workflow.jobs.posting_feedback_evaluation;
   assert.equal(job.permissions, undefined);
