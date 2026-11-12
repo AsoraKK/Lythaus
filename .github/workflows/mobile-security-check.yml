@@ -1,6 +1,7 @@
 name: Mobile Security Check
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
