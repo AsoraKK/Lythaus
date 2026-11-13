@@ -10,7 +10,9 @@ import { sourceConnection, restoredConnection, restoredConnectionMetadata, readO
   installMissingExtensions, checkedExtensionSpecifications } from './planetscale-native-restore-verifier.mjs';
 import { buildRestoreSmoke, runRestoreSmoke } from './planetscale-native-restore-smoke.mjs';
 import { inspectCleanupReservation, finalizeQualificationEvidence, sha256 } from './planetscale-native-restore-evidence.mjs';
-import { RUN12, verifyRun12ReviewedCleanup } from './planetscale-native-restore-run12-reconciliation.mjs';
+import { RUN12 } from './planetscale-native-restore-run12-reconciliation.mjs';
+import { verifyRun12CleanupHistory } from './planetscale-native-restore-run12-history.mjs';
+import { RUN14, verifyRun14Cleanup } from './planetscale-native-restore-run14-reconciliation.mjs';
 
 const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
 const targetPath = plan => `/branches/${plan.target.name}`;
@@ -294,7 +296,7 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
         && typeof run.display_title === 'string'), 'execution_history_incomplete');
     requireThat(new Set(prior.workflow_runs.map(run => run.id)).size === prior.workflow_runs.length, 'execution_history_duplicate_run');
     const previous = prior.workflow_runs.filter(run => String(run.id) !== env.GITHUB_RUN_ID);
-    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure, pinnedManuallyDeletedFailure, RUN12];
+    const pinnedExecutions = [pinnedCancelledExecution, pinnedPrecreateFailure, pinnedManuallyDeletedFailure, RUN12, RUN14];
     const pinnedRows = new Map(pinnedExecutions.map(pinned => [pinned.runId,
       previous.filter(run => String(run.id) === pinned.runId)]));
     const pinnedIds = new Set(pinnedExecutions.map(pinned => pinned.runId));
@@ -305,7 +307,8 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
     requireThat(verifyPinnedHistoryEntry(pinnedRows.get(pinnedCancelledExecution.runId)[0], pinnedCancelledExecution, 'cancelled')
       && verifyPinnedHistoryEntry(pinnedRows.get(pinnedPrecreateFailure.runId)[0], pinnedPrecreateFailure, 'failure')
       && verifyPinnedHistoryEntry(pinnedRows.get(pinnedManuallyDeletedFailure.runId)[0], pinnedManuallyDeletedFailure, 'failure')
-      && verifyPinnedHistoryEntry(pinnedRows.get(RUN12.runId)[0], RUN12, 'failure'),
+      && verifyPinnedHistoryEntry(pinnedRows.get(RUN12.runId)[0], RUN12, 'failure')
+      && verifyPinnedHistoryEntry(pinnedRows.get(RUN14.runId)[0], RUN14, 'success'),
     'prior_execution_history_entry_mismatch');
     const cancelledRun = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
     const cancelledProof = await verifyPinnedCancelledExecution(cancelledRun, read, env);
@@ -313,9 +316,10 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
     const precreateProof = await verifyPinnedPrecreateFailure(precreateRun, read, env);
     const manuallyDeletedRun = await read(`/actions/runs/${pinnedManuallyDeletedFailure.runId}`);
     const manuallyDeletedProof = await verifyPinnedManuallyDeletedFailure(manuallyDeletedRun, read, env);
-    const reviewedProof = await verifyRun12ReviewedCleanup(await read(`/actions/runs/${RUN12.runId}`), read, env);
+    const reviewedProof = await verifyRun12CleanupHistory(await read(`/actions/runs/${RUN12.runId}`), read, env);
+    const run14Proof = await verifyRun14Cleanup(await read(`/actions/runs/${RUN14.runId}`), read, env);
     return { executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED', workflowPath, workflowId,
-      pinnedExecutions: [cancelledProof, precreateProof, manuallyDeletedProof, reviewedProof] } };
+      pinnedExecutions: [cancelledProof, precreateProof, manuallyDeletedProof, reviewedProof, run14Proof] } };
   }
   return { executionHistoryReconciliation: null };
 }
@@ -388,7 +392,8 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       const directTarget = await api.request(targetPath(plan), { absent: true });
       requireThat(directTarget === null, 'preexisting_target_refused');
       const branches = await api.list('/branches');
-      requireThat(!branches.some(row => row.name === plan.target.name || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
+      requireThat(!branches.some(row => row.name === plan.target.name
+        || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId, RUN14.targetId].includes(row.id)), 'preexisting_target_refused');
       const protectedBackup = await api.request(backupPath(plan));
       checkBackupForExercise(protectedBackup, plan);
       requireThat(protectedBackup.protected === true, 'backup_protection_unconfirmed');
@@ -485,7 +490,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
       logicalBytes: backup.uncompressed_size, restoreHistorySha256: hash(plan.backup.restoredBranches) };
     const branches = await api.list('/branches');
     requireThat(!branches.some(row => row.name === plan.target.name || row.id === report.createdTargetId
-      || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId].includes(row.id)), 'preexisting_target_refused');
+      || [pinnedManuallyDeletedFailure.targetId, RUN12.targetId, RUN14.targetId].includes(row.id)), 'preexisting_target_refused');
     requireThat(await api.request(targetPath(plan), { absent: true }) === null, 'preexisting_target_refused');
     requireThat(Array.isArray(backup.restored_branches)
       && !backup.restored_branches.some(row => row.name === plan.target.name), 'backup_target_history_unexpected');

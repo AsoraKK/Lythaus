@@ -13,6 +13,7 @@ import { checkSetupWindow, DEPENDENCY_SETUP_RESERVE_MS } from '../ci/planetscale
 import { expectedMigrationPrefix } from '../ci/planetscale-migration-manifest.mjs';
 import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
 import { syntheticRun12Metadata } from './planetscale-native-restore-run12-fixture.mjs';
+import { syntheticRun14Metadata } from './planetscale-native-restore-run14-fixture.mjs';
 import { TEST_RELEASE_SHA, TEST_BACKUP_ID, TEST_BACKUP_COMPLETED_AT, TEST_TARGET, TEST_TARGET_BYTES,
   TEST_PINS, TEST_PLAN, testBackup, testPlan, testPlanSha } from './planetscale-native-restore-test-plan.mjs';
 
@@ -1730,7 +1731,15 @@ test('the run-12 target reappearing under a different name blocks a new paid res
   assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
 });
 
-test('GitHub preconditions reconcile only the four pinned prior runs with complete evidence', async () => {
+test('the run-14 target reappearing under a different name blocks a new paid restore', async () => {
+  const f = fixture(), list = f.options.api.list;
+  f.options.api.list = path => path === '/branches' ? [{ id: 'p5953kdp72ac', name: 'different-name' }] : list(path);
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, ['preexisting_target_refused']);
+  assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+});
+
+test('GitHub preconditions reconcile only the five pinned prior runs with complete evidence', async () => {
   const env = { ...environment(), GH_TOKEN: password, GITHUB_SHA: sha, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
     GITHUB_REPOSITORY_ID: '1010752912', GITHUB_REPOSITORY: 'fixture-owner/Lythaus', GITHUB_RUN_ATTEMPT: '1' };
   const workflowPath = '.github/workflows/planetscale-native-restore-check.yml';
@@ -1785,18 +1794,24 @@ test('GitHub preconditions reconcile only the four pinned prior runs with comple
     path: workflowPath, head_sha: headSha, head_branch: 'main', event: 'workflow_dispatch',
     display_title: `Native restore plan ${headSha}` }));
   const fixtureFetch = (overrides = {}) => {
-    const reads = [], run12 = syntheticRun12Metadata(env.GITHUB_REPOSITORY);
+    const reads = [], run12 = syntheticRun12Metadata(env.GITHUB_REPOSITORY), run14 = syntheticRun14Metadata(env.GITHUB_REPOSITORY);
+    if (overrides.run12ArchivesUnavailable) for (const id of ['40360605402', '40371017566']) {
+      run12.responses.set(`/actions/runs/${id}/artifacts?per_page=100`, { total_count: 0, artifacts: [] });
+    }
     const fetcher = async (url, options = {}) => {
       reads.push({ url, method: options.method ?? 'GET' });
       const parsed = new URL(url), pathname = parsed.pathname;
       const suffix = url.slice(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}`.length);
       if (run12.responses.has(suffix)) return Response.json(await run12.read(suffix));
+      if (run14.responses.has(suffix)) return Response.json(await run14.read(suffix));
       if (pathname.endsWith('/branches/main')) return Response.json({ protected: true, commit: { sha: overrides.mainSha ?? sha } });
       if (pathname.endsWith(`/actions/runs/${env.GITHUB_RUN_ID}/approvals`)) return Response.json(overrides.currentApprovals
         ?? [{ state: 'approved', user: { type: overrides.bot ? 'Bot' : 'User', login: 'owner' }, environments: [{ name: 'production' }] }]);
       if (pathname.includes('/actions/workflows/') && pathname.endsWith('/runs')) {
-        const runs = overrides.history ? [...overrides.history, ...(overrides.omitRun12 ? [] : [run12.run])]
-          : [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(), ...(overrides.omitRun12 ? [] : [run12.run])];
+        const runs = overrides.history ? [...overrides.history, ...(overrides.omitRun12 ? [] : [run12.run]),
+          ...(overrides.omitRun14 ? [] : [run14.run])]
+          : [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(), ...(overrides.omitRun12 ? [] : [run12.run]),
+            ...(overrides.omitRun14 ? [] : [run14.run])];
         return Response.json({ total_count: overrides.historyCount ?? runs.length, workflow_runs: runs });
       }
       if (pathname.endsWith('/actions/runs/40184823787/approvals')) return Response.json(overrides.priorApprovals ?? []);
@@ -1826,9 +1841,18 @@ test('GitHub preconditions reconcile only the four pinned prior runs with comple
   };
   const good = fixtureFetch();
   const readiness = await githubReadiness(env, good.fetcher, true);
-  assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions.length, 4);
+  assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions.length, 5);
   assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions[3].runId, '40360605402');
   assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions[3].recoveryAcceptance, 'NOT_CERTIFIED');
+  assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions[4].runId, '40470687953');
+  assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions[4].cleanupOutcome, 'DELETED_AND_READBACK_VERIFIED');
+  assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions[4].recoveryAcceptance, 'NOT_CERTIFIED');
+  assert.equal(readiness.executionHistoryReconciliation.pinnedExecutions[4].recoveryCertified, false);
+  const historical = fixtureFetch({ run12ArchivesUnavailable: true });
+  const historicalReadiness = await githubReadiness(env, historical.fetcher, true);
+  assert.equal(historicalReadiness.executionHistoryReconciliation.pinnedExecutions[3].status, 'PINNED_RUN12_LOG_CLEANUP_RECONCILED');
+  assert.equal(historicalReadiness.executionHistoryReconciliation.pinnedExecutions[3].qualificationArchiveBytesVerified, false);
+  assert.equal(historicalReadiness.executionHistoryReconciliation.pinnedExecutions[3].recoveryCertified, false);
   assert.deepEqual({ ...readiness.executionHistoryReconciliation,
     pinnedExecutions: readiness.executionHistoryReconciliation.pinnedExecutions.slice(0, 3) }, { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED',
     workflowPath, workflowId: 394786946, pinnedExecutions: [
@@ -1851,7 +1875,7 @@ test('GitHub preconditions reconcile only the four pinned prior runs with comple
         artifactProviderMutationCount: 1, artifactCredentialActionCount: 0, manualOperator: pinnedHuman },
     ] });
   assert.ok(good.reads.every(row => row.method === 'GET'));
-  const noPrior = fixtureFetch({ history: planRuns });
+  const noPrior = fixtureFetch({ history: planRuns, omitRun12: true, omitRun14: true });
   await assert.rejects(() => githubReadiness(env, noPrior.fetcher, true), /prior_execution_requires_manual_reconciliation/);
   for (const [label, overrides] of [
     ['main changed', { mainSha: 'b'.repeat(40) }], ['bot approval', { bot: true }],
@@ -1873,11 +1897,14 @@ test('GitHub preconditions reconcile only the four pinned prior runs with comple
     ['artifact present', { artifactCount: 1, artifacts: [{ id: 1 }] }], ['artifact inventory incomplete', { artifactCount: 1 }],
     ['missing artifacts', { artifacts: undefined }], ['history count mismatch', { historyCount: 99 }], ['history over limit', { historyCount: 101 }],
     ['unclassifiable history', { history: [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(), { ...planRuns[0], id: 99, display_title: 'unexpected' }] }],
+    ['unknown run remains blocked after run 14', { run12ArchivesUnavailable: true, history: [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(),
+      { ...failedRun(), id: 99, run_number: 15, head_sha: 'f'.repeat(40), display_title: 'Native restore execute unknown', name: 'Native restore execute unknown' }] }],
     ['pinned history title mismatch', { history: [...planRuns, { ...cancelledRun(), display_title: `Native restore plan ${cancelledSha}` }, failedRun(), manuallyDeletedRun()] }],
     ['pinned history SHA mismatch', { history: [...planRuns, { ...cancelledRun(), head_sha: 'e'.repeat(40) }, failedRun(), manuallyDeletedRun()] }],
     ['second execute run', { history: [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(), { ...failedRun(), id: 40193991313 }] }],
     ['missing manually deleted run', { history: [...planRuns, cancelledRun(), failedRun()] }],
     ['missing reviewed cleanup run', { omitRun12: true }],
+    ['missing run 14', { omitRun14: true }],
     ['failed run SHA mismatch', { failedRun: { head_sha: 'f'.repeat(40) } }],
     ['failed run event mismatch', { failedRun: { event: 'push' } }],
     ['failed run attempt mismatch', { failedRun: { run_attempt: 2 } }],
