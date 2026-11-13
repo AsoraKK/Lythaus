@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
-import { RUN14, RUN14_LOG_ATTESTATION, assertRun14Evidence, assertRun14LogAttestation,
+import { RUN14, RUN14_REPOSITORY, RUN14_LOG_ATTESTATION, assertRun14Evidence, assertRun14LogAttestation,
   readRun14Evidence, verifyRun14Cleanup } from '../ci/planetscale-native-restore-run14-reconciliation.mjs';
 import { syntheticRun14Metadata } from './planetscale-native-restore-run14-fixture.mjs';
 
-const env = { GITHUB_REPOSITORY: 'AsoraKK/Lythaus' };
+const env = { GITHUB_REPOSITORY: RUN14_REPOSITORY };
 
 test('run-14 reconciliation accepts only the exact pinned log attestation', () => {
   assert.equal(assertRun14LogAttestation(RUN14_LOG_ATTESTATION), true);

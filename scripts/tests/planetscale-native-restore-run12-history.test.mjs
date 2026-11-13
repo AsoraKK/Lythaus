@@ -5,7 +5,7 @@ import { assertRun12HistoricalEvidence, readRun12HistoricalEvidence,
   verifyRun12CleanupHistory } from '../ci/planetscale-native-restore-run12-history.mjs';
 import { syntheticRun12Metadata } from './planetscale-native-restore-run12-fixture.mjs';
 
-const env = { GITHUB_REPOSITORY: 'AsoraKK/Lythaus' };
+const env = { GITHUB_REPOSITORY: new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1) };
 const archivePath = id => `/actions/runs/${id}/artifacts?per_page=100`;
 function fixture(absent = true) {
   const f = syntheticRun12Metadata(env.GITHUB_REPOSITORY);

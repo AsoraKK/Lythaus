@@ -4,6 +4,8 @@ import { isDeepStrictEqual } from 'node:util';
 import { object, requireThat } from './planetscale-native-restore-contract.mjs';
 import { hash0021RestoreEvidenceRecord } from './planetscale-0021-only-contract.mjs';
 
+export const RUN14_REPOSITORY = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
+
 export const RUN14 = Object.freeze({
   runId: '40470687953', runNumber: 14, runAttempt: 1, workflowId: 394786946,
   workflowPath: '.github/workflows/planetscale-native-restore-check.yml',
@@ -23,7 +25,7 @@ export const RUN14 = Object.freeze({
   cleanupArtifactDigestText: '3b99b99de6374e227dfe8b6b63e2835d799e7335f5f862bbb5d9f00a1b43379e',
   cleanupHeadSha: '8dd80c4734ac5dad57c4e7338660b4e629c58da1',
   cleanupFinishedAt: '2026-10-27T08:44:47Z', cleanupResultLoggedAt: '2026-10-27T08:44:43.3951079Z',
-  operator: 'AsoraKK', operatorId: 211295889,
+  operator: RUN14_REPOSITORY.split('/')[0], operatorId: 211295889,
 });
 
 // These values are transcribed from the retained run #3 cleanup log. They pin

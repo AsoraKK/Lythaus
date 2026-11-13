@@ -1,6 +1,6 @@
-import { RUN14 } from '../ci/planetscale-native-restore-run14-reconciliation.mjs';
+import { RUN14, RUN14_REPOSITORY } from '../ci/planetscale-native-restore-run14-reconciliation.mjs';
 
-export function syntheticRun14Metadata(repository = 'AsoraKK/Lythaus') {
+export function syntheticRun14Metadata(repository = RUN14_REPOSITORY) {
   const run = cleanup => {
     const id = cleanup ? RUN14.cleanupRunId : RUN14.runId;
     const runNumber = cleanup ? RUN14.cleanupRunNumber : RUN14.runNumber;

@@ -4,12 +4,14 @@ import { object, requireThat } from './planetscale-native-restore-contract.mjs';
 import { hash0021RestoreEvidenceRecord } from './planetscale-0021-only-contract.mjs';
 import { RUN12, RUN12_ARTIFACTS, verifyRun12ReviewedCleanup } from './planetscale-native-restore-run12-reconciliation.mjs';
 
+const repository = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
+
 // This exact historical exception is not an archive reconstruction or a fresh
 // recovery certificate. The original strict verifier remains unchanged.
 export const RUN12_HISTORICAL_LOG_ATTESTATION = Object.freeze({
   qualificationRunId: RUN12.runId, qualificationJobId: RUN12.jobId,
   cleanupRunId: RUN12.cleanupRunId, cleanupJobId: RUN12.cleanupJobId,
-  sourceLogUrl: 'https://api.github.com/repos/AsoraKK/Lythaus/actions/jobs/121741463878/logs',
+  sourceLogUrl: `https://api.github.com/repos/${repository}/actions/jobs/121741463878/logs`,
   evidenceCommit: RUN12.evidenceHead, originalRecordSha256: RUN12.recordSha256,
   targetId: RUN12.targetId, cleanupResult: 'DELETED_AND_READBACK_VERIFIED',
   recoveryCertified: false, qualificationOutcome: 'FAILED', recoveryAcceptance: 'NOT_CERTIFIED',
