@@ -8,6 +8,7 @@ import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/ui/components/create_post_modal.dart';
 import 'package:lythaus/ui/screens/create/create_modal.dart';
 import 'package:lythaus/ui/screens/create/create_screen.dart';
@@ -81,6 +82,8 @@ _Harness _buildHarness({
 
   final container = ProviderContainer(
     overrides: [
+      // Fake notifier outcomes remain covered without enabling production sends.
+      contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
       contentRecoveryStorageProvider.overrideWithValue(
         MemoryContentRecoveryStorage(),
       ),
@@ -138,7 +141,9 @@ void main() {
     expect(harness.notifier.resetCalled, isTrue);
   });
 
-  testWidgets('shows AI scan sheet when content is blocked', (tester) async {
+  testWidgets('shows private restriction sheet when content is blocked', (
+    tester,
+  ) async {
     final harness = _buildHarness(
       submitFn: (n) async {
         n.state = n.state.copyWith(
@@ -156,7 +161,7 @@ void main() {
     await tester.tap(find.text('Post'));
     await tester.pumpAndSettle();
 
-    expect(find.text('AI Scan'), findsOneWidget);
+    expect(find.text('Submission restricted'), findsOneWidget);
     expect(find.text('blocked'), findsOneWidget);
     expect(find.text('harm'), findsOneWidget);
   });

@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **id** | **String** |  |
 **email** | **String** |  |
 **status** | **String** |  |
+**inviteDeliveryState** | **String** |  |
 **source_** | **String** |  |
 **createdAt** | [**DateTime**](DateTime.md) |  |
 **invitedAt** | [**DateTime**](DateTime.md) |  | [optional]

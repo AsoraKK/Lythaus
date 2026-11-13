@@ -16,6 +16,7 @@ part 'waitlist_admin_item.g.dart';
 /// * [id]
 /// * [email]
 /// * [status]
+/// * [inviteDeliveryState]
 /// * [source_]
 /// * [createdAt]
 /// * [invitedAt]
@@ -34,6 +35,10 @@ abstract class WaitlistAdminItem implements Built<WaitlistAdminItem, WaitlistAdm
   @BuiltValueField(wireName: r'status')
   WaitlistAdminItemStatusEnum get status;
   // enum statusEnum {  waiting,  invited,  converted,  unsubscribed,  };
+
+  @BuiltValueField(wireName: r'inviteDeliveryState')
+  WaitlistAdminItemInviteDeliveryStateEnum get inviteDeliveryState;
+  // enum inviteDeliveryStateEnum {  not_invited,  queued,  processing,  provider_accepted,  delivered,  deferred,  bounced,  rejected,  failed,  delivery_attention,  cancelled,  complained,  revoked,  redeemed,  expired,  };
 
   @BuiltValueField(wireName: r'source')
   String get source_;
@@ -94,6 +99,11 @@ class _$WaitlistAdminItemSerializer implements PrimitiveSerializer<WaitlistAdmin
     yield serializers.serialize(
       object.status,
       specifiedType: const FullType(WaitlistAdminItemStatusEnum),
+    );
+    yield r'inviteDeliveryState';
+    yield serializers.serialize(
+      object.inviteDeliveryState,
+      specifiedType: const FullType(WaitlistAdminItemInviteDeliveryStateEnum),
     );
     yield r'source';
     yield serializers.serialize(
@@ -181,6 +191,13 @@ class _$WaitlistAdminItemSerializer implements PrimitiveSerializer<WaitlistAdmin
             specifiedType: const FullType(WaitlistAdminItemStatusEnum),
           ) as WaitlistAdminItemStatusEnum;
           result.status = valueDes;
+          break;
+        case r'inviteDeliveryState':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(WaitlistAdminItemInviteDeliveryStateEnum),
+          ) as WaitlistAdminItemInviteDeliveryStateEnum;
+          result.inviteDeliveryState = valueDes;
           break;
         case r'source':
           final valueDes = serializers.deserialize(
@@ -281,4 +298,45 @@ class WaitlistAdminItemStatusEnum extends EnumClass {
 
   static BuiltSet<WaitlistAdminItemStatusEnum> get values => _$waitlistAdminItemStatusEnumValues;
   static WaitlistAdminItemStatusEnum valueOf(String name) => _$waitlistAdminItemStatusEnumValueOf(name);
+}
+
+class WaitlistAdminItemInviteDeliveryStateEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'not_invited')
+  static const WaitlistAdminItemInviteDeliveryStateEnum notInvited = _$waitlistAdminItemInviteDeliveryStateEnum_notInvited;
+  @BuiltValueEnumConst(wireName: r'queued')
+  static const WaitlistAdminItemInviteDeliveryStateEnum queued = _$waitlistAdminItemInviteDeliveryStateEnum_queued;
+  @BuiltValueEnumConst(wireName: r'processing')
+  static const WaitlistAdminItemInviteDeliveryStateEnum processing = _$waitlistAdminItemInviteDeliveryStateEnum_processing;
+  @BuiltValueEnumConst(wireName: r'provider_accepted')
+  static const WaitlistAdminItemInviteDeliveryStateEnum providerAccepted = _$waitlistAdminItemInviteDeliveryStateEnum_providerAccepted;
+  @BuiltValueEnumConst(wireName: r'delivered')
+  static const WaitlistAdminItemInviteDeliveryStateEnum delivered = _$waitlistAdminItemInviteDeliveryStateEnum_delivered;
+  @BuiltValueEnumConst(wireName: r'deferred')
+  static const WaitlistAdminItemInviteDeliveryStateEnum deferred_ = _$waitlistAdminItemInviteDeliveryStateEnum_deferred_;
+  @BuiltValueEnumConst(wireName: r'bounced')
+  static const WaitlistAdminItemInviteDeliveryStateEnum bounced = _$waitlistAdminItemInviteDeliveryStateEnum_bounced;
+  @BuiltValueEnumConst(wireName: r'rejected')
+  static const WaitlistAdminItemInviteDeliveryStateEnum rejected = _$waitlistAdminItemInviteDeliveryStateEnum_rejected;
+  @BuiltValueEnumConst(wireName: r'failed')
+  static const WaitlistAdminItemInviteDeliveryStateEnum failed = _$waitlistAdminItemInviteDeliveryStateEnum_failed;
+  @BuiltValueEnumConst(wireName: r'delivery_attention')
+  static const WaitlistAdminItemInviteDeliveryStateEnum deliveryAttention = _$waitlistAdminItemInviteDeliveryStateEnum_deliveryAttention;
+  @BuiltValueEnumConst(wireName: r'cancelled')
+  static const WaitlistAdminItemInviteDeliveryStateEnum cancelled = _$waitlistAdminItemInviteDeliveryStateEnum_cancelled;
+  @BuiltValueEnumConst(wireName: r'complained')
+  static const WaitlistAdminItemInviteDeliveryStateEnum complained = _$waitlistAdminItemInviteDeliveryStateEnum_complained;
+  @BuiltValueEnumConst(wireName: r'revoked')
+  static const WaitlistAdminItemInviteDeliveryStateEnum revoked = _$waitlistAdminItemInviteDeliveryStateEnum_revoked;
+  @BuiltValueEnumConst(wireName: r'redeemed')
+  static const WaitlistAdminItemInviteDeliveryStateEnum redeemed = _$waitlistAdminItemInviteDeliveryStateEnum_redeemed;
+  @BuiltValueEnumConst(wireName: r'expired')
+  static const WaitlistAdminItemInviteDeliveryStateEnum expired = _$waitlistAdminItemInviteDeliveryStateEnum_expired;
+
+  static Serializer<WaitlistAdminItemInviteDeliveryStateEnum> get serializer => _$waitlistAdminItemInviteDeliveryStateEnumSerializer;
+
+  const WaitlistAdminItemInviteDeliveryStateEnum._(String name): super(name);
+
+  static BuiltSet<WaitlistAdminItemInviteDeliveryStateEnum> get values => _$waitlistAdminItemInviteDeliveryStateEnumValues;
+  static WaitlistAdminItemInviteDeliveryStateEnum valueOf(String name) => _$waitlistAdminItemInviteDeliveryStateEnumValueOf(name);
 }

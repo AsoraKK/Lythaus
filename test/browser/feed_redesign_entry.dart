@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:js_interop';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,11 +14,26 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/state/providers/theme_mode_provider.dart';
 import '../helpers/content_recovery.dart';
 import '../helpers/feed_session.dart';
+
+@JS('globalThis.__readEditorialFocus')
+external set _focusReader(JSFunction reader);
+
+class _FixtureAppearance implements ThemeModeStorage {
+  @override
+  Future<ThemeMode> load() async => Uri.base.queryParameters['theme'] == 'dark'
+      ? ThemeMode.dark
+      : ThemeMode.light;
+
+  @override
+  Future<void> save(ThemeMode mode) async {}
+}
 
 class _FixtureFeed extends LiveFeedController {
   _FixtureFeed(FeedModel feed)
@@ -75,10 +93,71 @@ class _FixtureFeed extends LiveFeedController {
 }
 
 void main() {
+  // Read-only browser evidence: never requests focus or changes app state.
+  WidgetsFlutterBinding.ensureInitialized();
+  final focusEvents = <Map<String, Object?>>[];
+  Map<String, Object?> readFocus() {
+    final focus = FocusManager.instance.primaryFocus;
+    var shortcutAncestors = 0;
+    var drawerAncestors = 0;
+    var radioAncestors = 0;
+    final radios = <Map<String, Object?>>[];
+    void visit(Element element) {
+      final widget = element.widget;
+      if (widget is RadioListTile<ThemeMode>) {
+        final node = widget.focusNode;
+        radios.add({
+          'mode': widget.value.name,
+          'node': identityHashCode(node),
+          'label': node?.debugLabel,
+          'hasFocus': node?.hasFocus,
+          'canRequestFocus': node?.canRequestFocus,
+          'attached': node?.context != null,
+          'routeCurrent': ModalRoute.of(element)?.isCurrent,
+          'drawerOpen': element
+              .findAncestorStateOfType<ScaffoldState>()
+              ?.isEndDrawerOpen,
+        });
+      }
+      element.visitChildElements(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildElements(visit);
+    focus?.context?.visitAncestorElements((element) {
+      if (element.widget is CallbackShortcuts) shortcutAncestors++;
+      if (element.widget is Drawer) drawerAncestors++;
+      if (element.widget is RadioListTile<ThemeMode>) radioAncestors++;
+      return true;
+    });
+    return {
+      'at': DateTime.now().millisecondsSinceEpoch,
+      'node': identityHashCode(focus),
+      'primaryLabel': focus?.debugLabel,
+      'primaryScope': focus is FocusScopeNode,
+      'isRoot': identical(focus, FocusManager.instance.rootScope),
+      'shortcutAncestors': shortcutAncestors,
+      'drawerAncestors': drawerAncestors,
+      'radioAncestors': radioAncestors,
+      'radios': radios,
+      'ancestors': focus?.ancestors.map((node) => node.debugLabel).toList(),
+    };
+  }
+
+  FocusManager.instance.addListener(() {
+    focusEvents.add(readFocus());
+    if (focusEvents.length > 24) focusEvents.removeAt(0);
+  });
+  _focusReader = (() => jsonEncode({
+    ...readFocus(),
+    'events': focusEvents,
+  }).toJS).toJS;
   GoogleFonts.config.allowRuntimeFetching = false;
   final guest = Uri.base.queryParameters['actor'] == 'guest';
   final tier = Uri.base.queryParameters['tier'] ?? 'black';
   final dio = Dio(BaseOptions(baseUrl: '${Uri.base.origin}/api'));
+  final useNewsBaseline =
+      Uri.base.queryParameters['scenario'] == 'news_baseline';
+  if (useNewsBaseline) dio.interceptors.add(CanonicalApiPathInterceptor());
   runApp(
     ProviderScope(
       overrides: [
@@ -91,11 +170,14 @@ void main() {
         ),
         secureDioProvider.overrideWithValue(dio),
         socialFeedServiceProvider.overrideWithValue(SocialFeedService(dio)),
+        if (Uri.base.queryParameters['feedback'] == 'candidate')
+          contributionFeedbackCandidateProvider.overrideWithValue(true),
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
         analyticsClientProvider.overrideWithValue(const NullAnalyticsClient()),
         settingsProvider.overrideWith((ref) => SettingsController()),
+        themeModeStorageProvider.overrideWithValue(_FixtureAppearance()),
         feedEntitlementsProvider.overrideWith(
           (ref) async => guest
               ? null
@@ -127,7 +209,8 @@ void main() {
                   ),
                 ],
         ),
-        liveFeedStateProvider.overrideWith((ref, feed) => _FixtureFeed(feed)),
+        if (!useNewsBaseline)
+          liveFeedStateProvider.overrideWith((ref, feed) => _FixtureFeed(feed)),
       ],
       child: const _Fixture(),
     ),
@@ -139,15 +222,22 @@ class _Fixture extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
     title: 'Lythaus feed · synthetic QA',
+    debugShowCheckedModeBanner: false,
     theme: LythausTheme.light(),
     darkTheme: LythausTheme.dark(),
-    themeMode: Uri.base.queryParameters['theme'] == 'dark'
-        ? ThemeMode.dark
-        : ThemeMode.light,
+    themeMode: ref.watch(themeModeProvider),
+    themeAnimationDuration: Duration.zero,
     routerConfig: ref.watch(appRouterProvider),
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(
         disableAnimations: true,
+        viewInsets: EdgeInsets.only(
+          bottom:
+              double.tryParse(
+                Uri.base.queryParameters['keyboardInset'] ?? '',
+              ) ??
+              0,
+        ),
         textScaler: TextScaler.linear(
           double.tryParse(Uri.base.queryParameters['textScale'] ?? '') ?? 1,
         ),

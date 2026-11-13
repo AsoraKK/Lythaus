@@ -9,54 +9,58 @@ import 'package:lythaus/design_system/components/lyth_list_row.dart';
 import 'package:lythaus/design_system/components/lyth_skeleton.dart';
 
 void main() {
-  test(
-    'Material legacy colours and all scheme roles stay inside the palette',
-    () {
-      final theme = LythausTheme.dark();
-      final source = {
-        LythSemanticColors.canvas.toARGB32(),
-        LythSemanticColors.surface.toARGB32(),
-        LythSemanticColors.text.toARGB32(),
-        LythSemanticColors.accent.toARGB32(),
-      };
-      final diagnostics = DiagnosticPropertiesBuilder();
-      theme.colorScheme.debugFillProperties(diagnostics);
-      for (final property
-          in diagnostics.properties.whereType<ColorProperty>()) {
-        final value = property.value;
-        if (value != null && value.a > 0) {
-          expect(source, contains(value.toARGB32()), reason: property.name);
+  for (final appearance in {
+    Brightness.light: LythausTheme.light(),
+    Brightness.dark: LythausTheme.dark(),
+  }.entries) {
+    test(
+      '${appearance.key} Material colours and all scheme roles stay inside the palette',
+      () {
+        final theme = appearance.value;
+        final source = {
+          LythSemanticColors.canvas.toARGB32(),
+          LythSemanticColors.surface.toARGB32(),
+          LythSemanticColors.text.toARGB32(),
+          LythSemanticColors.accent.toARGB32(),
+        };
+        final diagnostics = DiagnosticPropertiesBuilder();
+        theme.colorScheme.debugFillProperties(diagnostics);
+        for (final property
+            in diagnostics.properties.whereType<ColorProperty>()) {
+          final value = property.value;
+          if (value != null && value.a > 0) {
+            expect(source, contains(value.toARGB32()), reason: property.name);
+          }
         }
-      }
-      for (final value in [
-        theme.primaryColor,
-        theme.primaryColorLight,
-        theme.primaryColorDark,
-        theme.secondaryHeaderColor,
-        theme.shadowColor,
-        theme.unselectedWidgetColor,
-        theme.disabledColor,
-      ]) {
-        expect(source, contains(value.toARGB32()));
-      }
-      expect(theme.brightness, Brightness.dark);
-      expect(LythausTheme.light().brightness, Brightness.dark);
-      for (final state in [
-        WidgetState.disabled,
-        WidgetState.hovered,
-        WidgetState.focused,
-        WidgetState.pressed,
-      ]) {
-        final style = theme.filledButtonTheme.style!;
-        final foreground = style.foregroundColor!.resolve({state})!;
-        final background = style.backgroundColor!.resolve({state})!;
-        expect(
-          LythColorSchemes.contrastRatio(foreground, background),
-          greaterThanOrEqualTo(4.5),
-        );
-      }
-    },
-  );
+        for (final value in [
+          theme.primaryColor,
+          theme.primaryColorLight,
+          theme.primaryColorDark,
+          theme.secondaryHeaderColor,
+          theme.shadowColor,
+          theme.unselectedWidgetColor,
+          theme.disabledColor,
+        ]) {
+          expect(source, contains(value.toARGB32()));
+        }
+        expect(theme.brightness, appearance.key);
+        for (final state in [
+          WidgetState.disabled,
+          WidgetState.hovered,
+          WidgetState.focused,
+          WidgetState.pressed,
+        ]) {
+          final style = theme.filledButtonTheme.style!;
+          final foreground = style.foregroundColor!.resolve({state})!;
+          final background = style.backgroundColor!.resolve({state})!;
+          expect(
+            LythColorSchemes.contrastRatio(foreground, background),
+            greaterThanOrEqualTo(4.5),
+          );
+        }
+      },
+    );
+  }
 
   test(
     'Flutter colors remain aligned with the platform-neutral token source',

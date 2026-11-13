@@ -14,6 +14,8 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onTitleTap,
     this.onSearchTap,
     this.onTrendingTap,
+    this.onAccountTap,
+    this.onCreateTap,
     this.logoFocusNode,
     this.titleFocusNode,
     this.showDivider = false,
@@ -25,6 +27,8 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onTitleTap;
   final VoidCallback? onSearchTap;
   final VoidCallback? onTrendingTap;
+  final VoidCallback? onAccountTap;
+  final VoidCallback? onCreateTap;
   final FocusNode? logoFocusNode;
   final FocusNode? titleFocusNode;
   final bool showDivider;
@@ -37,6 +41,15 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
+    if (useWordmark) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(24, 12, 24, 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: LythBrand(variant: LythBrandVariant.wordmark, height: 32),
+        ),
+      );
+    }
     return Container(
       constraints: BoxConstraints(minHeight: preferredSize.height),
       decoration: BoxDecoration(
@@ -48,57 +61,53 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
       padding: EdgeInsets.symmetric(horizontal: spacing.lg),
       child: Row(
         children: [
-          if (useWordmark) ...[
-            const Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: LythBrand(variant: LythBrandVariant.symbol, height: 36),
-              ),
-            ),
-            if (onLogoTap != null)
-              IconButton(
-                focusNode: logoFocusNode,
-                onPressed: onLogoTap,
-                tooltip: 'Feed controls',
-                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
-                icon: const Icon(Icons.tune),
-              ),
-          ] else ...[
+          if (onAccountTap != null)
             IconButton(
-              focusNode: logoFocusNode,
-              onPressed: onLogoTap,
-              tooltip: 'Feed controls',
-              icon: const LythBrand(
-                variant: LythBrandVariant.symbol,
-                height: 24,
-                decorative: true,
-              ),
+              onPressed: onAccountTap,
+              tooltip: 'Account menu',
+              icon: const Icon(Icons.account_circle_outlined),
             ),
-            SizedBox(width: spacing.sm),
-            Expanded(
-              child: TextButton(
-                focusNode: titleFocusNode,
-                onPressed: onTitleTap,
-                style: TextButton.styleFrom(
-                  alignment: Alignment.centerLeft,
-                  foregroundColor: theme.colorScheme.onSurface,
-                ),
-                child: Text(title, style: theme.textTheme.titleLarge),
-              ),
+          IconButton(
+            focusNode: logoFocusNode,
+            onPressed: onLogoTap,
+            tooltip: 'Feed controls',
+            icon: const LythBrand(
+              variant: LythBrandVariant.symbol,
+              height: 24,
+              decorative: true,
             ),
-          ],
+          ),
+          SizedBox(width: spacing.sm),
+          Expanded(
+            child: TextButton(
+              focusNode: titleFocusNode,
+              onPressed: onTitleTap,
+              style: TextButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                foregroundColor: theme.colorScheme.onSurface,
+              ),
+              child: Text(title, style: theme.textTheme.titleLarge),
+            ),
+          ),
           Row(
             children: [
-              LythIconButton(
-                icon: Icons.search,
-                tooltip: 'Search',
-                onPressed: onSearchTap,
-              ),
+              if (onCreateTap == null)
+                LythIconButton(
+                  icon: Icons.search,
+                  tooltip: 'Search',
+                  onPressed: onSearchTap,
+                ),
               LythIconButton(
                 icon: Icons.trending_up_outlined,
                 tooltip: 'Trending',
                 onPressed: onTrendingTap,
               ),
+              if (onCreateTap != null)
+                LythIconButton(
+                  icon: Icons.edit_outlined,
+                  tooltip: 'Create',
+                  onPressed: onCreateTap,
+                ),
             ],
           ),
         ],

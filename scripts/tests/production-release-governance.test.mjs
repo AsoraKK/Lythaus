@@ -333,7 +333,8 @@ test('canonical manifest finalizes VERIFIED or BLOCKED after production smoke', 
   assert.match(workflow, /resolve-release-failure-domain\.mjs/);
   assert.match(workflow, /transition-release-state\.mjs VERIFIED/);
   assert.match(workflow, /transition-release-state\.mjs BLOCKED/);
-  assert.match(workflow, /RELEASE_STATE_HISTORY_JSON: \$\{\{ steps\.verified_state\.outputs\.history_json \|\| '\[\]' \}\}/);
+  assert.match(workflow, /RELEASE_STATE_HISTORY_JSON: \$\{\{ steps\.app_only_state\.outputs\.history_json \|\| steps\.verified_state\.outputs\.history_json \|\| '\[\]' \}\}/);
+  assert.match(workflow, /Record app-only release state[\s\S]*APP_ONLY_STATUS.*needs\.app_only\.outputs\.status[\s\S]*MANIFEST_VALIDATION[\s\S]*state=VERIFIED/);
 });
 
 test('canonical manifest retains the exact deterministic release plan provenance', () => {

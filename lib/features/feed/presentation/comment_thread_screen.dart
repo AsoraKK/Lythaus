@@ -15,8 +15,12 @@ import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/feed/application/owner_content_repository.dart';
 import 'package:lythaus/features/feed/application/comment_preferences.dart';
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
+import 'package:lythaus/features/reactions/domain/contribution_feedback.dart';
+import 'package:lythaus/features/reactions/presentation/contribution_feedback_controls.dart';
 
 class CommentThreadScreen extends ConsumerStatefulWidget {
   const CommentThreadScreen({
@@ -38,6 +42,7 @@ class CommentThreadScreen extends ConsumerStatefulWidget {
 class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   final TextEditingController _composerController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _composerScrollController = ScrollController();
   final FocusNode _composerFocusNode = FocusNode();
 
   List<_ThreadComment> _comments = const [];
@@ -90,7 +95,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _composerController.text = pending.payload['body'] as String? ?? '';
       _aiLabel = pending.payload['declaredCreationMode'] == 'ai_assisted'
           ? 'assisted'
-          : 'human';
+          : pending.payload['declaredCreationMode'] == 'human'
+          ? 'human'
+          : null;
       _pendingParentId = pending.payload['parentId'] as String?;
       _locked = true;
     }
@@ -161,11 +168,13 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
             ? 'assisted'
             : data['declaredCreationMode'] == 'human'
             ? 'human'
+            : pending == null && (data['body'] as String? ?? '').isNotEmpty
+            ? 'human'
             : null;
       }
       _locked = pending != null && !pending.needsReentry;
       _draftStatus = pending?.needsReentry == true
-          ? 'Re-enter the same text, disclosure and reply target to check the previous request.'
+          ? 'Re-enter the same text and reply target to check the previous request.'
           : data == null
           ? null
           : 'Draft restored on this device.';
@@ -173,7 +182,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _pendingParentId = pending!.payload['parentId'] as String?;
         _aiLabel = pending.payload['declaredCreationMode'] == 'ai_assisted'
             ? 'assisted'
-            : 'human';
+            : pending.payload['declaredCreationMode'] == 'human'
+            ? 'human'
+            : null;
       }
     });
     _syncReloadBlock();
@@ -202,6 +213,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   }
 
   void _saveDraft() {
+    if (_aiLabel == null && !_locked && _composerController.text.isNotEmpty) {
+      _aiLabel = 'human';
+    }
     final actor = _actor;
     final version = ++_draftVersion;
     setState(() => _draftStatus = 'Saving draft…');
@@ -264,6 +278,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     _scrollController.removeListener(_onScroll);
     _composerController.dispose();
     _scrollController.dispose();
+    _composerScrollController.dispose();
     _composerFocusNode.dispose();
     super.dispose();
   }
@@ -858,12 +873,16 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   }
 
   Future<void> _submitComment() async {
+    if (!ref.read(contentSubmissionPresentationEnabledProvider) ||
+        !widget.canSubmit) {
+      return;
+    }
     final rawText = _composerController.text.trim();
     if (rawText.isEmpty || _isSubmitting || _confirmingDeletion || _restoring) {
       return;
     }
 
-    final label = _aiLabel;
+    final label = _aiLabel ?? (_locked ? null : 'human');
     final parentId = _pendingParentId ?? _replyTarget?.id;
     final registry = ref.read(contentMutationRegistryProvider);
     final dio = ref.read(secureDioProvider);
@@ -902,7 +921,11 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       }
       final body = {
         'body': rawText,
-        'declaredCreationMode': label == 'assisted' ? 'ai_assisted' : 'human',
+        'declaredCreationMode': switch (label) {
+          'assisted' => 'ai_assisted',
+          'human' => 'human',
+          _ => throw StateError('A validated declaration is required.'),
+        },
         if (parentId != null) 'parentId': parentId,
       };
       attempt = await registry.beginDurable(_createScope, body);
@@ -1017,6 +1040,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         builder: (_) => ContentEditorScreen(
           contentId: comment.id,
           text: comment.text,
+          declaredCreationMode: comment.declaredCreationMode,
           isComment: true,
           postId: widget.postId,
         ),
@@ -1348,6 +1372,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   Widget build(BuildContext context) {
     final signedIn = ref.watch(currentUserProvider) != null;
     final canCompose = signedIn && widget.canSubmit;
+    final submissionsEnabled = ref.watch(
+      contentSubmissionPresentationEnabledProvider,
+    );
     final journal = ref.watch(contentMutationRegistryProvider);
     return PopScope(
       canPop:
@@ -1446,36 +1473,42 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
                         ? 'This post is awaiting publication checks. Comments can be submitted after publication.'
                         : 'Reopen the post to check whether comments are available.',
                   ),
-                if (_draftStatus != null) Text(_draftStatus!),
+                if (_draftStatus != null)
+                  Text(
+                    !submissionsEnabled && _draftStatus!.contains('disclosure')
+                        ? contentSubmissionPendingMessage
+                        : _draftStatus!,
+                  ),
                 if (_pendingParentId != null && _replyTarget == null)
                   const Text('Saved reply target retained.'),
                 ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: constraints.maxHeight * 0.5,
                   ),
-                  child: SingleChildScrollView(
-                    child: _ComposerBar(
-                      key: ValueKey('comment-create-input:$_sessionEpoch'),
-                      enabled: canCompose,
-                      controller: _composerController,
-                      replyTarget: _replyTarget,
-                      isSubmitting: _isSubmitting || _restoring,
-                      locked: _locked,
-                      aiLabel: _aiLabel,
-                      composerFocusNode: _composerFocusNode,
-                      onCancelReply: () => setState(() {
-                        if (!_isSubmitting && !_locked) {
-                          _replyTarget = null;
-                          _pendingParentId = null;
-                          _saveDraft();
-                        }
-                      }),
-                      onChanged: _saveDraft,
-                      onDisclosureChanged: (label) => setState(() {
-                        _aiLabel = label;
-                        _saveDraft();
-                      }),
-                      onSend: _submitComment,
+                  child: Scrollbar(
+                    controller: _composerScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _composerScrollController,
+                      child: _ComposerBar(
+                        key: ValueKey('comment-create-input:$_sessionEpoch'),
+                        enabled: canCompose,
+                        sendEnabled: canCompose && submissionsEnabled,
+                        controller: _composerController,
+                        replyTarget: _replyTarget,
+                        isSubmitting: _isSubmitting || _restoring,
+                        locked: _locked,
+                        composerFocusNode: _composerFocusNode,
+                        onCancelReply: () => setState(() {
+                          if (!_isSubmitting && !_locked) {
+                            _replyTarget = null;
+                            _pendingParentId = null;
+                            _saveDraft();
+                          }
+                        }),
+                        onChanged: _saveDraft,
+                        onSend: _submitComment,
+                      ),
                     ),
                   ),
                 ),
@@ -1642,6 +1675,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     return _CommentTile(
       key: _commentKeys.putIfAbsent(comment.id, GlobalKey.new),
       comment: comment,
+      showFeedback:
+          ref.watch(contributionFeedbackCandidateProvider) &&
+          !comment.deleted &&
+          comment.moderationState == 'allowed',
       replyContext: comment.parentCommentId == null
           ? null
           : comment.replyToDeleted || replyTarget?.deleted == true
@@ -1701,28 +1738,26 @@ class _ComposerBar extends StatelessWidget {
     super.key,
     required this.controller,
     required this.enabled,
+    required this.sendEnabled,
     required this.replyTarget,
     required this.isSubmitting,
     required this.locked,
-    required this.aiLabel,
     required this.composerFocusNode,
     required this.onCancelReply,
     required this.onSend,
     required this.onChanged,
-    required this.onDisclosureChanged,
   });
 
   final TextEditingController controller;
   final bool enabled;
+  final bool sendEnabled;
   final _ThreadComment? replyTarget;
   final bool isSubmitting;
   final bool locked;
-  final String? aiLabel;
   final FocusNode composerFocusNode;
   final VoidCallback onCancelReply;
   final VoidCallback onSend;
   final VoidCallback onChanged;
-  final ValueChanged<String> onDisclosureChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1766,7 +1801,7 @@ class _ComposerBar extends StatelessWidget {
                     enabled: enabled && !isSubmitting && !locked,
                     onChanged: (_) => onChanged(),
                     textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => onSend(),
+                    onSubmitted: sendEnabled ? (_) => onSend() : null,
                     decoration: const InputDecoration(
                       labelText: 'Write a reply',
                       border: OutlineInputBorder(),
@@ -1777,7 +1812,7 @@ class _ComposerBar extends StatelessWidget {
                 Tooltip(
                   message: locked ? 'Retry same comment' : 'Send reply',
                   child: FilledButton(
-                    onPressed: !enabled || isSubmitting ? null : onSend,
+                    onPressed: !sendEnabled || isSubmitting ? null : onSend,
                     child: isSubmitting
                         ? const SizedBox(
                             width: 14,
@@ -1797,30 +1832,16 @@ class _ComposerBar extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (locked)
-              const Text(
-                'The previous submission is awaiting confirmation. Retry checks the same submission.',
+              Text(
+                sendEnabled
+                    ? 'The previous submission is awaiting confirmation. Retry checks the same submission.'
+                    : contentSubmissionPendingMessage,
               ),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Human-authored'),
-                  selected: aiLabel == 'human',
-                  onSelected: !enabled || isSubmitting || locked
-                      ? null
-                      : (_) => onDisclosureChanged('human'),
-                ),
-                ChoiceChip(
-                  label: const Text('AI-assisted'),
-                  selected: aiLabel == 'assisted',
-                  onSelected: !enabled || isSubmitting || locked
-                      ? null
-                      : (_) => onDisclosureChanged('assisted'),
-                ),
-              ],
-            ),
-            const Text(
-              'AI-generated public content is not allowed. AI-assisted text is limited to 249 user-perceived characters.',
+            if (enabled && !sendEnabled)
+              const Text(contentSubmissionUnavailableMessage),
+            TextButton(
+              onPressed: () => showContentPostingPolicy(context),
+              child: const Text('Posting policy'),
             ),
           ],
         ),
@@ -1834,6 +1855,7 @@ class _CommentTile extends StatelessWidget {
     super.key,
     required this.comment,
     required this.highlighted,
+    required this.showFeedback,
     required this.onReply,
     this.onEdit,
     this.onDelete,
@@ -1843,6 +1865,7 @@ class _CommentTile extends StatelessWidget {
 
   final _ThreadComment comment;
   final bool highlighted;
+  final bool showFeedback;
   final VoidCallback? onReply;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -1861,7 +1884,7 @@ class _CommentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: highlighted
             ? scheme.primaryContainer.withValues(alpha: 0.55)
-            : scheme.surfaceContainerLowest,
+            : scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: scheme.outlineVariant),
       ),
@@ -1898,14 +1921,19 @@ class _CommentTile extends StatelessWidget {
                 ),
               ),
             ),
-          Text(comment.text, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 6),
+          Text(
+            comment.text,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.5),
+          ),
           if (comment.moderationState == 'under_review')
             const Text('Under review. Publication checks are pending.'),
-          if (!comment.deleted && comment.declaredCreationMode != null)
-            Text(
-              comment.declaredCreationMode == 'ai_assisted'
-                  ? 'AI-assisted'
-                  : 'Human-authored',
+          if (showFeedback)
+            ContributionFeedbackControls(
+              target: FeedbackTarget(FeedbackTargetType.comment, comment.id),
+              authorId: comment.authorId,
             ),
           Wrap(
             spacing: 8,

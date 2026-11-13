@@ -14,6 +14,7 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 
 import '../../../helpers/content_recovery.dart';
 
@@ -68,6 +69,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // Route ownership tests retain the existing submission contract.
+          contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
           _actor.overrideWith((ref) => _user('owner')),
           currentUserProvider.overrideWith((ref) => ref.watch(_actor)),
           jwtProvider.overrideWith((ref) async => 'synthetic-token'),
@@ -89,6 +92,7 @@ void main() {
                       text: isComment
                           ? 'Original synthetic comment'
                           : 'Original synthetic post',
+                      declaredCreationMode: 'human',
                       isComment: isComment,
                       postId: isComment ? 'synthetic-post' : null,
                     ),
@@ -102,17 +106,31 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.text('Open editor')),
+    );
+    final registry = container.read(contentMutationRegistryProvider);
+    await registry.refresh();
+    await registry.saveDraft(
+      isComment
+          ? 'comment:owner:synthetic-comment'
+          : 'post:owner:synthetic-post',
+      {
+        'body': isComment
+            ? 'Original synthetic comment'
+            : 'Original synthetic post',
+        'declaredCreationMode': 'human',
+      },
+    );
     await tester.tap(find.text('Open editor'));
     await tester.pumpAndSettle();
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(ContentEditorScreen)),
-    );
     await tester.enterText(
       find.byType(TextField).first,
       'Revised synthetic post',
     );
-    await tester.tap(find.text('Human-authored'));
     await tester.pumpAndSettle();
+    expect(find.text('Human-authored'), findsNothing);
+    expect(find.text('AI-assisted'), findsNothing);
     return (
       navigatorKey: navigatorKey,
       container: container,
@@ -204,9 +222,7 @@ void main() {
       await fixture.navigatorKey.currentState!.maybePop();
       await tester.pumpAndSettle();
       expect(
-        find.text(
-          'Edit saved. Under review; this is not an authorship assessment.',
-        ),
+        find.text('Edit saved. Publication checks are pending.'),
         findsOneWidget,
       );
       expect(find.text('Submitting…'), findsNothing);
@@ -277,9 +293,7 @@ void main() {
       await fixture.navigatorKey.currentState!.maybePop();
       await tester.pumpAndSettle();
       expect(
-        find.text(
-          'Edit saved. Under review; this is not an authorship assessment.',
-        ),
+        find.text('Edit saved. Publication checks are pending.'),
         findsOneWidget,
       );
       expect(find.text('Submitting…'), findsNothing);

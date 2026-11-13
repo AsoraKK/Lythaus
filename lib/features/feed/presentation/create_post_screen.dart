@@ -20,6 +20,7 @@ import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -36,13 +37,7 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
-  static const String _policyReminderMessage =
-      'Choose Human-authored or AI-assisted before posting.\n'
-      'AI-generated public content is not allowed.\n'
-      'AI-assisted public text is limited to 249 user-perceived characters.\n'
-      'Disclosure conflicts may be placed Under review.\n'
-      'Appeal outcomes are recorded by Lythaus.\n'
-      'This is an invite-only Alpha.';
+  static const String _policyReminderMessage = contentPostingPolicyMessage;
 
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
@@ -87,6 +82,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final active = TickerMode.valuesOf(context).enabled;
+    final handlesLocalBack =
+        ModalRoute.of(context)?.willHandlePopInternally ?? false;
     final state = ref.watch(postCreationProvider);
     final inputEpoch = ref.watch(
       contentMutationRegistryProvider.select(
@@ -103,25 +101,31 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         }
       },
     );
+    // Account changes must close a private appeal even when registry
+    // notifications are deferred until the end of a build frame.
+    ref.listen<String?>(currentUserProvider.select((user) => user?.id), (
+      previous,
+      next,
+    ) {
+      if (previous != next) _dismissAppealDialog();
+    });
     final canCreate = ref.watch(canCreatePostProvider);
+    final submissionsEnabled = ref.watch(
+      contentSubmissionPresentationEnabledProvider,
+    );
     final privateImagesEnabled = ref.watch(privateImageUploadsEnabledProvider);
     final imageBlocksPost =
         privateImagesEnabled &&
         canCreate &&
         ref.watch(privateImageUploadProvider).blocksPost;
     final theme = Theme.of(context);
-    final isAssisted = state.aiLabel == 'assisted';
     final canEdit =
         canCreate &&
         !state.isRestoring &&
         !state.isSubmitting &&
         state.errorResult?.outcomeUncertain != true;
-    final characterCount = isAssisted
-        ? state.userPerceivedTextLength
-        : state.text.length;
-    final characterLimit = isAssisted
-        ? aiAssistedPublicTextMaxGraphemes
-        : postTextMaxLength;
+    final characterCount = state.text.length;
+    const characterLimit = postTextMaxLength;
     final remainingCharacters = (characterLimit - characterCount).clamp(
       0,
       characterLimit,
@@ -150,16 +154,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     return PopScope(
       canPop:
-          !imageBlocksPost &&
-          !state.isSubmitting &&
-          (state.text.isEmpty || state.isSuccess),
+          !active ||
+          handlesLocalBack ||
+          (!imageBlocksPost &&
+              !state.isSubmitting &&
+              (state.text.isEmpty || state.isSuccess)),
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _handleClose(context);
+        if (!didPop &&
+            active &&
+            !handlesLocalBack &&
+            TickerMode.valuesOf(context).enabled &&
+            ModalRoute.of(context)?.willHandlePopInternally != true) {
+          _handleClose(context);
+        }
       },
       child: ReadingPane(
         child: Scaffold(
           appBar: AppBar(
-            title: Text('Create Post', style: context.textTheme.titleLarge),
+            title: Text('New post', style: context.textTheme.titleLarge),
             leading: IconButton(
               icon: const Icon(Icons.close),
               tooltip: 'Close composer',
@@ -167,10 +179,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ),
             actions: [
               Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: 16),
                 child: FilledButton(
                   onPressed:
-                      state.isSubmitting ||
+                      !submissionsEnabled ||
+                          state.isSubmitting ||
                           state.isRestoring ||
                           imageBlocksPost ||
                           !state.isValid ||
@@ -233,8 +246,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   _LimitExceededBanner(result: state.limitExceededResult!),
                 if (state.hasError &&
                     state.errorResult?.code !=
-                        ErrorCodes.deviceIntegrityBlocked)
+                        ErrorCodes.deviceIntegrityBlocked &&
+                    (submissionsEnabled ||
+                        state.errorResult?.outcomeUncertain != true))
                   _ErrorBanner(result: state.errorResult!),
+                if (!submissionsEnabled &&
+                    state.errorResult?.outcomeUncertain == true)
+                  const Text(contentSubmissionPendingMessage),
 
                 // Main content
                 Expanded(
@@ -248,7 +266,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           if (!canCreate) _AuthRequiredCard(theme: theme),
                           if (state.isRestoring) const Text('Restoring draft…'),
                           if (state.draftStatus != null)
-                            Text(state.draftStatus!),
+                            Text(
+                              !submissionsEnabled &&
+                                      state.draftStatus!.contains('disclosure')
+                                  ? contentSubmissionPendingMessage
+                                  : state.draftStatus!,
+                            ),
+                          if (!submissionsEnabled)
+                            const Text(contentSubmissionUnavailableMessage),
 
                           // Text input
                           const SizedBox(height: 12),
@@ -258,7 +283,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             ),
                             controller: _textController,
                             focusNode: _focusNode,
-                            minLines: 5,
+                            minLines: 6,
                             maxLines: 10,
                             textAlignVertical: TextAlignVertical.top,
                             enabled: canEdit,
@@ -267,21 +292,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               labelText: 'Your post',
                               floatingLabelBehavior:
                                   FloatingLabelBehavior.always,
-                              hintText: "What's on your mind?",
+                              hintText: 'Share your thoughts…',
                               hintStyle: context.textTheme.bodyMedium?.copyWith(
                                 color: context.colorScheme.onSurfaceVariant,
                               ),
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                              ),
                               border: InputBorder.none,
-                              errorText: state.validationError,
-                              counterText: isAssisted
-                                  ? '$characterCount/$characterLimit '
-                                        'user-perceived characters'
-                                  : '$characterCount/$characterLimit',
-                              semanticCounterText: isAssisted
-                                  ? '$characterCount of $characterLimit '
-                                        'user-perceived characters used'
-                                  : '$characterCount of $characterLimit '
-                                        'characters used',
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              errorText: submissionsEnabled
+                                  ? state.validationError
+                                  : contentDraftValidationError(state.text),
+                              counterText: '$characterCount/$characterLimit',
+                              semanticCounterText:
+                                  '$characterCount of $characterLimit '
+                                  'characters used',
                             ),
                             onChanged: (value) {
                               ref
@@ -289,94 +318,51 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   .updateText(value);
                             },
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'How did you write this?',
-                            style: context.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Choose one. AI-assisted text is limited to 249 characters.',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+                          const Divider(height: 24),
                           TextButton(
                             onPressed: _showPostingPolicy,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              alignment: Alignment.centerLeft,
+                            ),
                             child: const Text('Posting policy'),
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: Text(
-                                  'Human-authored',
-                                  style: context.textTheme.bodySmall,
-                                ),
-                                selected: state.aiLabel == 'human',
-                                onSelected: canEdit
-                                    ? (_) => ref
-                                          .read(postCreationProvider.notifier)
-                                          .setAiLabel('human')
-                                    : null,
-                              ),
-                              ChoiceChip(
-                                label: Text(
-                                  'AI-assisted',
-                                  style: context.textTheme.bodySmall,
-                                ),
-                                selected: state.aiLabel == 'assisted',
-                                onSelected: canEdit
-                                    ? (_) => ref
-                                          .read(postCreationProvider.notifier)
-                                          .setAiLabel('assisted')
-                                    : null,
-                              ),
-                            ],
-                          ),
-                          if (isAssisted)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                '$characterCount of '
-                                '$aiAssistedPublicTextMaxGraphemes user-perceived '
-                                'characters used for AI-assisted public text.',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      characterCount >
-                                          aiAssistedPublicTextMaxGraphemes
-                                      ? theme.colorScheme.error
-                                      : theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
                           const SizedBox(height: 12),
-                          if (privateImagesEnabled && canCreate)
+                          if (submissionsEnabled &&
+                              privateImagesEnabled &&
+                              canCreate)
                             PrivateImageUploadCard(canEdit: canEdit)
                           else ...[
                             Text(
                               'Photos are not available yet',
-                              style: context.textTheme.titleSmall,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Image sharing will open after the required safety '
-                              'and authenticity checks are ready. You can submit text for review.',
+                              'Photo uploads remain unavailable while publication '
+                              'checks are being validated.',
                               style: context.textTheme.bodySmall,
                             ),
                           ],
                           const SizedBox(height: 12),
-                          Text(
-                            'Submissions stay private while publication checks are pending. '
-                            'Being under review does not mean AI assessment has completed.',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                          if (!submissionsEnabled &&
+                              privateImagesEnabled &&
+                              ref.watch(privateImageUploadProvider).hasImage)
+                            TextButton(
+                              onPressed:
+                                  ref.watch(privateImageUploadProvider).busy
+                                  ? null
+                                  : ref
+                                        .read(
+                                          privateImageUploadProvider.notifier,
+                                        )
+                                        .clear,
+                              child: const Text(
+                                'Clear retained image selection',
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -399,8 +385,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       alignment: Alignment.centerRight,
                       child: Text(
                         '$remainingCharacters '
-                        '${isAssisted ? 'user-perceived characters' : 'characters'} '
-                        'remaining',
+                        'characters remaining',
                         style: context.textTheme.bodySmall?.copyWith(
                           color: characterCount > characterLimit * 0.9
                               ? theme.colorScheme.error
@@ -438,6 +423,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _handleSubmit() async {
+    if (!ref.read(contentSubmissionPresentationEnabledProvider)) return;
     final user = ref.read(currentUserProvider);
     ref
         .read(analyticsEventTrackerProvider)

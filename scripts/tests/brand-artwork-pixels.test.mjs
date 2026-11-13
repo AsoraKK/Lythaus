@@ -33,10 +33,9 @@ test('width-limited container centers wordmark vertically',()=>{
   assert.ok(rect.height>27&&rect.height<28);
   assert.equal(rect.y+rect.height/2,70);
 });
-test('consumer shell uses square LH while auth and onboarding retain monochrome wordmarks',()=>{
+test('consumer headers use only the approved wordmark with theme text contrast',()=>{
   for(const theme of ['light','dark']){
-    assert.deepEqual(brandPresentation('shell',theme),{kind:'symbol',file:'lythaus-symbol-square-warm.fb697a91817f.svg',foreground:'#F5F3EE'});
-    for(const screen of ['login','onboarding'])assert.deepEqual(brandPresentation(screen,theme),{kind:'wordmark',file:'lythaus-wordmark-white.5ba0451347e2.svg',foreground:'#F5F3EE'});
+    for(const screen of ['shell','login','onboarding'])assert.deepEqual(brandPresentation(screen,theme),{kind:'wordmark',file:'lythaus-wordmark-white.5ba0451347e2.svg',foreground:theme==='light'?'#242321':'#F5F3EE'});
     assert.equal(brandPresentation('admin',theme).foreground,null);
     assert.match(brandPresentation('admin',theme).file,theme==='dark'?/wordmark-white/:/wordmark-black/);
   }
@@ -47,13 +46,13 @@ test('consumer shell uses square LH while auth and onboarding retain monochrome 
   assert.throws(()=>containedBrandRect(box,'wordmark',true));
   assert.throws(()=>brandPresentation('unknown','dark'));
 });
-test('a canonical wordmark cannot certify the shell LH symbol',async()=>{
+test('the square LH symbol cannot certify the header wordmark',async()=>{
   const render=async file=>{
     const source=readFileSync('assets/brand/lythaus-v1/'+file,'utf8').replace(/fill="#[0-9A-Fa-f]{6}"/g,'fill="#F5F3EE"');
     const {data,info}=await sharp(Buffer.from(source)).resize(36,36,{fit:'contain',background:'#242321'}).flatten({background:'#242321'}).ensureAlpha().raw().toBuffer({resolveWithObject:true});
     return {data,width:info.width,height:info.height};
   };
-  const symbol=await render(brandPresentation('shell','dark').file),wordmark=await render(brandPresentation('login','dark').file);
+  const symbol=await render('lythaus-symbol-square-warm.fb697a91817f.svg'),wordmark=await render(brandPresentation('shell','dark').file);
   artworkFidelity(symbol,symbol,[36,35,33]);
   assert.throws(()=>artworkFidelity(symbol,wordmark,[36,35,33]),/Artwork fidelity/);
   assert.throws(()=>artworkFidelity(wordmark,symbol,[36,35,33]),/Artwork fidelity/);

@@ -15,12 +15,17 @@ part 'waitlist_admin_response.g.dart';
 ///
 /// Properties:
 /// * [items]
+/// * [inviteFeatureEnabled] - Whether the invitation schema and send flow are enabled for this admin environment.
 /// * [nextCursor]
 /// * [summary]
 @BuiltValue()
 abstract class WaitlistAdminResponse implements Built<WaitlistAdminResponse, WaitlistAdminResponseBuilder> {
   @BuiltValueField(wireName: r'items')
   BuiltList<WaitlistAdminItem> get items;
+
+  /// Whether the invitation schema and send flow are enabled for this admin environment.
+  @BuiltValueField(wireName: r'inviteFeatureEnabled')
+  bool get inviteFeatureEnabled;
 
   @BuiltValueField(wireName: r'nextCursor')
   String? get nextCursor;
@@ -55,6 +60,11 @@ class _$WaitlistAdminResponseSerializer implements PrimitiveSerializer<WaitlistA
     yield serializers.serialize(
       object.items,
       specifiedType: const FullType(BuiltList, [FullType(WaitlistAdminItem)]),
+    );
+    yield r'inviteFeatureEnabled';
+    yield serializers.serialize(
+      object.inviteFeatureEnabled,
+      specifiedType: const FullType(bool),
     );
     yield r'nextCursor';
     yield object.nextCursor == null ? null : serializers.serialize(
@@ -95,6 +105,13 @@ class _$WaitlistAdminResponseSerializer implements PrimitiveSerializer<WaitlistA
             specifiedType: const FullType(BuiltList, [FullType(WaitlistAdminItem)]),
           ) as BuiltList<WaitlistAdminItem>;
           result.items.replace(valueDes);
+          break;
+        case r'inviteFeatureEnabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.inviteFeatureEnabled = valueDes;
           break;
         case r'nextCursor':
           final valueDes = serializers.deserialize(

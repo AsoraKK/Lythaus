@@ -40,6 +40,7 @@ FeedItem mapPostToFeedItem(
       featuredEligible: post.featuredEligible,
     ),
     authorshipLabel: post.authorship.label.label,
+    declaredCreationMode: post.declaredCreationMode,
     classificationSource: post.authorship.classificationSource,
     classificationState: post.authorship.classificationState,
   );

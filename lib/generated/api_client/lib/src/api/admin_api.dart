@@ -35,6 +35,8 @@ import 'package:lythaus_api_client/src/model/admin_user_mutation_response.dart';
 import 'package:lythaus_api_client/src/model/admin_user_page.dart';
 import 'package:lythaus_api_client/src/model/admin_user_profile_patch.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_create.dart';
+import 'package:lythaus_api_client/src/model/admin_waitlist_invite202_response.dart';
+import 'package:lythaus_api_client/src/model/admin_waitlist_invite_request.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_patch.dart';
 import 'package:lythaus_api_client/src/model/alpha_action.dart';
 import 'package:lythaus_api_client/src/model/alpha_admin_case.dart';
@@ -3600,6 +3602,113 @@ class AdminApi {
     );
   }
 
+  /// Send a one-time signup invitation to a waitlist entry
+  /// Administrator and owner roles may queue a one-time email-bound signup invitation for an eligible waiting entry. Provider acceptance advances the waitlist state; queue submission does not prove inbox delivery.
+  ///
+  /// Parameters:
+  /// * [waitlistId]
+  /// * [idempotencyKey] - Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+  /// * [adminWaitlistInviteRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AdminWaitlistInvite202Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AdminWaitlistInvite202Response>> adminWaitlistInvite({
+    required String waitlistId,
+    required String idempotencyKey,
+    required AdminWaitlistInviteRequest adminWaitlistInviteRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/waitlist/{waitlistId}/invite'.replaceAll('{' r'waitlistId' '}', encodeQueryParameter(_serializers, waitlistId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AdminWaitlistInviteRequest);
+      _bodyData = _serializers.serialize(adminWaitlistInviteRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AdminWaitlistInvite202Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminWaitlistInvite202Response),
+      ) as AdminWaitlistInvite202Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AdminWaitlistInvite202Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// List private beta waitlist signups
   /// Administrator-only PII access. Every successful view is written to the admin audit log.
   ///
@@ -3899,7 +4008,7 @@ class AdminApi {
   }
 
   /// Update a waitlist signup status
-  /// Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+  /// Status is managed by provider acceptance, signup verification, and unsubscribe. Manual updates are rejected with waitlist_status_managed.
   ///
   /// Parameters:
   /// * [waitlistId]
@@ -3911,9 +4020,10 @@ class AdminApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [WaitlistStatusResponse] as data
+  /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<WaitlistStatusResponse>> adminWaitlistStatusUpdate({
+  @Deprecated('This operation has been deprecated')
+  Future<Response<void>> adminWaitlistStatusUpdate({
     required String waitlistId,
     required WaitlistStatusUpdate waitlistStatusUpdate,
     CancelToken? cancelToken,
@@ -3971,35 +4081,7 @@ class AdminApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    WaitlistStatusResponse? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(WaitlistStatusResponse),
-      ) as WaitlistStatusResponse;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<WaitlistStatusResponse>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
+    return _response;
   }
 
   /// Read audited diagnostics and review history

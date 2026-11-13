@@ -29,7 +29,7 @@ const runTransaction = (reads, failAudit = false, clockOffsetSeconds = 0, source
     await client.query('SET ROLE lythaus_admin'); await client.query('BEGIN');
     const result = await work({ query: async (text, values) => {
       reads.push(text);
-      if (failAudit && text.includes('INSERT INTO system.audit_events')) await client.query('SET LOCAL ROLE lythaus_runtime');
+      if (failAudit && text.includes('INSERT INTO system.audit_events')) throw new Error('synthetic_audit_write_failure');
       if (sourceTimeout && text.startsWith('WITH')) {
         await client.query("SET LOCAL statement_timeout = '1ms'");
         await client.query('SELECT pg_sleep(0.01)');

@@ -15,6 +15,7 @@ import 'package:lythaus/features/feed/application/content_recovery_storage.dart'
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/media/application/private_image_api.dart';
 import 'package:lythaus/features/media/application/private_image_upload.dart';
 import 'package:lythaus/features/media/presentation/private_image_upload_card.dart';
@@ -345,6 +346,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // Exercise the retained upload lifecycle explicitly; production is closed.
+          contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
           currentUserProvider.overrideWith((ref) => ref.watch(_owner)),
           canCreatePostProvider.overrideWithValue(true),
           privateImageUploadsEnabledProvider.overrideWithValue(true),
@@ -466,6 +469,7 @@ void main() {
       final fixture = _Fixture();
       await showCard(tester, fixture, textScale: 2);
       expect(tester.takeException(), isNull);
+      expect(find.textContaining('human-authored'), findsNothing);
       await tester.ensureVisible(find.text('Choose image'));
       await tester.tap(find.text('Choose image'));
       await tester.pumpAndSettle();

@@ -8,13 +8,13 @@ class InviteRedeemService {
   final Dio _dio;
 
   Future<void> redeemInvite({
-    required String accessToken,
+    required String email,
     required String inviteCode,
+    required String password,
   }) async {
     await _dio.post<Map<String, dynamic>>(
-      '/api/auth/redeem-invite',
-      data: {'inviteCode': inviteCode},
-      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      '/api/auth/email/verify',
+      data: {'email': email, 'token': inviteCode, 'password': password},
     );
   }
 }

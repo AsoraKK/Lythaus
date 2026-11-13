@@ -11,11 +11,13 @@ class AuthorProfileLink extends StatefulWidget {
     required this.userId,
     required this.label,
     this.textStyle,
+    this.maxLines = 1,
   });
 
   final String userId;
   final String label;
   final TextStyle? textStyle;
+  final int maxLines;
 
   @override
   State<AuthorProfileLink> createState() => _AuthorProfileLinkState();
@@ -79,16 +81,17 @@ class _AuthorProfileLinkState extends State<AuthorProfileLink> {
         onPressed: _openingProfile ? null : _openProfile,
         style: TextButton.styleFrom(
           alignment: Alignment.centerLeft,
-          foregroundColor: scheme.primary,
+          foregroundColor: scheme.onSurface,
           minimumSize: const Size(0, 48),
           padding: EdgeInsets.zero,
           tapTargetSize: MaterialTapTargetSize.padded,
-          textStyle: widget.textStyle?.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: scheme.primary,
-          ),
+          textStyle: widget.textStyle,
         ),
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        child: Text(
+          label,
+          maxLines: widget.maxLines,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

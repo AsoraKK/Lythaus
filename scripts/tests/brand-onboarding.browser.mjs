@@ -143,6 +143,7 @@ export async function runOnboardingCase({browser,engine,origin,referenceOrigin,t
   for(const key of ['x','y','width','height'])assert.ok(Math.abs(result.semanticBox[key]-originalBox[key])<0.02,'Named image matches original '+key);
   boundary='verify onboarding policy copy and icons';
   for(const text of onboardingCopy)await page.getByText(text,{exact:true}).waitFor();
+  assert.equal(await page.getByText(/Human-authored|AI-assisted/).count(),0,'Authorship-selection copy stays absent');
   const iconUrls=await page.locator('link[rel="icon"],link[rel="apple-touch-icon"]').evaluateAll(nodes=>nodes.map(n=>n.href));assert.equal(iconUrls.length,4);result.icons=[];
   for(const url of iconUrls){const expected=iconAssets.find(a=>a.public_url===new URL(url).pathname);assert.ok(expected);const response=await context.request.get(url);assert.equal(response.status(),200);const digest=hash(await response.body());assert.equal(digest,expected.sha256);result.icons.push({path:new URL(url).pathname,status:response.status(),sha256:digest});}
   boundary='verify host after semantics';

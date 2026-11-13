@@ -19,8 +19,10 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
@@ -57,6 +59,7 @@ class _StaticFeed extends LiveFeedController {
               title: 'Synthetic feed post',
               body: 'Synthetic post',
               authorshipLabel: 'Human-authored',
+              declaredCreationMode: 'human',
               publishedAt: DateTime.utc(2026),
             ),
           ],
@@ -148,6 +151,7 @@ Future<void> _pump(
   Size viewport = const Size(390, 900),
   double textScale = 1,
   String? initialCommentId,
+  String editDeclaration = 'ai_assisted',
 }) async {
   tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1;
@@ -158,6 +162,9 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // These legacy request/receipt journeys exercise the retained contract
+        // explicitly. Default-gate presentation coverage lives in its own suite.
+        contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
         contentRecoveryStorageProvider.overrideWithValue(
           storage ?? MemoryContentRecoveryStorage(),
         ),
@@ -225,6 +232,31 @@ Future<void> _pump(
     ),
   );
   await tester.pumpAndSettle();
+  if (actor != null) {
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    final registry = container.read(contentMutationRegistryProvider);
+    await registry.refresh();
+    for (final draft in <String, Map<String, dynamic>>{
+      'comment-create:$actor:p1': {'body': '', 'declaredCreationMode': 'human'},
+      'post:$actor:p1': {
+        'body': 'Synthetic post',
+        'declaredCreationMode': editDeclaration,
+      },
+      for (final id in ['c0', 'c1', 'pending'])
+        'comment:$actor:$id': {
+          'body': 'Comment $id',
+          'declaredCreationMode': editDeclaration,
+        },
+    }.entries) {
+      // Never overwrite a persisted recovery payload or an uncertain attempt.
+      if (registry.draft(draft.key) == null &&
+          registry.pending(draft.key) == null) {
+        await registry.saveDraft(draft.key, draft.value);
+      }
+    }
+  }
 }
 
 Future<void> _captureComments(WidgetTester tester, String name) async {
@@ -279,14 +311,15 @@ Future<void> _draft(
   String disclosure = 'Human-authored',
 }) async {
   await tester.enterText(find.byType(TextField), text);
-  await tester.tap(find.widgetWithText(ChoiceChip, disclosure));
+  expect(find.widgetWithText(ChoiceChip, disclosure), findsNothing);
+  expect(find.text(disclosure), findsNothing);
+  expect(find.text('Human-authored'), findsNothing);
+  expect(find.text('AI-assisted'), findsNothing);
   await tester.pumpAndSettle();
 }
 
 Future<void> _sendSyntheticComment(WidgetTester tester, String text) async {
   await tester.enterText(find.byType(TextField), text);
-  await tester.pump();
-  await tester.tap(find.widgetWithText(ChoiceChip, 'Human-authored'));
   await tester.pump();
   await _pumpUntil(
     tester,
@@ -304,7 +337,7 @@ void main() {
   });
 
   testWidgets(
-    'discover card edit uses fresh disclosure and refreshes pending content out of feed',
+    'discover card edit preserves the restored mode and refreshes pending content out of feed',
     (tester) async {
       final adapter = _Adapter(
         (request) async => request.method == 'PUT'
@@ -519,29 +552,23 @@ void main() {
     },
   );
 
-  testWidgets(
-    'declaration and AI-assisted grapheme limit block writes locally',
-    (tester) async {
-      final adapter = _Adapter(
-        (request) async => _response({'items': <Object>[]}),
-      );
-      await _pump(tester, adapter);
-      await _openComments(tester);
-      await tester.enterText(
-        find.byType(TextField),
-        'A comment without a declaration',
-      );
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pumpAndSettle();
+  test(
+    'unreconciled legacy contract still rejects missing declarations and oversized assisted text',
+    () {
       expect(
-        find.text('Choose an authorship disclosure before posting'),
-        findsOneWidget,
+        validatePublicPostAuthorship(
+          text: 'A comment without a declaration',
+          aiLabel: null,
+        ),
+        'Content does not meet Lythaus posting requirements.',
       );
-      await _draft(tester, '👨‍👩‍👧‍👦' * 250, disclosure: 'AI-assisted');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('cannot exceed 249'), findsOneWidget);
-      expect(adapter.requests.where((r) => r.method == 'POST'), isEmpty);
+      expect(
+        validatePublicPostAuthorship(
+          text: '👨‍👩‍👧‍👦' * 250,
+          aiLabel: 'assisted',
+        ),
+        contains('cannot exceed 249'),
+      );
     },
   );
 
@@ -710,7 +737,7 @@ void main() {
   );
 
   testWidgets(
-    'owner edits a comment with a fresh declaration and pending result',
+    'owner edits a comment with a restored assisted mode and pending result',
     (tester) async {
       final adapter = _Adapter(
         (request) async => request.method == 'PUT'
@@ -731,10 +758,6 @@ void main() {
         find.byType(TextField),
         'Revised synthetic comment',
       );
-      await tester.tap(find.text('Submit edit'));
-      await tester.pumpAndSettle();
-      expect(adapter.requests.where((r) => r.method == 'PUT'), isEmpty);
-      await tester.tap(find.widgetWithText(ChoiceChip, 'AI-assisted'));
       await tester.tap(find.text('Submit edit'));
       await tester.pumpAndSettle();
       final write = adapter.requests.singleWhere((r) => r.method == 'PUT');
@@ -809,7 +832,12 @@ void main() {
         find.text('Under review. Publication checks are pending.'),
         findsOneWidget,
       );
-      expect(find.text('Authorship: Under review'), findsOneWidget);
+      expect(find.text('Authorship: Under review'), findsNothing);
+      expect(find.text('Human-authored'), findsNothing);
+      expect(
+        find.text('Under review. Publication checks are pending.'),
+        findsOneWidget,
+      );
     },
   );
 
@@ -874,7 +902,8 @@ void main() {
         find.text('Under review. Publication checks are pending.'),
         findsOneWidget,
       );
-      expect(find.text('AI-assisted'), findsAtLeastNWidgets(1));
+      expect(find.text('AI-assisted'), findsNothing);
+      expect(find.text('Human-authored'), findsNothing);
     },
   );
 
@@ -902,7 +931,6 @@ void main() {
         find.byType(TextField),
         'Late synthetic edit receipt',
       );
-      await tester.tap(find.widgetWithText(ChoiceChip, 'AI-assisted'));
       await tester.pump();
       await tester.tap(find.text('Submit edit'));
       for (var i = 0; i < 10; i++) {
@@ -1193,249 +1221,266 @@ void main() {
     },
   );
 
+  // Repeated live creates depend on the pending declaration-free contract.
+  // Create -> delete retains the same mounted thread and deferred-read race during a refresh.
   for (final secondMutationStatus in <int?>[null, 503, 403]) {
-    testWidgets('synthetic stale initial read reloads after a second mutation '
-        '${secondMutationStatus == null ? 'succeeds' : 'fails with $secondMutationStatus'}', (
-      tester,
-    ) async {
-      final initialRead = Completer<ResponseBody>();
-      final secondWrite = Completer<ResponseBody>();
-      var commentReads = 0;
-      var writes = 0;
-      final adapter = _Adapter((request) async {
-        if (request.method == 'GET' &&
-            request.path.endsWith('/comments') &&
-            request.queryParameters['cursor'] == null) {
-          commentReads++;
-          if (commentReads == 1) return initialRead.future;
-          return _response({
-            'items': [
-              _comment('first'),
-              if (secondMutationStatus == null) _comment('second'),
-            ],
-          });
-        }
-        if (request.method == 'POST') {
-          writes++;
-          if (writes == 1) {
+    testWidgets(
+      'create then delete defers a stale refresh read until deletion '
+      '${secondMutationStatus == null ? 'succeeds' : 'fails with $secondMutationStatus'}',
+      (tester) async {
+        final initialRead = Completer<ResponseBody>();
+        final deletion = Completer<ResponseBody>();
+        var commentReads = 0;
+        var creates = 0;
+        var deletes = 0;
+        final adapter = _Adapter((request) async {
+          if (request.method == 'GET' &&
+              request.path.endsWith('/comments') &&
+              request.queryParameters['cursor'] == null) {
+            commentReads++;
+            if (commentReads == 1) {
+              return _response({
+                'items': [_comment('existing')],
+              });
+            }
+            if (commentReads == 2) return initialRead.future;
+            return _response({
+              'items': [
+                _comment('first'),
+                if (secondMutationStatus != null) _comment('existing'),
+                _comment('refreshed', author: 'other'),
+              ],
+            });
+          }
+          if (request.method == 'POST') {
+            creates++;
             return _response({
               'id': 'first',
               ..._body(request),
               'moderationState': 'under_review',
             }, 201);
           }
-          if (writes == 2) return secondWrite.future;
-          return _response({
-            'id': 'second-retried',
-            'body': 'Second synthetic send',
-            'declaredCreationMode': 'human',
-            'moderationState': 'under_review',
-          }, 201);
-        }
-        return _response({'items': <Object>[]});
-      });
+          if (request.method == 'DELETE') {
+            deletes++;
+            if (deletes == 1) return deletion.future;
+            return _response({'commentId': 'existing', 'deleted': true});
+          }
+          return _response({'items': <Object>[]});
+        });
 
-      await _pump(tester, adapter);
-      await tester.tap(find.text('Open comments'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await _pumpUntil(
-        tester,
-        () =>
-            find.byType(TextField).evaluate().isNotEmpty &&
-            find.text('Restoring draft…').evaluate().isEmpty &&
-            tester
-                    .widget<FilledButton>(
-                      find.widgetWithIcon(FilledButton, Icons.send),
-                    )
-                    .onPressed !=
-                null,
-      );
+        await _pump(tester, adapter);
+        await _openComments(tester);
+        final deleteExisting = tester
+            .widget<TextButton>(
+              find.widgetWithText(TextButton, 'Delete comment'),
+            )
+            .onPressed!;
+        // A queued owner action remains guarded while the list refresh is pending.
+        unawaited(
+          tester
+              .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+              .onRefresh(),
+        );
+        await _pumpUntil(tester, () => commentReads == 2);
+        final threadState = tester.state(find.byType(CommentThreadScreen));
+        await _sendSyntheticComment(tester, 'First synthetic send');
+        await _pumpUntil(
+          tester,
+          () =>
+              creates == 1 &&
+              tester
+                  .widget<TextField>(find.byType(TextField))
+                  .controller!
+                  .text
+                  .isEmpty,
+        );
+        expect(_body(adapter.requests.singleWhere((r) => r.method == 'POST')), {
+          'body': 'First synthetic send',
+          'declaredCreationMode': 'human',
+        });
+        deleteExisting();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+        await _pumpUntil(tester, () => deletes == 1);
+        expect(commentReads, 2);
 
-      await _sendSyntheticComment(tester, 'First synthetic send');
-      await _pumpUntil(
-        tester,
-        () {
-          final input = tester.widget<TextField>(find.byType(TextField));
-          final send = tester.widget<FilledButton>(
-            find.widgetWithIcon(FilledButton, Icons.send),
+        initialRead.complete(
+          _response({
+            'items': [_comment('existing')],
+          }),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(
+          commentReads,
+          2,
+          reason: 'The fresh read must wait for the active deletion.',
+        );
+        expect(
+          tester.state(find.byType(CommentThreadScreen)),
+          same(threadState),
+        );
+        if (secondMutationStatus != null) {
+          deletion.complete(
+            _response({
+              'error': {
+                'code': 'ACCESS_DENIED',
+                'message': 'Synthetic rejection',
+              },
+            }, secondMutationStatus),
           );
-          return writes == 1 &&
-              input.controller!.text.isEmpty &&
-              send.onPressed != null;
-        },
-        reason:
-            'First write did not finish: writes=$writes, '
-            'input=${tester.widget<TextField>(find.byType(TextField)).controller!.text}, '
-            'sendDisabled=${tester.widget<FilledButton>(find.widgetWithIcon(FilledButton, Icons.send)).onPressed == null}, '
-            'restoring=${find.text('Restoring draft…').evaluate().isNotEmpty}, '
-            'signInNotice=${find.text('Sign in to comment.').evaluate().isNotEmpty}, '
-            'errorBanner=${find.byType(MaterialBanner).evaluate().isNotEmpty}, '
-            'requests=${adapter.requests.map((request) => request.method).toList()}',
-      );
-
-      await _sendSyntheticComment(tester, 'Second synthetic send');
-      await _pumpUntil(tester, () => writes == 2);
-      expect(commentReads, 1);
-
-      initialRead.complete(
-        _response({
-          'items': [_comment('first')],
-        }),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 20));
-      expect(
-        commentReads,
-        1,
-        reason: 'The fresh read must wait for the active second mutation.',
-      );
-
-      if (secondMutationStatus != null) {
-        secondWrite.complete(
-          _response({
-            'error': {
-              'code': 'ACCESS_DENIED',
-              'message': 'Synthetic rejection',
-            },
-          }, secondMutationStatus),
-        );
-      } else {
-        secondWrite.complete(
-          _response({
-            'id': 'second',
-            'body': 'Second synthetic send',
-            'declaredCreationMode': 'human',
-            'moderationState': 'under_review',
-          }, 201),
-        );
-      }
-
-      await _pumpUntil(tester, () => commentReads == 2);
-      await tester.pumpAndSettle();
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.text('Comment first'), findsOneWidget);
-      expect(
-        find.text('Comment second'),
-        secondMutationStatus == null ? findsOneWidget : findsNothing,
-      );
-      expect(commentReads, 2, reason: 'The deferred refresh must run once.');
-      if (secondMutationStatus == 403) {
-        expect(
-          find.text('You are not allowed to change this content.'),
-          findsOneWidget,
-        );
-        expect(
-          tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          'Second synthetic send',
-        );
-        await tester.tap(find.text('Retry'));
-        await _pumpUntil(tester, () => writes == 3);
+        } else {
+          deletion.complete(
+            _response({'commentId': 'existing', 'deleted': true}),
+          );
+        }
+        await _pumpUntil(tester, () => commentReads == 3);
         await tester.pumpAndSettle();
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.text('Comment refreshed'), findsOneWidget);
         expect(
-          find.text('You are not allowed to change this content.'),
-          findsNothing,
+          find.text('Comment existing'),
+          secondMutationStatus == null ? findsNothing : findsOneWidget,
         );
-        expect(find.text('Second synthetic send'), findsOneWidget);
+        expect(commentReads, 3, reason: 'The deferred refresh must run once.');
+        final firstDelete = adapter.requests.singleWhere(
+          (r) => r.method == 'DELETE',
+        );
+        expect(firstDelete.path, '/api/comments/existing');
+        expect(firstDelete.headers['Idempotency-Key'], isNotEmpty);
+        if (secondMutationStatus != null) {
+          expect(find.byType(MaterialBanner), findsOneWidget);
+          if (secondMutationStatus == 403) {
+            expect(
+              find.text('You are not allowed to change this content.'),
+              findsOneWidget,
+            );
+          }
+          await tester.tap(find.text('Retry'));
+          await _pumpUntil(tester, () => deletes == 2);
+          await tester.pumpAndSettle();
+          final retry = adapter.requests
+              .where((r) => r.method == 'DELETE')
+              .last;
+          expect(retry.path, firstDelete.path);
+          if (secondMutationStatus == 503) {
+            expect(
+              retry.headers['Idempotency-Key'],
+              firstDelete.headers['Idempotency-Key'],
+            );
+          }
+          expect(find.text('Comment existing'), findsNothing);
+          expect(find.byType(MaterialBanner), findsNothing);
+        }
+        expect(creates, 1);
+        expect(commentReads, 3);
         expect(
-          tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          isEmpty,
+          tester.state(find.byType(CommentThreadScreen)),
+          same(threadState),
         );
-      }
-      expect(tester.takeException(), isNull);
-    });
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
-  testWidgets('synthetic deferred refresh stays scoped to the active account', (
-    tester,
-  ) async {
-    final actorProvider = StateProvider<User?>((ref) => _user());
-    final initialRead = Completer<ResponseBody>();
-    final secondWrite = Completer<ResponseBody>();
-    var commentReads = 0;
-    var writes = 0;
-    final adapter = _Adapter((request) async {
-      if (request.method == 'GET' &&
-          request.path.endsWith('/comments') &&
-          request.queryParameters['cursor'] == null) {
-        commentReads++;
-        if (commentReads == 1) return initialRead.future;
-        return _response({'items': <Object>[]});
-      }
-      if (request.method == 'POST') {
-        writes++;
-        if (writes == 1) {
+  testWidgets(
+    'create then delete keeps deferred refresh scoped to the active account',
+    (tester) async {
+      final actorProvider = StateProvider<User?>((ref) => _user());
+      final initialRead = Completer<ResponseBody>();
+      final deletion = Completer<ResponseBody>();
+      var commentReads = 0;
+      var creates = 0;
+      var deletes = 0;
+      final adapter = _Adapter((request) async {
+        if (request.method == 'GET' &&
+            request.path.endsWith('/comments') &&
+            request.queryParameters['cursor'] == null) {
+          commentReads++;
+          if (commentReads == 1) {
+            return _response({
+              'items': [_comment('existing')],
+            });
+          }
+          if (commentReads == 2) return initialRead.future;
+          return _response({'items': <Object>[]});
+        }
+        if (request.method == 'POST') {
+          creates++;
           return _response({
             'id': 'first',
             ..._body(request),
             'moderationState': 'under_review',
           }, 201);
         }
-        return secondWrite.future;
+        if (request.method == 'DELETE') {
+          deletes++;
+          return deletion.future;
+        }
+        return _response({'items': <Object>[]});
+      });
+
+      await _pump(tester, adapter, mutableActorProvider: actorProvider);
+      await _openComments(tester);
+      final deleteExisting = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Delete comment'))
+          .onPressed!;
+      unawaited(
+        tester
+            .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+            .onRefresh(),
+      );
+      await _pumpUntil(tester, () => commentReads == 2);
+      final threadState = tester.state(find.byType(CommentThreadScreen));
+      await _sendSyntheticComment(tester, 'First synthetic send');
+      await _pumpUntil(
+        tester,
+        () =>
+            creates == 1 &&
+            tester
+                .widget<TextField>(find.byType(TextField))
+                .controller!
+                .text
+                .isEmpty,
+      );
+      deleteExisting();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await _pumpUntil(tester, () => deletes == 1);
+      initialRead.complete(
+        _response({
+          'items': [_comment('existing')],
+        }),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 20));
       }
-      return _response({'items': <Object>[]});
-    });
-
-    await _pump(tester, adapter, mutableActorProvider: actorProvider);
-    await tester.tap(find.text('Open comments'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await _pumpUntil(
-      tester,
-      () =>
-          find.byType(TextField).evaluate().isNotEmpty &&
-          find.text('Restoring draft…').evaluate().isEmpty,
-    );
-
-    await _sendSyntheticComment(tester, 'First synthetic send');
-    await _pumpUntil(tester, () => writes == 1);
-    await _pumpUntil(
-      tester,
-      () => tester
-          .widget<TextField>(find.byType(TextField))
-          .controller!
-          .text
-          .isEmpty,
-    );
-    await _sendSyntheticComment(tester, 'Second synthetic send');
-    await _pumpUntil(tester, () => writes == 2);
-
-    initialRead.complete(
-      _response({
-        'items': [_comment('first')],
-      }),
-    );
-    for (var i = 0; i < 5; i++) {
-      await tester.pump(const Duration(milliseconds: 20));
-    }
-
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(CommentThreadScreen)),
-    );
-    container.read(actorProvider.notifier).state = _user('new-actor');
-    await tester.pump();
-    await _pumpUntil(tester, () => commentReads == 2);
-    await tester.pumpAndSettle();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-
-    secondWrite.complete(
-      _response({
-        'id': 'second',
-        'body': 'Second synthetic send',
-        'declaredCreationMode': 'human',
-        'moderationState': 'under_review',
-      }, 201),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Comment first'), findsNothing);
-    expect(find.text('Comment second'), findsNothing);
-    expect(
-      commentReads,
-      2,
-      reason: 'Account change must discard the old queue.',
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(commentReads, 2);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CommentThreadScreen)),
+      );
+      container.read(actorProvider.notifier).state = _user('new-actor');
+      await tester.pump();
+      await _pumpUntil(tester, () => commentReads == 3);
+      await tester.pumpAndSettle();
+      deletion.complete(_response({'commentId': 'existing', 'deleted': true}));
+      await tester.pumpAndSettle();
+      expect(find.text('First synthetic send'), findsNothing);
+      expect(find.text('Comment existing'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(
+        commentReads,
+        3,
+        reason: 'Account change must discard the old queue.',
+      );
+      expect(creates, 1);
+      expect(deletes, 1);
+      expect(tester.state(find.byType(CommentThreadScreen)), same(threadState));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'synthetic queued refresh preserves delete rejection and its retry',
@@ -1796,7 +1841,6 @@ void main() {
         find.byType(TextField),
         'Revised while an older page was pending',
       );
-      await tester.tap(find.widgetWithText(ChoiceChip, 'AI-assisted'));
       await tester.tap(find.text('Submit edit'));
       await tester.pumpAndSettle();
       expect(
@@ -1918,7 +1962,6 @@ void main() {
       await tester.tap(find.byTooltip('Edit post'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Revised pending post');
-      await tester.tap(find.text('Human-authored'));
       await tester.tap(find.text('Submit edit'));
       await tester.pumpAndSettle();
       expect(find.text('Revised pending post'), findsOneWidget);
@@ -1975,7 +2018,6 @@ void main() {
       await tester.tap(find.text('Edit comment'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Private revised comment');
-      await tester.tap(find.text('AI-assisted'));
       await tester.tap(find.text('Submit edit'));
       await tester.pumpAndSettle();
       expect(find.text('Private revised comment'), findsOneWidget);

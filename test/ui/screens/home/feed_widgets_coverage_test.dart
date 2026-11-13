@@ -110,7 +110,7 @@ void main() {
       expect(find.text('Public posts, newest first.'), findsOneWidget);
       expect(find.text('Body 0'), findsOneWidget);
       expect(find.text('author-0'), findsOneWidget);
-      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.text('Authorship: Under review'), findsNothing);
       expect(find.byTooltip('Post actions'), findsWidgets);
       expect(find.text('Title 0'), findsOneWidget);
       expect(find.text('routine-topic'), findsNothing);
@@ -242,16 +242,19 @@ void main() {
       );
       await tester.pump();
 
-      expect(
-        find.text('Editorial coverage from earned, revocable contributors.'),
-        findsOneWidget,
-      );
+      expect(find.text('About News Board'), findsOneWidget);
       expect(find.text('News headline 0'), findsOneWidget);
       expect(find.text('News body 0'), findsOneWidget);
       expect(find.text('reporter-0'), findsOneWidget);
       expect(find.byTooltip('Post actions'), findsWidgets);
-      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.text('Authorship: Under review'), findsNothing);
       expect(find.byTooltip('Post actions'), findsWidgets);
+      await tester.tap(find.text('About News Board'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Editorial coverage from earned, revocable contributors.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders empty state when there are no items', (tester) async {
@@ -296,7 +299,7 @@ void main() {
 
       expect(find.text('News headline 0'), findsOneWidget);
       expect(find.text('News body 0'), findsOneWidget);
-      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.text('Authorship: Under review'), findsNothing);
     });
   });
 
@@ -320,7 +323,7 @@ void main() {
       expect(find.text('-spam'), findsOneWidget);
       expect(find.text('Body 0'), findsOneWidget);
       expect(find.text('author-0'), findsOneWidget);
-      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.text('Authorship: Under review'), findsNothing);
       expect(find.byTooltip('Post actions'), findsWidgets);
       expect(find.text('Title 0'), findsOneWidget);
       expect(find.text('routine-topic'), findsNothing);

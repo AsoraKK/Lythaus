@@ -30,6 +30,7 @@ domain.Post post(String status) => domain.Post.fromJson({
   'visibility': 'public',
   'moderationState': 'allowed',
   'publicLabel': 'Human-authored',
+  'declaredCreationMode': 'ai_assisted',
   'feedItemDeleted': false,
   'trustStatus': status,
   'timeline': {
@@ -140,6 +141,7 @@ void main() {
           underReview ? 'Under review' : 'AI-assisted',
         );
         expect(item.classificationSource, 'user_disclosure');
+        expect(item.declaredCreationMode, 'ai_assisted');
         final trust = item.trustSummary;
         expect(trust.trustStatus, underReview ? 'no_extra_signals' : status);
         expect(trust.timeline.created, 'complete');

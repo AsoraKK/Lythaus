@@ -166,7 +166,7 @@ void main() {
           expect(find.text(_posts.first.body), findsOneWidget);
           expect(
             tester.getSize(find.byType(CustomScrollView)).width,
-            lessThanOrEqualTo(760),
+            lessThanOrEqualTo(992),
           );
           await _capture(tester, boundary, name);
           await tester.scrollUntilVisible(
@@ -211,7 +211,7 @@ void main() {
           expect(find.textContaining('Assessment:'), findsNothing);
           expect(find.text('Created: complete'), findsNothing);
           if (state == 'review') {
-            expect(find.text('Authorship: Under review'), findsOneWidget);
+            expect(find.text('Authorship: Under review'), findsNothing);
           }
           expect(tester.takeException(), isNull);
           await _capture(tester, boundary, name);

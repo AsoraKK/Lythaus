@@ -16,16 +16,13 @@ void main() {
       expect(state.validationError, isNull);
       expect(state.isNews, isFalse);
       expect(state.contentType, 'text');
-      expect(state.aiLabel, isNull);
+      expect(state.aiLabel, 'human');
     });
 
     test('reload safety requires a settled and recoverable text draft', () {
       expect(const PostCreationState().canSafelyReload, isTrue);
       expect(const PostCreationState(text: 'unsaved').canSafelyReload, isFalse);
-      expect(
-        const PostCreationState(aiLabel: 'human').canSafelyReload,
-        isFalse,
-      );
+      expect(const PostCreationState(aiLabel: 'human').canSafelyReload, isTrue);
       expect(
         const PostCreationState(
           text: 'saved',

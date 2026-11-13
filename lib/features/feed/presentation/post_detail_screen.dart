@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,7 +14,6 @@ import 'package:lythaus/features/reactions/domain/reaction.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
-import 'package:lythaus/ui/components/authorship_disclosure.dart';
 import 'package:lythaus/ui/components/author_profile_link.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
@@ -22,6 +22,9 @@ import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/feed/application/owner_content_repository.dart';
 import 'package:lythaus/state/providers/feed_providers.dart' as live;
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
+import 'package:lythaus/features/reactions/domain/contribution_feedback.dart';
+import 'package:lythaus/features/reactions/presentation/contribution_feedback_controls.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({
@@ -60,8 +63,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final epoch = _readEpoch;
     final revised = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
-        builder: (_) =>
-            ContentEditorScreen(contentId: post.id, text: post.text),
+        builder: (_) => ContentEditorScreen(
+          contentId: post.id,
+          text: post.text,
+          declaredCreationMode: post.declaredCreationMode,
+        ),
       ),
     );
     if (!mounted || revised == null || !_isOwner(post) || epoch != _readEpoch) {
@@ -367,38 +373,59 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
+                    if (post.title?.trim().isNotEmpty == true) ...[
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          post.title!.trim(),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     _PostHeader(post: post),
-                    const SizedBox(height: 12),
-                    Text(
-                      post.text,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    AuthorshipDisclosure(
-                      label: post.authorship.label.label,
-                      classificationSource:
-                          post.authorship.classificationSource,
-                      classificationState: post.authorship.classificationState,
-                    ),
+                    const SizedBox(height: 10),
                     if (post.moderationState == 'under_review') ...[
                       const SizedBox(height: 8),
                       const Text(
                         'Under review. Publication checks are pending.',
                       ),
                     ],
+                    const SizedBox(height: 16),
+                    Text(
+                      post.text,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(height: 1.65),
+                    ),
                     if ((post.mediaUrls?.isNotEmpty ?? false)) ...[
                       const SizedBox(height: 12),
                       _PostMedia(mediaUrls: post.mediaUrls!),
                     ],
+                    if (post.source != null) ...[
+                      const SizedBox(height: 16),
+                      _SourceLink(source: post.source!),
+                    ],
                     const SizedBox(height: 12),
-                    // ── Reaction Bar (Phase 2) ──
-                    ReactionBar(
-                      contentId: post.id,
-                      authorUserId: post.authorId,
-                      initialSummary: ReactionSummary(
-                        myReactionType: post.viewerReaction,
+                    const Divider(),
+                    if (ref.watch(contributionFeedbackCandidateProvider) &&
+                        post.moderationState != 'under_review')
+                      ContributionFeedbackControls(
+                        target: FeedbackTarget(
+                          FeedbackTargetType.post,
+                          post.id,
+                        ),
+                        authorId: post.authorId,
+                      )
+                    else
+                      ReactionBar(
+                        contentId: post.id,
+                        authorUserId: post.authorId,
+                        initialSummary: ReactionSummary(
+                          myReactionType: post.viewerReaction,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 12),
                     TrustStripRow(
                       compact: true,
@@ -470,6 +497,24 @@ class _PostHeader extends StatelessWidget {
       post.authorUsername,
       authorId: post.authorId,
     );
+    final localizations = MaterialLocalizations.of(context);
+    final timestamp =
+        post.publishedAt ??
+        (post.createdAt.millisecondsSinceEpoch == 0 ? null : post.createdAt);
+    final dateLabel = timestamp == null
+        ? null
+        : '${post.publishedAt == null ? 'Created' : 'Published'} '
+              '${localizations.formatMediumDate(timestamp.toLocal())}';
+    final displayDate =
+        post.publishedAt != null ||
+            post.title?.trim().isNotEmpty == true ||
+            post.isPublication ||
+            post.moderationState == 'under_review'
+        ? dateLabel
+        : timestamp == null
+        ? null
+        : _formatTimeAgo(timestamp);
+    final updated = post.updatedAt;
 
     return Row(
       children: [
@@ -491,12 +536,23 @@ class _PostHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                _formatTimeAgo(post.createdAt),
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+              if (displayDate != null && dateLabel != null)
+                Tooltip(
+                  message: dateLabel,
+                  child: Text(
+                    displayDate,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-              ),
+              if (updated != null && updated.isAfter(post.createdAt))
+                Text(
+                  'Updated ${localizations.formatMediumDate(updated.toLocal())}',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
             ],
           ),
         ),
@@ -517,6 +573,51 @@ class _PostHeader extends StatelessWidget {
       return '${diff.inMinutes}m ago';
     }
     return 'Just now';
+  }
+}
+
+class _SourceLink extends StatelessWidget {
+  const _SourceLink({required this.source});
+
+  final domain.NewsSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final uri = Uri.tryParse(source.url ?? '');
+    final safeUrl =
+        uri != null &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.host.isNotEmpty &&
+        uri.userInfo.isEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Source: ${source.name}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (safeUrl)
+          TextButton.icon(
+            onPressed: () async {
+              try {
+                if (await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                )) {
+                  return;
+                }
+              } catch (_) {}
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Couldn’t open the source.')),
+                );
+              }
+            },
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Open source'),
+          ),
+      ],
+    );
   }
 }
 

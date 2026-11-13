@@ -39,7 +39,31 @@ class LythSemanticColors {
     'infoSurface': surface,
   };
 
-  static const light = dark;
+  static const light = <String, Color>{
+    'canvas': text,
+    'surface': text,
+    'surfaceRaised': text,
+    'text': canvas,
+    'secondary': surface,
+    'muted': surface,
+    'accent': canvas,
+    'onAccent': text,
+    'selection': text,
+    'onSelection': canvas,
+    'border': surface,
+    'control': canvas,
+    'focus': canvas,
+    'danger': canvas,
+    'onDanger': text,
+    'dangerSurface': text,
+    'success': canvas,
+    'successSurface': text,
+    'warning': canvas,
+    'warningSurface': text,
+    'info': canvas,
+    'infoSurface': text,
+  };
 
-  static Map<String, Color> of(Brightness brightness) => dark;
+  static Map<String, Color> of(Brightness brightness) =>
+      brightness == Brightness.light ? light : dark;
 }

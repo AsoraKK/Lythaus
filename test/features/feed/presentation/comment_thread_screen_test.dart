@@ -18,6 +18,8 @@ import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -86,6 +88,46 @@ Widget _buildApp({
   );
 }
 
+// Existing request-outcome tests explicitly restore the old declaration
+// contract. Production has no selector and the presentation gate stays closed.
+Future<void> _mountLegacySubmission(WidgetTester tester, _MockDio dio) async {
+  final container = ProviderContainer(
+    overrides: [
+      contentSubmissionPresentationEnabledProvider.overrideWithValue(true),
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
+      secureDioProvider.overrideWithValue(dio),
+      currentUserProvider.overrideWithValue(
+        User(
+          id: 'synthetic-comment-owner',
+          email: 'synthetic@example.invalid',
+          role: UserRole.user,
+          tier: UserTier.bronze,
+          reputationScore: 0,
+          createdAt: DateTime.utc(2026),
+          lastLoginAt: DateTime.utc(2026),
+        ),
+      ),
+      jwtProvider.overrideWith((ref) async => 'test-token'),
+    ],
+  );
+  addTearDown(container.dispose);
+  final registry = container.read(contentMutationRegistryProvider);
+  await registry.refresh();
+  await registry.saveDraft('comment-create:synthetic-comment-owner:p1', {
+    'body': 'Hello world',
+    'declaredCreationMode': 'human',
+  });
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: CommentThreadScreen(postId: 'p1')),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
@@ -96,6 +138,79 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
+  });
+
+  testWidgets(
+    'large-text comment policy remains reachable without declarations',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer(
+        (_) async => _commentPageResponse(items: [_commentJson('1')]),
+      );
+      await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+      await tester.pumpAndSettle();
+      expect(find.text('Author declaration: Human-authored'), findsNothing);
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+      final scrollbar = find.byType(Scrollbar);
+      expect(tester.widget<Scrollbar>(scrollbar).thumbVisibility, isTrue);
+      await tester.drag(scrollbar, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Posting policy'));
+      await tester.tap(find.text('Posting policy'));
+      await tester.pumpAndSettle();
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+      expect(
+        find.textContaining(
+          'AI-generated or AI-edited media are not permitted.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Done').hitTestable(), findsOneWidget);
+      final policyScroll = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(Scrollable),
+      );
+      expect(
+        tester.state<ScrollableState>(policyScroll).position.maxScrollExtent,
+        greaterThan(0),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('unknown declaration is not presented as human-authored', (
+    tester,
+  ) async {
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        any(),
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _commentPageResponse(
+        items: [
+          {..._commentJson('unknown'), 'declaredCreationMode': 'future_mode'},
+        ],
+      ),
+    );
+    await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+    await tester.pumpAndSettle();
+    expect(find.text('Author declaration unavailable'), findsNothing);
+    expect(find.text('Author declaration: Human-authored'), findsNothing);
+    expect(find.text('Human-authored'), findsNothing);
+    expect(find.text('AI-assisted'), findsNothing);
   });
 
   // ── AppBar ─────────────────────────────────────────────────────────────────
@@ -218,7 +333,7 @@ void main() {
       await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('unavailable'), findsOneWidget);
+      expect(find.text('This post is unavailable.'), findsOneWidget);
     });
 
     testWidgets('Retry button re-fetches comments', (tester) async {
@@ -407,11 +522,8 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
-      await tester.pumpAndSettle();
-
+      await _mountLegacySubmission(tester, dio);
       await tester.enterText(find.byType(TextField), 'Hello world');
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Human-authored'));
       await tester.pump();
 
       final sendBtn = find.byIcon(Icons.send);
@@ -502,11 +614,8 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
-      await tester.pumpAndSettle();
-
+      await _mountLegacySubmission(tester, dio);
       await tester.enterText(find.byType(TextField), 'Hello world');
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Human-authored'));
       await tester.pump();
       await tester.tap(find.byIcon(Icons.send));
       await tester.pumpAndSettle();

@@ -637,7 +637,8 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
       throw new Error('acceptance_expired_fixture_state_invalid');
     }
     const attemptedAt = new Date().toISOString();
-    const rejected = await candidateJson(env, run, path, { token, password: randomToken(32) });
+    const email = await runEmail(env, run, 'resend');
+    const rejected = await candidateJson(env, run, path, { token, email, password: randomToken(32) });
     requireAcceptanceRejection({ status: rejected.response.status, body: rejected.body }, 400, ['verification_token_invalid']);
     const rejectedAt = new Date().toISOString();
     await recordAuditEvidence(env, run.id, 'auth.acceptance.expired_verification_rejected', run.resend_fixture_user_id!, {
@@ -653,7 +654,9 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   }
   const password = requirePasswordInput(form.get('password'), 'creation');
   if (password !== form.get('passwordConfirmation')) throw new Error('invalid_password');
-  const body = { token, password };
+  const body = purpose === 'verification'
+    ? { token, email: await runEmail(env, run, observed.body.flow === 'initial' ? 'primary' : 'resend'), password }
+    : { token, password };
   if (observed.body.consumed !== true) {
     const first = await candidateJson(env, run, path, body);
     if (!first.response.ok) throw new Error('candidate_email_completion_rejected');

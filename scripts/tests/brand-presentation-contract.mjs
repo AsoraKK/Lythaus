@@ -2,15 +2,14 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
 
-const text=JSON.parse(readFileSync(new URL('../../design/tokens.json',import.meta.url))).color.dark.text;
+const colors=JSON.parse(readFileSync(new URL('../../design/tokens.json',import.meta.url))).color;
 
 export function brandPresentation(screen,theme){
   assert.ok(['login','onboarding','shell','admin'].includes(screen));
   assert.ok(['light','dark'].includes(theme));
-  const consumer=screen!=='admin',kind=screen==='shell'?'symbol':'wordmark';
-  const file=kind==='symbol'?'lythaus-symbol-square-warm.fb697a91817f.svg'
-    :consumer||theme==='dark'?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg';
-  return {kind,file,foreground:consumer?text:null};
+  const consumer=screen!=='admin',kind='wordmark';
+  const file=consumer||theme==='dark'?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg';
+  return {kind,file,foreground:consumer?colors[theme].text:null};
 }
 
 export function containedBrandRect(box,kind,control=false){

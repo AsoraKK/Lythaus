@@ -67,10 +67,10 @@ describe('Support feedback control-panel route', () => {
     expect(await screen.findByRole('button', { name: /Synthetic layout issue/ })).toBeInTheDocument();
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
-      const suggestions = screen.getByRole('button', { name: 'Suggestions' });
+      const suggestions = screen.getByRole('button', { name: 'Help improve Lythaus' });
       await user.click(suggestions);
       expect(await screen.findByText('No suggestions in this queue.')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Suggestions' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Help improve Lythaus' })).toHaveAttribute('aria-pressed', 'true');
       expect(screen.queryByRole('button', { name: /Synthetic layout issue/ })).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: 'Problem reports' }));
@@ -174,7 +174,7 @@ describe('Support feedback control-panel route', () => {
     const user = userEvent.setup();
     renderRoutes();
     await user.click(await screen.findByRole('button', { name: /Synthetic layout issue/ }));
-    await user.click(screen.getByRole('button', { name: 'Suggestions' }));
+    await user.click(screen.getByRole('button', { name: 'Help improve Lythaus' }));
     expect(await screen.findByText('No suggestions in this queue.')).toBeInTheDocument();
     releaseDetail(detail);
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Synthetic layout issue' })).not.toBeInTheDocument());
@@ -246,7 +246,7 @@ describe('Support feedback control-panel route', () => {
     await user.type(screen.getByLabelText('Reply to member'), 'Synthetic refresh guard.');
     await user.click(screen.getByRole('button', { name: 'Send reply' }));
     await waitFor(() => expect(detailLoads).toBe(2));
-    const suggestions = screen.getByRole('button', { name: 'Suggestions' });
+    const suggestions = screen.getByRole('button', { name: 'Help improve Lythaus' });
     expect(suggestions).toBeDisabled();
     releaseRefresh(detail);
     await waitFor(() => expect(suggestions).toBeEnabled());

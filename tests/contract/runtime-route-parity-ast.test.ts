@@ -369,8 +369,14 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 130, admin: 65 });
+    expect(routeCounts).toEqual({ public: 136, admin: 66 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
+      'GET /feedback/post/{param}',
+      'GET /feedback/comment/{param}',
+      'PUT /feedback/post/{param}/quality',
+      'PUT /feedback/post/{param}/emotion',
+      'PUT /feedback/comment/{param}/quality',
+      'PUT /feedback/comment/{param}/emotion',
       'GET /.well-known/jwks.json',
       'PUT /media/uploads/{param}/bytes',
       'GET /media/uploads/{param}',
@@ -396,6 +402,7 @@ describe('source-derived OpenAPI route parity', () => {
       'POST /admin/account-support/users/{param}/history',
       'GET /admin/waitlist',
       'POST /admin/waitlist/{param}/status',
+      'POST /admin/waitlist/{param}/invite',
       'POST /admin/waitlist/{param}/retention-hold',
       'POST /admin/appeals/{param}/adjudications',
       'GET /admin/appeals/community/queue',

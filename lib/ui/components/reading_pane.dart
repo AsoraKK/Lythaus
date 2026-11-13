@@ -13,7 +13,7 @@ class ReadingPane extends StatelessWidget {
     child: Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
+        constraints: const BoxConstraints(maxWidth: 992),
         child: SizedBox(
           width: double.infinity,
           height: double.infinity,

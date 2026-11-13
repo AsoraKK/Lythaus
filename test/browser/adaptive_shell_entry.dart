@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
@@ -31,6 +32,9 @@ class _FixtureAuth extends StateNotifier<AsyncValue<User?>>
 
 @JS('lythausNavigationSnapshot')
 external set _snapshot(JSFunction callback);
+
+@JS('lythausNavigationTextGeometry')
+external set _textGeometry(JSFunction callback);
 
 @JS('lythausNavigationSignOut')
 external set _signOut(JSFunction callback);
@@ -118,6 +122,56 @@ class _Fixture extends ConsumerWidget {
           'focused': fields.single.focusNode!.hasFocus,
         },
       }).toJS;
+    }).toJS;
+    _textGeometry = (() {
+      final labels = <Map<String, Object?>>[];
+      final root = _shellKey.currentContext;
+      if (root is Element) {
+        void visit(Element element) {
+          final widget = element.widget;
+          final renderObject = element.renderObject;
+          if (widget is RichText && renderObject is RenderParagraph) {
+            final text = widget.text.toPlainText();
+            if (text == 'Notifications') {
+              final origin = renderObject.localToGlobal(Offset.zero);
+              final size = renderObject.size;
+              final box = {
+                'x': origin.dx,
+                'y': origin.dy,
+                'width': size.width,
+                'height': size.height,
+                'right': origin.dx + size.width,
+                'bottom': origin.dy + size.height,
+              };
+              final lines = renderObject
+                  .getBoxesForSelection(
+                    TextSelection(baseOffset: 0, extentOffset: text.length),
+                  )
+                  .map((textBox) {
+                    final rect = textBox.toRect();
+                    final topLeft = renderObject.localToGlobal(rect.topLeft);
+                    final bottomRight = renderObject.localToGlobal(
+                      rect.bottomRight,
+                    );
+                    return {
+                      'x': topLeft.dx,
+                      'y': topLeft.dy,
+                      'width': bottomRight.dx - topLeft.dx,
+                      'height': bottomRight.dy - topLeft.dy,
+                      'right': bottomRight.dx,
+                      'bottom': bottomRight.dy,
+                    };
+                  })
+                  .toList();
+              labels.add({'text': text, 'box': box, 'lines': lines});
+            }
+          }
+          element.visitChildren(visit);
+        }
+
+        visit(root);
+      }
+      return jsonEncode(labels).toJS;
     }).toJS;
     return MaterialApp(
       title: 'Lythaus navigation synthetic QA',

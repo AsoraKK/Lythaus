@@ -54,9 +54,18 @@ class WebReleaseReloadGate {
       return;
     }
 
+    if (_authLoading()) return;
+    bool hasFocusedTextEntry;
+    try {
+      hasFocusedTextEntry = _hasFocusedTextEntry();
+    } catch (_) {
+      // Focus may still point at a widget being removed during navigation.
+      // The bridge was already closed by schedule(); keep it closed.
+      return;
+    }
+
     _setCanReload(
-      !_authLoading() &&
-          !_hasFocusedTextEntry() &&
+      !hasFocusedTextEntry &&
           _registry.canSafelyReload &&
           !_hasPendingAuthenticatedWork() &&
           _postCanSafelyReload(),

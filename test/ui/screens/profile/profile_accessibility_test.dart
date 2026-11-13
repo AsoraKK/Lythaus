@@ -212,7 +212,7 @@ void main() {
 
     final swipe = find.widgetWithText(
       SwitchListTile,
-      'Swipe between profile tabs',
+      'Swipe between feeds and profile tabs',
     );
     await tester.ensureVisible(swipe);
     await tester.tap(swipe);
@@ -290,7 +290,7 @@ void main() {
         isTrue,
       );
       for (final label in [
-        'Swipe between profile tabs',
+        'Swipe between feeds and profile tabs',
         'Left-handed mode (mirror nav)',
       ]) {
         final tile = find.widgetWithText(SwitchListTile, label);

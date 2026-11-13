@@ -1,4 +1,6 @@
 import { readCommentThread, commentThreadErrorStatus } from './comment-thread-reader.ts';
+import { changeFeedback, feedbackInput, feedbackTarget, readFeedback } from './contribution-feedback.ts';
+import { lockRelationshipUsers } from './feedback-visibility-locks.ts';
 import { commentReplyTargetQuery, nestedReplyDepth } from '../../../packages/db/src/comment-visibility.ts';
 import { commentNotificationVisibilitySql } from '../../../packages/db/src/comment-notifications.ts';
 import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
@@ -8,7 +10,7 @@ import { MAX_IMAGE_BYTES } from '@lythaus/media';
 import { parseStandardUpload, verifyStandardUploadBytes, UploadIntegrityError, readBoundedRequestBody } from '../../../packages/media/src/standard-upload.ts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyLoginPassword, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
+import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification, requiresWaitlistInvitation, waitlistInvitesRequired, waitlistInviteVerificationAllowed } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { handleOwnerContentRead } from './owner-content-reader.ts';
 import { handleBetaApi } from './authenticity-beta.ts';
@@ -18,7 +20,7 @@ import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
 import { handleActivityMeasurement } from './activity-measurement-handler.ts';
 import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
-import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
+import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, hasWaitlistInviteForVerification, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason, waitlistInviteSchemaInstalled } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -69,6 +71,7 @@ interface Env extends EnvBindings {
   TAG_SEARCH_INDEX_READ_ENABLED?: string;
   TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST?: string;
   TAG_SEARCH_MAX_CANDIDATES_PER_REQUEST?: string;
+  CONTRIBUTION_FEEDBACK_ENABLED?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -448,12 +451,18 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
   let outboxId: string | undefined;
   const outcome = await transaction(env.DB_APP_FRESH, client => persistRecoveryIntake(client, correlationId(request), async () => {
     const userId = await findRecoveryUser(client, lookup);
+    let hasWaitlistInvite = false;
+    if (userId) {
+      const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+      if (inviteSchemaPresent) hasWaitlistInvite = await hasWaitlistInviteForVerification(client, userId);
+    }
     const account = userId ? await lockRecoveryAccount(client, userId) : undefined;
     const plan = recoveryPlan(account);
     if (!account || plan === 'suppressed') return plan;
     if (plan === 'support_required') return `support_required:${recoverySupportReason(account)}`;
     if (intent === 'verification' && plan === 'reset_password') return 'suppressed';
     const purpose = plan === 'credential_setup' ? 'verification' : 'password_reset';
+    if (purpose === 'verification' && hasWaitlistInvite) return 'suppressed';
     const table = purpose === 'verification' ? 'identity.email_verification_tokens' : 'identity.password_reset_tokens';
     const pending = await client.query(
       `SELECT id FROM ${table} WHERE user_id=$1 AND consumed_at IS NULL AND superseded_at IS NULL
@@ -528,6 +537,13 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     if (registrationPlan === 'neutral_existing_account') {
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
+    // Public registration is invite-only. The private production-auth
+    // acceptance harness is the sole coordinator-bound exception.
+    if (requiresWaitlistInvitation({
+      registrationPlan,
+      inviteOnly: waitlistInvitesRequired(env.WAITLIST_INVITES_REQUIRED),
+      authenticatedAcceptance: acceptance !== undefined,
+    })) throw new Error('invite_required');
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
     const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
     const verificationToken = randomToken(32);
@@ -760,21 +776,48 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
   await acceptanceContext(request, env);
   const url = new URL(request.url);
   if (request.method !== 'POST') throw new Error('method_not_allowed');
-  const input = await readJson<{ token?: string; password?: string }>(request, 8 * 1024);
+  const input = await readJson<{ token?: string; password?: string; email?: string }>(request, 8 * 1024);
   const token = requireToken(url.searchParams.get('token') ?? input.token, 'verification_token_invalid');
   if (input.password === undefined) throw new Error('password_setup_required');
-  const password = await requireUncompromisedPassword(input.password);
   const secrets = requireAuthSecrets(env);
+  let emailLookup: string;
+  try { emailLookup = hmacLookup(normalizeEmailAddress(input.email), secrets.hmacKey); }
+  catch { throw new Error('verification_token_invalid'); }
+  await enforceRateLimit(request, env, 'auth-address:email_verify', 10, emailLookup);
+  const password = await requireUncompromisedPassword(input.password);
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const tokenHash = hashAuthToken(token, 'verification');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    const owner = await client.query<{ user_id: string }>(
-      `SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64')`,
-      [tokenHash],
+    const owner = await client.query<{ user_id: string; challenge_id: string }>(
+      `SELECT t.user_id, t.id AS challenge_id
+         FROM identity.email_verification_tokens t
+        WHERE t.token_hash = decode($1, 'base64')
+          AND (
+            EXISTS (SELECT 1 FROM identity.email_credentials credential
+                     WHERE credential.user_id = t.user_id
+                       AND credential.email_lookup_hmac = decode($2, 'base64'))
+            OR EXISTS (SELECT 1 FROM identity.contact_emails contact
+                        WHERE contact.user_id = t.user_id
+                          AND contact.email_lookup_hmac = decode($2, 'base64')
+                          AND contact.verified_at IS NOT NULL)
+          )`,
+      [tokenHash, emailLookup],
     );
     if (!owner.rows[0]) throw new Error('verification_token_invalid');
     const userId = owner.rows[0].user_id;
+    const inviteSchemaPresent = await waitlistInviteSchemaInstalled(client, env.WAITLIST_INVITE_SCHEMA_ENABLED === 'true');
+    if (inviteSchemaPresent) {
+      if (await hasWaitlistInviteForVerification(client, userId)) {
+        const invite = await client.query<{ found: boolean; valid: boolean }>(
+          `SELECT found, valid FROM marketing.lock_waitlist_invite_for_verification($1, $2, decode($3, 'base64'))`,
+          [userId, owner.rows[0].challenge_id, emailLookup],
+        );
+        if (invite.rowCount !== 1 || invite.rows[0]?.found !== true || invite.rows[0]?.valid !== true) {
+          throw new Error('verification_token_invalid');
+        }
+      }
+    }
     const account = await lockRecoveryAccount(client, userId);
     if (!account || recoveryPlan(account) !== 'credential_setup') throw new Error('verification_token_invalid');
     const found = await client.query<{ id: string }>(
@@ -1911,6 +1954,7 @@ async function createFollow(request: Request, env: Env, user: Principal, routeTa
   const targetUserId = input.userId;
   const sourceEventId = uuidv7();
   const created = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, targetUserId);
     await assertSocialInteractionAllowed(client, user.userId, targetUserId);
     const result = await client.query(
       `INSERT INTO social.follows (follower_id, followed_id) VALUES ($1, $2)
@@ -1958,6 +2002,7 @@ async function relationshipList(request: Request, env: Env, user: Principal, kin
 async function removeFollow(request: Request, env: Env, user: Principal, followedId: string): Promise<Response> {
   const sourceEventId = uuidv7();
   const removed = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, followedId);
     const result = await client.query(
       `DELETE FROM social.follows WHERE follower_id = $1 AND followed_id = $2 RETURNING followed_id`,
       [user.userId, followedId],
@@ -1978,6 +2023,7 @@ async function setBlock(request: Request, env: Env, user: Principal, targetUserI
   const change = planRelationshipMutation('block', user.userId, targetUserId, blocked);
   const sourceEventId = uuidv7();
   const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, change.targetUserId);
     const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [change.targetUserId]);
     if (target.rowCount !== 1) throw new Error('user_not_found');
     if (blocked) {
@@ -2003,6 +2049,7 @@ async function setMute(request: Request, env: Env, user: Principal, targetUserId
   const change = planRelationshipMutation('mute', user.userId, targetUserId, muted);
   const sourceEventId = uuidv7();
   const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    await lockRelationshipUsers(client, user.userId, change.targetUserId);
     const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [change.targetUserId]);
     if (target.rowCount !== 1) throw new Error('user_not_found');
     const mutation = muted
@@ -3551,6 +3598,40 @@ export default {
           respond: (body, status) => privateResponse(request, env, body, { status }),
           readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+      }
+      const feedbackRead = url.pathname.match(/^\/api\/feedback\/(post|comment)\/([^/]+)$/);
+      if (request.method === 'GET' && feedbackRead) {
+        if (env.CONTRIBUTION_FEEDBACK_ENABLED !== 'true') {
+          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
+        }
+        const target = feedbackTarget(feedbackRead[1], feedbackRead[2]);
+        const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
+        const data = await transaction(env.DB_APP_FRESH, client => readFeedback(client, target, user?.userId ?? null));
+        return privateResponse(request, env, data);
+      }
+      const feedbackWrite = url.pathname.match(/^\/api\/feedback\/(post|comment)\/([^/]+)\/(quality|emotion)$/);
+      if (request.method === 'PUT' && feedbackWrite) {
+        if (env.CONTRIBUTION_FEEDBACK_ENABLED !== 'true') {
+          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
+        }
+        const target = feedbackTarget(feedbackWrite[1], feedbackWrite[2]);
+        const user = await principal(request, env);
+        const body = await readJson<unknown>(request.clone() as Request, 1024);
+        if (body === null || typeof body !== 'object' || Array.isArray(body) || !('value' in body)) throw new Error('invalid_reaction');
+        const input = feedbackInput(feedbackWrite[3], body.value);
+        return await idempotentMutation(request, env, user.userId, 'contribution-feedback.change', async () => {
+          await enforceDailyAction(env, user.userId, 'reaction');
+          const result = await transaction(env.DB_APP_FRESH, async client => changeFeedback(client, {
+            target, actor: user.userId, ...input, id: uuidv7(),
+            audit: async () => writeActivity(client, request, user, uuidv7(), {
+              eventType: input.value === null ? 'content.reaction_removed' : 'content.reaction_added',
+              category: 'content', title: input.channel === 'quality' ? 'You rated a contribution' : 'You reacted to content',
+              explanation: input.value === null ? 'Your feedback was removed.' : 'Your feedback was saved separately from other reactions. It does not change reputation or rewards.',
+              objectType: target.type, objectId: target.id, metadata: { contentType: target.type },
+            }),
+          }));
+          return privateResponse(request, env, { target, channel: input.channel, value: input.value, changed: result.changed });
+        }, true);
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
       if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts' || url.pathname === '/api/users/me/comments')) {

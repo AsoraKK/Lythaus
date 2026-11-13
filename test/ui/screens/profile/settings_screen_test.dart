@@ -95,12 +95,12 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.scrollUntilVisible(
-        find.text('Feedback and suggestions'),
+        find.text('Help improve Lythaus'),
         300,
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Report a problem'), findsOneWidget);
-      expect(find.text('Feedback and suggestions'), findsOneWidget);
+      expect(find.text('Help improve Lythaus'), findsOneWidget);
       expect(
         find.text('Send a private bug report and follow its history'),
         findsOneWidget,
@@ -133,7 +133,7 @@ void main() {
     );
     final swipeTile = find.widgetWithText(
       SwitchListTile,
-      'Swipe between profile tabs',
+      'Swipe between feeds and profile tabs',
     );
 
     expect(tester.widget<SwitchListTile>(leftHandedTile).value, isFalse);

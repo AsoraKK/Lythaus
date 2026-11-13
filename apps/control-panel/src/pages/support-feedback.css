@@ -22,6 +22,11 @@
   outline: 2px solid color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
+.support-feedback .support-kind-tabs button.support-kind-tab--suggestion.selected {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
 .support-feedback .support-layout {
   display: grid;
   grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.5fr);

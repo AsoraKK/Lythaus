@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
@@ -38,8 +39,13 @@ User createTestUser() {
 }
 
 Future<void> chooseHumanAuthorship(WidgetTester tester) async {
-  await tester.tap(find.text('Human-authored'));
+  // Explicit legacy fixture for repository outcome tests; no production selector.
+  ProviderScope.containerOf(
+    tester.element(find.byType(CreatePostScreen)),
+  ).read(postCreationProvider.notifier).setAiLabel('human');
   await tester.pump();
+  expect(find.text('Human-authored'), findsNothing);
+  expect(find.text('AI-assisted'), findsNothing);
 }
 
 /// Mock AuthStateNotifier for testing
@@ -108,6 +114,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentSubmissionPresentationEnabledProvider.overrideWithValue(
+              true,
+            ),
             contentRecoveryStorageProvider.overrideWithValue(
               MemoryContentRecoveryStorage(),
             ),
@@ -149,7 +158,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify create post screen is shown
-      expect(find.text('Create Post'), findsOneWidget);
+      expect(find.text('New post'), findsOneWidget);
       expect(find.textContaining('5000 characters remaining'), findsOneWidget);
 
       // Enter post text
@@ -210,6 +219,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentSubmissionPresentationEnabledProvider.overrideWithValue(
+              true,
+            ),
             contentRecoveryStorageProvider.overrideWithValue(
               MemoryContentRecoveryStorage(),
             ),
@@ -246,7 +258,7 @@ void main() {
       expect(find.text('hate_speech'), findsOneWidget);
 
       // User should still be on the create post screen (not closed)
-      expect(find.text('Create Post'), findsOneWidget);
+      expect(find.text('New post'), findsOneWidget);
 
       // Text should still be there so user can modify it
       expect(find.text('Some inappropriate content'), findsOneWidget);
@@ -272,6 +284,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentSubmissionPresentationEnabledProvider.overrideWithValue(
+              true,
+            ),
             contentRecoveryStorageProvider.overrideWithValue(
               MemoryContentRecoveryStorage(),
             ),
@@ -305,7 +320,7 @@ void main() {
       expect(find.textContaining('18h'), findsOneWidget);
 
       // User should still be on the create post screen
-      expect(find.text('Create Post'), findsOneWidget);
+      expect(find.text('New post'), findsOneWidget);
     });
 
     testWidgets('network error flow with retry', (tester) async {
@@ -331,6 +346,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentSubmissionPresentationEnabledProvider.overrideWithValue(
+              true,
+            ),
             contentRecoveryStorageProvider.overrideWithValue(
               MemoryContentRecoveryStorage(),
             ),
@@ -380,6 +398,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentSubmissionPresentationEnabledProvider.overrideWithValue(
+              true,
+            ),
             contentRecoveryStorageProvider.overrideWithValue(
               MemoryContentRecoveryStorage(),
             ),
@@ -405,13 +426,11 @@ void main() {
       await tester.enterText(textField, 'Valid content');
       await tester.pump();
 
-      // Text alone is insufficient because disclosure is required.
+      // Text can use the default mode without showing a mode control.
       final enabledButton = tester.widget<FilledButton>(postButton);
-      expect(enabledButton.onPressed, isNull);
+      expect(enabledButton.onPressed, isNotNull);
 
       await chooseHumanAuthorship(tester);
-      final disclosedButton = tester.widget<FilledButton>(postButton);
-      expect(disclosedButton.onPressed, isNotNull);
 
       // Enter text exceeding max length
       await tester.enterText(textField, 'A' * 5001);
@@ -448,6 +467,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentSubmissionPresentationEnabledProvider.overrideWithValue(
+              true,
+            ),
             contentRecoveryStorageProvider.overrideWithValue(
               MemoryContentRecoveryStorage(),
             ),

@@ -51,12 +51,12 @@ paths:
                   value:
                     state: found
                     account:
-                      id: 01900000-0000-7000-8000-000000000001
+                      id: "00000000-0000-4000-8000-000000000009"
                       status: active
                       verificationState: pending_verification
                       verifiedAt: null
-                      createdAt: '2026-10-01T00:00:00.000000Z'
-                      updatedAt: '2026-10-01T00:00:00.000000Z'
+                      createdAt: "2000-01-04T00:00:00Z"
+                      updatedAt: "2000-01-04T00:00:00Z"
                       deletedAt: null
                       lastSignInAt: null
                       activeSessionCount: 0
@@ -98,7 +98,7 @@ paths:
               chronological:
                 value: { reasonCode: SUPPORT_REQUEST, order: oldest, limit: 25 }
               correlated:
-                value: { reasonCode: SUPPORT_REQUEST, correlationId: synthetic-support-lookup, since: '2026-10-01T00:00:00Z', until: '2026-10-03T00:00:00Z' }
+                value: { reasonCode: SUPPORT_REQUEST, correlationId: synthetic-support-lookup, since: "2000-01-05T00:00:00Z", until: "2000-01-07T00:00:00Z" }
       responses:
         '200':
           description: Partial recorded history, including explicit missing-evidence notice.
@@ -110,7 +110,7 @@ paths:
               example:
                 items: []
                 nextCursor: null
-                snapshotAt: '2026-10-02T00:00:00.000001Z'
+                snapshotAt: "2000-01-06T00:00:00Z"
                 coverage: partial
                 notice: This is partial recorded history. Events may never have been recorded or may have expired or been removed. An empty result does not prove that no activity occurred. Identity account events do not record correlation IDs.
                 correlationId: synthetic-support-history

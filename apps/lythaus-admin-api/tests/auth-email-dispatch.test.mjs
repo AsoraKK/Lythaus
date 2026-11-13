@@ -3,6 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { dispatchKeeperEmail } from '../src/auth-email-dispatch-adapter.ts';
+import { claimKeeperIdempotency, finalizeKeeperIdempotency } from '../src/keeper-runtime.ts';
 import { handleEmailEnvelope } from '../../lythaus-public-api/src/email-envelope-entrypoint.ts';
 import { decryptField, encryptField, hmacLookup } from '../../../packages/security/src/index.ts';
 
@@ -16,19 +17,61 @@ const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
 const account = { id:version,status:'relink_required',protected_identity:false,contact_ciphertext:encrypted.ciphertext,
   contact_key_version:'v1',contact_lookup:lookup,contact_verified:true,credential_lookup:lookup,credential_verified:false };
 const input = { operation:'invite',actorId:version,correlationId:version,reasonCode:'SUPPORT_REQUEST',email,displayName:'Synthetic',handle:'synthetic' };
+
+test('stale waitlist invite idempotency claims become outcome-unknown without dispatch replay', async () => {
+  const calls = [];
+  const client = { query: async (sql, values = []) => {
+    calls.push({ sql, values });
+    if (sql.includes('INSERT INTO system.idempotency_keys')) return { rows: [], rowCount: 0 };
+    if (sql.includes('SELECT actor_id, response, created_at')) return { rows: [{ actor_id: version, response: { state: 'processing' }, processing_expired: true }], rowCount: 1 };
+    if (sql.includes('UPDATE system.idempotency_keys')) return { rows: [], rowCount: 1 };
+    throw new Error('unexpected_idempotency_query');
+  } };
+  assert.deepEqual(await claimKeeperIdempotency(client, `admin.waitlist.invite:${version}`, 'invite-key-0001', version), { state: 'outcome_unknown' });
+  assert.equal(calls.length, 3);
+  assert.match(calls[1].sql, /created_at <= now\(\) - interval '5 minutes'/);
+  assert.match(calls[2].sql, /response ->> 'state' = 'processing'/);
+});
+
+test('fresh or unrelated idempotency claims remain in progress and actor mismatch stays rejected', async () => {
+  for (const { scope, row, expected } of [
+    { scope: `admin.waitlist.invite:${version}`, row: { actor_id: version, response: { state: 'processing' }, processing_expired: false }, expected: /idempotency_in_progress/ },
+    { scope: 'admin.user.delete:target', row: { actor_id: version, response: { state: 'processing' }, processing_expired: true }, expected: /idempotency_in_progress/ },
+    { scope: `admin.waitlist.invite:${version}`, row: { actor_id: '01900000-0000-7000-8000-000000000002', response: { state: 'processing' }, processing_expired: true }, expected: /idempotency_key_reused/ },
+  ]) {
+    const client = { query: async sql => sql.includes('INSERT INTO system.idempotency_keys')
+      ? { rows: [], rowCount: 0 }
+      : { rows: [row], rowCount: 1 } };
+    await assert.rejects(claimKeeperIdempotency(client, scope, 'invite-key-0001', version), expected);
+  }
+});
+
+test('late invite finalization reports the quarantined unknown outcome', async () => {
+  const client = { query: async sql => sql.includes("SET response = $4::jsonb")
+    ? { rows: [], rowCount: 0 }
+    : { rows: [{ state: 'outcome_unknown' }], rowCount: 1 } };
+  await assert.rejects(finalizeKeeperIdempotency(client, `admin.waitlist.invite:${version}`, 'invite-key-0001', version, { deliveryState: 'queued' }), /idempotency_outcome_unknown/);
+});
+
 const request = new Request('https://admin.lythaus.co/api/admin/users');
 const internal = (body, method='POST',path='/keeper-email') => new Request(`https://private.internal${path}`, { method, ...(method==='POST'?{body:typeof body==='string'?body:JSON.stringify(body)}:{}) });
-function database({ member=true, duplicate=false, recovered=account, recent=false }={}) {
-  const writes=[];
+function database({ member=true, duplicate=false, recovered=account, recent=false, waitlistEligible=true, inviteBound=true, existingWaitlistInvite=null }={}) {
+  const writes=[], calls=[];
+  const reissueEligibleAccount = existingWaitlistInvite?.status === 'relink_required';
   const run=async (_,work)=>work({query:async(sql,values)=>{
+    calls.push({sql,values});
     if(sql.includes('FROM identity.admin_memberships a JOIN')) return {rows:[],rowCount:member?1:0};
+    if(sql.includes("pg_catalog.to_regclass('marketing.waitlist_invites')")) return {rows:[{invites_present:false,verifier_present:false}],rowCount:1};
+    if(sql.includes('marketing.waitlist_invite_eligible')) return {rows:[{eligible:waitlistEligible && (!existingWaitlistInvite || reissueEligibleAccount)}],rowCount:1};
+    if(sql.includes('marketing.waitlist_invite_reissue_user')) return {rows:[{user_id:reissueEligibleAccount ? existingWaitlistInvite.user_id : null}],rowCount:1};
+    if(sql.includes('marketing.bind_waitlist_invite')) return {rows:[{bound:inviteBound}],rowCount:1};
     if(sql.includes('UNION SELECT user_id')) return {rows:[],rowCount:duplicate?1:0};
     if(sql.includes('SELECT u.id, u.status')) return {rows:recovered?[recovered]:[],rowCount:recovered?1:0};
     if(sql.includes('SELECT id FROM identity.email_verification_tokens')) return {rows:[],rowCount:recent?1:0};
     writes.push({sql,values});
     return {rows:[],rowCount:1};
   }});
-  return {run,writes};
+  return {run,writes,calls};
 }
 
 test('private invitation and resend produce Jobs-compatible envelopes with no plaintext DB payload', async()=>{
@@ -48,6 +91,71 @@ test('private invitation and resend produce Jobs-compatible envelopes with no pl
     assert.ok(!JSON.stringify(db.writes).includes(email));
     assert.ok(!JSON.stringify(db.writes).includes(opened.token));
   }
+});
+
+test('waitlist invitation requires its schema, matching eligible address and atomic binding before queueing', async () => {
+  const waitlistId = '01900000-0000-7000-8000-000000000002';
+  const payload = { ...input, waitlistId };
+  const disabled = database();
+  const disabledResponse = await handleEmailEnvelope(internal(payload), env, disabled.run);
+  assert.equal(disabledResponse.status, 409);
+  assert.equal((await disabledResponse.json()).error, 'waitlist_invite_not_eligible');
+  assert.equal(disabled.calls.length, 0, 'schema-off requests must fail before opening a transaction');
+
+  const ineligible = database({ waitlistEligible: false });
+  const rejected = await handleEmailEnvelope(internal(payload), { ...env, WAITLIST_INVITE_SCHEMA_ENABLED: 'true' }, ineligible.run);
+  assert.equal(rejected.status, 409);
+  assert.equal((await rejected.json()).error, 'waitlist_invite_not_eligible');
+  assert.equal(ineligible.writes.some(row => /INSERT INTO identity\.(users|email_credentials|email_verification_tokens)|INSERT INTO system\.transactional_email_outbox/.test(row.sql)), false);
+
+  const db = database();
+  const response = await handleEmailEnvelope(internal(payload), { ...env, WAITLIST_INVITE_SCHEMA_ENABLED: 'true' }, db.run);
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.result.deliveryState, 'queued');
+  assert.equal(result.result.userId.length, 36);
+  const eligibility = db.calls.findIndex(row => row.sql.includes('marketing.waitlist_invite_eligible'));
+  const accountInsert = db.calls.findIndex(row => row.sql.includes('INSERT INTO identity.users'));
+  const outboxInsert = db.calls.findIndex(row => row.sql.includes('INSERT INTO system.transactional_email_outbox'));
+  const bind = db.calls.find(row => row.sql.includes('marketing.bind_waitlist_invite'));
+  assert.ok(eligibility >= 0 && eligibility < accountInsert && accountInsert < outboxInsert);
+  assert.ok(bind && db.calls.indexOf(bind) > outboxInsert, 'the waitlist binding is committed with the account and email outbox');
+  assert.equal(bind.values[0], waitlistId);
+  assert.equal(bind.values[1], result.result.userId);
+  assert.equal(bind.values[4], lookup);
+  const challenge = db.calls.find(row => row.sql.includes('INSERT INTO identity.email_verification_tokens'));
+  assert.match(challenge.sql, /CASE WHEN \$4::boolean THEN interval '7 days'/);
+  assert.equal(challenge.values[3], true);
+  const outbox = db.writes.find(row => row.sql.includes('INSERT INTO system.transactional_email_outbox'));
+  assert.equal(outbox.values[5], 'waitlist-v1');
+  const envelope = JSON.parse(await decryptField({ ciphertext: outbox.values[8], encryptionKeyVersion: outbox.values[9] }, env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1));
+  assert.equal(envelope.to, email);
+  assert.match(envelope.token, /^[0-9a-f]{64}$/);
+  assert.ok(!JSON.stringify(db.writes).includes(email));
+  assert.ok(!JSON.stringify(db.writes).includes(envelope.token));
+});
+
+test('expired or failed waitlist invitations reissue to the existing email-bound account', async () => {
+  const waitlistId = '01900000-0000-7000-8000-000000000002';
+  const existingUserId = '01900000-0000-7000-8000-000000000003';
+  const db = database({ existingWaitlistInvite: { user_id: existingUserId, status: 'relink_required', email_lookup_hmac: lookup } });
+  const response = await handleEmailEnvelope(internal({ ...input, waitlistId }), { ...env, WAITLIST_INVITE_SCHEMA_ENABLED: 'true' }, db.run);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).result.userId, existingUserId);
+  assert.equal(db.writes.some(row => /INSERT INTO identity\.(users|email_credentials|contact_emails)/.test(row.sql)), false);
+  assert.equal(db.calls.some(row => row.sql.includes('UNION SELECT user_id')), false);
+  const bind = db.calls.find(row => row.sql.includes('marketing.bind_waitlist_invite'));
+  assert.equal(bind.values[1], existingUserId);
+  assert.equal(db.calls.some(row => row.sql.includes('marketing.waitlist_invite_reissue_user')), true);
+  const audit = db.calls.find(row => row.sql.includes('INSERT INTO system.audit_events') && row.sql.includes('target_id, reason_code'));
+  assert.equal(audit.values[6], 'marketing.waitlist_invite_reissued');
+  assert.equal(JSON.parse(audit.values[5]).reissued, true);
+
+  const redeemed = database({ existingWaitlistInvite: { user_id: existingUserId, status: 'active', email_lookup_hmac: lookup } });
+  const rejected = await handleEmailEnvelope(internal({ ...input, waitlistId }), { ...env, WAITLIST_INVITE_SCHEMA_ENABLED: 'true' }, redeemed.run);
+  assert.equal(rejected.status, 409);
+  assert.equal((await rejected.json()).error, 'waitlist_invite_not_eligible');
+  assert.equal(redeemed.writes.some(row => /INSERT INTO identity\.(email_verification_tokens)|INSERT INTO system\.transactional_email_outbox/.test(row.sql)), false);
 });
 
 test('authorization, existing identity, cooldown, restrictions and trusted linkage are enforced',async()=>{

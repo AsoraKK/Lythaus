@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 import 'package:lythaus/design_system/widgets/approved_brand_paths.g.dart';
 
 /// Approved outlines with the shared monochrome treatment.
@@ -21,6 +20,7 @@ class LythBrand extends StatelessWidget {
     this.variant = LythBrandVariant.wordmark,
     this.height = 32,
     this.decorative = false,
+    this.foreground,
   });
 
   /// Selects the approved layout for this slot.
@@ -32,8 +32,13 @@ class LythBrand extends StatelessWidget {
   /// Omits the image label when the parent supplies the control's meaning.
   final bool decorative;
 
+  /// Overrides the theme text color for a contrasting brand surface.
+  /// Only the tint changes; approved outlines and proportions are preserved.
+  final Color? foreground;
+
   @override
   Widget build(BuildContext context) {
+    final tint = foreground ?? Theme.of(context).colorScheme.onSurface;
     final aspectRatio = switch (variant) {
       LythBrandVariant.symbol => 1.0,
       LythBrandVariant.wordmark => 470.28944891 / 130.6866688,
@@ -44,6 +49,7 @@ class LythBrand extends StatelessWidget {
     };
     if (kIsWeb) {
       return Semantics(
+        container: true,
         label: decorative ? null : 'Lythaus',
         image: !decorative,
         excludeSemantics: true,
@@ -51,10 +57,7 @@ class LythBrand extends StatelessWidget {
           height: height,
           width: height * aspectRatio,
           child: ColorFiltered(
-            colorFilter: const ColorFilter.mode(
-              LythSemanticColors.text,
-              BlendMode.srcIn,
-            ),
+            colorFilter: ColorFilter.mode(tint, BlendMode.srcIn),
             child: CustomPaint(painter: ApprovedBrandPainter(file)),
           ),
         ),
@@ -65,10 +68,7 @@ class LythBrand extends StatelessWidget {
       height: height,
       width: height * aspectRatio,
       fit: BoxFit.contain,
-      colorFilter: const ColorFilter.mode(
-        LythSemanticColors.text,
-        BlendMode.srcIn,
-      ),
+      colorFilter: ColorFilter.mode(tint, BlendMode.srcIn),
       semanticsLabel: decorative ? null : 'Lythaus',
       excludeFromSemantics: decorative,
     );

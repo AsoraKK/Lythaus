@@ -21,7 +21,7 @@ class LythausTheme {
       displaySmall: _text(colors, 24, FontWeight.w700, 1.3, tracking: -0.3),
       headlineLarge: _text(colors, 28, FontWeight.w700, 1.25, tracking: -0.4),
       headlineMedium: _text(colors, 24, FontWeight.w700, 1.3, tracking: -0.3),
-      headlineSmall: _text(colors, 20, FontWeight.w600, 1.35),
+      headlineSmall: _text(colors, 22, FontWeight.w600, 1.3, tracking: -0.3),
       titleLarge: _text(colors, 18, FontWeight.w600, 1.4),
       titleMedium: _text(colors, 16, FontWeight.w600, 1.4),
       titleSmall: _text(colors, 14, FontWeight.w600, 1.4),
@@ -96,7 +96,11 @@ class LythausTheme {
       highlightColor: colors.primary.withValues(alpha: 0.12),
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      extensions: [LythThemeExtension.dark()],
+      extensions: [
+        colors.brightness == Brightness.light
+            ? LythThemeExtension.light()
+            : LythThemeExtension.dark(),
+      ],
       appBarTheme: AppBarTheme(
         backgroundColor: colors.surface,
         foregroundColor: colors.onSurface,
@@ -110,8 +114,8 @@ class LythausTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: button.merge(
           ElevatedButton.styleFrom(
-            backgroundColor: colors.primary,
-            foregroundColor: colors.onPrimary,
+            backgroundColor: LythSemanticColors.accent,
+            foregroundColor: LythSemanticColors.onAccent,
             disabledBackgroundColor: colors.surfaceContainerHigh,
             disabledForegroundColor: semantic['muted'],
           ),
@@ -120,8 +124,8 @@ class LythausTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: button.merge(
           FilledButton.styleFrom(
-            backgroundColor: colors.primary,
-            foregroundColor: colors.onPrimary,
+            backgroundColor: LythSemanticColors.accent,
+            foregroundColor: LythSemanticColors.onAccent,
             disabledBackgroundColor: colors.surfaceContainerHigh,
             disabledForegroundColor: semantic['muted'],
           ),
@@ -205,9 +209,9 @@ class LythausTheme {
         secondaryLabelStyle: text.labelLarge?.copyWith(
           color: colors.onPrimaryContainer,
         ),
-        side: BorderSide(color: colors.outline),
+        side: BorderSide(color: colors.outlineVariant),
         shape: shape,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         showCheckmark: true,
         checkmarkColor: colors.onPrimaryContainer,
       ),

@@ -3,6 +3,8 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/components/lythaus_side_navigation.dart';
+import 'package:lythaus/ui/components/editorial_action_bar.dart';
+import 'package:lythaus/ui/components/feed_navigation_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,22 +17,30 @@ import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/state/providers/theme_mode_provider.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' show FeedResponse;
+import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
 import 'package:lythaus/design_system/theme/lyth_theme.dart';
 
 import '../../helpers/content_recovery.dart';
 
 class _AuthService extends Mock implements AuthService {}
 
+class _EmptySearch extends FeedSearchNotifier {
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) async =>
+      FeedResponse.fromCursor(posts: []);
+}
+
 bool _navigationHasFocus() {
   final context = FocusManager.instance.primaryFocus?.context;
   if (context is! Element) return false;
   var found = false;
   context.visitAncestorElements((element) {
-    found =
-        element.widget is LythausSideNavigation ||
-        element.widget is BottomNavigationBar;
+    found = element.widget is EditorialActionBar;
     return !found;
   });
   return found;
@@ -86,6 +96,20 @@ List<Override> _baseOverrides({bool guest = false}) => [
   ),
   liveFeedItemsProvider.overrideWith((ref, _) async => _items),
 ];
+
+Finder _action(String label) => find.descendant(
+  of: find.byType(EditorialActionBar),
+  matching: find.text(label),
+);
+
+Future<void> _menuDestination(WidgetTester tester, String label) async {
+  await tester.tap(_action('Menu'));
+  await tester.pumpAndSettle();
+  final target = find.widgetWithText(ListTile, label);
+  await tester.ensureVisible(target);
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
@@ -154,7 +178,7 @@ void main() {
           controller.selection,
           const TextSelection(baseOffset: 2, extentOffset: 9),
         );
-        await tester.tap(find.text('Discover').last);
+        await tester.tap(find.text('Discovery'));
         await tester.pumpAndSettle();
         expect(
           tester
@@ -165,7 +189,7 @@ void main() {
         );
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
-        await tester.tap(find.text('Create').last);
+        await tester.tap(_action('Create'));
         await tester.pumpAndSettle();
         expect(tester.state(find.byType(CreatePostScreen)), same(composer));
         expect(controller.text, 'Synthetic unfinished draft');
@@ -187,11 +211,13 @@ void main() {
         tester.element(find.byType(AdaptiveShell)),
       );
       expect(container.read(currentUserProvider), same(user));
-      final navigation = tester.widget<BottomNavigationBar>(
-        find.byType(BottomNavigationBar),
+      final navigation = tester.widget<EditorialActionBar>(
+        find.byType(EditorialActionBar),
       );
-      navigation.onTap!(0);
-      navigation.onTap!(1);
+      tester
+          .widget<FeedNavigationRail>(find.byType(FeedNavigationRail))
+          .onSelect('discover');
+      navigation.onCreate();
       await container.read(authStateProvider.notifier).signOut();
       await tester.binding.setSurfaceSize(const Size(1440, 844));
       await tester.pumpAndSettle();
@@ -240,7 +266,7 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
-            await tester.tap(find.widgetWithText(TextButton, 'Settings'));
+            await _menuDestination(tester, 'Settings');
             await tester.pumpAndSettle();
             await tester.tap(find.text('Account security'));
             await tester.pumpAndSettle();
@@ -299,17 +325,24 @@ void main() {
             );
             await tester.pumpAndSettle();
             expect(find.byType(LythausSideNavigation), findsNothing);
-            final nav = tester.widget<BottomNavigationBar>(
-              find.byType(BottomNavigationBar),
-            );
+            final labels = tester
+                .widgetList<Text>(
+                  find.descendant(
+                    of: find.byType(EditorialActionBar),
+                    matching: find.byType(Text),
+                  ),
+                )
+                .map((text) => text.data)
+                .toList();
             expect(
-              nav.items.map((item) => item.label),
+              labels,
               leftHanded
-                  ? ['Rewards', 'Profile', 'Create', 'Discover']
-                  : ['Discover', 'Create', 'Profile', 'Rewards'],
+                  ? ['Menu', 'Search', 'Create']
+                  : ['Create', 'Search', 'Menu'],
             );
-            expect(nav.currentIndex, leftHanded ? 0 : 3);
-            await tester.tap(find.text('Create'));
+            await tester.tap(find.text('Discovery'));
+            await tester.pumpAndSettle();
+            await tester.tap(_action('Create'));
             await tester.pumpAndSettle();
             expect(find.text('Sign in to create a post.'), findsOneWidget);
             expect(tester.takeException(), isNull);
@@ -355,7 +388,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Help'));
+        await _menuDestination(tester, 'Help');
         await tester.pumpAndSettle();
         expect(launches, ['https://lythaus.co/help']);
         expect(find.text('Sign in to view your rewards.'), findsOneWidget);
@@ -382,7 +415,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Settings'));
+      await _menuDestination(tester, 'Settings');
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
       await tester.pageBack();
@@ -421,13 +454,13 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Rewards'));
+        await _menuDestination(tester, 'Rewards');
         await tester.pumpAndSettle();
         expect(router.routeInformationProvider.value.uri.queryParameters, {
           'source': 'fixture',
           'tab': 'rewards',
         });
-        await tester.tap(find.text('Profile'));
+        await _menuDestination(tester, 'Profile');
         await tester.pumpAndSettle();
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
@@ -464,11 +497,275 @@ void main() {
       await tester.pumpAndSettle();
 
       // Bottom nav should be present on narrow viewport
-      expect(find.byType(BottomNavigationBar), findsOneWidget);
+      expect(find.byType(EditorialActionBar), findsOneWidget);
       expect(find.byType(LythausSideNavigation), findsNothing);
     });
 
-    testWidgets('renders compact side navigation on wide viewport', (
+    testWidgets('drawer reaches existing feed tools and guest gates', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+          ],
+          child: const MaterialApp(home: AdaptiveShell()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(_action('Menu'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Close menu'), findsOneWidget);
+      expect(find.text('Manage feeds'), findsOneWidget);
+      expect(find.text('Rewards'), findsOneWidget);
+      await tester.tap(find.text('Manage feeds'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a feed'), findsOneWidget);
+      await tester.tap(find.text('Build custom feed'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in to create a custom feed.'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(_action('Menu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Review and appeals'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in to view your appeals.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final command in ['search', 'searchThenFeed']) {
+      testWidgets('newer tab navigation cancels pending feed controls '
+          '(command=$command)', (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._baseOverrides(guest: true),
+              currentUserProvider.overrideWithValue(null),
+            ],
+            child: const MaterialApp(home: AdaptiveShell()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final navigation = tester.widget<EditorialActionBar>(
+          find.byType(EditorialActionBar),
+        );
+        await tester.tap(_action('Menu'));
+        await tester.pumpAndSettle();
+        final manage = tester.widget<ListTile>(
+          find.widgetWithText(ListTile, 'Manage feeds'),
+        );
+        manage.onTap!();
+        navigation.onSearch();
+        if (command != 'search') {
+          tester
+              .widget<FeedNavigationRail>(find.byType(FeedNavigationRail))
+              .onSelect('discover');
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a feed'), findsNothing);
+        expect(
+          find.text('Back to feed'),
+          command == 'search' ? findsOneWidget : findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('newer drawer section cancels pending feed controls', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+          ],
+          child: const MaterialApp(home: AdaptiveShell()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(AdaptiveShell));
+      ModalRoute.of(context)!.addLocalHistoryEntry(LocalHistoryEntry());
+      await tester.tap(_action('Menu'));
+      await tester.pumpAndSettle();
+      final manage = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Manage feeds'),
+      );
+      final appeals = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Review and appeals'),
+      );
+      manage.onTap!();
+      appeals.onTap!();
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a feed'), findsNothing);
+      expect(find.text('Sign in to view your appeals.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('newer route feed selection cancels pending feed controls', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final selectedFeed = ValueNotifier<String?>(null);
+      addTearDown(selectedFeed.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+          ],
+          child: MaterialApp(
+            home: ValueListenableBuilder<String?>(
+              valueListenable: selectedFeed,
+              builder: (_, value, _) => AdaptiveShell(initialFeedId: value),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(_action('Menu'));
+      await tester.pumpAndSettle();
+      tester
+          .widget<ListTile>(find.widgetWithText(ListTile, 'Manage feeds'))
+          .onTap!();
+      selectedFeed.value = 'appeals';
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a feed'), findsNothing);
+      expect(find.text('Sign in to view your appeals.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keyboard leaves room for the draft and navigation returns', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final user = User(
+        id: '018f0000-0000-7000-8000-000000000001',
+        email: 'synthetic@example.invalid',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime.utc(2026),
+        lastLoginAt: DateTime.utc(2026),
+      );
+      final auth = _AuthService();
+      when(() => auth.getCurrentUser()).thenAnswer((_) async => user);
+      when(() => auth.getJwtToken()).thenAnswer((_) async => null);
+      final inset = ValueNotifier(300.0);
+      addTearDown(inset.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(),
+            enhancedAuthServiceProvider.overrideWithValue(auth),
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+          ],
+          child: MaterialApp(
+            builder: (context, child) => ValueListenableBuilder<double>(
+              valueListenable: inset,
+              builder: (context, bottom, _) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: const TextScaler.linear(2),
+                  viewInsets: EdgeInsets.only(bottom: bottom),
+                ),
+                child: child!,
+              ),
+            ),
+            home: const AdaptiveShell(initialIndex: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(EditorialActionBar), findsNothing);
+      await tester.enterText(find.byType(TextField), 'A synthetic draft');
+      expect(find.text('A synthetic draft'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      inset.value = 0;
+      await tester.pumpAndSettle();
+      expect(find.byType(EditorialActionBar), findsOneWidget);
+      expect(find.text('A synthetic draft'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('search and notifications preserve shell route state', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final router = GoRouter(
+        initialLocation: '/?source=fixture',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, state) => AdaptiveShell(
+              initialSearchQuery: state.uri.queryParameters['q'] ?? '',
+              initialIndex: switch (state.uri.queryParameters['tab']) {
+                'search' => 4,
+                'notifications' => 5,
+                _ => 0,
+              },
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+            feedSearchProvider.overrideWith(_EmptySearch.new),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      Finder navigationLabel(String label) => find.descendant(
+        of: find.byType(EditorialActionBar),
+        matching: find.text(label),
+      );
+      await tester.tap(navigationLabel('Search'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'civic');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.queryParameters, {
+        'source': 'fixture',
+        'tab': 'search',
+        'q': 'civic',
+      });
+      await tester.tap(find.text('Discovery'));
+      await tester.pumpAndSettle();
+      await tester.tap(navigationLabel('Search'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'civic',
+      );
+      await _menuDestination(tester, 'Notifications');
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationsScreen), findsOneWidget);
+      expect(find.text('Sign in to view your notifications.'), findsOneWidget);
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['q'],
+        'civic',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('wide viewport retains actions and a hidden menu', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(1024, 768));
@@ -488,16 +785,85 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(LythausSideNavigation), findsOneWidget);
+      expect(find.byType(LythausSideNavigation), findsNothing);
       expect(find.text('Fixture identity'), findsOneWidget);
-      expect(
-        tester
-            .widget<LythausSideNavigation>(find.byType(LythausSideNavigation))
-            .extended,
-        isFalse,
+      expect(find.byType(EditorialActionBar), findsOneWidget);
+      expect(find.text('Settings'), findsNothing);
+      await tester.tap(_action('Menu'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Settings'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Settings'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('appearance changes preserve Escape and return Menu focus', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _baseOverrides(guest: true),
+          child: Consumer(
+            builder: (context, ref, _) => MaterialApp(
+              theme: LythausTheme.light(),
+              darkTheme: LythausTheme.dark(),
+              themeMode: ref.watch(themeModeProvider),
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: const TextScaler.linear(2),
+                  disableAnimations: true,
+                ),
+                child: child!,
+              ),
+              home: const AdaptiveShell(),
+            ),
+          ),
+        ),
       );
-      // Bottom nav should not be present
-      expect(find.byType(BottomNavigationBar), findsNothing);
+      await tester.pumpAndSettle();
+      for (final choice in ['Dark', 'Light', 'System']) {
+        await tester.tap(_action('Menu'));
+        await tester.pumpAndSettle();
+        final radio = find.widgetWithText(RadioListTile<ThemeMode>, choice);
+        await tester.scrollUntilVisible(
+          radio,
+          400,
+          scrollable: find.descendant(
+            of: find.byType(Drawer),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(radio);
+        await tester.pumpAndSettle();
+        expect(tester.getRect(radio).bottom, lessThanOrEqualTo(960));
+        await tester.tap(radio);
+        await tester.pumpAndSettle();
+        expect(
+          Theme.of(tester.element(find.byType(AdaptiveShell))).brightness,
+          choice == 'Dark' ? Brightness.dark : Brightness.light,
+        );
+        expect(
+          tester.widget<RadioListTile<ThemeMode>>(radio).focusNode!.hasFocus,
+          isTrue,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Close menu'), findsNothing);
+        expect(
+          tester
+              .widget<EditorialActionBar>(find.byType(EditorialActionBar))
+              .menuFocusNode!
+              .hasFocus,
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      }
     });
 
     testWidgets('guest tapping Create offers account entry', (tester) async {

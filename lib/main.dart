@@ -10,6 +10,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/routing/app_router.dart';
+import 'package:lythaus/core/routing/invite_location_scrubber.dart';
 import 'package:lythaus/core/routing/url_strategy.dart';
 import 'package:lythaus/core/config/web_release_guard.dart';
 import 'package:lythaus/core/config/web_release_reload_gate.dart';
@@ -24,9 +25,13 @@ import 'package:lythaus/core/observability/crash_reporting.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/core/network/pending_authenticated_operations.dart';
+import 'package:lythaus/state/providers/theme_mode_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Path URL strategy removes the browser fragment while normalizing the
+  // route. Capture an emailed invite token before that happens.
+  final startupInviteCode = inviteCodeFromBrowserLocation();
   deferStartupPresentation();
   configureAppUrlStrategy();
   if (isReleaseWebBuild) {
@@ -44,7 +49,15 @@ Future<void> main() async {
     logger: AppLogger('CrashReporting'),
   );
   await crashReporting.initialize();
-  runApp(const ProviderScope(child: LythausApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        if (startupInviteCode != null)
+          pendingInviteCodeProvider.overrideWith((ref) => startupInviteCode),
+      ],
+      child: const LythausApp(),
+    ),
+  );
 }
 
 class LythausApp extends ConsumerStatefulWidget {
@@ -172,13 +185,17 @@ class _LythausAppState extends ConsumerState<LythausApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return ForegroundActivityObserver(
       child: MaterialApp.router(
         title: 'Lythaus',
-        theme: LythausTheme.dark(),
+        theme: LythausTheme.light(),
         darkTheme: LythausTheme.dark(),
-        themeMode: ThemeMode.dark,
+        themeMode: themeMode,
+        // Keep appearance changes immediate. Animated palette transitions can
+        // drop Flutter web semantics focus while the Menu is open.
+        themeAnimationDuration: Duration.zero,
         routerConfig: router,
       ),
     );

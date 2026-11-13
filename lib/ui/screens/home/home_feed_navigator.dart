@@ -14,8 +14,11 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/components/lythaus_top_bar.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/ui/components/feed_navigation_rail.dart';
+import 'package:lythaus/ui/components/feed_swipe_region.dart';
 import 'package:lythaus/ui/components/feed_control_panel.dart';
 import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
@@ -24,7 +27,6 @@ import 'package:lythaus/ui/screens/home/custom_feed.dart';
 import 'package:lythaus/ui/screens/home/custom_feed_creation_flow.dart';
 import 'package:lythaus/ui/screens/home/discover_feed.dart';
 import 'package:lythaus/ui/screens/home/news_feed.dart';
-import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/home/trending_feed_screen.dart';
 
 enum AlphaFeedSection { discover, myFeeds, newsBoard }
@@ -34,18 +36,29 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
     super.key,
     this.section = AlphaFeedSection.discover,
     this.initialFeedId,
+    this.onAccountTap,
+    this.onCreateTap,
+    this.showNavigation = true,
+    this.onFeedChanged,
+    this.feedControlsFocusNode,
   });
 
   final AlphaFeedSection section;
   final String? initialFeedId;
+  final VoidCallback? onAccountTap;
+  final VoidCallback? onCreateTap;
+  final bool showNavigation;
+  final ValueChanged<String>? onFeedChanged;
+  final FocusNode? feedControlsFocusNode;
 
   @override
-  ConsumerState<HomeFeedNavigator> createState() => _HomeFeedNavigatorState();
+  ConsumerState<HomeFeedNavigator> createState() => HomeFeedNavigatorState();
 }
 
-class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
+class HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   PageController? _pageController;
   String _selectedId = 'discover';
+  String? _reportedId;
   String? _pagesIdentity;
   FeedReadSession? _lastSession;
   bool _feedControlsOpen = false;
@@ -90,7 +103,6 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     ...feeds
         .where((feed) => feed.type == FeedType.custom)
         .map((feed) => feed.id),
-    'appeals',
   ];
 
   void _jumpToSelection() {
@@ -104,6 +116,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   void _selectId(String id, {bool fromSwipe = false}) {
     if (_selectedId == id) return;
     setState(() => _selectedId = id);
+    _reportedId = id;
+    widget.onFeedChanged?.call(id);
     final index = _feeds.indexWhere((feed) => feed.id == id);
     if (index >= 0) ref.read(currentFeedIndexProvider.notifier).state = index;
     if (!fromSwipe) _jumpToSelection();
@@ -132,6 +146,15 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     if (_selectedId == '_custom' && custom.isNotEmpty) {
       _selectedId = custom.first.id;
     }
+    if (_reportedId != _selectedId) {
+      final resolved = _selectedId;
+      _reportedId = resolved;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selectedId == resolved && session.isCurrent) {
+          widget.onFeedChanged?.call(resolved);
+        }
+      });
+    }
     final identity = ids.join('|');
     if (identity != _pagesIdentity) {
       final old = _pageController;
@@ -141,122 +164,119 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       _pagesIdentity = identity;
       WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
     }
-    final labels = [
-      'Discovery',
-      'News',
-      ...custom.map((feed) => feed.name),
-      'Appeals',
-    ];
+    final labels = ['Discovery', 'News', ...custom.map((feed) => feed.name)];
     final customState = ref.watch(customFeedsProvider);
     final entitlements = ref.watch(feedEntitlementsProvider);
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            LythausTopBar(
-              title: 'Discovery',
-              logoFocusNode: _feedControlsFocus,
-              onLogoTap:
-                  feeds
-                          .where((feed) => feed.type != FeedType.moderation)
-                          .length >
-                      1
-                  ? _openFeedControl
-                  : null,
-              onTitleTap:
-                  feeds
-                          .where((feed) => feed.type != FeedType.moderation)
-                          .length >
-                      1
-                  ? _openFeedControl
-                  : null,
-              onSearchTap: _openSearch,
-              onTrendingTap: _openTrending,
-              useWordmark: true,
-            ),
-            FeedNavigationRail(
-              ids: ids,
-              labels: labels,
-              selectedId: _selectedId,
-              onSelect: _selectId,
-              onCreate: _createFeed,
-            ),
-            const _OwnSubmissions(),
-            if (session.isAuthenticated &&
-                (customState.hasError || entitlements.hasError))
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text('Some feeds could not be loaded.'),
-                    TextButton(
-                      onPressed: () {
-                        ref.invalidate(customFeedsProvider);
-                        ref.invalidate(feedEntitlementsProvider);
-                      },
-                      child: const Text('Retry feeds'),
-                    ),
-                  ],
+      body: ReadingPane(
+        child: SafeArea(
+          child: Column(
+            children: [
+              if (widget.showNavigation) ...[
+                const LythausTopBar(title: '', useWordmark: true),
+                FeedNavigationRail(
+                  ids: ids,
+                  labels: labels,
+                  selectedId: _selectedId,
+                  selectedFocusNode: _feedControlsFocus,
+                  onSelect: (id) =>
+                      id == _selectedId ? _openFeedControl() : _selectId(id),
                 ),
-              ),
-            Expanded(
-              child: _selectedId == '_custom'
-                  ? _emptyCustomFeeds(
-                      customState.isLoading || entitlements.isLoading,
-                      customState.hasError || entitlements.hasError,
-                    )
-                  : !ids.contains(_selectedId)
-                  ? Center(
-                      child: Text(
-                        customState.isLoading || entitlements.isLoading
-                            ? 'Loading your feed'
-                            : 'This feed is unavailable. Choose another feed.',
+              ],
+              if (session.isAuthenticated &&
+                  (customState.hasError || entitlements.hasError))
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Text('Some feeds could not be loaded.'),
+                      TextButton(
+                        onPressed: () {
+                          ref.invalidate(customFeedsProvider);
+                          ref.invalidate(feedEntitlementsProvider);
+                        },
+                        child: const Text('Retry feeds'),
                       ),
-                    )
-                  : PageView.builder(
-                      key: ValueKey((identity, session)),
-                      controller: _pageController,
-                      onPageChanged: (index) =>
-                          _selectId(ids[index], fromSwipe: true),
-                      itemCount: ids.length,
-                      itemBuilder: (context, index) {
-                        final id = ids[index];
-                        if (id == 'appeals') {
-                          return session.isAuthenticated
-                              ? const AppealHistoryScreen(embedded: true)
-                              : const SignInRequired(
-                                  message: 'Sign in to view your appeals.',
-                                  returnTo: '/?feed=appeals',
-                                );
-                        }
-                        if (id == 'news' &&
-                            !feeds.any((feed) => feed.type == FeedType.news)) {
-                          return session.isGuest
-                              ? const SignInRequired(
-                                  message: 'Sign in to check your News access.',
-                                  returnTo: '/?feed=news',
-                                )
-                              : const NewsFeed(
-                                  feed: newsBoardFeedModel,
-                                  items: [],
-                                );
-                        }
-                        final matching = feeds.where((feed) => feed.id == id);
-                        if (matching.isEmpty) {
-                          return const Center(
-                            child: Text('Discover unavailable'),
-                          );
-                        }
-                        return _FeedPage(
-                          key: ValueKey((id, session)),
-                          feed: matching.first,
-                          session: session,
-                        );
-                      },
-                    ),
-            ),
-          ],
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: _selectedId == 'appeals'
+                    ? session.isAuthenticated
+                          ? const AppealHistoryScreen(embedded: true)
+                          : const SignInRequired(
+                              message: 'Sign in to view your appeals.',
+                              returnTo: '/?feed=appeals',
+                            )
+                    : _selectedId == '_custom'
+                    ? _emptyCustomFeeds(
+                        customState.isLoading || entitlements.isLoading,
+                        customState.hasError || entitlements.hasError,
+                      )
+                    : !ids.contains(_selectedId)
+                    ? Center(
+                        child: Text(
+                          customState.isLoading || entitlements.isLoading
+                              ? 'Loading your feed'
+                              : 'This feed is unavailable. Choose another feed.',
+                        ),
+                      )
+                    : FeedSwipeRegion(
+                        onFeedStep: !ref.watch(horizontalSwipeEnabledProvider)
+                            ? null
+                            : (step) {
+                                final index = ids.indexOf(_selectedId);
+                                final next = index + step;
+                                if (index >= 0 &&
+                                    next >= 0 &&
+                                    next < ids.length) {
+                                  _selectId(ids[next]);
+                                }
+                              },
+                        child: PageView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          key: ValueKey((identity, session)),
+                          controller: _pageController,
+                          onPageChanged: (index) =>
+                              _selectId(ids[index], fromSwipe: true),
+                          itemCount: ids.length,
+                          itemBuilder: (context, index) {
+                            final id = ids[index];
+                            if (id == 'news' &&
+                                !feeds.any(
+                                  (feed) => feed.type == FeedType.news,
+                                )) {
+                              return session.isGuest
+                                  ? const SignInRequired(
+                                      message:
+                                          'Sign in to check your News access.',
+                                      returnTo: '/?feed=news',
+                                    )
+                                  : const NewsFeed(
+                                      feed: newsBoardFeedModel,
+                                      items: [],
+                                    );
+                            }
+                            final matching = feeds.where(
+                              (feed) => feed.id == id,
+                            );
+                            if (matching.isEmpty) {
+                              return const Center(
+                                child: Text('Discover unavailable'),
+                              );
+                            }
+                            return _FeedPage(
+                              key: ValueKey((id, session)),
+                              feed: matching.first,
+                              session: session,
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -310,6 +330,23 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     );
   }
 
+  String get selectedFeedId => _selectedId;
+
+  void selectFeed(String id) => _selectId(id);
+
+  void createFeed() => _createFeed();
+
+  void showTrending() => _openTrending();
+
+  void refreshFeed() {
+    final feed = _feeds.where((feed) => feed.id == _selectedId).firstOrNull;
+    if (feed != null) ref.read(liveFeedStateProvider(feed).notifier).refresh();
+  }
+
+  void openFeedControls() => _openFeedControl();
+
+  void showAppeals() => _selectId('appeals');
+
   void _openFeedControl() {
     if (_feedControlsOpen) return;
     final session = ref.read(feedReadSessionProvider);
@@ -350,6 +387,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                     child: FeedControlPanel(
                       availableFeeds: available,
                       selectedFeedId: _selectedId,
+                      onCreateCustom: () {
+                        Navigator.of(sheetContext).pop();
+                        if (session.isCurrent) _createFeed();
+                      },
                       onSelect: (feed) {
                         Navigator.of(sheetContext).pop();
                         if (session.isCurrent) _selectId(feed.id);
@@ -366,7 +407,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     ).whenComplete(() {
       _feedControlsOpen = false;
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
-        _feedControlsFocus.requestFocus();
+        (widget.feedControlsFocusNode ?? _feedControlsFocus).requestFocus();
       }
     });
   }
@@ -381,21 +422,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const TrendingFeedScreen()));
   }
-
-  void _openSearch() {
-    final router = GoRouter.maybeOf(context);
-    if (router != null) {
-      router.go('/search');
-      return;
-    }
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const FeedSearchScreen()));
-  }
 }
 
-class _OwnSubmissions extends ConsumerWidget {
-  const _OwnSubmissions();
+class OwnSubmissionsMenu extends ConsumerWidget {
+  const OwnSubmissionsMenu({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -560,6 +590,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     switch (feed.type) {
       case FeedType.discover:
         return DiscoverFeed(
+          showContext: false,
           controller: controller,
           feed: feed,
           items: items,
@@ -764,6 +795,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
         builder: (_) => ContentEditorScreen(
           contentId: item.interactionPostId ?? item.id,
           text: item.body,
+          declaredCreationMode: item.declaredCreationMode,
         ),
       ),
     );

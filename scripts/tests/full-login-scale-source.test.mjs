@@ -5,6 +5,7 @@ import {originalRunApp,wrappedRunApp,wrapProductionTextScale} from './full-login
 test('scale twin keeps the entire production bootstrap and router outside its root wrapper',async()=>{
  const source=await readFile('lib/main.dart','utf8'),wrapped=wrapProductionTextScale(source);
  assert.equal(wrapped.replace(wrappedRunApp,originalRunApp),source);
+ assert.ok(wrapped.includes('pendingInviteCodeProvider.overrideWith((ref) => startupInviteCode)'));
  assert.ok(wrapped.includes('await crashReporting.initialize();'));
  assert.ok(wrapped.includes('MaterialApp.router('));
  assert.ok(!source.includes('DIAGNOSTIC_TEXT_SCALE'));

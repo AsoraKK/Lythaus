@@ -1,5 +1,6 @@
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_submission_gate.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
@@ -44,27 +45,33 @@ void main() {
     );
   });
 
-  testWidgets('authenticated users can compose and submit when valid', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [canCreatePostProvider.overrideWithValue(true)],
-        child: const MaterialApp(home: CreatePostScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'authenticated users can compose while publication remains unavailable',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [canCreatePostProvider.overrideWithValue(true)],
+          child: const MaterialApp(home: CreatePostScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Please sign in to create a post.'), findsNothing);
-    await tester.enterText(find.byType(TextField).first, 'Hello Lythaus');
-    await tester.pump();
-    await tester.tap(find.text('Human-authored'));
-    await tester.pump();
+      expect(find.text('Please sign in to create a post.'), findsNothing);
+      await tester.enterText(find.byType(TextField).first, 'Hello Lythaus');
+      await tester.pump();
+      expect(find.text('Human-authored'), findsNothing);
+      expect(find.text('AI-assisted'), findsNothing);
+      expect(find.text(contentSubmissionUnavailableMessage), findsOneWidget);
 
-    final postButton = find.widgetWithText(FilledButton, 'Post');
-    expect(postButton, findsOneWidget);
-    expect(tester.widget<FilledButton>(postButton).onPressed, isNotNull);
-  });
+      final postButton = find.widgetWithText(FilledButton, 'Post');
+      expect(postButton, findsOneWidget);
+      expect(tester.widget<FilledButton>(postButton).onPressed, isNull);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        'Hello Lythaus',
+      );
+    },
+  );
 
   testWidgets('guest users cannot open composer tab from app shell', (
     tester,
@@ -128,6 +135,6 @@ void main() {
 
     expect(find.text('Sign in to create a post.'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
-    expect(find.text('Create Post'), findsNothing);
+    expect(find.text('New post'), findsNothing);
   });
 }

@@ -5,7 +5,7 @@ import {regionPixels} from './full-login-pixels.mjs';
 import {refreshUrl,loginFixtureResponse} from './brand-login-transport.mjs';
 
 export const originalCaptureEvents=['pointerdown','pointerup','mousedown','mouseup','touchstart','touchend','keydown','keyup','beforeinput','input','change','wheel','scroll','resize','focusin'];
-export const onboardingCopy=['Welcome to Lythaus','The authentic social network. Curated feeds, credible voices, and calm interactions.','Before you post','Choose Human-authored or AI-assisted before posting.','AI-generated public content cannot be posted.','AI-assisted public text is limited to 249 user-perceived characters.','Disclosure conflicts may enter Under review.','Appeal outcomes are recorded by Lythaus.','This is an invite-only Alpha.','Continue'];
+export const onboardingCopy=['Welcome to Lythaus','The authentic social network. Curated feeds, credible voices, and calm interactions.','Before you post','AI-generated or AI-edited media cannot be posted.','AI-generated text is allowed up to 250 user-perceived characters.','Posts may remain under review until publication checks are complete.','Appeal outcomes are recorded by Lythaus.','This is an invite-only Alpha.','Continue'];
 export async function waitForOriginalDwell(page,anchor,dwell){
  assert.ok(Number.isFinite(anchor)&&Number.isFinite(dwell)&&anchor>=0&&dwell>=0);
  await page.waitForFunction(({anchor,dwell})=>performance.now()-anchor>=dwell,{anchor,dwell},{polling:10});
@@ -59,8 +59,9 @@ export function assertUntouchedPresentation(state,presentationAt){
 export function assertOnboardingLayout(layout,{scale,theme,width},reference){
  assert.ok(['light','dark'].includes(theme),'Both OS colour preferences remain covered');
  assert.equal(layout.visibleAuthChoices,0);assert.equal(layout.screens.length,1);
- const screen=layout.screens[0];assert.equal(screen.scale,scale);assert.equal(screen.theme,'dark','Consumer presentation stays charcoal for either OS preference');assert.equal(screen.disableAnimations,true);
+ const screen=layout.screens[0];assert.equal(screen.scale,scale);assert.equal(screen.theme,theme,'Onboarding follows the requested OS colour preference');assert.equal(screen.disableAnimations,true);
  assert.equal(screen.bounds.width,width);assert.equal(screen.bounds.height,960);assert.equal(screen.brands.length,1);
+ assert.doesNotMatch(Object.keys(screen.texts).join('\n'),/Human-authored|AI-assisted/,'Authorship-selection copy stays absent');
  for(const text of onboardingCopy)assert.ok(screen.texts[text],text);
  for(const rect of [screen.bounds,...screen.brands,...Object.values(screen.texts)])assert.ok(Object.values(rect).every(Number.isFinite)&&rect.width>0&&rect.height>0,'Finite nonempty fractional geometry');
  if(reference)assert.deepEqual(screen,reference,'Component geometry exactly matches the original static reference');

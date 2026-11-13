@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { collectWorkflowActionPinFailures, findUnpinnedActions } from '../validate-workflow-action-pins.mjs';
@@ -15,6 +15,18 @@ test('workflow action pin validator rejects mutable tags', () => {
 
 test('all repository workflows use immutable action references', () => {
   assert.deepEqual(collectWorkflowActionPinFailures(), []);
+});
+
+test('pinned Gitleaks download keeps its scan and fallback with bounded retries', () => {
+  const secretScan = readFileSync('scripts/secret-scan.sh', 'utf8');
+  assert.match(secretScan, /VERSION="\$\{GITLEAKS_VERSION:-8\.18\.0\}"/);
+  assert.match(secretScan, /ARCHIVE="gitleaks_\$\{VERSION\}_linux_x64\.tar\.gz"/);
+  assert.ok(secretScan.includes('https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${ARCHIVE}'));
+  assert.match(secretScan, /curl --fail --silent --show-error --location/);
+  assert.match(secretScan, /--retry 3 --retry-delay 2 --retry-max-time 30/);
+  assert.match(secretScan, /echo "Attempting docker fallback"/);
+  assert.match(secretScan, /exec docker run --rm -v "\$ROOT_DIR:\/repo" -w \/repo zricethezav\/gitleaks:8\.18\.0 detect/);
+  assert.match(secretScan, /exec "\$GITLEAKS_BIN" detect --no-banner --redact --config/);
 });
 
 test('named steps and composite actions cannot bypass immutable action pins', t => {

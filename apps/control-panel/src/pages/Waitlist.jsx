@@ -22,6 +22,7 @@ const WAITLIST_GUIDE = {
 function Waitlist() {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState({ totalWaiting: null, last7Days: null, last24Hours: null });
+  const [inviteFeatureEnabled, setInviteFeatureEnabled] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [filters, setFilters] = useState({ q: '', status: '', source: '', createdAfter: '', createdBefore: '' });
   const [appliedFilters, setAppliedFilters] = useState({ q: '', status: '', source: '', createdAfter: '', createdBefore: '' });
@@ -56,18 +57,19 @@ function Waitlist() {
       if (requestId !== listRequestId.current) return;
       if (!response || !Array.isArray(response.items) || !response.summary) throw new Error('invalid_waitlist_response');
       setItems((current) => append ? [...current, ...response.items] : response.items);
+      setInviteFeatureEnabled(response.inviteFeatureEnabled === true);
       setSummary({ totalWaiting: Number(response.summary.totalWaiting ?? 0), last7Days: Number(response.summary.last7Days ?? 0), last24Hours: Number(response.summary.last24Hours ?? 0) });
       setNextCursor(response.nextCursor || null);
     } catch (requestError) {
       if (requestId !== listRequestId.current) return;
       if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSummary({ totalWaiting: null, last7Days: null, last24Hours: null });
+        setItems([]); setNextCursor(null); setInviteFeatureEnabled(false); setSummary({ totalWaiting: null, last7Days: null, last24Hours: null });
         setError(requestError.status === 403 ? 'Administrator access is required to view waitlist contacts.' : 'Sign in through approved admin access to view waitlist contacts.');
       } else if (requestError.payload?.error === 'waitlist_search_limit_exceeded') {
         setItems([]); setNextCursor(null);
         setError('This exact-email search reached the 1,000-contact scan limit. Narrow the status, source, or date filters and try again.');
       } else {
-        if (!append) { setItems([]); setNextCursor(null); }
+        if (!append) { setItems([]); setNextCursor(null); setInviteFeatureEnabled(false); }
         setError('Waitlist data could not be loaded.');
       }
     } finally {
@@ -140,11 +142,13 @@ function Waitlist() {
     let resultMessage = 'Action recorded.';
     try {
       if (operation === 'status') {
-        const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}/status`, { method: 'POST', body: { status: item.nextStatus, reasonCode: normalizedReason, confirmation } });
-        setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, status: response.status } : entry));
-        if (item.nextStatus === 'unsubscribed') resultMessage = item.retentionHold
-          ? 'Unsubscribed. Purge is blocked by the active retention hold.'
-          : 'Unsubscribed. A retention-aware purge request was recorded.';
+        throw new Error('waitlist_status_managed');
+      } else if (operation === 'invite') {
+        const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}/invite`, {
+          method: 'POST', body: { reasonCode: normalizedReason, confirmation }, headers: { 'Idempotency-Key': idempotencyKey() },
+        });
+        setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, inviteDeliveryState: response.deliveryState } : entry));
+        resultMessage = 'Invitation queued. Waitlist status changes only after provider acceptance.';
       } else if (operation === 'hold') {
         const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}/retention-hold`, { method: 'POST', body: { active: item.nextActive, reasonCode: normalizedReason, confirmation } });
         setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, retentionHold: response.retentionHold } : entry));
@@ -235,6 +239,7 @@ function Waitlist() {
       </LythCard>
 
       <LythCard variant="panel" className="waitlist-table-panel">
+        {!loading && !error && !inviteFeatureEnabled ? <p className="muted" role="status">Invite sending is disabled until the invitation schema and email flow are enabled.</p> : null}
         {loading ? <p className="waitlist-loading" role="status" aria-live="polite">Loading waitlist...</p> : null}
         {loadingMore ? <p role="status" aria-live="polite">Loading more waitlist contacts...</p> : null}
         {error ? <div className="notice error" role="alert"><strong>{error}</strong><span>Try again. If the problem continues, check the admin API status.</span></div> : null}
@@ -243,7 +248,14 @@ function Waitlist() {
         {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table ref={listRef} className="waitlist-table" aria-label="Waitlist contacts" aria-busy={loadingMore} tabIndex={-1}><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
           <td>{item.email}</td><td><span className={`waitlist-status ${String(item.status).toLowerCase()}`}>{item.status}</span><span className="muted">{item.retentionHold ? 'Retention hold active' : ''}</span></td><td>{item.source}</td><td>{formatDateTime(item.createdAt)}</td><td><AccountLinkStatus item={item} value={linkedAccounts[item.id]} access={supportAccess} busy={linkLookupBusyId === item.id} onCheck={checkAccountLink} /></td>
           <td><div className="waitlist-actions">
-            <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', `UPDATE WAITLIST STATUS ${item.id} TO ${event.target.value.toUpperCase()}`)} disabled={loading || loadingMore || updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option>{item.status === 'waiting' ? <option value="invited">Invited</option> : null}{['waiting', 'invited'].includes(item.status) ? <option value="converted">Converted</option> : null}</select>
+            {((item.status === 'waiting' && ['not_invited', 'expired', 'failed'].includes(item.inviteDeliveryState || 'not_invited'))
+              || (item.status === 'invited' && ['expired', 'failed'].includes(item.inviteDeliveryState))) && !item.retentionHold && inviteFeatureEnabled
+              ? <LythButton variant="secondary" type="button" onClick={() => beginAction(item, 'invite', `SEND WAITLIST INVITE ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>{item.inviteDeliveryState === 'not_invited' ? 'Send invite' : 'Reissue invite'}</LythButton>
+              : item.status === 'waiting' && !item.retentionHold && !inviteFeatureEnabled
+                ? <span className="waitlist-invite-state" aria-label="Invite delivery: feature disabled">Invites disabled</span>
+              : <span className={`waitlist-invite-state ${String(item.inviteDeliveryState || 'not_invited').replaceAll('_', '-')}`} aria-label={`Invite delivery: ${item.inviteDeliveryState || 'not invited'}`}>
+                {item.inviteDeliveryState === 'provider_accepted' ? 'Email accepted by provider' : item.inviteDeliveryState === 'delivered' ? 'Email delivered' : item.inviteDeliveryState === 'queued' || item.inviteDeliveryState === 'processing' ? 'Invite queued' : item.inviteDeliveryState === 'revoked' ? 'Invite revoked' : item.inviteDeliveryState === 'redeemed' ? 'Invite used' : item.inviteDeliveryState === 'delivery_attention' ? 'Delivery needs review' : item.inviteDeliveryState === 'not_invited' ? 'Not invited' : item.inviteDeliveryState || 'Status unavailable'}
+              </span>}
             <LythButton variant="ghost" type="button" onClick={() => beginAction({ ...item, nextActive: !item.retentionHold }, 'hold', `${item.retentionHold ? 'RELEASE' : 'PLACE'} RETENTION HOLD ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>{item.retentionHold ? 'Release hold' : 'Place hold'}</LythButton>
             <LythButton variant="ghost" type="button" onClick={() => beginAction(item, 'edit', `UPDATE WAITLIST ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>Edit source</LythButton>
             <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `UNSUBSCRIBE AND REQUEST PURGE ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>Unsubscribe + request purge</LythButton>
@@ -275,6 +287,7 @@ function waitlistActionSummary(action, editSource) {
     return `Unsubscribe and record a retention-aware purge request for this contact. Current status: ${item.status}; requested status: unsubscribed. An active retention hold blocks purge; this action does not immediately delete the contact.`;
   }
   if (operation === 'status') return `Change status from ${item.status} to ${item.nextStatus}.`;
+  if (operation === 'invite') return `Send a one-time, email-bound Lythaus signup code to ${item.email}.${item.inviteDeliveryState && item.inviteDeliveryState !== 'not_invited' ? ' This replacement invalidates the previous code.' : ''} The waitlist will be marked invited only after the email provider accepts the message.`;
   if (operation === 'hold') return `${item.nextActive ? 'Place' : 'Release'} the retention hold for this contact.`;
   if (operation === 'edit') return `Change source from ${item.source || 'none'} to ${editSource || 'none'}.`;
   return `Unsubscribe this contact and record a retention-aware purge request. Current status: ${item.status}; resulting status: unsubscribed. An active retention hold blocks purge; this action does not immediately delete the contact.`;

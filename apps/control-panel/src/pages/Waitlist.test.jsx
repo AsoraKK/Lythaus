@@ -16,8 +16,10 @@ const firstPage = {
     source: 'lythaus.co',
     createdAt: '2026-08-14T07:00:00.000Z',
     retentionHold: false,
+    inviteDeliveryState: 'not_invited',
   }],
   nextCursor: 'next-page',
+  inviteFeatureEnabled: true,
   summary: { totalWaiting: 123, last7Days: 18 }
 };
 
@@ -62,6 +64,80 @@ describe('Waitlist', () => {
     render(<Waitlist />);
     expect(await screen.findByText('Waitlist data could not be loaded.')).toBeInTheDocument();
     expect(screen.queryByText('database stack detail')).not.toBeInTheDocument();
+  });
+
+  it('keeps waitlist viewing available while invitation sending is disabled', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({ ...firstPage, inviteFeatureEnabled: false }));
+    render(<Waitlist />);
+    expect(await screen.findByText('person@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Invite sending is disabled');
+    expect(screen.getByText('Invites disabled')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send invite' })).not.toBeInTheDocument();
+  });
+
+  it('shows a revoked invite state without offering a duplicate send action', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({
+      ...firstPage,
+      items: [{ ...firstPage.items[0], inviteDeliveryState: 'revoked' }],
+    }));
+    render(<Waitlist />);
+    expect(await screen.findByText('person@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Invite revoked')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send invite' })).not.toBeInTheDocument();
+  });
+
+  it('offers a confirmed reissue for an expired invite and explains that the old code stops working', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({
+      ...firstPage,
+      items: [{ ...firstPage.items[0], status: 'invited', inviteDeliveryState: 'expired' }],
+    }));
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    fireEvent.click(screen.getByRole('button', { name: 'Reissue invite' }));
+    expect(screen.getByRole('note')).toHaveTextContent('This replacement invalidates the previous code.');
+    expect(screen.getByLabelText('Waitlist confirmation')).toHaveAttribute('placeholder', `SEND WAITLIST INVITE ${waitlistId}`);
+  });
+
+  it('does not offer a first send for a legacy invited row without invite delivery history', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({
+      ...firstPage,
+      items: [{ ...firstPage.items[0], status: 'invited', inviteDeliveryState: 'not_invited' }],
+    }));
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    expect(screen.queryByRole('button', { name: 'Send invite' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reissue invite' })).not.toBeInTheDocument();
+  });
+
+  it('offers the first invite only for a waiting row without invite history', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve(firstPage));
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    expect(screen.getByRole('button', { name: 'Send invite' })).toBeInTheDocument();
+  });
+
+  it('does not offer reissue when a failed send has uncertain or permanent provider outcome', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({
+      ...firstPage,
+      items: [{ ...firstPage.items[0], inviteDeliveryState: 'delivery_attention' }],
+    }));
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    expect(screen.getByText('Delivery needs review')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reissue invite' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer reissue for bounced, rejected, or complained addresses', async () => {
+    for (const inviteDeliveryState of ['bounced', 'rejected', 'complained']) {
+      adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({
+        ...firstPage,
+        items: [{ ...firstPage.items[0], status: 'invited', inviteDeliveryState }],
+      }));
+      const view = render(<Waitlist />);
+      await screen.findByText('person@example.com');
+      expect(screen.queryByRole('button', { name: 'Reissue invite' })).not.toBeInTheDocument();
+      view.unmount();
+    }
   });
 
   it('offers a retry after a list error and loads the authorized list', async () => {
@@ -177,32 +253,34 @@ describe('Waitlist', () => {
     expect(document.activeElement).toBe(screen.getByRole('table', { name: 'Waitlist contacts' }));
   });
 
-  it('updates status and a retention hold without exposing implementation detail', async () => {
+  it('sends an email-bound invite and changes waitlist state only from delivery evidence', async () => {
     adminRequest.mockImplementation((path) => {
       if (path === 'account-support/access') return ownerDenied();
       if (path === 'waitlist') return Promise.resolve(firstPage);
-      if (path.endsWith('/status')) return Promise.resolve({ id: firstPage.items[0].id, status: 'invited' });
+      if (path.endsWith('/invite')) return Promise.resolve({ id: firstPage.items[0].id, deliveryState: 'queued' });
       if (path.endsWith('/retention-hold')) return Promise.resolve({ id: firstPage.items[0].id, retentionHold: true });
       return Promise.reject(new Error('Unexpected test route'));
     });
     render(<Waitlist />);
     await screen.findByText('person@example.com');
-    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(screen.getByRole('note')).toHaveTextContent('person@example.com');
-    expect(screen.getByText('Change status from waiting to invited.')).toBeInTheDocument();
+    expect(screen.getByText(/email-bound Lythaus signup code/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'BETA_INVITE' } });
-    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `UPDATE WAITLIST STATUS ${waitlistId} TO INVITED` } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `SEND WAITLIST INVITE ${waitlistId}` } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(screen.getByText('invited', { selector: 'span.waitlist-status' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('Invite delivery: queued')).toBeInTheDocument());
+    expect(screen.getByText('waiting', { selector: 'span.waitlist-status' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Place hold' }));
     expect(screen.getByText('Place the retention hold for this contact.')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'RETENTION_REVIEW' } });
     fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `PLACE RETENTION HOLD ${waitlistId}` } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Release hold' })).toBeInTheDocument());
-    expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/status`, {
-      method: 'POST', body: { status: 'invited', reasonCode: 'BETA_INVITE', confirmation: `UPDATE WAITLIST STATUS ${waitlistId} TO INVITED` }
-    });
+    expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/invite`, expect.objectContaining({
+      method: 'POST', body: { reasonCode: 'BETA_INVITE', confirmation: `SEND WAITLIST INVITE ${waitlistId}` },
+      headers: { 'Idempotency-Key': expect.any(String) },
+    }));
     expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/retention-hold`, {
       method: 'POST', body: { active: true, reasonCode: 'RETENTION_REVIEW', confirmation: `PLACE RETENTION HOLD ${waitlistId}` }
     });
@@ -213,7 +291,7 @@ describe('Waitlist', () => {
     render(<Waitlist />);
     await screen.findByText('person@example.com');
 
-    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(screen.getByRole('heading', { name: 'Confirm waitlist action' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Search waitlist by exact email'), { target: { value: 'other@example.com' } });
 
@@ -233,7 +311,7 @@ describe('Waitlist', () => {
     render(<Waitlist />);
     await screen.findByText('person@example.com');
 
-    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send invite' }));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(screen.queryByRole('heading', { name: 'Confirm waitlist action' })).not.toBeInTheDocument();
 
@@ -249,15 +327,15 @@ describe('Waitlist', () => {
     adminRequest.mockImplementation((path) => {
       if (path === 'account-support/access') return ownerDenied();
       if (path === 'waitlist') return Promise.resolve(firstPage);
-      if (path.endsWith('/status')) return Promise.reject(Object.assign(new Error('Denied'), { status: 403 }));
+      if (path.endsWith('/invite')) return Promise.reject(Object.assign(new Error('Denied'), { status: 403 }));
       return Promise.reject(new Error('Unexpected test route'));
     });
     render(<Waitlist />);
     await screen.findByText('person@example.com');
 
-    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send invite' }));
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'BETA_INVITE' } });
-    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `UPDATE WAITLIST STATUS ${waitlistId} TO INVITED` } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `SEND WAITLIST INVITE ${waitlistId}` } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required');

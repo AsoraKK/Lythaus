@@ -17,7 +17,17 @@ against the JSON. Flutter does not fetch or parse design tokens at runtime.
 
 Web support surfaces consume the JSON in their opt-in layout. Share semantic roles
 and values across platforms; use native Material and HTML controls for behavior.
-The application continues to use its existing theme preference and persistence.
+The application watches `themeModeProvider` from
+`state/providers/theme_mode_provider.dart`. Its default is `ThemeMode.system`;
+the Material application follows platform brightness until explicitly overridden.
+Shell controls call
+`ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light)` (or `dark` /
+`system`). The returned boolean reports persistence success; false means the
+choice remains active for the current session only. Appearance is a device-local
+preference shared by guest and signed-in sessions, stored under
+`lythaus.appearance.mode.v1` using the existing secure-storage convention. It is
+not a backend/account preference. Pending initial reads cannot override a new
+choice, and rapid changes persist in order.
 
 `LythAvatar` reserves its diameter and uses an account initial during loading or
 image failure. It leaves the source media unchanged. Reaction controls use native
@@ -34,7 +44,7 @@ labels remain distinct from authorship and private reputation.
 | text | `onSurface` | Primary reading text |
 | secondary | `onSurfaceVariant` | Supporting prose and icons |
 | muted | `semanticColors['muted']` | Metadata; tested on every reading surface |
-| accent / onAccent | `primary / onPrimary` | Links, focus and primary filled actions |
+| accent / onAccent | `primary / onPrimary` | Readable emphasis, links and controls |
 | selection / onSelection | `primaryContainer / onPrimaryContainer` | Selected destinations and filters |
 | border | `outlineVariant` | Decorative dividers, non-interactive card edges |
 | control | `outline` | Essential field, control and interactive-card boundaries |
@@ -43,10 +53,20 @@ labels remain distinct from authorship and private reputation.
 | dangerSurface | `errorContainer` | Error feedback surface |
 | success, warning, info | `semanticColors[role]` | Distinct feedback with matching `roleSurface` |
 
-Dark references are canvas `#070706`, text `#F2EEE3`, secondary `#C9C3B7`,
-muted `#A09A8F`, accent `#F2C98D`. Light uses warm paper `#F7F4EC` and deep
-amber `#80551F` for readable small links and controls. Do not use pale amber as
-small text on a light surface.
+Both themes use only the approved palette: charcoal `#242321`, raised charcoal
+`#302E2B`, offwhite `#F5F3EE`, and amber `#EFC58D`. Dark uses charcoal surfaces,
+offwhite text and amber emphasis. Light uses offwhite surfaces with charcoal
+text, links, selected indicators and focus. Its selected containers remain
+offwhite so existing readable text and charcoal selection indicators contrast.
+Filled and elevated primary buttons retain the exact amber brand fill with
+charcoal labels in both modes; they intentionally differ from light-mode
+`colorScheme.primary`. Never use amber as small text on an offwhite surface.
+
+`LythBrand` defaults to `colorScheme.onSurface`. A dark masthead in a light page
+can pass `foreground: LythSemanticColors.text`. Tinting preserves the approved
+SVG geometry and aspect ratio; assets and outlines must not be modified.
+The loading wordmark stays static and charcoal in light mode. Dark mode retains
+the approved animation and its existing reduced-motion/lifecycle guards.
 
 Enabled text pairs are tested at 4.5:1; essential boundaries and focus are tested
 at 3:1 across canvas, surface and raised surfaces. Decorative dividers and

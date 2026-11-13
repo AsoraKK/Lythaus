@@ -119,7 +119,7 @@ class _PresentationPreferencesSectionState
               ),
             ),
           SwitchListTile(
-            title: const Text('Swipe between profile tabs'),
+            title: const Text('Swipe between feeds and profile tabs'),
             subtitle: const Text('Tabs remain available when swipe is off.'),
             value: swipe,
             onChanged: editable

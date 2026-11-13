@@ -423,16 +423,16 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     await fixture.insertChallenge(user.id, validToken, 'valid');
 
     for (const token of [expiredToken, supersededToken]) {
-      const stale = await fixture.request('/api/auth/email/verify', { token, password: ownerPassword });
+      const stale = await fixture.request('/api/auth/email/verify', { token, email, password: ownerPassword });
       assertPrivateError(stale, await stale.json(), 400, 'verification_token_invalid');
       assert.equal((await fixture.account(email)).verified_at, null, 'stale evidence cannot verify or replace the credential');
     }
 
-    const verified = await fixture.request('/api/auth/email/verify', { token: validToken, password: ownerPassword });
+    const verified = await fixture.request('/api/auth/email/verify', { token: validToken, email, password: ownerPassword });
     assert.equal(verified.status, 200);
     assert.deepEqual(await verified.json(), { state: 'verified' });
     assert.ok((await fixture.account(email)).verified_at);
-    const replayedProof = await fixture.request('/api/auth/email/verify', { token: validToken, password: ownerPassword });
+    const replayedProof = await fixture.request('/api/auth/email/verify', { token: validToken, email, password: ownerPassword });
     assertPrivateError(replayedProof, await replayedProof.json(), 400, 'verification_token_invalid');
     assert.equal(await fixture.sessionCount(user.id), 0, 'verification does not silently create an authenticated session');
 
@@ -470,7 +470,7 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
       const verificationMessage = await fixture.emailEnvelope(email, 'verification');
       assert.equal(verificationMessage.to, email);
       const verified = await fixture.request('/api/auth/email/verify', {
-        token: verificationMessage.token, password: ownerPassword,
+        token: verificationMessage.token, email, password: ownerPassword,
       });
       assert.equal(verified.status, 200);
       assert.deepEqual(await verified.json(), { state: 'verified' });
@@ -727,6 +727,7 @@ async function createFixture() {
     bindings: {
       DB_APP_FRESH: { role: 'lythaus_runtime' },
       ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
+      WAITLIST_INVITES_REQUIRED: 'false',
       CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
       WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-auth-workerd' },
       AUTH_PASSWORD_PEPPER_V1: randomBytes(32).toString('base64'),
