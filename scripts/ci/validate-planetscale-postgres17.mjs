@@ -5,6 +5,7 @@ import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
 import { applyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-contract.mjs';
+import { isAllowedLocalPostgres17Host } from './postgres17-host-policy.mjs';
 
 const { Client } = pg;
 
@@ -26,7 +27,7 @@ const root = process.cwd();
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '';
 if (!connectionString) throw new Error('PLANETSCALE_PG17_TEST_DATABASE_URL is required for the local PostgreSQL 17 compatibility test');
 const connection = new URL(connectionString);
-if (!['localhost', '127.0.0.1', '::1'].includes(connection.hostname)) throw new Error('PostgreSQL 17 compatibility validation refuses non-local database hosts');
+if (!isAllowedLocalPostgres17Host(connection.hostname)) throw new Error('PostgreSQL 17 compatibility validation refuses non-local database hosts');
 
 const { migrations } = loadApprovedMigrations({ root });
 const client = new Client({ connectionString, ssl: false });

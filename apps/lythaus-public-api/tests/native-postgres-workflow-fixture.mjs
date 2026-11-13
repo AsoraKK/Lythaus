@@ -5,10 +5,11 @@ import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { installReputationLockFunctionFixture } from '../../lythaus-jobs/tests/helpers/install-reputation-lock-fixture.mjs';
+import { isAllowedLocalPostgres17Host } from '../../../scripts/ci/postgres17-host-policy.mjs';
 
 export async function nativePostgresPrivacyWorkflowFixture(connectionString, { supportPolicy, onStep, afterQuery } = {}) {
   const target = new URL(connectionString);
-  assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
+  assert.ok(isAllowedLocalPostgres17Host(target.hostname));
   assert.ok(target.pathname.startsWith('/lythaus_auth_test') || target.pathname.startsWith('/lythaus_support_test_workflow_')
     || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'));
   const installer = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });

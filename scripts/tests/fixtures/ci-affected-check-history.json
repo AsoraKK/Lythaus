@@ -1,0 +1,57 @@
+{
+  "sampleWindow": "2026-09-26 through 2026-10-26 UTC",
+  "selection": "Two pull-request revisions from the committed 25-run baseline; base SHA is the recorded one-commit parent.",
+  "replays": [
+    {
+      "runId": "37043700409",
+      "sourceCategory": "security_success",
+      "sourceConclusion": "success",
+      "eventName": "pull_request",
+      "baseSha": "5e560bb0e6060f48badf3eb0a5402f0b9e1173b1",
+      "headSha": "a98eb99ca90062972e4343cac3d1cf03b127f46c",
+      "changedPaths": [
+        ".github/workflows/ci.yml",
+        "ml/datasets/tools/materialise/README.md",
+        "ml/datasets/tools/materialise/materialise.mjs",
+        "ml/datasets/tools/materialise/read-source.mjs",
+        "packages/authenticity/tests/wp003.test.mjs",
+        "scripts/tests/file-io-security.test.mjs",
+        "scripts/trim-trailing-whitespace.js"
+      ],
+      "expectedRecommendation": "FULL",
+      "expectedSelectedSuites": [
+        "CodeQL JavaScript TypeScript",
+        "Dependency audit",
+        "Disabled activity pilot integration",
+        "Flutter analyze and test",
+        "Native Workers and PlanetScale",
+        "OpenAPI contract",
+        "Repository hygiene",
+        "Web frontends",
+        "Workflow lint",
+        "dependency-review",
+        "scan"
+      ]
+    },
+    {
+      "runId": "40024806174",
+      "sourceCategory": "application_cancelled",
+      "sourceConclusion": "cancelled",
+      "eventName": "pull_request",
+      "baseSha": "0f069a27108e713e375ae6431ebf14065c45cca1",
+      "headSha": "eb80a1598b2c65af6ef8aafec3bef5f1b232340c",
+      "changedPaths": [
+        "apps/marketing-site/package-lock.json"
+      ],
+      "expectedRecommendation": "AFFECTED_ONLY_CANDIDATE",
+      "expectedSelectedSuites": [
+        "CodeQL JavaScript TypeScript",
+        "Dependency audit",
+        "Repository hygiene",
+        "Web frontends",
+        "dependency-review",
+        "scan"
+      ]
+    }
+  ]
+}

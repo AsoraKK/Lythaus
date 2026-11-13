@@ -3,12 +3,13 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { isAllowedLocalPostgres17Host } from '../../../scripts/ci/postgres17-host-policy.mjs';
 
 // Actual dispatchers and auth execute in workerd. Only database transport is
 // replaced by disposable PG17 connections under the real restricted roles.
 export async function nativePostgresActivityFixture(connectionString, kind, bindings) {
   const target = new URL(connectionString);
-  assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
+  assert.ok(isAllowedLocalPostgres17Host(target.hostname));
   assert.match(target.pathname, /^\/lythaus_auth_test_activity_integration_[a-f0-9]+$/);
   assert.ok(['public', 'admin', 'jobs'].includes(kind));
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
