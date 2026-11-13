@@ -42,8 +42,8 @@ budget admission, and a new explicit action packet. No gate is waived.
 Execution is restricted to protected current main in repository ID 1010752912,
 attempt 1, a named human's normal production approval, and an exact approval
 record. Every prior execute run in the complete workflow history blocks another
-execution, even across SHAs. The only reconciled prior executions are the four
-exact pinned runs #7, #8, #9 and #12; complete history must include all four and every other
+execution, even across SHAs. The only reconciled prior executions are the five
+exact pinned runs #7, #8, #9, #12 and #14; complete history must include all five and every other
 non-plan execution blocks. Run #7 (`40184823787`, SHA
 `43829abc3424a88a22826695bbfdc7be4a116e62`) must remain a terminal cancellation
 with no production approval, one terminal job with no runner and an explicit
@@ -67,6 +67,54 @@ the target. These pinned reconciliations never permit retry after any other
 runner or step sequence, or after an uncertain provider mutation. Run #12 is
 bound to its original denied reset and reviewed cleanup #2 as described below;
 it remains FAILED and NOT_CERTIFIED.
+
+Run #14 (`40470687953`, attempt 1, workflow `394786946`, source SHA
+`8dd80c4734ac5dad57c4e7338660b4e629c58da1`) is reconciled only with its exact
+reviewed cleanup run #3 (`40475075010`, attempt 1, workflow `394840164`, job
+`122091204998`). The retained cleanup log binds evidence commit
+`cd7512a19353874586cc0573b97158a8086b6468`, historical record hash
+`c8af5a2658260bfd1999db2c692da4ab26571c774b8f18a75374214b196b1ca1`, target
+`p5953kdp72ac`, final artifact `12720920605`, and the result
+`DELETED_AND_READBACK_VERIFIED` with `recoveryCertified:false`. The log reports
+digest text `3b99b99de6374e227dfe8b6b63e2835d799e7335f5f862bbb5d9f00a1b43379e`
+for that cleanup ZIP. The runner pins these recovered log statements in
+source; it does not fetch or parse the old logs at runtime. The artifact and
+original qualification ZIP are no longer available, so neither digest is
+byte-verified. The checked-in qualification
+report does match SHA-256
+`741b984dc35cf651156bdb99a9abedb9c4fef04b27a0f0ccc7413e82e343f354`; the
+original qualification ZIP digest `7e66ea427d9804594946aa71bb9321c6d4f25a906dfd59eef17d6b43e2c6583f`
+remains pinned text only. Current evidence record
+`8658fad0d90b44b94ac7c2def552f3cbae10e7c05fb6420f2b5fb6fd2ea2bcda` verifies
+against its canonical hash and remains qualification-only; the linked report
+states `NOT_CERTIFIED`. Its owner testing RPO/RTO acceptance is dated after cleanup and does not measure actual
+transaction loss or full production failover RTO. Independent recovery remains
+unresolved. This history entry is bookkeeping for one exact cleanup event, not
+current restore evidence or recovery certification. The runner also refuses
+the historical target ID if it reappears under any branch name. Fresh target
+absence, full branch inventory, backup restore history and protected backup
+checks remain required before a future restore. All current restore verification,
+artifact/hash review, accepted RPO/RTO, cost, operator/reviewer approval, and
+independent-recovery gates remain in force; unknown or changed executions still
+fail closed.
+
+Run #12 retains its original strict archive-metadata verifier whenever either
+qualification or cleanup archive inventory contains an artifact. A missing,
+partial, expired or changed artifact in that path still fails; a strict-path
+failure never falls back to another profile. When both complete inventories
+are empty, the separate historical log profile requires the exact original
+qualification bytes and review record preserved in Git commit
+`1f00a9f6d6df8dd88a136c8d962a7da8ba529d99`, their raw SHA-256 hashes and the
+original canonical review hash, the existing exact run/job/production-approval
+checks, PR #1119's exact head, and its unchanged owner attestation. The preserved
+cleanup log for job `121741463878` reports `DELETED_AND_READBACK_VERIFIED`; it is
+a reviewed historical statement, not a replacement ZIP. The copied original
+JSON files live under `historical-cleanup/run12`, outside the current restore
+evidence directory. No pending/final payload or original archive is recreated.
+The receipt explicitly reports all missing archive and cleanup-payload byte
+checks as false. Run #12 remains FAILED and NOT_CERTIFIED. The runner must still
+establish current target absence, and all current backup, restore, cost, review,
+RPO/RTO and independent-recovery gates remain required.
 
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`). The read-only inventory
 below recorded `muprxxetwfet` and
@@ -308,8 +356,9 @@ checks cannot reserve GitHub queue capacity. Dispatch only with a named
 available reviewer/operator and enough remaining time for the observed queue,
 all setup limits and the original two hours. A runner-started failed preflight is not eligible for the
 one pinned pre-runner cancellation. Only the exact pinned run #8 pre-create
-failure and run #9's separately verified manual deletion described above can
-be reconciled after a runner starts. No later failure is automatically eligible.
+failure, run #9's separately verified manual deletion, run #12's reviewed
+cleanup, and run #14's log-attested cleanup described above can be reconciled
+after a runner starts. No other execution is automatically eligible.
 
 For the exact 32-GiB target with zero replicas, the best available known
 compute-and-disk component is about **US$0.023971114 for two hours**. It uses
