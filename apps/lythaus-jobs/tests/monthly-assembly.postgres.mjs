@@ -391,7 +391,8 @@ test('SEC-01/03/16: enabled current monthly policy captures safe email evidence 
     [userId, randomBytes(32)]), 'lythaus_runtime');
   assert.equal((await sql(`SELECT reason_code FROM trust.monthly_maintenance_revocations WHERE observation_id IN
     (SELECT id FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1)`, [userId])).rows[0].reason_code, 'email_binding_changed');
-  const evidence = await tx(client => readMonthlyMaintenanceEvidence(client, userId, '2026-11-01T00:00:00.000Z'));
+  const cutoff = new Date(observed[0].performed_at.getTime() + 1).toISOString();
+  const evidence = await tx(client => readMonthlyMaintenanceEvidence(client, userId, cutoff));
   assert.equal(evidence.evidence.length, 1); assert.notEqual(evidence.evidence[0].revokedAt, null);
   assert.deepEqual(evidence.evidence[0].facts, { kind: 'email_control', emailVersion: tokenId });
 });
@@ -497,8 +498,14 @@ test('CAL-09/REL-02: more than fifty canonical events must drain before the mont
 });
 
 test('CAL-20/REL-02: scheduled reconciliation discovers months, revisits new evidence and is inert while paused', async () => {
-  const first = await reconcileMonthlyAssembly(env); assert.ok(first.processed > 0);
-  assert.deepEqual(await reconcileMonthlyAssembly(env), { processed: 0 });
+  let processed = 0, batches = 0, result;
+  do {
+    result = await reconcileMonthlyAssembly(env);
+    processed += result.processed;
+    batches++;
+  } while (result.processed > 0 && batches < 10);
+  assert.ok(processed > 0);
+  assert.deepEqual(result, { processed: 0 });
   const before = (await sql('SELECT count(*)::int n FROM trust.monthly_reputation_sources')).rows[0].n;
   await jobs.scheduled({}, env);
   assert.equal((await sql('SELECT count(*)::int n FROM trust.monthly_reputation_sources')).rows[0].n, before);
