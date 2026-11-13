@@ -52,6 +52,8 @@ GRANT EXECUTE ON FUNCTION privacy.set_retention_rule(uuid, uuid, text, interval,
 GRANT USAGE ON SCHEMA identity, content, moderation, trust, editorial, system TO lythaus_admin;
 GRANT SELECT, UPDATE ON identity.users TO lythaus_admin;
 GRANT SELECT ON identity.handles, identity.admin_memberships, identity.user_entitlements TO lythaus_admin;
+-- Auth summary joins verification state only; email and password material remain unreadable.
+GRANT SELECT (user_id, verified_at) ON identity.contact_emails, identity.email_credentials TO lythaus_admin;
 GRANT INSERT, UPDATE ON identity.user_entitlements TO lythaus_admin;
 GRANT SELECT, INSERT, UPDATE ON identity.auth_sessions, identity.refresh_token_families, identity.account_events TO lythaus_admin;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, moderation.content_flags, moderation.cases, moderation.decisions, moderation.detector_runs, moderation.appeals, moderation.appeal_votes, moderation.enforcement_events, trust.provenance_events, trust.human_contribution_events, trust.reputation_events, trust.source_citations, trust.accountability_signals, editorial.memberships, editorial.membership_events, editorial.applications, editorial.portfolio_items, editorial.peer_reviews, editorial.publications TO lythaus_admin;
