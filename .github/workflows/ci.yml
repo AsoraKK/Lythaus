@@ -71,6 +71,8 @@ jobs:
         run: node --test scripts/tests/planetscale-native-restore-inventory.test.mjs
       - name: Validate private migration target comparison without connections
         run: node --test scripts/tests/admin-subject-rebind-target-diagnostic.test.mjs
+      - name: Validate migration role audit and dormant credential probe
+        run: node --test scripts/tests/planetscale-migration-role-probe.test.mjs
       - name: Verify fixed native restore runner without provider access
         run: node --test scripts/tests/planetscale-native-restore-plan.test.mjs scripts/tests/planetscale-native-restore-check.test.mjs scripts/tests/planetscale-native-restore-cleanup.test.mjs scripts/tests/planetscale-native-restore-run12-reconciliation.test.mjs scripts/tests/planetscale-native-restore-run12-history.test.mjs scripts/tests/planetscale-native-restore-run14-reconciliation.test.mjs scripts/tests/planetscale-native-restore-early-history.test.mjs
       - name: Verify reviewed restore cleanup transport and staged Actions handoff
@@ -106,6 +108,10 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
+      - name: Verify migration probe privilege oracle on disposable PG17
+        env:
+          SYNTHETIC_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: node --test scripts/tests/planetscale-migration-role-probe-pg17.test.mjs
       - name: Verify read-only mapped product privilege preflight
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control

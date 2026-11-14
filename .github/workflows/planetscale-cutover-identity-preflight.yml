@@ -4,15 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA for this read-only identity preflight
+        description: Exact current main SHA for the selected protected inspection
         required: true
         type: string
       inspection:
-        description: SQL identity inspection, restore inventory, or connection-free install target comparison
+        description: Existing inspection, read-only role audit, or separately approved credential probe
         required: true
         type: choice
         default: identity
-        options: [identity, restore-inventory, install-target]
+        options: [identity, restore-inventory, install-target, migration-role-audit, migration-probe]
+      migration_probe_approval:
+        description: Separate source-bound one-use credential approval JSON; blank for every read-only mode
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +27,83 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  migration_role:
+    if: inputs.inspection == 'migration-role-audit' || inputs.inspection == 'migration-probe'
+    name: ${{ inputs.inspection == 'migration-role-audit' && 'Audit intended migration role without issuing credentials' || 'Separate short-lived migration probe' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      MIGRATION_PROBE_APPROVAL_JSON: ${{ inputs.migration_probe_approval }}
+      INSPECTION: ${{ inputs.inspection }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Require first-attempt owner and exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = 1010752912
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$GITHUB_ACTOR" = "${GITHUB_REPOSITORY%%/*}"
+          test "$GITHUB_ACTOR_ID" = 211295889
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          if [[ "$INSPECTION" == migration-probe ]]; then
+            node scripts/ci/run-planetscale-migration-probe.mjs validate-probe-approval
+          else
+            test -z "$MIGRATION_PROBE_APPROVAL_JSON"
+          fi
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install locked dependencies without protected inputs
+        run: npm ci --ignore-scripts
+      - name: Validate audit and dormant probe with synthetic inputs
+        run: node --test scripts/tests/planetscale-migration-role-probe.test.mjs
+      - name: Protected audit or separately approved single probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$INSPECTION" == migration-probe ]]; then
+            node scripts/ci/run-planetscale-migration-probe.mjs probe
+          else
+            node scripts/ci/run-planetscale-migration-probe.mjs audit > "$RUNNER_TEMP/migration-role-audit.json"
+          fi
+      - name: Retain sanitized role audit
+        if: always() && inputs.inspection == 'migration-role-audit'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: migration-role-audit-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/migration-role-audit.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Retain sanitized probe checkpoint
+        if: always() && inputs.inspection == 'migration-probe'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: migration-probe-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/migration-probe.json
+          if-no-files-found: ignore
+          retention-days: 7
+
   install_target:
     if: inputs.inspection == 'install-target'
     name: Compare existing migration target without connecting
