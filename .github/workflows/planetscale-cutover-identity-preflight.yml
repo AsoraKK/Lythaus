@@ -43,7 +43,7 @@ jobs:
           test "$GITHUB_REPOSITORY_ID" = 1010752912
           test "$GITHUB_REF" = refs/heads/main
           test "$REF_PROTECTED" = true
-          test "$GITHUB_ACTOR" = AsoraKK
+          test "$GITHUB_ACTOR" = "${GITHUB_REPOSITORY%%/*}"
           test "$GITHUB_ACTOR_ID" = 211295889
           test "$GITHUB_RUN_ATTEMPT" = 1
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
