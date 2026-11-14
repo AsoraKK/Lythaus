@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import pg from 'pg';
-import { PUBLIC_PROFILE_SQL, PROBE_PROFILE_SQL, CANONICAL_AUTHORITY_SQL, allTrue, PUBLIC_KEYS, PROBE_KEYS }
+import { PUBLIC_PROFILE_SQL, PROBE_PROFILE_SQL, CANONICAL_AUTHORITY_SQL, allTrue, PUBLIC_KEYS, PROBE_KEYS,
+  ROLE_DETAIL_SQL, PUBLIC_FUNCTION_CATEGORY_SQL, roleDiagnostic, functionDiagnostic }
   from '../ci/planetscale-migration-role-audit.mjs';
 import { SESSION_SQL, OBSERVER_SQL } from '../ci/planetscale-migration-probe.mjs';
 
@@ -40,7 +41,14 @@ test('PostgreSQL17 synthetic ACL, ownership, column, function, SET-path and obse
     await setup.query('REVOKE SELECT ON fixture.items FROM PUBLIC');
     await setup.query("CREATE FUNCTION public.fixture_definer() RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1'");
     assert.equal((await publicCheck()).no_public_callable_application_functions, false);
+    assert.deepEqual(functionDiagnostic((await setup.query(PUBLIC_FUNCTION_CATEGORY_SQL, [['pg_trgm', 'unaccent', 'pgcrypto']])).rows[0]),
+      { total: 1, known_extension: 0, other: 1, security_definer: 1 });
     await setup.query('REVOKE ALL ON FUNCTION public.fixture_definer() FROM PUBLIC');
+    await setup.query('CREATE EXTENSION pg_trgm');
+    const extensionFunctions = functionDiagnostic((await setup.query(PUBLIC_FUNCTION_CATEGORY_SQL, [['pg_trgm', 'unaccent', 'pgcrypto']])).rows[0]);
+    assert.ok(extensionFunctions.total > 0); assert.equal(extensionFunctions.total, extensionFunctions.known_extension);
+    assert.equal(extensionFunctions.other, 0); assert.equal((await publicCheck()).no_public_callable_application_functions, false);
+    await setup.query('DROP EXTENSION pg_trgm');
     await setup.query("CREATE FUNCTION pg_catalog.fixture_definer() RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1'");
     assert.equal((await publicCheck()).no_public_catalog_escalation, false);
     await setup.query('REVOKE ALL ON FUNCTION pg_catalog.fixture_definer() FROM PUBLIC');
@@ -70,8 +78,21 @@ test('PostgreSQL17 synthetic ACL, ownership, column, function, SET-path and obse
       assert.equal((await watch.query(SESSION_SQL, [probeName, observerName])).rows[0].sessions, 0);
       const authority = (await watch.query(CANONICAL_AUTHORITY_SQL, [observerName, migrationName, apps])).rows[0];
       assert.equal(authority.canonical_can_set_owner, true); assert.equal(authority.owner_policy_set, true);
-      assert.equal(authority.app_roles_isolated, true); await watch.query('ROLLBACK');
+      assert.equal(authority.app_roles_isolated, true);
+      const detail = roleDiagnostic((await watch.query(ROLE_DETAIL_SQL, [migrationName])).rows[0], migrationName);
+      assert.equal(detail.canonical_can_login, true); assert.equal(detail.canonical_replication, false);
+      assert.equal(detail.canonical_bypass_rls, false); assert.equal(detail.canonical_unexpired, true);
+      assert.equal(detail.executor_parameter_grant_option, false); assert.equal(detail.pinned_setup_identity_matches, false);
+      const absent = roleDiagnostic((await watch.query(ROLE_DETAIL_SQL, ['pscale_api_missingfixture'])).rows[0], 'pscale_api_missingfixture');
+      assert.equal(absent.canonical_role_present, false); assert.equal(absent.executor_can_set_canonical, false);
+      await watch.query('ROLLBACK');
     } finally { await watch.end(); }
+    await setup.query(`ALTER ROLE ${migrationName} REPLICATION BYPASSRLS CREATEROLE CREATEDB`);
+    const privileged = roleDiagnostic((await setup.query(ROLE_DETAIL_SQL, [migrationName])).rows[0], migrationName);
+    assert.equal(privileged.canonical_can_login, true); assert.equal(privileged.canonical_replication, true);
+    assert.equal(privileged.canonical_bypass_rls, true); assert.equal(privileged.canonical_create_role, true);
+    assert.equal((await setup.query(CANONICAL_AUTHORITY_SQL, ['postgres', migrationName, apps])).rows[0].canonical_login_valid, false);
+    await setup.query(`ALTER ROLE ${migrationName} NOREPLICATION NOBYPASSRLS NOCREATEROLE NOCREATEDB`);
     await setup.query(`GRANT ${migrationName} TO ${apps[0]} WITH INHERIT FALSE, SET TRUE`);
     assert.equal((await setup.query(CANONICAL_AUTHORITY_SQL, ['postgres', migrationName, apps])).rows[0].app_roles_isolated, false);
     await setup.query(`GRANT ${apps[1]} TO ${probeName} WITH INHERIT FALSE, SET TRUE`);

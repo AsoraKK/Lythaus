@@ -7,7 +7,9 @@ import test from 'node:test';
 import { parse } from 'yaml';
 import { ownerContext, canonicalRoles, mainConnection, roleInventory, auditMigrationRole, readOnly,
   PUBLIC_PROFILE_SQL, CANONICAL_AUTHORITY_SQL, PROBE_PROFILE_SQL, PUBLIC_KEYS, AUTHORITY_KEYS, PROBE_KEYS,
-  ROLES_ENDPOINT, WORKFLOW, hash } from '../ci/planetscale-migration-role-audit.mjs';
+  ROLES_ENDPOINT, WORKFLOW, hash, ROLE_DETAIL_SQL, ROLE_DETAIL_KEYS, PUBLIC_FUNCTION_CATEGORY_SQL,
+  roleDiagnostic, functionDiagnostic } from '../ci/planetscale-migration-role-audit.mjs';
+import { RESTORE } from '../ci/planetscale-native-restore-contract.mjs';
 import { runProbe, probeConsent, PROFILE_SHA256, REQUEST_PROFILE, SESSION_SQL, OBSERVER_SQL } from '../ci/planetscale-migration-probe.mjs';
 import { quietConsumers, proveOneUseRun, proveAudit, extractAudit } from '../ci/planetscale-migration-probe-evidence.mjs';
 
@@ -95,6 +97,9 @@ function fixture({ changeProvider = () => {}, changeSql = () => {}, changeRead =
       else if (text === CANONICAL_AUTHORITY_SQL) body = { rows: [truth(AUTHORITY_KEYS)], rowCount: 1 };
       else if (text === PUBLIC_PROFILE_SQL) body = { rows: [truth(PUBLIC_KEYS)], rowCount: 1 };
       else if (text === PROBE_PROFILE_SQL) body = { rows: [truth(PROBE_KEYS)], rowCount: 1 };
+      else if (text === ROLE_DETAIL_SQL) body = { rows: [Object.fromEntries(ROLE_DETAIL_KEYS.map(key => [key,
+        ['canonical_role_present', 'canonical_can_login', 'canonical_unexpired', 'executor_can_set_owner'].includes(key)]))], rowCount: 1 };
+      else if (text === PUBLIC_FUNCTION_CATEGORY_SQL) body = { rows: [{ total: 0, known_extension: 0, other: 0, security_definer: 0 }], rowCount: 1 };
       else if (text === SESSION_SQL) body = { rows: [{ observer_identity: true, observer_visible: true, role_present: true, sessions: 0 }], rowCount: 1 };
       else if (text === OBSERVER_SQL) body = { rows: [{ visible: true }], rowCount: 1 };
       changeSql(body, text, values); return body;
@@ -326,4 +331,57 @@ test('read-only connections close on failed metadata', async () => {
   await assert.rejects(readOnly(url(observer), () => ({ async connect() {}, async query() {}, async end() { closed = true; } }),
     async () => { throw new Error(canary); }, 'fixture'));
   assert.equal(closed, true);
+});
+
+test('role observations distinguish valid login, privileged flags, expiry and unknown pinned identity without promoting readiness', async () => {
+  const f = fixture({ changeSql(body, sql) {
+    if (sql === CANONICAL_AUTHORITY_SQL) body.rows[0].canonical_login_valid = false;
+    if (sql === ROLE_DETAIL_SQL) {
+      body.rows[0].canonical_replication = true; body.rows[0].canonical_bypass_rls = true;
+    }
+  } });
+  const report = await auditMigrationRole({ ...f.options, now: baseTime });
+  assert.equal(report.status, 'BLOCKED'); assert.equal(report.authorityReady, false);
+  assert.equal(report.roleDetails.canonical_can_login, true);
+  assert.equal(report.roleDetails.canonical_unexpired, true);
+  assert.equal(report.roleDetails.canonical_replication, true);
+  assert.equal(report.roleDetails.canonical_bypass_rls, true);
+  assert.equal(report.roleDetails.pinned_setup_identity_matches, false);
+  assert.equal(report.roleDetails.pinned_setup_profile_matches, false); noSecrets(report);
+});
+
+test('pinned migration profile comparison requires exact identity and every observed flag', () => {
+  const row = Object.fromEntries(ROLE_DETAIL_KEYS.map(key => [key, false]));
+  for (const key of ['canonical_role_present', 'canonical_can_login', 'canonical_create_database', 'canonical_create_role',
+    'canonical_replication', 'canonical_bypass_rls', 'canonical_unexpired']) row[key] = true;
+  assert.equal(roleDiagnostic(row, RESTORE.setup).pinned_setup_profile_matches, true);
+  assert.equal(roleDiagnostic(row, 'pscale_api_unknown').pinned_setup_profile_matches, false);
+  for (const key of ['canonical_superuser', 'canonical_can_login', 'canonical_create_database', 'canonical_create_role',
+    'canonical_replication', 'canonical_bypass_rls', 'canonical_unexpired']) {
+    assert.equal(roleDiagnostic({ ...row, [key]: !row[key] }, RESTORE.setup).pinned_setup_profile_matches, false);
+  }
+});
+
+test('known extension classification stays informational and cannot clear the PUBLIC function gate', async () => {
+  const f = fixture({ changeSql(body, sql) {
+    if (sql === PUBLIC_PROFILE_SQL) body.rows[0].no_public_callable_application_functions = false;
+    if (sql === PUBLIC_FUNCTION_CATEGORY_SQL) body.rows[0] = { total: 4, known_extension: 4, other: 0, security_definer: 0 };
+  } });
+  const report = await auditMigrationRole({ ...f.options, now: baseTime });
+  assert.equal(report.status, 'BLOCKED'); assert.equal(report.probeProfileReady, false);
+  assert.deepEqual(report.publicFunctionCategories, { total: 4, known_extension: 4, other: 0, security_definer: 0 });
+  noSecrets(report);
+});
+
+test('diagnostic shapes reject missing fields, names, invalid counts and free-form row data', () => {
+  const row = Object.fromEntries(ROLE_DETAIL_KEYS.map(key => [key, false]));
+  for (const invalid of [{}, { ...row, password: canary }, { ...row, canonical_can_login: canary }]) {
+    assert.throws(() => roleDiagnostic(invalid, RESTORE.setup), /catalog_shape_unverified/);
+  }
+  for (const invalid of [{}, { total: -1, known_extension: 0, other: 0, security_definer: 0 },
+    { total: 1, known_extension: 1, other: 1, security_definer: 0 },
+    { total: 1, known_extension: 1, other: 0, security_definer: 2 },
+    { total: 1, known_extension: 1, other: 0, security_definer: 0, name: canary }]) {
+    assert.throws(() => functionDiagnostic(invalid), /function_category_shape_unverified/);
+  }
 });

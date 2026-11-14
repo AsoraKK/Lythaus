@@ -41,6 +41,32 @@ mechanism prevents an arbitrary database/provider administrator from acting.
 The receipt contains fixed status/booleans and source/configuration hashes only.
 An audit pass is neither installation approval nor current-email login proof.
 
+### Reading a blocked audit
+
+`canonical_login_valid` is a compound gate, including LOGIN, SQL validity,
+NOSUPERUSER, NOREPLICATION and NOBYPASSRLS. Its false value alone does not prove
+an inactive login. `roleDetails` reports each flag separately, plus existing
+executor SET paths and parameter grant-option/ACL-presence booleans. A comparison
+with the pinned recovery setup profile requires the exact configured identity
+and every profile flag to match; labels or a whole-map digest mismatch do not
+establish an individual role identity. These observations do not change any
+authority, installer, activation or minimal-probe acceptance gate. Do not alter
+a production role merely to make the compound gate pass.
+
+`publicFunctionCategories` counts PUBLIC-callable noncatalog functions owned by
+the three reviewed extensions (pg_trgm, unaccent, pgcrypto), other functions,
+and SECURITY DEFINER functions. It contains no function names or bodies. An
+extension count is classification only: the existing no-callable-function probe
+gate remains blocked until its actual profile is separately reviewed. Presence
+alone does not establish application-data exposure.
+
+The policy parameter's catalog SET permission is needed for function-owned
+configuration. A successful ordinary transaction-local SET does not prove that
+CREATE/ALTER FUNCTION SET is permitted. Local PostgreSQL17 reproduces ordinary
+SET success with function-definition denial under a non-superuser. Preserve the
+function configuration capacity guards; do not grant privileges, issue another
+credential, or substitute a session SET test to overcome this audit result.
+
 ## Dormant credential probe: separate approval required
 
 Select `migration-probe` only after independently reviewing a fresh successful
