@@ -10,6 +10,9 @@ import 'package:lythaus/features/feed/application/feed_read_session.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
+import 'package:lythaus/features/reactions/application/contribution_feedback_controller.dart';
+import 'package:lythaus/features/reactions/domain/contribution_feedback.dart';
+import 'package:lythaus/features/reactions/presentation/contribution_feedback_controls.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
@@ -420,6 +423,7 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
     final enabled = !_busy && pending == null;
     final service = ref.read(feedActionsServiceProvider);
     final postId = _postId;
+    final feedbackCandidate = ref.watch(contributionFeedbackCandidateProvider);
     return FeedCard(
       item: widget.item,
       onTap: widget.onTap,
@@ -450,29 +454,37 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
       actions: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (feedbackCandidate)
+            ContributionFeedbackControls(
+              target: FeedbackTarget(FeedbackTargetType.post, postId),
+              authorId: widget.item.authorId ?? '',
+            ),
           Wrap(
             spacing: 2,
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              TextButton.icon(
-                onPressed: enabled && !isOwn ? _usefulPressed : null,
-                icon: Icon(
-                  selected ? Icons.thumb_up : Icons.thumb_up_outlined,
-                  size: 20,
+              if (!feedbackCandidate)
+                TextButton.icon(
+                  onPressed: enabled && !isOwn ? _usefulPressed : null,
+                  icon: Icon(
+                    selected ? Icons.thumb_up : Icons.thumb_up_outlined,
+                    size: 20,
+                  ),
+                  label: Text(selected ? 'Useful selected' : 'Useful'),
                 ),
-                label: Text(selected ? 'Useful selected' : 'Useful'),
-              ),
-              IconButton(
-                tooltip: 'Negative feedback',
-                onPressed: enabled ? _negativeFeedback : null,
-                icon: const Icon(Icons.thumb_down_outlined, size: 20),
-              ),
-              IconButton(
-                tooltip: 'Story emotions — unavailable',
-                onPressed: _emotions,
-                icon: const Icon(Icons.add_reaction_outlined, size: 20),
-              ),
+              if (!feedbackCandidate)
+                IconButton(
+                  tooltip: 'Negative feedback',
+                  onPressed: enabled ? _negativeFeedback : null,
+                  icon: const Icon(Icons.thumb_down_outlined, size: 20),
+                ),
+              if (!feedbackCandidate)
+                IconButton(
+                  tooltip: 'Story emotions — unavailable',
+                  onPressed: _emotions,
+                  icon: const Icon(Icons.add_reaction_outlined, size: 20),
+                ),
               IconButton(
                 tooltip: 'Comments',
                 onPressed: _comments,
