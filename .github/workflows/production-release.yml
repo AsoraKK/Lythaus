@@ -55,6 +55,11 @@ on:
         required: true
         default: false
         type: boolean
+      enable_admin_subject_rebind:
+        description: Request separately approved admin binding preview/execution after a full canonical release; never grants identity-write approval itself
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -115,6 +120,11 @@ jobs:
           fetch-depth: 0
       - name: Require explicit production confirmation
         run: test "${{ inputs.confirm_production }}" = true
+      - name: Keep identity-binding activation separate from owner-testing and diagnostic exceptions
+        if: inputs.enable_admin_subject_rebind == true
+        env:
+          RELEASE_MODE: ${{ inputs.release_mode }}
+        run: test "$RELEASE_MODE" = force_auth_critical
       - name: Restrict owner testing to authentication deployment
         env:
           OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception' || inputs.release_mode == 'owner_testing_subject_diagnostic_exception') }}
@@ -446,6 +456,141 @@ jobs:
             .artifacts/release/release-manifest.json
             .artifacts/release/release-manifest.sha256
             ${{ runner.temp }}/release-plan.json
+
+  admin_rebind_preview:
+    name: Approve exact administrator binding preview
+    needs: [preflight, workers, production_smoke, manifest]
+    if: inputs.enable_admin_subject_rebind == true && inputs.release_mode == 'force_auth_critical'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    outputs:
+      policy_sha256: ${{ steps.activate.outputs.policy_sha256 }}
+      expires_at: ${{ steps.activate.outputs.expires_at }}
+    env:
+      ENABLE_ADMIN_SUBJECT_REBIND: ${{ inputs.enable_admin_subject_rebind }}
+      RELEASE_MODE: ${{ inputs.release_mode }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      ADMIN_WORKER_VERSION_ID: ${{ needs.workers.outputs.admin_worker_version }}
+      PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}
+      PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+      PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+      ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON: ${{ vars.ADMIN_SUBJECT_REBIND_PREVIEW_APPROVAL_JSON }}
+      RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Require the accepted exact Admin deployment and rollback evidence
+        env:
+          AUTHENTICATED_ACCEPTANCE_PROVEN: ${{ needs.workers.outputs.authenticated_acceptance_proven }}
+          ADMIN_WORKER_STATUS: ${{ needs.workers.outputs.admin_worker_status }}
+          ADMIN_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.admin_worker_source_sha }}
+          HYPERDRIVE_VERIFIED_MAIN: ${{ needs.workers.outputs.hyperdrive_verified_main }}
+          DATABASE_IDENTITY_VERIFIED: ${{ needs.workers.outputs.database_identity_verified }}
+          ROLLBACK_ARTIFACTS_PROVEN: ${{ needs.workers.outputs.rollback_artifacts_proven }}
+        run: |
+          test "$AUTHENTICATED_ACCEPTANCE_PROVEN" = true
+          test "$ADMIN_WORKER_STATUS" = ACTIVATED
+          test "$ADMIN_WORKER_SOURCE_SHA" = "$RELEASE_SHA"
+          test "$HYPERDRIVE_VERIFIED_MAIN" = true
+          test "$DATABASE_IDENTITY_VERIFIED" = true
+          test "$ROLLBACK_ARTIFACTS_PROVEN" = true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Reverify fresh native and independent recovery without exceptions
+        run: node scripts/ci/verify-production-recovery-readiness.mjs
+      - name: Install only the specifically approved preview policy
+        id: activate
+        run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs preview
+      - name: Describe the owner preview handoff
+        run: |
+          echo 'Preview is read-only and expires within 15 minutes. Open https://admin.lythaus.co/api/admin/recovery/subject-rebind in a fresh current-email Access session. Give only the opaque review packet to the operator. The execute job needs a separate exact-commitment approval; neither this release nor preview approval authorizes a membership update.' >> "$GITHUB_STEP_SUMMARY"
+
+  admin_rebind_execute:
+    name: Approve exact administrator binding commitment
+    needs: [admin_rebind_preview, workers]
+    if: inputs.enable_admin_subject_rebind == true && inputs.release_mode == 'force_auth_critical'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    outputs:
+      policy_sha256: ${{ steps.activate.outputs.policy_sha256 }}
+    env:
+      ENABLE_ADMIN_SUBJECT_REBIND: ${{ inputs.enable_admin_subject_rebind }}
+      RELEASE_MODE: ${{ inputs.release_mode }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      ADMIN_WORKER_VERSION_ID: ${{ needs.workers.outputs.admin_worker_version }}
+      ADMIN_REBIND_PREVIEW_POLICY_SHA256: ${{ needs.admin_rebind_preview.outputs.policy_sha256 }}
+      PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}
+      PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+      PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+      ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON: ${{ vars.ADMIN_SUBJECT_REBIND_EXECUTE_APPROVAL_JSON }}
+      RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Reverify fresh native and independent recovery without exceptions
+        run: node scripts/ci/verify-production-recovery-readiness.mjs
+      - name: Install only the specifically approved execution commitment
+        id: activate
+        run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs execute
+      - name: Describe the owner confirmation and acceptance
+        run: |
+          echo 'The approved commitment is ready until the original deadline. In the same verified recovery session select Check approval, then Update sign-in once. Afterward sign out, open a fresh browser session with the current Lythaus address, open the panel and complete the reviewed authorized read. This workflow performs no membership write and does not certify owner sign-in. An uncertain result requires read-only reconciliation, never a repeated POST.' >> "$GITHUB_STEP_SUMMARY"
+
+  admin_rebind_cleanup:
+    name: Disable the exact temporary administrator binding policy
+    needs: [admin_rebind_preview, admin_rebind_execute]
+    if: ${{ always() && inputs.enable_admin_subject_rebind == true && needs.admin_rebind_preview.outputs.policy_sha256 != '' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      ENABLE_ADMIN_SUBJECT_REBIND: ${{ inputs.enable_admin_subject_rebind }}
+      RELEASE_MODE: ${{ inputs.release_mode }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}
+      PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+      PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+      ADMIN_REBIND_PREVIEW_POLICY_SHA256: ${{ needs.admin_rebind_preview.outputs.policy_sha256 }}
+      ADMIN_REBIND_EXECUTE_POLICY_SHA256: ${{ needs.admin_rebind_execute.outputs.policy_sha256 }}
+      ADMIN_REBIND_PREVIEW_EXPIRES_AT: ${{ needs.admin_rebind_preview.outputs.expires_at }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Wait for the finite deadline and verify disablement without changing the membership
+        run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs disable
 
   provider_evidence:
     name: Capture exact-SHA provider evidence

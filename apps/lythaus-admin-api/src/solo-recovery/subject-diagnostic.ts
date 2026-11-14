@@ -56,7 +56,7 @@ interface ParsedTarget {
   roleFingerprint: string;
 }
 
-async function hyperdriveTarget(connectionString: string): Promise<ParsedTarget> {
+export async function hyperdriveTarget(connectionString: string): Promise<ParsedTarget> {
   const url = new URL(connectionString);
   if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname || url.hash) {
     throw new Error('subject_diagnostic_target_invalid');

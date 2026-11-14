@@ -243,6 +243,13 @@ jobs:
       - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run validate:production-gates
       - run: node --test scripts/tests/public-waitlist-cutover.test.mjs
+      - name: Verify disabled admin identity rebind on isolated PG17
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          LYTHAUS_LOCAL_REBIND_PROPOSAL_TEST: synthetic
+        run: |
+          npm run validate:planetscale-postgres17
+          node --experimental-test-module-mocks --experimental-strip-types --test --test-concurrency=1 scripts/tests/admin-subject-rebind-capability.test.mjs scripts/tests/admin-subject-rebind-install-cli.test.mjs scripts/tests/admin-subject-rebind-activation.test.mjs scripts/tests/admin-subject-rebind-activation.postgres.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-protocol.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-page.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind.postgres.mjs
 
   activity_pilot:
     name: Disabled activity pilot integration

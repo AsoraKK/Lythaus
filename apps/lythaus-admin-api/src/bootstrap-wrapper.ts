@@ -9,6 +9,7 @@ import { rejectUnknownFields, requireConfirmation } from './admin-runtime-policy
 import { readBoundedJson } from './request-body-policy.ts';
 import { bootstrapFirstAdmin, FIRST_ADMIN_BOOTSTRAP_CONFIRMATION } from './first-admin-bootstrap.ts';
 import { SUBJECT_DIAGNOSTIC_PATH, handleSubjectDiagnostic } from './solo-recovery/subject-diagnostic.ts';
+import { SUBJECT_REBIND_PATH, handleSubjectRebind } from './solo-recovery/subject-rebind.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -91,10 +92,20 @@ async function handleFirstAdminBootstrap(request: Request, env: Env): Promise<Re
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (new URL(request.url).pathname === SUBJECT_REBIND_PATH) return handleSubjectRebind(request, env);
     if (new URL(request.url).pathname === SUBJECT_DIAGNOSTIC_PATH) return handleSubjectDiagnostic(request, env);
     if (new URL(request.url).pathname === BOOTSTRAP_PATH) {
       return handleFirstAdminBootstrap(request, env);
     }
-    return adminWorker.fetch(request, env);
+    const result = await adminWorker.fetch(request, env);
+    if (request.method === 'GET' && result.ok && ['/api/admin/health', '/api/admin/moderation/cases'].includes(new URL(request.url).pathname)
+      && /^[a-f0-9]{40}$/.test(env.WORKER_VERSION?.tag ?? '')
+      && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(env.WORKER_VERSION?.id ?? '')) {
+      const headers = new Headers(result.headers);
+      headers.set('x-lythaus-source-sha', env.WORKER_VERSION.tag!);
+      headers.set('x-lythaus-worker-version', env.WORKER_VERSION.id);
+      return new Response(result.body, { status: result.status, headers });
+    }
+    return result;
   },
 };
