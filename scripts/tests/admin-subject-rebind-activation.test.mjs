@@ -262,8 +262,10 @@ test('live inventory rejects partial metadata and requires complete stable Acces
 
 test('canonical workflow keeps both approvals after normal release, defaults off and retains same-run cleanup',()=>{
   const workflow=YAML.parse(fs.readFileSync('.github/workflows/production-release.yml','utf8'));
-  assert.equal(workflow.on.workflow_dispatch.inputs.enable_admin_subject_rebind.default,false);
-  assert.ok(workflow.jobs.preflight.steps.some(step=>step.if==='inputs.enable_admin_subject_rebind == true'
+  const optIn="vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha";
+  assert.ok(Object.keys(workflow.on.workflow_dispatch.inputs).length<=10);
+  assert.equal(Object.hasOwn(workflow.on.workflow_dispatch.inputs,'enable_admin_subject_rebind'),false);
+  assert.ok(workflow.jobs.preflight.steps.some(step=>step.if===optIn
     &&step.run==='test "$RELEASE_MODE" = force_auth_critical'));
   const preview=workflow.jobs.admin_rebind_preview,execute=workflow.jobs.admin_rebind_execute,cleanup=workflow.jobs.admin_rebind_cleanup;
   assert.deepEqual(preview.needs,['preflight','workers','production_smoke','manifest']);
@@ -271,12 +273,20 @@ test('canonical workflow keeps both approvals after normal release, defaults off
   assert.ok(preview.steps[0].run.includes('test "$AUTHENTICATED_ACCEPTANCE_PROVEN" = true'));
   assert.ok(preview.steps[0].run.includes('test "$ADMIN_WORKER_SOURCE_SHA" = "$RELEASE_SHA"'));
   for(const job of [preview,execute]){
-    assert.ok(job.if.includes("inputs.release_mode == 'force_auth_critical'"));
-    assert.ok(job.steps.some(step=>step.run==='node scripts/ci/verify-production-recovery-readiness.mjs'));
+    assert.equal(job.if,`${optIn} && inputs.release_mode == 'force_auth_critical'`);
+    const recovery=job.steps.find(step=>step.run==='node scripts/ci/verify-production-recovery-readiness.mjs');
+    const activation=job.steps.find(step=>step.id==='activate');
+    assert.equal(recovery.env.RECOVERY_READINESS_REPORT_FILE,'${{ runner.temp }}/admin-rebind-recovery.json');
+    assert.equal(activation.env.RECOVERY_READINESS_REPORT_FILE,recovery.env.RECOVERY_READINESS_REPORT_FILE);
     assert.equal(job.env.PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT,"${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}");
   }
+  for(const job of Object.values(workflow.jobs))for(const value of Object.values(job.env??{}))assert.doesNotMatch(String(value),/\$\{\{[^}]*\brunner\./);
+  for(const job of [preview,execute])assert.equal(job.env.ENABLE_ADMIN_SUBJECT_REBIND,`\${{ ${optIn} }}`);
   assert.equal(preview.env.ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON,'${{ vars.ADMIN_SUBJECT_REBIND_PREVIEW_APPROVAL_JSON }}');
   assert.equal(execute.env.ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON,'${{ vars.ADMIN_SUBJECT_REBIND_EXECUTE_APPROVAL_JSON }}');
-  assert.deepEqual(cleanup.needs,['admin_rebind_preview','admin_rebind_execute']);assert.ok(cleanup.if.includes('always()'));
+  assert.deepEqual(cleanup.needs,['admin_rebind_preview','admin_rebind_execute']);
+  assert.equal(cleanup.if,"${{ always() && needs.admin_rebind_preview.outputs.policy_sha256 != '' }}");
+  assert.equal(cleanup.env.ENABLE_ADMIN_SUBJECT_REBIND,"${{ needs.admin_rebind_preview.outputs.policy_sha256 != '' }}");
+  assert.doesNotMatch(JSON.stringify(cleanup),/ADMIN_SUBJECT_REBIND_RELEASE_SHA/);
   assert.ok(cleanup.steps.at(-1).run.endsWith(' disable'));
 });

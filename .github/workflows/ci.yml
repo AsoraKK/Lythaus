@@ -249,7 +249,7 @@ jobs:
           LYTHAUS_LOCAL_REBIND_PROPOSAL_TEST: synthetic
         run: |
           npm run validate:planetscale-postgres17
-          node --experimental-test-module-mocks --experimental-strip-types --test --test-concurrency=1 scripts/tests/admin-subject-rebind-capability.test.mjs scripts/tests/admin-subject-rebind-install-cli.test.mjs scripts/tests/admin-subject-rebind-activation.test.mjs scripts/tests/admin-subject-rebind-activation.postgres.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-protocol.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-page.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind.postgres.mjs
+          node --experimental-test-module-mocks --experimental-strip-types --test --test-concurrency=1 scripts/tests/admin-subject-rebind-capability.test.mjs scripts/tests/admin-subject-rebind-install-cli.test.mjs scripts/tests/admin-subject-rebind-activation.test.mjs scripts/tests/admin-subject-rebind-activation.postgres.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-protocol.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-page.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind.pg17.mjs
 
   activity_pilot:
     name: Disabled activity pilot integration

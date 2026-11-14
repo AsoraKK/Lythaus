@@ -1,8 +1,24 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test, { mock } from 'node:test';
+import YAML from 'yaml';
 import {loadApprovedMigrations} from '../ci/planetscale-migration-manifest.mjs';
 import {rebindGrantPayload,REBIND_BOUNDARY_SQL,REBIND_SOURCE_STATE_SQL} from '../ci/admin-subject-rebind-capability.mjs';
+
+test('destructive synthetic rebind fixture is isolated from broad application test discovery',()=>{
+  const filename='admin-subject-rebind.pg17.mjs';
+  assert.ok(fs.existsSync(`apps/lythaus-admin-api/tests/${filename}`));
+  assert.equal(fs.existsSync('apps/lythaus-admin-api/tests/admin-subject-rebind.postgres.mjs'),false);
+  assert.doesNotMatch(filename,/\.(postgres|test)\.mjs$/);
+  const ci=YAML.parse(fs.readFileSync('.github/workflows/ci.yml','utf8'));
+  const registrations=Object.values(ci.jobs).flatMap(job=>job.steps??[]).filter(step=>step.run?.includes(filename));
+  assert.equal(registrations.length,1);
+  assert.equal(registrations[0].env.LYTHAUS_LOCAL_REBIND_PROPOSAL_TEST,'synthetic');
+  const target=new URL(registrations[0].env.PLANETSCALE_PG17_TEST_DATABASE_URL);
+  assert.equal(target.hostname,'127.0.0.1');assert.equal(target.pathname,'/postgres');
+  const baseline=registrations[0].run.indexOf('npm run validate:planetscale-postgres17');
+  assert.ok(baseline>=0&&baseline<registrations[0].run.indexOf(filename));
+});
 
 test('opt-in installation CLI executes only the reviewed capability and preserves unrelated grants',async()=>{
   const repository=new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1,-1);

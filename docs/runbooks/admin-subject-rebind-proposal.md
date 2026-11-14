@@ -126,8 +126,14 @@ metrics remaining unavailable is expected for the preserved administrator role.
 
 ## Protected activation handoff
 
-The opt-in `enable_admin_subject_rebind` input is false by default on the
-canonical `production-release.yml` workflow. It is accepted only with
+The canonical `production-release.yml` workflow retains its ten dispatch inputs.
+Opt in by setting the repository variable `ADMIN_SUBJECT_REBIND_RELEASE_SHA` to
+the exact reviewed merged SHA used as `release_sha`. An absent, empty or different
+value disables enabling jobs. Clear the variable after cleanup is verified;
+once preview has emitted its policy receipt, cleanup depends on that same-run
+receipt and continues even if the selector is cleared. This selector requests the handoff
+only and grants no production installation, activation or identity-write authority.
+The selected handoff is accepted only with
 `release_mode=force_auth_critical`, after normal protected review, exact-main
 CI/security/historical evidence, provider checks, fresh native recovery proof,
 independent recovery, exact-candidate authenticated acceptance, deployment,

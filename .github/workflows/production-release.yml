@@ -55,11 +55,6 @@ on:
         required: true
         default: false
         type: boolean
-      enable_admin_subject_rebind:
-        description: Request separately approved admin binding preview/execution after a full canonical release; never grants identity-write approval itself
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   actions: read
@@ -121,7 +116,7 @@ jobs:
       - name: Require explicit production confirmation
         run: test "${{ inputs.confirm_production }}" = true
       - name: Keep identity-binding activation separate from owner-testing and diagnostic exceptions
-        if: inputs.enable_admin_subject_rebind == true
+        if: vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha
         env:
           RELEASE_MODE: ${{ inputs.release_mode }}
         run: test "$RELEASE_MODE" = force_auth_critical
@@ -460,7 +455,7 @@ jobs:
   admin_rebind_preview:
     name: Approve exact administrator binding preview
     needs: [preflight, workers, production_smoke, manifest]
-    if: inputs.enable_admin_subject_rebind == true && inputs.release_mode == 'force_auth_critical'
+    if: vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha && inputs.release_mode == 'force_auth_critical'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
@@ -468,7 +463,7 @@ jobs:
       policy_sha256: ${{ steps.activate.outputs.policy_sha256 }}
       expires_at: ${{ steps.activate.outputs.expires_at }}
     env:
-      ENABLE_ADMIN_SUBJECT_REBIND: ${{ inputs.enable_admin_subject_rebind }}
+      ENABLE_ADMIN_SUBJECT_REBIND: ${{ vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha }}
       RELEASE_MODE: ${{ inputs.release_mode }}
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
@@ -482,7 +477,6 @@ jobs:
       PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
       PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
       ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON: ${{ vars.ADMIN_SUBJECT_REBIND_PREVIEW_APPROVAL_JSON }}
-      RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Require the accepted exact Admin deployment and rollback evidence
@@ -509,9 +503,13 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Reverify fresh native and independent recovery without exceptions
+        env:
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
         run: node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Install only the specifically approved preview policy
         id: activate
+        env:
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
         run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs preview
       - name: Describe the owner preview handoff
         run: |
@@ -520,14 +518,14 @@ jobs:
   admin_rebind_execute:
     name: Approve exact administrator binding commitment
     needs: [admin_rebind_preview, workers]
-    if: inputs.enable_admin_subject_rebind == true && inputs.release_mode == 'force_auth_critical'
+    if: vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha && inputs.release_mode == 'force_auth_critical'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
     outputs:
       policy_sha256: ${{ steps.activate.outputs.policy_sha256 }}
     env:
-      ENABLE_ADMIN_SUBJECT_REBIND: ${{ inputs.enable_admin_subject_rebind }}
+      ENABLE_ADMIN_SUBJECT_REBIND: ${{ vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha }}
       RELEASE_MODE: ${{ inputs.release_mode }}
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
@@ -542,7 +540,6 @@ jobs:
       PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
       PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
       ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON: ${{ vars.ADMIN_SUBJECT_REBIND_EXECUTE_APPROVAL_JSON }}
-      RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -554,9 +551,13 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Reverify fresh native and independent recovery without exceptions
+        env:
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
         run: node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Install only the specifically approved execution commitment
         id: activate
+        env:
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
         run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs execute
       - name: Describe the owner confirmation and acceptance
         run: |
@@ -565,12 +566,12 @@ jobs:
   admin_rebind_cleanup:
     name: Disable the exact temporary administrator binding policy
     needs: [admin_rebind_preview, admin_rebind_execute]
-    if: ${{ always() && inputs.enable_admin_subject_rebind == true && needs.admin_rebind_preview.outputs.policy_sha256 != '' }}
+    if: ${{ always() && needs.admin_rebind_preview.outputs.policy_sha256 != '' }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
     env:
-      ENABLE_ADMIN_SUBJECT_REBIND: ${{ inputs.enable_admin_subject_rebind }}
+      ENABLE_ADMIN_SUBJECT_REBIND: ${{ needs.admin_rebind_preview.outputs.policy_sha256 != '' }}
       RELEASE_MODE: ${{ inputs.release_mode }}
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
