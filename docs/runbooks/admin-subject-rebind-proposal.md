@@ -99,6 +99,24 @@ caller-setting spoofing, expiry during a lock wait, concurrent execution,
 atomic rollback, separately approved reversal and the unchanged ordinary
 subject-lookup authorization code. This is not a live owner sign-in test.
 
+## A blocked installation target
+
+If installation stops at `admin_rebind_install_migration_target_mismatch`, the
+guard has rejected the configured target before opening a database connection.
+Do not retry installation, replace a credential or relax that guard on a guess.
+The protected `planetscale-cutover-identity-preflight.yml` workflow provides
+`inspection=install-target` for a first-attempt repository-owner run on exact
+current protected main. It uses the existing migration URL and role map only
+in runner memory and makes no database connection or provider request. Its
+sanitized report gives four match booleans: branch, database, physical origin
+and canonical migration role. It never emits a URL, password, role value or
+derived fingerprint. It does not test existing SQL authority or function state,
+and a match is not installation approval. Settings can change between runs;
+the comparison describes its own current inputs, not immutable proof of a past
+run's private inputs. Resolve a confirmed mismatch only under the applicable
+specific security approval. Any new merged source needs its own exact-source
+installation consent; the earlier source approval does not transfer.
+
 ## Acceptance without unrelated grants
 
 The unchanged administrator role cannot use `GET /api/admin/overview?period=today`:

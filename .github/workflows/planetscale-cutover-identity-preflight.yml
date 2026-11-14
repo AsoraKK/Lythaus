@@ -8,11 +8,11 @@ on:
         required: true
         type: string
       inspection:
-        description: Existing SQL identity inspection or metadata-only native restore inventory
+        description: SQL identity inspection, restore inventory, or connection-free install target comparison
         required: true
         type: choice
         default: identity
-        options: [identity, restore-inventory]
+        options: [identity, restore-inventory, install-target]
 
 permissions:
   contents: read
@@ -22,6 +22,72 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  install_target:
+    if: inputs.inspection == 'install-target'
+    name: Compare existing migration target without connecting
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Require first-attempt owner run on exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = 1010752912
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$GITHUB_ACTOR" = AsoraKK
+          test "$GITHUB_ACTOR_ID" = 211295889
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Validate comparison without protected inputs
+        run: |
+          node --check scripts/ci/admin-subject-rebind-target-diagnostic.mjs
+          node --test scripts/tests/admin-subject-rebind-target-diagnostic.test.mjs
+      - name: Recheck main immediately before protected comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          git diff --quiet
+          git diff --cached --quiet
+      - name: Report only target match booleans
+        env:
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+        run: node scripts/ci/admin-subject-rebind-target-diagnostic.mjs > "$RUNNER_TEMP/install-target-diagnostic.json"
+      - name: Summarize private comparison
+        if: always()
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/install-target-diagnostic.json"
+          if [[ -s "$report" ]]; then
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Retain sanitized target comparison
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: admin-rebind-install-target-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/install-target-diagnostic.json
+          if-no-files-found: ignore
+          retention-days: 7
+
   inspect:
     if: inputs.inspection == 'identity'
     name: Inspect protected production SQL identities
