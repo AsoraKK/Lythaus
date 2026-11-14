@@ -3,6 +3,7 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig } from './
 import { RESTORE_INVENTORY_TARGET as TARGET } from './planetscale-native-restore-inventory.mjs';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 import { REBIND_BOUNDARY_SQL, REBIND_SIGNATURE, rebindGrantPayload, assertRebindBoundary } from './admin-subject-rebind-capability.mjs';
+import { RESTORE, ROLE_SQL_SECURITY_BASELINE, EXTENSIONS } from './planetscale-native-restore-contract.mjs';
 
 export const WORKFLOW = '.github/workflows/planetscale-cutover-identity-preflight.yml';
 export const ROLES_ENDPOINT = 'https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-core/branches/main/roles';
@@ -167,6 +168,65 @@ export const CANONICAL_AUTHORITY_SQL = `SELECT
       OR pg_has_role(r.oid,'postgres','MEMBER') OR pg_has_role(r.oid,$2,'MEMBER'))) AS app_roles_isolated,
   (SELECT count(*)=4 FROM pg_roles WHERE rolname=ANY($3::text[])) AS app_roles_present`;
 
+export const ROLE_DETAIL_SQL = `WITH canonical AS (SELECT * FROM pg_roles WHERE rolname=$1) SELECT
+  EXISTS(SELECT 1 FROM canonical) AS canonical_role_present,
+  EXISTS(SELECT 1 FROM canonical WHERE rolcanlogin) AS canonical_can_login,
+  EXISTS(SELECT 1 FROM canonical WHERE rolsuper) AS canonical_superuser,
+  EXISTS(SELECT 1 FROM canonical WHERE rolcreatedb) AS canonical_create_database,
+  EXISTS(SELECT 1 FROM canonical WHERE rolcreaterole) AS canonical_create_role,
+  EXISTS(SELECT 1 FROM canonical WHERE rolreplication) AS canonical_replication,
+  EXISTS(SELECT 1 FROM canonical WHERE rolbypassrls) AS canonical_bypass_rls,
+  EXISTS(SELECT 1 FROM canonical WHERE rolvaliduntil IS NULL OR rolvaliduntil>clock_timestamp()) AS canonical_unexpired,
+  coalesce(pg_has_role((SELECT oid FROM pg_roles WHERE rolname=current_user),(SELECT oid FROM canonical),'SET'),false)
+    AS executor_can_set_canonical,
+  pg_has_role(current_user,'postgres','SET') AS executor_can_set_owner,
+  has_parameter_privilege(current_user,'lythaus.admin_subject_rebind_approval','SET WITH GRANT OPTION')
+    AS executor_parameter_grant_option,
+  has_parameter_privilege('postgres','lythaus.admin_subject_rebind_approval','SET WITH GRANT OPTION')
+    AS owner_parameter_grant_option,
+  EXISTS(SELECT 1 FROM pg_parameter_acl WHERE parname='lythaus.admin_subject_rebind_approval') AS policy_parameter_acl_present`;
+
+export const PUBLIC_FUNCTION_CATEGORY_SQL = `WITH callable AS (
+  SELECT p.prosecdef, EXISTS(SELECT 1 FROM pg_depend d JOIN pg_extension e ON e.oid=d.refobjid
+    WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.objsubid=0
+      AND d.refclassid='pg_extension'::regclass AND d.deptype='e' AND e.extname=ANY($1::text[])) AS known_extension
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema'
+    AND EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      WHERE a.grantee=0 AND a.privilege_type='EXECUTE')
+    AND EXISTS(SELECT 1 FROM aclexplode(coalesce(n.nspacl,acldefault('n',n.nspowner))) a
+      WHERE a.grantee=0 AND a.privilege_type='USAGE')
+) SELECT count(*)::integer AS total,
+  (count(*) FILTER(WHERE known_extension))::integer AS known_extension,
+  (count(*) FILTER(WHERE NOT known_extension))::integer AS other,
+  (count(*) FILTER(WHERE prosecdef))::integer AS security_definer FROM callable`;
+
+export const ROLE_DETAIL_KEYS = ['canonical_role_present', 'canonical_can_login', 'canonical_superuser',
+  'canonical_create_database', 'canonical_create_role', 'canonical_replication', 'canonical_bypass_rls',
+  'canonical_unexpired', 'executor_can_set_canonical', 'executor_can_set_owner',
+  'executor_parameter_grant_option', 'owner_parameter_grant_option', 'policy_parameter_acl_present'];
+const FUNCTION_CATEGORY_KEYS = ['total', 'known_extension', 'other', 'security_definer'];
+
+export function roleDiagnostic(row, canonicalRole) {
+  allTrue(row, ROLE_DETAIL_KEYS);
+  const baseline = ROLE_SQL_SECURITY_BASELINE[RESTORE.setup];
+  const fields = { rolsuper: 'canonical_superuser', rolbypassrls: 'canonical_bypass_rls',
+    rolcreaterole: 'canonical_create_role', rolcreatedb: 'canonical_create_database',
+    rolreplication: 'canonical_replication', rolcanlogin: 'canonical_can_login' };
+  const identityMatches = canonicalRole === RESTORE.setup;
+  return { ...row, pinned_setup_identity_matches: identityMatches,
+    pinned_setup_profile_matches: identityMatches && row.canonical_role_present && row.canonical_unexpired
+      && Object.entries(fields).every(([flag, key]) => row[key] === baseline[flag]) };
+}
+
+export function functionDiagnostic(row) {
+  check(object(row) && Object.keys(row).sort().join(',') === [...FUNCTION_CATEGORY_KEYS].sort().join(',')
+    && FUNCTION_CATEGORY_KEYS.every(key => Number.isSafeInteger(row[key]) && row[key] >= 0 && row[key] <= 1000000)
+    && row.total === row.known_extension + row.other && row.security_definer <= row.total,
+  'function_category_shape_unverified');
+  return row;
+}
+
 export const PROBE_PROFILE_SQL = `SELECT
   ${catalogEscalation("a.grantee IN(0,(SELECT oid FROM pg_roles WHERE rolname=$1))")} AS no_catalog_escalation,
   current_user=session_user AND current_user=$1 AND current_database()='postgres'
@@ -243,6 +303,8 @@ export async function auditMigrationRole({ env, fetchImpl = fetch, clientFactory
       [roles.lythaus_runtime, roles.lythaus_admin, roles.lythaus_jobs, roles.lythaus_privacy]])).rows?.[0];
     const publicProfile = (await query(PUBLIC_PROFILE_SQL)).rows?.[0];
     const authorityReady = allTrue(authority, AUTHORITY_KEYS), probeProfileReady = allTrue(publicProfile, PUBLIC_KEYS);
+    const roleDetails = roleDiagnostic((await query(ROLE_DETAIL_SQL, [roles.lythaus_migrations])).rows?.[0], roles.lythaus_migrations);
+    const publicFunctionCategories = functionDiagnostic((await query(PUBLIC_FUNCTION_CATEGORY_SQL, [EXTENSIONS])).rows?.[0]);
     const boundary = await query(REBIND_BOUNDARY_SQL, [roles.lythaus_admin, roles.lythaus_runtime,
       roles.lythaus_jobs, roles.lythaus_privacy, REBIND_SIGNATURE]);
     check(Array.isArray(boundary.rows) && boundary.rowCount === boundary.rows.length && boundary.rows.length <= 1,
@@ -250,7 +312,7 @@ export async function auditMigrationRole({ env, fetchImpl = fetch, clientFactory
     if (boundary.rows.length) {
       try { assertRebindBoundary(boundary.rows[0], payload); } catch { throw new AuditFailure('existing_function_boundary_unsafe'); }
     }
-    const result = { authority, publicProfile, authorityReady, probeProfileReady,
+    const result = { authority, publicProfile, authorityReady, probeProfileReady, roleDetails, publicFunctionCategories,
       functionState: boundary.rows.length ? 'VERIFIED_DISABLED' : 'ABSENT' };
     if (underLock) {
       check(authorityReady && probeProfileReady, 'fresh_role_or_public_profile_blocked');
