@@ -243,9 +243,10 @@ test('CLI success, denial and transport failure retain only sanitized JSON with 
 test('manual inventory is an exclusive protected mode with fixed credentials and registered offline checks', () => {
   const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
   assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection']);
-  assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory']);
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory', 'install-target']);
   assert.equal(workflow.on.workflow_dispatch.inputs.inspection.default, 'identity');
   assert.equal(workflow.jobs.inspect.if, "inputs.inspection == 'identity'");
+  assert.equal(workflow.jobs.install_target.if, "inputs.inspection == 'install-target'");
   const job = workflow.jobs.restore_inventory;
   assert.equal(job.if, "inputs.inspection == 'restore-inventory'");
   assert.equal(job.environment, 'production');
@@ -263,4 +264,30 @@ test('manual inventory is an exclusive protected mode with fixed credentials and
   assert.doesNotMatch(source, /from ['"]pg['"]|\.query\(|method: ['"](?:POST|PUT|PATCH|DELETE)['"]|console\.(?:warn|error)/);
   const ci = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
   assert.match(ci, /node --test scripts\/tests\/planetscale-native-restore-inventory.test.mjs/);
+});
+
+test('protected install target diagnostic is exclusive, owner-bound and scopes secrets after source verification', () => {
+  const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
+  assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection']);
+  assert.deepEqual(workflow.permissions, { contents: 'read' });
+  const job = workflow.jobs.install_target;
+  assert.equal(job.if, "inputs.inspection == 'install-target'");
+  assert.equal(job.environment, 'production');
+  assert.equal(job['timeout-minutes'], 5);
+  const guards = job.steps.find(step => step.name === 'Require first-attempt owner run on exact protected main').run;
+  for (const required of ['1010752912', 'refs/heads/main', 'REF_PROTECTED', 'GITHUB_SHA', 'git rev-parse HEAD',
+    'GITHUB_ACTOR_ID', '211295889', 'test "$GITHUB_RUN_ATTEMPT" = 1',
+    'test "$GITHUB_ACTOR" = "${GITHUB_REPOSITORY%%/*}"', 'git rev-parse FETCH_HEAD']) assert.ok(guards.includes(required));
+  const protectedSteps = job.steps.filter(step => step.env?.PLANETSCALE_ADMIN_DATABASE_URL);
+  assert.equal(protectedSteps.length, 1);
+  const comparison = protectedSteps[0];
+  assert.deepEqual(Object.keys(comparison.env).sort(), ['PLANETSCALE_ADMIN_DATABASE_URL', 'PSCALE_ROLE_IDENTIFIERS']);
+  assert.match(comparison.run, /^node scripts\/ci\/admin-subject-rebind-target-diagnostic.mjs > /);
+  assert.ok(job.steps.indexOf(comparison) > job.steps.findIndex(step => step.name === 'Recheck main immediately before protected comparison'));
+  assert.ok(job.steps.indexOf(comparison) > job.steps.findIndex(step => step.name === 'Validate comparison without protected inputs'));
+  assert.doesNotMatch(JSON.stringify(job), /npm ci|PLANETSCALE_API_TOKEN|PLANETSCALE_SERVICE_TOKEN|apply-planetscale|wrangler/);
+  const upload = job.steps.find(step => step.uses?.startsWith('actions/upload-artifact@'));
+  assert.equal(upload.with['retention-days'], 7);
+  assert.equal(workflow.jobs.inspect.if, "inputs.inspection == 'identity'");
+  assert.equal(workflow.jobs.restore_inventory.if, "inputs.inspection == 'restore-inventory'");
 });

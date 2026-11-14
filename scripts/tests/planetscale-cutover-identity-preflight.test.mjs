@@ -236,7 +236,7 @@ test('connection, probe, and rollback failures stay sanitized and close both cli
 });
 
 test('manual workflow is protected, exact-SHA gated, read-only, and has no bypass input', () => {
-  const identityWorkflow = workflow.split('\n  restore_inventory:')[0];
+  const identityWorkflow = workflow.split('\n  inspect:')[1].split('\n  restore_inventory:')[0];
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/);
@@ -244,7 +244,7 @@ test('manual workflow is protected, exact-SHA gated, read-only, and has no bypas
   assert.match(workflow, /test "\$GITHUB_SHA" = "\$RELEASE_SHA"/);
   assert.match(workflow, /ref: \$\{\{ github.sha \}\}/);
   assert.match(workflow, /test "\$\(git rev-parse FETCH_HEAD\)" = "\$RELEASE_SHA"/);
-  assert.ok(workflow.indexOf('Recheck current main before protected reads') < workflow.indexOf('PLANETSCALE_ADMIN_DATABASE_URL:'));
+  assert.ok(identityWorkflow.indexOf('Recheck current main before protected reads') < identityWorkflow.indexOf('PLANETSCALE_ADMIN_DATABASE_URL:'));
   assert.match(workflow, /PLANETSCALE_ADMIN_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_ADMIN_DATABASE_URL \}\}/);
   assert.match(workflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_SCHEMA_READ_DATABASE_URL \}\}/);
   assert.match(workflow, /PLANETSCALE_API_TOKEN: \$\{\{ secrets\.PLANETSCALE_API_TOKEN \}\}/);
