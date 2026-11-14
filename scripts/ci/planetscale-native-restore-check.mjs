@@ -13,6 +13,7 @@ import { inspectCleanupReservation, finalizeQualificationEvidence, sha256 } from
 import { RUN12 } from './planetscale-native-restore-run12-reconciliation.mjs';
 import { verifyRun12CleanupHistory } from './planetscale-native-restore-run12-history.mjs';
 import { RUN14, verifyRun14Cleanup } from './planetscale-native-restore-run14-reconciliation.mjs';
+import { verifyRun8History, verifyRun9History } from './planetscale-native-restore-early-history.mjs';
 
 const manifest = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/native-hyperdrive-production.json', import.meta.url)));
 const targetPath = plan => `/branches/${plan.target.name}`;
@@ -313,9 +314,11 @@ export async function githubReadiness(environment, fetchImpl = fetch, execute = 
     const cancelledRun = await read(`/actions/runs/${pinnedCancelledExecution.runId}`);
     const cancelledProof = await verifyPinnedCancelledExecution(cancelledRun, read, env);
     const precreateRun = await read(`/actions/runs/${pinnedPrecreateFailure.runId}`);
-    const precreateProof = await verifyPinnedPrecreateFailure(precreateRun, read, env);
+    const precreateProof = await verifyRun8History(precreateRun, read, env,
+      { strictVerifier: verifyPinnedPrecreateFailure });
     const manuallyDeletedRun = await read(`/actions/runs/${pinnedManuallyDeletedFailure.runId}`);
-    const manuallyDeletedProof = await verifyPinnedManuallyDeletedFailure(manuallyDeletedRun, read, env);
+    const manuallyDeletedProof = await verifyRun9History(manuallyDeletedRun, read, env,
+      { strictVerifier: verifyPinnedManuallyDeletedFailure, assertManualPayloads: assertPinnedManualCleanupProof });
     const reviewedProof = await verifyRun12CleanupHistory(await read(`/actions/runs/${RUN12.runId}`), read, env);
     const run14Proof = await verifyRun14Cleanup(await read(`/actions/runs/${RUN14.runId}`), read, env);
     return { executionHistoryReconciliation: { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED', workflowPath, workflowId,

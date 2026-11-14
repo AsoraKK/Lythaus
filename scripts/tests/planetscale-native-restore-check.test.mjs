@@ -1823,6 +1823,8 @@ test('GitHub preconditions reconcile only the five pinned prior runs with comple
         ? null : { ...cancelledRun(), ...(overrides.run ?? {}) });
       if (pathname.endsWith('/actions/runs/40193991312/jobs')) return Response.json({ total_count: overrides.failedJobCount ?? 1,
         jobs: Object.hasOwn(overrides, 'failedJobs') ? overrides.failedJobs : [failedJob()] });
+      if (pathname.endsWith('/actions/runs/40193991312/approvals')) return Response.json(overrides.failedApprovals
+        ?? [{ state: 'approved', user: { type: 'User', id: 211295889, login: pinnedHuman }, environments: [{ name: 'production' }] }]);
       if (pathname.endsWith('/actions/runs/40193991312/artifacts')) return Response.json({ total_count: overrides.failedArtifactCount ?? 1,
         artifacts: Object.hasOwn(overrides, 'failedArtifacts') ? overrides.failedArtifacts : [failedArtifact()] });
       if (pathname.endsWith('/actions/runs/40193991312')) return Response.json(overrides.malformedFailedRun
@@ -1830,7 +1832,7 @@ test('GitHub preconditions reconcile only the five pinned prior runs with comple
       if (pathname.endsWith('/actions/runs/40212030891/jobs')) return Response.json({ total_count: overrides.manualJobCount ?? 1,
         jobs: Object.hasOwn(overrides, 'manualJobs') ? overrides.manualJobs : [manuallyDeletedJob()] });
       if (pathname.endsWith('/actions/runs/40212030891/approvals')) return Response.json(overrides.manualApprovals
-        ?? [{ state: 'approved', user: { type: 'User', login: pinnedHuman }, environments: [{ name: 'production' }] }]);
+        ?? [{ state: 'approved', user: { type: 'User', id: 211295889, login: pinnedHuman }, environments: [{ name: 'production' }] }]);
       if (pathname.endsWith('/actions/runs/40212030891/artifacts')) return Response.json({ total_count: overrides.manualArtifactCount ?? 1,
         artifacts: Object.hasOwn(overrides, 'manualArtifacts') ? overrides.manualArtifacts : [manuallyDeletedArtifact()] });
       if (pathname.endsWith('/actions/runs/40212030891')) return Response.json({ ...manuallyDeletedRun(), ...(overrides.manualRun ?? {}) });
@@ -1853,6 +1855,35 @@ test('GitHub preconditions reconcile only the five pinned prior runs with comple
   assert.equal(historicalReadiness.executionHistoryReconciliation.pinnedExecutions[3].status, 'PINNED_RUN12_LOG_CLEANUP_RECONCILED');
   assert.equal(historicalReadiness.executionHistoryReconciliation.pinnedExecutions[3].qualificationArchiveBytesVerified, false);
   assert.equal(historicalReadiness.executionHistoryReconciliation.pinnedExecutions[3].recoveryCertified, false);
+  const allMissing = { run12ArchivesUnavailable: true,
+    failedArtifactCount: 0, failedArtifacts: [], manualArtifactCount: 0, manualArtifacts: [] };
+  const actualAvailability = fixtureFetch(allMissing);
+  const reconciled = await githubReadiness(env, actualAvailability.fetcher, true);
+  const earlyProofs = reconciled.executionHistoryReconciliation.pinnedExecutions.slice(1, 3);
+  assert.equal(earlyProofs[0].status, 'PINNED_PRECREATE_LOG_OBSERVATION_RECONCILED');
+  assert.equal(earlyProofs[0].originalQualificationPayloadBytesVerified, false);
+  assert.equal(earlyProofs[0].originalQualificationPayloadSha256, null);
+  assert.equal(earlyProofs[0].artifactProviderMutationCount, null);
+  assert.equal(earlyProofs[1].status, 'PINNED_MANUAL_CLEANUP_WITH_UNAVAILABLE_ARCHIVE');
+  assert.equal(earlyProofs[1].qualificationPayloadBytesVerified, true);
+  assert.equal(earlyProofs[1].originalQualificationArchiveBytesVerified, false);
+  for (const proof of reconciled.executionHistoryReconciliation.pinnedExecutions.slice(1)) {
+    assert.equal(proof.recoveryAcceptance, 'NOT_CERTIFIED');
+    assert.equal(proof.recoveryCertified, false);
+  }
+  for (const overrides of [
+    { failedApprovals: [] }, { manualApprovals: [] },
+    { failedApprovals: [{ state: 'approved', user: { type: 'User', id: 1, login: pinnedHuman }, environments: [{ name: 'production' }] }] },
+    { manualApprovals: [{ state: 'approved', user: { type: 'Bot', id: 211295889, login: pinnedHuman }, environments: [{ name: 'production' }] }] },
+    { failedJobs: [{ ...failedJob(), id: 1 }] }, { manualJobs: [{ ...manuallyDeletedJob(), head_sha: 'e'.repeat(40) }] },
+    { failedArtifactCount: 1 }, { manualArtifactCount: 1 },
+    { history: [...planRuns, cancelledRun(), failedRun(), manuallyDeletedRun(),
+      { ...failedRun(), id: 99, run_number: 15, display_title: 'Native restore execute unknown' }] },
+  ]) {
+    const candidate = fixtureFetch({ ...allMissing, ...overrides });
+    await assert.rejects(() => githubReadiness(env, candidate.fetcher, true));
+    assert.ok(candidate.reads.every(row => row.method === 'GET'));
+  }
   assert.deepEqual({ ...readiness.executionHistoryReconciliation,
     pinnedExecutions: readiness.executionHistoryReconciliation.pinnedExecutions.slice(0, 3) }, { status: 'PINNED_PRIOR_EXECUTIONS_RECONCILED',
     workflowPath, workflowId: 394786946, pinnedExecutions: [
@@ -1916,7 +1947,7 @@ test('GitHub preconditions reconcile only the five pinned prior runs with comple
     ['failure step changed', { failedJobs: [{ ...failedJob(), steps: failedJob().steps.map(step =>
       step.number === 6 ? { ...step, conclusion: 'success' } : step) }] }],
     ['extra job step', { failedJobs: [{ ...failedJob(), steps: [...failedJob().steps, { name: 'extra', number: 20, status: 'completed', conclusion: 'success' }] }] }],
-    ['artifact inventory empty', { failedArtifactCount: 0, failedArtifacts: [] }],
+    ['missing archive lacks historical approval', { failedArtifactCount: 0, failedArtifacts: [], failedApprovals: [] }],
     ['artifact digest mismatch', { failedArtifacts: [{ ...failedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] }],
     ['artifact expired', { failedArtifacts: [{ ...failedArtifact(), expired: true }] }],
     ['artifact source mismatch', { failedArtifacts: [{ ...failedArtifact(), workflow_run: { ...failedArtifact().workflow_run, head_sha: 'f'.repeat(40) } }] }],
@@ -1931,7 +1962,7 @@ test('GitHub preconditions reconcile only the five pinned prior runs with comple
     ['manual job runner missing', { manualJobs: [{ ...manuallyDeletedJob(), runner_id: 0 }] }],
     ['manual upload failed', { manualJobs: [{ ...manuallyDeletedJob(), steps: manuallyDeletedJob().steps.map(step =>
       step.number === 9 ? { ...step, conclusion: 'failure' } : step) }] }],
-    ['manual artifact absent', { manualArtifactCount: 0, manualArtifacts: [] }],
+    ['missing manual archive lacks approval', { manualArtifactCount: 0, manualArtifacts: [], manualApprovals: [] }],
     ['manual artifact replaced', { manualArtifacts: [{ ...manuallyDeletedArtifact(), id: 1 }] }],
     ['manual artifact expired', { manualArtifacts: [{ ...manuallyDeletedArtifact(), expired: true }] }],
     ['manual artifact hash changed', { manualArtifacts: [{ ...manuallyDeletedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] }],
@@ -1942,7 +1973,7 @@ test('GitHub preconditions reconcile only the five pinned prior runs with comple
   }
   let proofReads = 0;
   const changesBeforeCreate = async (url, options) => {
-    if (new URL(url).pathname.endsWith('/actions/runs/40212030891/artifacts') && ++proofReads === 2) {
+    if (new URL(url).pathname.endsWith('/actions/runs/40212030891/artifacts') && ++proofReads === 4) {
       return Response.json({ total_count: 1, artifacts: [{ ...manuallyDeletedArtifact(), digest: 'sha256:' + '0'.repeat(64) }] });
     }
     return good.fetcher(url, options);

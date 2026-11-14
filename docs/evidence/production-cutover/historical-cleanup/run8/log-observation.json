@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "lythaus-historical-log-observation-v1",
+  "runId": "40193991312",
+  "runAttempt": 1,
+  "jobId": 121170799629,
+  "sourceMainSha": "96ff66fa5c28c9780ce72ee23a40cd846372d6bd",
+  "sourceLogUrl": "https://github.com/AsoraKK/Lythaus/actions/runs/40193991312/job/121170799629",
+  "reportedAt": "2026-10-25T12:41:36.6835940Z",
+  "reportedSummary": {
+    "status": "BLOCKED",
+    "blockers": ["copied_role_metadata_invalid"],
+    "cleanup": "NOT_NEEDED",
+    "createdTargetId": null
+  },
+  "sourceControlFlow": {
+    "runnerPath": "scripts/ci/planetscale-native-restore-check.mjs",
+    "runnerGitBlob": "75cfbf57d84ce01b5951fb83164ee6918ee6297a",
+    "runnerSha256": "94ffc283894246063ef694a6a1a887ba77983bff142e25354ed1056b82bcfc10",
+    "contractPath": "scripts/ci/planetscale-native-restore-contract.mjs",
+    "contractGitBlob": "09fa3bbf55bd5ac4bddce345d79f3615341d92b4",
+    "contractSha256": "c2fa4fc8af3d26e88341266ddd067e2996b14864ea6f79104fd80580af1fdf23",
+    "sourceRoleValidationLine": 206,
+    "firstCreateMutationLine": 219,
+    "targetIdAssignmentLine": 223,
+    "interpretation": "The source-role guard precedes creation. The later restored-role guard follows target-ID assignment; the ID is not cleared. The logged null ID, NOT_NEEDED cleanup and sole metadata blocker attest the earlier pre-create failure."
+  },
+  "qualificationArtifactId": 12599287272,
+  "qualificationArchiveSha256Text": "16d38d9bb99249074c62cb19a95baf6f6cd1d35f5feb98da054ca7afc07d03ac",
+  "originalQualificationPayloadSha256": null,
+  "originalQualificationPayloadBytesVerified": false,
+  "originalQualificationArchiveBytesVerified": false,
+  "evidenceKind": "RETAINED_JOB_LOG_SUMMARY_AND_PINNED_SOURCE_ANALYSIS",
+  "recoveryCertified": false
+}
