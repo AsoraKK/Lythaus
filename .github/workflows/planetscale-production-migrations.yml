@@ -37,6 +37,11 @@ on:
         description: Link or short reference for the operator estimate
         required: false
         type: string
+      admin_subject_rebind_install_approval:
+        description: Optional separately approved exact-payload consent for the disabled admin identity-rebind capability
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -53,6 +58,10 @@ jobs:
     timeout-minutes: 30
     env:
       PLANETSCALE_VERIFIER_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON: ${{ inputs.admin_subject_rebind_install_approval }}
+      PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -78,6 +87,8 @@ jobs:
           npm run validate:planetscale-migrations
           npm run test:planetscale-production-migrations
           node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
+      - name: Validate optional disabled admin identity-rebind installation consent
+        run: node scripts/ci/verify-admin-subject-rebind-install-consent.mjs
       - name: Resolve protected migration database credential
         shell: bash
         env:
@@ -90,6 +101,11 @@ jobs:
             echo "PLANETSCALE_SCHEMA_READ_DATABASE_URL is required in the protected production environment." >&2
             exit 1
           }
+
+          if [[ -n "${ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:-}" && -z "${STATIC_ADMIN_DATABASE_URL:-}" ]]; then
+            echo 'Admin identity-rebind capability installation requires the existing protected migration credential; no credential will be created.' >&2
+            exit 1
+          fi
 
           if [[ -n "${STATIC_ADMIN_DATABASE_URL:-}" ]]; then
             echo "::add-mask::$STATIC_ADMIN_DATABASE_URL"
@@ -169,6 +185,7 @@ jobs:
           node scripts/ci/verify-first-admin-bootstrap-boundary.mjs \
             > "$RUNNER_TEMP/planetscale-migration/first-admin-bootstrap-boundary.json"
       - name: Reconcile dedicated schema verifier metadata grants
+        if: inputs.admin_subject_rebind_install_approval == ''
         env:
           PSCALE_BRANCH_NAME: main
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -223,6 +240,10 @@ jobs:
     outputs:
       ready: ${{ steps.plan.outputs.ready }}
     steps:
+      - name: Refuse capability-install consent in the 0021-only lane
+        env:
+          ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON: ${{ inputs.admin_subject_rebind_install_approval }}
+        run: test -z "$ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main

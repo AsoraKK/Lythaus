@@ -5,6 +5,8 @@ import { APPROVED_MIGRATIONS, loadApprovedMigrations } from './planetscale-migra
 import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
 import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-contract.mjs';
+import { rebindInstallConsent, installReviewedRebindCapability } from './admin-subject-rebind-capability.mjs';
+import { branchQualifiedDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 
 const { Client } = pg;
 const root = process.cwd();
@@ -14,6 +16,7 @@ const usageApproval = process.env.PLANETSCALE_MIGRATION_USAGE_APPROVED ?? '';
 const usageMaxUsd = Number(process.env.PLANETSCALE_MIGRATION_USAGE_MAX_USD ?? '0');
 const databaseUrl = process.env.PLANETSCALE_ADMIN_DATABASE_URL ?? '';
 const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
+const rebindConsent = rebindInstallConsent(process.env);
 
 if (branch !== 'main') throw new Error('production migrations require PSCALE_BRANCH_NAME=main');
 if (approval !== 'approved') throw new Error('production migrations require PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED=approved');
@@ -33,6 +36,15 @@ const quoteRoleIdentifier = (value) => {
 for (const label of ['runtime', 'admin', 'jobs', 'privacy', 'migrations']) {
   if (!roleIdentifiers[`lythaus_${label}`]) throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for lythaus_${label}`);
   quoteRoleIdentifier(roleIdentifiers[`lythaus_${label}`]);
+}
+if (rebindConsent) {
+  const target = branchQualifiedDatabaseTarget(databaseUrl);
+  const expected = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/native-hyperdrive-production.json'), 'utf8'));
+  if (target.branchId !== 'vqa2g2xc9wsl' || target.sqlDatabaseName !== 'postgres'
+    || target.originFingerprint !== expected.expectedMainOriginFingerprint
+    || target.role !== roleIdentifiers.lythaus_migrations) {
+    throw new Error('admin_rebind_install_migration_target_mismatch');
+  }
 }
 
 async function registryRows(client) {
@@ -153,8 +165,10 @@ async function applyGrants(client) {
   await client.query('BEGIN');
   try {
     await acquireMigrationLock(client);
-    await client.query(sql);
+    if (!rebindConsent) await client.query(sql);
+    const capability = await installReviewedRebindCapability(client, rebindConsent, roleIdentifiers);
     await client.query('COMMIT');
+    if (rebindConsent) console.log(JSON.stringify({ adminSubjectRebindCapability: capability }));
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
     throw error;
@@ -165,6 +179,13 @@ const { migrations } = loadApprovedMigrations({ root, committedOnly: process.env
 const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
 await client.connect();
 try {
+  if (rebindConsent) {
+    const target = branchQualifiedDatabaseTarget(databaseUrl);
+    const session = await client.query('SELECT current_database() AS database_name, current_user AS current_role, session_user AS session_role');
+    const row = session.rows[0];
+    if (session.rowCount !== 1 || row.database_name !== 'postgres' || row.current_role !== row.session_role
+      || ![target.role, target.username].includes(row.current_role)) throw new Error('admin_rebind_install_session_target_mismatch');
+  }
   const registry = await registryRows(client);
   let mode;
   let pending;
@@ -206,6 +227,9 @@ try {
     throw new Error('production migration registry is neither a clean bootstrap nor an exact canonical migration prefix');
   }
 
+  if (rebindConsent && (mode !== 'verified' || pending.length !== 0)) {
+    throw new Error('admin_rebind_install_requires_existing_exact_migration_baseline');
+  }
   const bootstrapPending = [];
   for (const item of pending) {
     const migration = item.migration ?? item;
@@ -230,7 +254,9 @@ try {
   await applyGrants(client);
   await verifyWaitlistPrivileges(client);
   await verifyRuntimeRateLimitPrivileges(client);
-  console.log(`Validated and applied PlanetScale production migrations on ${branch} (${mode}); no migration checksum was updated.`);
+  console.log(rebindConsent
+    ? 'Verified the existing baseline and installed only the disabled admin identity-rebind capability; canonical role grants and migrations were not applied.'
+    : `Validated and applied PlanetScale production migrations on ${branch} (${mode}); no migration checksum was updated.`);
 } finally {
   await client.end();
 }
