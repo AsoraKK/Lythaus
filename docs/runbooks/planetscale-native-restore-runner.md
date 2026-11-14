@@ -116,6 +116,25 @@ checks as false. Run #12 remains FAILED and NOT_CERTIFIED. The runner must still
 establish current target absence, and all current backup, restore, cost, review,
 RPO/RTO and independent-recovery gates remain required.
 
+Runs #8 and #9 have separate historical profiles only when each run's complete
+artifact inventory is empty. Any available artifact retains that run's original
+strict verifier; a strict failure never falls back. Run #8 requires the exact
+new log-observation bytes under `historical-cleanup/run8`, plus its original
+run, ordered job steps and named human production approval. Its retained log
+reports `copied_role_metadata_invalid`, `NOT_NEEDED` and a null target ID; the
+pinned original source places source-role validation before creation and the
+later restored-role validation after target-ID assignment. This is an explicit
+log/source attestation, not verified original qualification JSON. The original
+payload hash and mutation/credential counts are unknown, and no bytes or zero
+counts are invented. Run #9 reuses the unchanged manual-cleanup payload checker
+against the exact tracked qualification and manual receipt bytes, together with
+the original run/job/production approval. These payloads do not prove membership
+in the missing original ZIP. Both profiles report NOT_CERTIFIED and explicitly
+false archive-byte verification. They do not establish current target absence,
+fresh recovery proof or permission to create a target. The complete-history
+unknown-execution guard and all current backup, cost, retention, approval,
+restore, release and cleanup gates remain unchanged.
+
 Source is `lythaus/lythaus-core/main` (`vqa2g2xc9wsl`). The read-only inventory
 below recorded `muprxxetwfet` and
 `lythaus-0021-native-restore-check-20261027-01` as past candidate pins; neither
