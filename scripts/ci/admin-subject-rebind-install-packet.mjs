@@ -20,7 +20,8 @@ const requiredChecks=['Repository hygiene','Workflow lint','Native Workers and P
 
 export async function rebindPacketGithubRead(env,suffix,fetchImpl=fetch) {
   if(/^\/actions\//.test(suffix))return githubRead(env,suffix,fetchImpl);
-  check(env.GITHUB_REPOSITORY==='AsoraKK/Lythaus'&&env.GH_TOKEN&&/^[a-f0-9]{40}$/.test(env.RELEASE_SHA??''),
+  check(env.GITHUB_REPOSITORY_ID==='1010752912'&&/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/Lythaus$/.test(env.GITHUB_REPOSITORY??'')
+    &&env.GH_TOKEN&&/^[a-f0-9]{40}$/.test(env.RELEASE_SHA??''),
     'packet_github_context_invalid');
   check(suffix==='/branches/main'||suffix===`/commits/${env.RELEASE_SHA}/check-runs?filter=latest&per_page=100`,
     'packet_github_path_invalid');

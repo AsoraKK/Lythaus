@@ -243,7 +243,7 @@ test('CLI success, denial and transport failure retain only sanitized JSON with 
 test('manual inventory is an exclusive protected mode with fixed credentials and registered offline checks', () => {
   const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
   assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection', 'migration_probe_approval']);
-  assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory', 'install-target', 'migration-role-audit', 'migration-probe']);
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory', 'install-target', 'migration-role-audit', 'migration-probe', 'rebind-install-packet']);
   assert.equal(workflow.on.workflow_dispatch.inputs.inspection.default, 'identity');
   assert.equal(workflow.jobs.inspect.if, "inputs.inspection == 'identity'");
   assert.equal(workflow.jobs.install_target.if, "inputs.inspection == 'install-target'");
