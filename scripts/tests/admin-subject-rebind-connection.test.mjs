@@ -105,8 +105,9 @@ test('existing-mode install preserves false or missing credential proof and reje
 test('existing-mode preview, execute and cleanup preserve credential proof and reject before any connection',async t=>{
   let connections=0,requests=0;
   t.mock.method(pg.Client.prototype,'connect',async()=>{connections++;throw new Error('unexpected connection');});
-  const env={...installation(),ENABLE_ADMIN_SUBJECT_REBIND:'true',RELEASE_MODE:'force_auth_critical',GITHUB_RUN_ID:'456',
-    GITHUB_WORKFLOW_REF:'AsoraKK/Lythaus/.github/workflows/production-release.yml@refs/heads/main',
+  const context=installation();
+  const env={...context,ENABLE_ADMIN_SUBJECT_REBIND:'true',RELEASE_MODE:'force_auth_critical',GITHUB_RUN_ID:'456',
+    GITHUB_WORKFLOW_REF:`${context.GITHUB_REPOSITORY}/.github/workflows/production-release.yml@refs/heads/main`,
     ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON:JSON.stringify({executor:{...executor,mode:'existing_owner_connection'}}),
     ADMIN_REBIND_EXECUTOR_BINDING_JSON:JSON.stringify({...executor,mode:'existing_owner_connection'})};
   for(const stage of ['preview','execute','disable']) {
