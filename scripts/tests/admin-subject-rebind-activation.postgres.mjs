@@ -19,6 +19,7 @@ const executor={mode:'existing_owner_connection',branchId:'vqa2g2xc9wsl',databas
 const repository=new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1,-1);
 const id=n=>`01900000-0000-7000-8000-${String(n).padStart(12,'0')}`;
 const connect=async(role=url.username)=>{const target=new URL(url);target.username=role;
+  if(role!==url.username)target.password='synthetic-handoff-fixture';
   const c=new pg.Client({connectionString:target.href,ssl:false});await c.connect();return c;};
 const operator=()=>connect(executorRole);
 const policyText=async c=>(await c.query('SELECT policy_text FROM admin_recovery.subject_rebind_control')).rows[0].policy_text;
@@ -88,10 +89,10 @@ test('PG17 policy handoff uses existing managed-owner authority and preserves th
     await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${REBIND_METADATA_VERIFIER_ROLE}') THEN CREATE ROLE ${REBIND_METADATA_VERIFIER_ROLE} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
     await owner.query(`GRANT USAGE ON SCHEMA identity TO ${REBIND_METADATA_VERIFIER_ROLE}`);
     for(const [label,role] of Object.entries(roles)){
-      await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role} LOGIN NOSUPERUSER INHERIT; END IF; END $$;`);
+      await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role} LOGIN NOSUPERUSER INHERIT PASSWORD 'synthetic-handoff-fixture'; END IF; END $$;`);
       if(label!=='lythaus_migrations')await owner.query(`GRANT ${label} TO ${role}`);
     }
-    await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${executorRole}') THEN CREATE ROLE ${executorRole} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
+    await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${executorRole}') THEN CREATE ROLE ${executorRole} LOGIN NOSUPERUSER NOINHERIT PASSWORD 'synthetic-handoff-fixture'; END IF; END $$;`);
     await owner.query(`GRANT postgres TO ${executorRole} WITH INHERIT FALSE, SET TRUE`);
     await t.test('preview, execution and cleanup CAS exact control revisions without changing membership',async()=>{
       await seed(owner);const preview=approval();
@@ -105,7 +106,7 @@ test('PG17 policy handoff uses existing managed-owner authority and preserves th
       assert.notEqual((await owner.query("SELECT oid FROM pg_roles WHERE rolname='postgres'")).rows[0].oid,10,
         'managed-owner test requires the CI non-bootstrap postgres fixture');
       await seed(owner);const preview=approval();
-      await owner.query('CREATE ROLE pscale_api_handofflocalroot LOGIN SUPERUSER');
+      await owner.query("CREATE ROLE pscale_api_handofflocalroot LOGIN SUPERUSER PASSWORD 'synthetic-handoff-fixture'");
       const root=await connect('pscale_api_handofflocalroot');
       try {
         await root.query('ALTER ROLE postgres NOSUPERUSER');

@@ -403,11 +403,12 @@ test('local PG17 proposal preserves authorization while permitting only an exact
       await seed(owner);
       const roles=Object.fromEntries(['runtime','admin','jobs','privacy','migrations'].map(name=>['lythaus_'+name,'pscale_api_test'+name]));
       for(const [label,role] of Object.entries(roles)){
-        await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role} LOGIN NOSUPERUSER INHERIT; END IF; END $$;`);
+        await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role} LOGIN NOSUPERUSER INHERIT PASSWORD 'synthetic-rebuild-fixture'; END IF; END $$;`);
         if(label!=='lythaus_migrations')await owner.query(`GRANT ${label} TO ${role}`);
       }
       const executorRole='pscale_api_testexecutor';
-      await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${executorRole}') THEN CREATE ROLE ${executorRole} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
+      await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${executorRole}') THEN CREATE ROLE ${executorRole} LOGIN NOSUPERUSER NOINHERIT PASSWORD 'synthetic-rebuild-fixture'; END IF; END $$;`);
+      await owner.query(`ALTER ROLE ${executorRole} PASSWORD 'synthetic-rebuild-fixture'`);
       await owner.query(`GRANT postgres TO ${executorRole} WITH INHERIT FALSE, SET TRUE`);
       const payload=rebindGrantPayload(),consent={payload,record:{
         approvedAt:new Date(Date.now()-1000).toISOString(),expiresAt:new Date(Date.now()+300000).toISOString(),
@@ -415,7 +416,7 @@ test('local PG17 proposal preserves authorization while permitting only an exact
           originFingerprint:'d'.repeat(64),roleFingerprint:rebindExecutorRoleFingerprint(executorRole),roleMapSha256:rebindRoleMapSha256(roles)},
       }};
       const transaction=async(work,{commit=false}={})=>{
-        const operatorUrl=new URL(connectionString);operatorUrl.username=executorRole;
+        const operatorUrl=new URL(connectionString);operatorUrl.username=executorRole;operatorUrl.password='synthetic-rebuild-fixture';
         const operator=new pg.Client({connectionString:operatorUrl.href,ssl:false});await operator.connect();
         try{
           await operator.query('BEGIN');
@@ -432,8 +433,8 @@ test('local PG17 proposal preserves authorization while permitting only an exact
         await client.query('DROP SCHEMA IF EXISTS admin_recovery');
       };
       await drop(owner);
-      await owner.query('CREATE ROLE pscale_api_rebuildtestroot LOGIN SUPERUSER');
-      const rootUrl=new URL(connectionString);rootUrl.username='pscale_api_rebuildtestroot';
+      await owner.query("CREATE ROLE pscale_api_rebuildtestroot LOGIN SUPERUSER PASSWORD 'synthetic-rebuild-fixture'");
+      const rootUrl=new URL(connectionString);rootUrl.username='pscale_api_rebuildtestroot';rootUrl.password='synthetic-rebuild-fixture';
       const localRoot=new pg.Client({connectionString:rootUrl.href,ssl:false});await localRoot.connect();
       try{
         await localRoot.query('ALTER ROLE postgres NOSUPERUSER');
