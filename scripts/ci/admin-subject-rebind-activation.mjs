@@ -1,6 +1,8 @@
-import {createHash,randomBytes} from 'node:crypto';
-import {parseRebindIntent,parseRebindPolicy,sealRebindPolicy,REBIND_POLICY_SETTING} from '../../apps/lythaus-admin-api/src/solo-recovery/rebind-protocol.ts';
+import {createHash} from 'node:crypto';
+import {parseRebindIntent,parseRebindPolicy,sealRebindPolicy} from '../../apps/lythaus-admin-api/src/solo-recovery/rebind-protocol.ts';
 import {REBIND_BOUNDARY_SQL,REBIND_SIGNATURE,REBIND_SOURCE_STATE_SQL,assertRebindBoundary} from './admin-subject-rebind-capability.mjs';
+import {REBIND_READER_SIGNATURE,REBIND_RESTORE_STATE_SIGNATURE,REBIND_CONTROL_UPDATE_SQL,rebindControlInventory} from './admin-subject-rebind-control.mjs';
+import {validateRebindExecutor,assertRebindExecutorSession,rebindExecutorBindingSha256} from './admin-subject-rebind-executor.mjs';
 
 const repository=new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1,-1);
 const sha=/^[a-f0-9]{40}$/;
@@ -9,14 +11,10 @@ const check=(condition,code)=>{if(!condition)throw new Error(code);};
 const keys=value=>Object.keys(value).sort().join(',');
 export const policySha256=value=>createHash('sha256').update(value).digest('hex');
 export const DISABLED_POLICY_SHA256=policySha256('DISABLED');
-export const REBIND_POLICY_ID_SQL=`SELECT oid FROM pg_catalog.pg_proc WHERE oid=to_regprocedure($1)`;
-export const REBIND_POLICY_ALTER_SQL=`ALTER FUNCTION ${REBIND_SIGNATURE} SET ${REBIND_POLICY_SETTING} FROM CURRENT`;
-export const REBIND_OPERATOR_SESSION_SQL=`SELECT current_database() AS database_name,current_user AS current_role,
-  session_user AS session_role,pg_has_role(current_user,'postgres','SET') AS may_set_owner`;
-export const REBIND_OWNER_CAPACITY_SQL=`SELECT current_user='postgres' AS owner_context,
-  has_parameter_privilege(current_user,$1,'SET') AS guard_allowed,
-  has_parameter_privilege(current_user,$2,'SET') AS policy_allowed`;
+export const REBIND_POLICY_ID_SQL='SELECT oid FROM pg_catalog.pg_proc WHERE oid=to_regprocedure($1)';
+export const rebindCatalogLockSql=signature=>`ALTER FUNCTION ${signature} COST 100`;
 const canonical=value=>JSON.stringify(parseRebindPolicy(value));
+const validRevision=value=>Number.isSafeInteger(value)&&value>=0&&value<Number.MAX_SAFE_INTEGER-2;
 
 export function requireRebindActivationContext(env) {
   check(env.ENABLE_ADMIN_SUBJECT_REBIND==='true'&&env.RELEASE_MODE==='force_auth_critical'
@@ -34,16 +32,20 @@ export function rebindActivationConsent(value,{env,payload,stage,now=Date.now()}
   requireRebindActivationContext(env);
   let record;try{record=typeof value==='string'?JSON.parse(value):value;}catch{throw new Error('admin_rebind_activation_consent_invalid');}
   check(record&&typeof record==='object'&&!Array.isArray(record)
-    &&keys(record)==='approvalReference,approvedAt,disableAtExpiry,expiresAt,grantSha256,operator,policy,previousPolicySha256,releaseRunId,releaseSha,schemaVersion,scope,stage,workerVersionId',
+    &&keys(record)==='approvalReference,approvedAt,catalogLock,disableAtExpiry,executor,expiresAt,grantSha256,operator,policy,previousPolicyRevision,previousPolicySha256,releaseRunId,releaseSha,schemaVersion,scope,stage,workerVersionId',
   'admin_rebind_activation_consent_invalid');
-  check(record.schemaVersion==='lythaus-admin-subject-rebind-activation-v1'
-    &&record.scope==='function_policy_only'&&record.stage===stage&&['preview','execute'].includes(stage)
+  check(record.schemaVersion==='lythaus-admin-subject-rebind-activation-v2'
+    &&record.scope==='owner_control_record_and_catalog_lock'&&record.catalogLock==='canonical_functions_cost_100'
+    &&record.stage===stage&&['preview','execute'].includes(stage)
     &&record.disableAtExpiry===true&&record.releaseSha===env.RELEASE_SHA&&record.releaseRunId===env.GITHUB_RUN_ID
     &&record.operator===env.GITHUB_ACTOR&&record.workerVersionId===env.ADMIN_WORKER_VERSION_ID
-    &&record.grantSha256===payload.sha256&&hash.test(record.previousPolicySha256??''),
+    &&record.grantSha256===payload.sha256&&hash.test(record.previousPolicySha256??'')
+    &&validRevision(record.previousPolicyRevision),
   'admin_rebind_activation_scope_invalid');
+  validateRebindExecutor(record.executor);
   const policy=parseRebindIntent(record.policy);
   check(policy&&policy.mode===stage&&policy.sourceSha===record.releaseSha&&policy.workerVersionId===record.workerVersionId
+    &&policy.capabilitySha256===payload.sha256&&policy.controlRevision===record.previousPolicyRevision+1
     &&policy.reference===`canonical-release:${record.releaseRunId}:admin-subject-rebind`,
   'admin_rebind_activation_policy_invalid');
   const stamp=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)?Date.parse(value):NaN;
@@ -56,37 +58,34 @@ export function rebindActivationConsent(value,{env,payload,stage,now=Date.now()}
     &&record.approvalReference.length>0&&record.approvalReference.length<=200,
   'admin_rebind_activation_reference_required');
   if(stage==='preview')check(record.previousPolicySha256===DISABLED_POLICY_SHA256,'admin_rebind_preview_must_start_disabled');
-  if(stage==='execute')check(record.previousPolicySha256===env.ADMIN_REBIND_PREVIEW_POLICY_SHA256,
+  if(stage==='execute') {
+    let previousExecutor;try{previousExecutor=JSON.parse(env.ADMIN_REBIND_EXECUTOR_BINDING_JSON);}catch{}
+    check(record.previousPolicySha256===env.ADMIN_REBIND_PREVIEW_POLICY_SHA256
+      &&record.previousPolicyRevision===Number(env.ADMIN_REBIND_PREVIEW_CONTROL_REVISION)
+      &&rebindExecutorBindingSha256(record.executor)===rebindExecutorBindingSha256(previousExecutor),
     'admin_rebind_execute_preview_binding_invalid');
-  return {record,policy,payload,policyText:null,policySha256:null};
+  }
+  return {record,policy,payload};
 }
 
 export function sealRebindActivationConsent(consent,bindingProof) {
   const policy=sealRebindPolicy(consent.policy,bindingProof);
-  check(policy&&policy.bindingProof.releaseRunId===consent.record.releaseRunId,
-    'admin_rebind_control_plane_proof_invalid');
+  check(policy&&policy.bindingProof.releaseRunId===consent.record.releaseRunId,'admin_rebind_control_plane_proof_invalid');
   const policyText=canonical(policy);
   return {...consent,policy,policyText,policySha256:policySha256(policyText)};
 }
 
-export function checkedFunctionPolicy(row,payload) {
-  check(Array.isArray(row?.settings),'admin_rebind_function_policy_invalid');
-  const settings=row.settings.filter(value=>typeof value==='string'&&value.startsWith(`${REBIND_POLICY_SETTING}=`));
-  check(settings.length===1,'admin_rebind_function_policy_invalid');
-  const value=settings[0].slice(REBIND_POLICY_SETTING.length+1);
-  check(value==='DISABLED'||parseRebindPolicy(value)!==null,'admin_rebind_function_policy_invalid');
-  assertRebindBoundary({...row,settings:row.settings.map(setting=>setting===settings[0]?`${REBIND_POLICY_SETTING}=DISABLED`:setting)},payload);
-  return value;
-}
-
 export function requirePolicyTransition(previous,consent) {
-  check(policySha256(previous)===consent.record.previousPolicySha256,'admin_rebind_policy_changed_before_activation');
+  check(policySha256(previous.policyText)===consent.record.previousPolicySha256
+    &&previous.revision===consent.record.previousPolicyRevision
+    &&consent.policy.controlRevision===previous.revision+1,'admin_rebind_policy_changed_before_activation');
   if(consent.record.stage==='preview') {
-    check(previous==='DISABLED','admin_rebind_preview_must_start_disabled');
+    check(previous.policyText==='DISABLED','admin_rebind_preview_must_start_disabled');
     return;
   }
-  const old=parseRebindPolicy(previous),next=consent.policy;
-  check(old&&old.mode==='preview'&&old.sourceSha===next.sourceSha&&old.workerVersionId===next.workerVersionId
+  const old=parseRebindPolicy(previous.policyText),next=consent.policy;
+  check(old&&old.mode==='preview'&&old.controlRevision===previous.revision
+    &&old.capabilitySha256===next.capabilitySha256&&old.sourceSha===next.sourceSha&&old.workerVersionId===next.workerVersionId
     &&old.origin===next.origin&&old.accessIssuer===next.accessIssuer&&old.accessAudience===next.accessAudience
     &&old.emailSha256===next.emailSha256&&old.reference===next.reference&&old.notBefore===next.notBefore
     &&next.expiresAt<=old.expiresAt&&JSON.stringify(old.databaseTarget)===JSON.stringify(next.databaseTarget),
@@ -95,54 +94,54 @@ export function requirePolicyTransition(previous,consent) {
 
 function parameters(roles) {
   const values=['admin','runtime','jobs','privacy','migrations'].map(label=>roles[`lythaus_${label}`]);
-  check(values.every(value=>/^pscale_api_[a-z0-9]+$/.test(value??''))&&new Set(values).size===5,
-    'admin_rebind_activation_roles_invalid');
+  check(values.every(value=>/^pscale_api_[a-z0-9]+$/.test(value??''))&&new Set(values).size===5,'admin_rebind_activation_roles_invalid');
   return [...values.slice(0,4),REBIND_SIGNATURE];
 }
 
-async function inventory(client,roles,payload,guard=null) {
+export async function inventoryRebindPolicy(client,roles,payload,{lock=false}={}) {
   const result=await client.query(REBIND_BOUNDARY_SQL,parameters(roles));
   check(result.rowCount===1&&result.rows.length===1,'admin_rebind_capability_missing');
-  let row=result.rows[0];
-  if(guard){
-    check(Array.isArray(row.settings)&&row.settings.filter(value=>value===`${guard}=locked`).length===1,
-      'admin_rebind_policy_guard_unverified');
-    row={...row,settings:row.settings.filter(value=>value!==`${guard}=locked`)};
-  }
-  return checkedFunctionPolicy(row,payload);
+  assertRebindBoundary(result.rows[0],payload);
+  const control=await rebindControlInventory(client,roles,payload,{lock});
+  check(control.policyText==='DISABLED'||parseRebindPolicy(control.policyText)?.controlRevision===control.revision,
+    'admin_rebind_control_state_invalid');
+  return control;
 }
 
 async function lockPolicy(client,roles,payload) {
-  // A unique, unused function setting obtains the catalog tuple write lock.
-  // It preserves the policy and every other setting, and is reset in this same
-  // transaction. Never grant the caller UPDATE on PostgreSQL system catalogs.
-  await inventory(client,roles,payload);
-  const before=await client.query(REBIND_POLICY_ID_SQL,[REBIND_SIGNATURE]);
-  check(before.rowCount===1,'admin_rebind_capability_missing');
-  const guard=`lythaus.rebind_guard_${randomBytes(16).toString('hex')}`;
-  const capacity=await client.query(REBIND_OWNER_CAPACITY_SQL,[guard,REBIND_POLICY_SETTING]);
-  check(capacity.rowCount===1&&capacity.rows[0].owner_context===true&&capacity.rows[0].guard_allowed===true
-    &&capacity.rows[0].policy_allowed===true,'admin_rebind_existing_owner_capacity_unverified');
-  await client.query('SELECT set_config($1,$2,true)',[guard,'locked']);
-  await client.query(`ALTER FUNCTION ${REBIND_SIGNATURE} SET ${guard} FROM CURRENT`);
-  const after=await client.query(REBIND_POLICY_ID_SQL,[REBIND_SIGNATURE]);
-  check(after.rowCount===1&&after.rows[0].oid===before.rows[0].oid,'admin_rebind_capability_replaced');
-  const previous=await inventory(client,roles,payload,guard);
-  return {guard,previous};
+  await inventoryRebindPolicy(client,roles,payload);
+  for(const signature of [REBIND_READER_SIGNATURE,REBIND_RESTORE_STATE_SIGNATURE,REBIND_SIGNATURE].sort()) {
+    const before=await client.query(REBIND_POLICY_ID_SQL,[signature]);
+    check(before.rowCount===1,'admin_rebind_capability_missing');
+    // The exact consent includes COST100 normalization; no authorization field is normalized.
+    await client.query(rebindCatalogLockSql(signature));
+    const after=await client.query(REBIND_POLICY_ID_SQL,[signature]);
+    check(after.rowCount===1&&after.rows[0].oid===before.rows[0].oid,'admin_rebind_capability_replaced');
+  }
+  return inventoryRebindPolicy(client,roles,payload,{lock:true});
 }
 
-async function useExistingOwnerAuthority(client,roles) {
+async function useExistingOwnerAuthority(client,roles,executor) {
   parameters(roles);
-  const session=await client.query(REBIND_OPERATOR_SESSION_SQL),row=session.rows[0];
-  check(session.rowCount===1&&row.database_name==='postgres'&&row.current_role===row.session_role
-    &&[roles.lythaus_migrations,`${roles.lythaus_migrations}.vqa2g2xc9wsl`].includes(row.current_role)
-    &&row.may_set_owner===true,'admin_rebind_existing_owner_authority_unverified');
+  await assertRebindExecutorSession(client,executor,roles);
   await client.query('SET LOCAL ROLE postgres');
 }
 
+async function coordinate(client) {
+  await client.query("SET LOCAL statement_timeout = '5s'");
+  await client.query("SET LOCAL lock_timeout = '2s'");
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'))");
+}
+
+async function writeControl(client,previous,policyText,disabledFromPolicySha256) {
+  const changed=await client.query(REBIND_CONTROL_UPDATE_SQL,[policyText,disabledFromPolicySha256,previous.revision,previous.policyText]);
+  check(changed.rowCount===1&&changed.rows.length===1&&Number(changed.rows[0].revision)===previous.revision+1,
+    'admin_rebind_control_compare_and_swap_failed');
+}
+
 export async function transitionRebindPolicy(client,{consent,roles,now=Date.now}) {
-  const effective=parseRebindPolicy(consent.policy);
-  const intent=parseRebindIntent(consent.record.policy);
+  const effective=parseRebindPolicy(consent.policy),intent=parseRebindIntent(consent.record.policy);
   const {bindingProof:_proof,...effectiveIntent}=effective??{};
   check(effective&&intent&&JSON.stringify(effectiveIntent)===JSON.stringify(intent)
     &&consent.policyText===canonical(effective)&&consent.policySha256===policySha256(consent.policyText),
@@ -155,50 +154,51 @@ export async function transitionRebindPolicy(client,{consent,roles,now=Date.now}
       'admin_rebind_control_plane_proof_stale');
   };
   current();
-  await useExistingOwnerAuthority(client,roles);
-  await client.query('SET LOCAL statement_timeout = \'5s\'');
-  await client.query('SET LOCAL lock_timeout = \'2s\'');
-  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");
-  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'))");
-  await client.query('LOCK TABLE identity.admin_memberships IN SHARE ROW EXCLUSIVE MODE');
-  const {guard,previous}=await lockPolicy(client,roles,consent.payload);
+  await useExistingOwnerAuthority(client,roles,consent.record.executor);
+  await coordinate(client);
+  const previous=await lockPolicy(client,roles,consent.payload);
   requirePolicyTransition(previous,consent);
+  await client.query('LOCK TABLE identity.admin_memberships IN SHARE ROW EXCLUSIVE MODE');
   const state=await client.query(REBIND_SOURCE_STATE_SQL);
   check(state.rowCount===1&&state.rows.length===1&&Object.values(state.rows[0]).length===4
     &&Object.values(state.rows[0]).every(value=>value===true),'admin_rebind_original_principal_changed');
   current();
-  await client.query('SELECT set_config($1,$2,true)',[REBIND_POLICY_SETTING,consent.policyText]);
-  await client.query(REBIND_POLICY_ALTER_SQL);
-  await client.query(`ALTER FUNCTION ${REBIND_SIGNATURE} RESET ${guard}`);
-  check(await inventory(client,roles,consent.payload)===consent.policyText,'admin_rebind_activation_postcondition_failed');
+  await writeControl(client,previous,consent.policyText,null);
+  const after=await inventoryRebindPolicy(client,roles,consent.payload);
+  check(after.policyText===consent.policyText&&after.revision===effective.controlRevision
+    &&after.disabledFromPolicySha256===null,'admin_rebind_activation_postcondition_failed');
   current();
   return {status:`${consent.record.stage.toUpperCase()}_POLICY_INSTALLED`,policySha256:consent.policySha256,
-    expiresAt:consent.policy.expiresAt,membershipWritePerformed:false};
+    controlRevision:after.revision,disabledFromPolicySha256:null,expiresAt:consent.policy.expiresAt,membershipWritePerformed:false};
 }
 
-export async function disableRebindPolicy(client,{roles,payload,allowedPolicyHashes}) {
-  check(Array.isArray(allowedPolicyHashes)&&allowedPolicyHashes.length>=1&&allowedPolicyHashes.length<=2
-    &&allowedPolicyHashes.every(value=>hash.test(value)),'admin_rebind_cleanup_binding_invalid');
-  await useExistingOwnerAuthority(client,roles);
-  await client.query('SET LOCAL statement_timeout = \'5s\'');
-  await client.query('SET LOCAL lock_timeout = \'2s\'');
-  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");
-  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'))");
-  await client.query('LOCK TABLE identity.admin_memberships IN SHARE ROW EXCLUSIVE MODE');
-  const {guard,previous}=await lockPolicy(client,roles,payload);
-  if(previous==='DISABLED'){
-    await client.query(`ALTER FUNCTION ${REBIND_SIGNATURE} RESET ${guard}`);
-    return {status:'ALREADY_DISABLED',membershipWritePerformed:false};
+export async function disableRebindPolicy(client,{roles,payload,executor,allowedPolicies,previousDisabledRevision}) {
+  check(Array.isArray(allowedPolicies)&&allowedPolicies.length>=1&&allowedPolicies.length<=2
+    &&allowedPolicies.every(value=>value&&hash.test(value.policySha256??'')&&validRevision(value.controlRevision))
+    &&validRevision(previousDisabledRevision)
+    &&allowedPolicies[0].controlRevision===previousDisabledRevision+1,'admin_rebind_cleanup_binding_invalid');
+  await useExistingOwnerAuthority(client,roles,executor);
+  await coordinate(client);
+  const previous=await lockPolicy(client,roles,payload);
+  if(previous.policyText==='DISABLED') {
+    check(previous.revision===previousDisabledRevision||allowedPolicies.some(value=>
+      previous.revision===value.controlRevision+1&&previous.disabledFromPolicySha256===value.policySha256),
+    'admin_rebind_cleanup_refuses_different_policy');
+    return {status:'ALREADY_DISABLED',controlRevision:previous.revision,disabledFromPolicySha256:previous.disabledFromPolicySha256,
+      membershipWritePerformed:false,bindingOutcomeVerified:false};
   }
-  check(allowedPolicyHashes.includes(policySha256(previous)),'admin_rebind_cleanup_refuses_different_policy');
-  await client.query('SELECT set_config($1,$2,true)',[REBIND_POLICY_SETTING,'DISABLED']);
-  await client.query(REBIND_POLICY_ALTER_SQL);
-  await client.query(`ALTER FUNCTION ${REBIND_SIGNATURE} RESET ${guard}`);
-  check(await inventory(client,roles,payload)==='DISABLED','admin_rebind_disable_postcondition_failed');
-  return {status:'DISABLED',membershipWritePerformed:false};
+  const previousHash=policySha256(previous.policyText);
+  check(allowedPolicies.some(value=>value.policySha256===previousHash&&value.controlRevision===previous.revision),
+    'admin_rebind_cleanup_refuses_different_policy');
+  await writeControl(client,previous,'DISABLED',previousHash);
+  const after=await inventoryRebindPolicy(client,roles,payload);
+  check(after.policyText==='DISABLED'&&after.revision===previous.revision+1
+    &&after.disabledFromPolicySha256===previousHash,'admin_rebind_disable_postcondition_failed');
+  return {status:'DISABLED',controlRevision:after.revision,disabledFromPolicySha256:after.disabledFromPolicySha256,
+    membershipWritePerformed:false,bindingOutcomeVerified:false};
 }
 
-export async function withRebindPolicyTransaction({connect,work,roles,payload,expectedPolicySha256}) {
+export async function withRebindPolicyTransaction({connect,work,roles,payload,executor,expectedPolicySha256}) {
   let client,commitAttempted=false,result;
   try {
     client=await connect();
@@ -211,17 +211,20 @@ export async function withRebindPolicyTransaction({connect,work,roles,payload,ex
     if(client){try{if(!commitAttempted)await client.query('ROLLBACK');}catch{}try{await client.end();}catch{}}
     if(!commitAttempted)throw new Error('admin_rebind_policy_transaction_failed');
   }
-  // COMMIT acknowledgement or connection-close failure never proves rollback.
-  // Read back with a new session and never retry an ALTER automatically.
   let reader;
   try {
     reader=await connect();
-    await reader.query('BEGIN READ ONLY');
-    const policy=await inventory(reader,roles,payload);
-    check(policySha256(policy)===expectedPolicySha256,'admin_rebind_policy_readback_mismatch');
+    await reader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    await useExistingOwnerAuthority(reader,roles,executor);
+    const observed=await inventoryRebindPolicy(reader,roles,payload);
+    const exact=policySha256(observed.policyText)===expectedPolicySha256&&observed.revision===result.controlRevision
+      &&observed.disabledFromPolicySha256===result.disabledFromPolicySha256;
+    const consumed=expectedPolicySha256!==DISABLED_POLICY_SHA256&&observed.policyText==='DISABLED'
+      &&observed.revision===result.controlRevision+1&&observed.disabledFromPolicySha256===expectedPolicySha256;
+    check(exact||consumed,'admin_rebind_policy_readback_mismatch');
     await reader.query('COMMIT');
     await reader.end();reader=null;
-    return {...result,readbackVerified:true};
+    return {...result,...(consumed?{status:'POLICY_CONSUMED_OR_DISABLED',bindingOutcomeVerified:false}:{}),readbackVerified:true};
   } catch {
     if(reader){try{await reader.end();}catch{}}
     throw new Error('admin_rebind_policy_outcome_unknown_read_only_reconciliation_required');

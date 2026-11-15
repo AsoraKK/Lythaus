@@ -93,12 +93,12 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: postgres
+          POSTGRES_USER: fixture_root
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: lythaus_auth_test_post_control
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U postgres -d lythaus_auth_test_post_control"
+          --health-cmd "pg_isready -U fixture_root -d lythaus_auth_test_post_control"
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -107,6 +107,18 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
+      - name: Prepare a disposable non-bootstrap postgres owner for managed-role tests
+        run: |
+          node --input-type=module <<'JS'
+          import pg from 'pg';
+          const client=new pg.Client({connectionString:'postgresql://fixture_root:postgres@127.0.0.1:5432/postgres'});
+          await client.connect();
+          try {
+            await client.query("CREATE ROLE postgres LOGIN SUPERUSER PASSWORD 'postgres'");
+            await client.query('ALTER DATABASE postgres OWNER TO postgres');
+            await client.query('ALTER DATABASE lythaus_auth_test_post_control OWNER TO postgres');
+          } finally { await client.end(); }
+          JS
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
       - name: Verify migration probe privilege oracle on disposable PG17
         env:
@@ -257,7 +269,7 @@ jobs:
           LYTHAUS_LOCAL_REBIND_PROPOSAL_TEST: synthetic
         run: |
           npm run validate:planetscale-postgres17
-          node --experimental-test-module-mocks --experimental-strip-types --test --test-concurrency=1 scripts/tests/admin-subject-rebind-capability.test.mjs scripts/tests/admin-subject-rebind-install-cli.test.mjs scripts/tests/admin-subject-rebind-activation.test.mjs scripts/tests/admin-subject-rebind-activation.postgres.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-protocol.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-page.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind.pg17.mjs
+          node --experimental-test-module-mocks --experimental-strip-types --test --test-concurrency=1 scripts/tests/admin-subject-rebind-capability.test.mjs scripts/tests/admin-subject-rebind-executor.test.mjs scripts/tests/admin-subject-rebind-install-cli.test.mjs scripts/tests/admin-subject-rebind-install-packet.test.mjs scripts/tests/admin-subject-rebind-recovery.test.mjs scripts/tests/admin-subject-rebind-activation.test.mjs scripts/tests/admin-subject-rebind-activation.postgres.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-protocol.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind-page.test.mjs apps/lythaus-admin-api/tests/admin-subject-rebind.pg17.mjs
 
   activity_pilot:
     name: Disabled activity pilot integration

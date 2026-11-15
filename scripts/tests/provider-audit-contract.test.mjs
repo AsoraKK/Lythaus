@@ -6,6 +6,7 @@ import os from 'node:os';
 import { test } from 'node:test';
 import { join, resolve } from 'node:path';
 import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
+import { REBIND_OBJECTS_SQL } from '../ci/admin-subject-rebind-capability.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const read = (file) => readFileSync(resolve(root, file), 'utf8');
@@ -140,6 +141,7 @@ test('actual audit wrapper preserves strict certification while emitting sanitiz
     '  async end() {}',
     '  async query(sql) {',
     '    record(sql);',
+    '    if (sql === ' + JSON.stringify(REBIND_OBJECTS_SQL) + ') return { rowCount:1, rows:[{namespace_present:false,control_present:false,reader_present:false,restore_state_present:false,mutator_present:false}] };',
     "    const statement = sql.replace(/^\\s*\\/\\*[\\s\\S]*?\\*\\/\\s*/, '');",
     "    assert.ok(/^(BEGIN READ ONLY|SHOW|SELECT|WITH|ROLLBACK)/.test(statement));",
     "    if (sql === 'SHOW transaction_read_only') return { rows: [{ transaction_read_only: 'on' }] };",

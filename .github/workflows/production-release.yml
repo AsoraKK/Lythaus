@@ -340,6 +340,7 @@ jobs:
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
           RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/recovery-readiness.json
+          REQUIRE_ADMIN_REBIND_BACKUP_CAPABILITY: ${{ vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha && inputs.release_mode == 'force_auth_critical' }}
         run: node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Upload sanitized persistent recovery readiness
         if: always()
@@ -462,6 +463,9 @@ jobs:
     outputs:
       policy_sha256: ${{ steps.activate.outputs.policy_sha256 }}
       expires_at: ${{ steps.activate.outputs.expires_at }}
+      control_revision: ${{ steps.activate.outputs.control_revision }}
+      previous_disabled_revision: ${{ steps.activate.outputs.previous_disabled_revision }}
+      executor_binding: ${{ steps.activate.outputs.executor_binding }}
     env:
       ENABLE_ADMIN_SUBJECT_REBIND: ${{ vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha }}
       RELEASE_MODE: ${{ inputs.release_mode }}
@@ -497,6 +501,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
@@ -524,6 +529,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       policy_sha256: ${{ steps.activate.outputs.policy_sha256 }}
+      control_revision: ${{ steps.activate.outputs.control_revision }}
     env:
       ENABLE_ADMIN_SUBJECT_REBIND: ${{ vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA != '' && vars.ADMIN_SUBJECT_REBIND_RELEASE_SHA == inputs.release_sha }}
       RELEASE_MODE: ${{ inputs.release_mode }}
@@ -531,6 +537,8 @@ jobs:
       REF_PROTECTED: ${{ github.ref_protected }}
       ADMIN_WORKER_VERSION_ID: ${{ needs.workers.outputs.admin_worker_version }}
       ADMIN_REBIND_PREVIEW_POLICY_SHA256: ${{ needs.admin_rebind_preview.outputs.policy_sha256 }}
+      ADMIN_REBIND_PREVIEW_CONTROL_REVISION: ${{ needs.admin_rebind_preview.outputs.control_revision }}
+      ADMIN_REBIND_EXECUTOR_BINDING_JSON: ${{ needs.admin_rebind_preview.outputs.executor_binding }}
       PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}
       PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
       PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
@@ -545,6 +553,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
@@ -577,10 +586,15 @@ jobs:
       REF_PROTECTED: ${{ github.ref_protected }}
       PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL != '' }}
       PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+      PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
       PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
       ADMIN_REBIND_PREVIEW_POLICY_SHA256: ${{ needs.admin_rebind_preview.outputs.policy_sha256 }}
       ADMIN_REBIND_EXECUTE_POLICY_SHA256: ${{ needs.admin_rebind_execute.outputs.policy_sha256 }}
       ADMIN_REBIND_PREVIEW_EXPIRES_AT: ${{ needs.admin_rebind_preview.outputs.expires_at }}
+      ADMIN_REBIND_PREVIEW_CONTROL_REVISION: ${{ needs.admin_rebind_preview.outputs.control_revision }}
+      ADMIN_REBIND_EXECUTE_CONTROL_REVISION: ${{ needs.admin_rebind_execute.outputs.control_revision }}
+      ADMIN_REBIND_PREVIOUS_DISABLED_REVISION: ${{ needs.admin_rebind_preview.outputs.previous_disabled_revision }}
+      ADMIN_REBIND_EXECUTOR_BINDING_JSON: ${{ needs.admin_rebind_preview.outputs.executor_binding }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

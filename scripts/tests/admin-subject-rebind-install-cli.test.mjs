@@ -20,37 +20,28 @@ test('destructive synthetic rebind fixture is isolated from broad application te
   assert.ok(baseline>=0&&baseline<registrations[0].run.indexOf(filename));
 });
 
-test('opt-in installation CLI executes only the reviewed capability and preserves unrelated grants',async()=>{
+test('opt-in installation CLI installs the fixed disabled objects and reads back without ordinary migrations or grants',async()=>{
+  const {roles,executor,payload,PolicyClient}=await import('./admin-subject-rebind-fixtures.mjs');
+  const implementation=await import('../ci/admin-subject-rebind-executor.mjs');
+  const {branchQualifiedDatabaseTarget}=await import('../ci/planetscale-0021-target-identity.mjs');
   const repository=new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1,-1);
-  const payload=rebindGrantPayload(),calls=[],now=Date.now();let installed=false;
-  const roles=Object.fromEntries(['runtime','admin','jobs','privacy','migrations'].map(label=>['lythaus_'+label,'pscale_api_test'+label]));
-  const manifest=loadApprovedMigrations();
-  const row={body:payload.sql.match(/AS \$\$([\s\S]*?)\$\$;/)[1],security_definer:true,owner:'postgres',
-    language_matches:true,return_matches:true,behavior_matches:true,arguments_match:true,
-    settings:['search_path=pg_catalog','lythaus.admin_subject_rebind_approval=DISABLED'],admin_execute:true,
-    runtime_execute:false,jobs_execute:false,privacy_execute:false,admin_direct_update:false,admin_acts_as_owner:false,
-    unexpected_role_reach:false,unexpected_execute:false};
+  const manifest=loadApprovedMigrations(),state=new PolicyClient({installed:false}),calls=[];let connections=0,providerChecks=0;
+  const raw='postgresql://pscale_api_executor.vqa2g2xc9wsl:synthetic@fixture.psdb.cloud/postgres?sslmode=verify-full';
+  const origin=branchQualifiedDatabaseTarget(raw).originFingerprint,binding={...executor,originFingerprint:origin};
   class Client {
-    async connect(){}
+    async connect(){connections++;}
     async end(){}
-    async query(sql){
+    async query(sql,args){
       calls.push(sql);
-      if(sql.startsWith('SELECT current_database() AS database_name'))return {rowCount:1,rows:[{
-        database_name:'postgres',current_role:roles.lythaus_migrations,session_role:roles.lythaus_migrations,
-      }]};
-      if(sql.includes(' AS owner_context_available'))return {rowCount:1,rows:[{owner_context_available:true}]};
-      if(sql.includes(' AS policy_setting_available'))return {rowCount:1,rows:[{policy_setting_available:true}]};
+      if(sql==='SELECT current_database() AS database_name, current_user AS current_role, session_user AS session_role')
+        return {rowCount:1,rows:[{database_name:'postgres',current_role:'pscale_api_executor',session_role:'pscale_api_executor'}]};
       if(sql.includes("to_regclass('system.schema_migrations')"))return {rows:[{registry:'system.schema_migrations'}],rowCount:1};
       if(sql.startsWith('SELECT version, checksum'))return {rows:manifest.migrations.map(m=>({version:m.name,checksum:m.checksum}))};
-      if(sql===REBIND_SOURCE_STATE_SQL)return {rowCount:1,rows:[{one_membership:true,bootstrap_closed:true,one_bootstrap:true,original_administrator:true}]};
-      if(sql===REBIND_BOUNDARY_SQL)return {rowCount:installed?1:0,rows:installed?[row]:[]};
-      if(sql.includes('CREATE FUNCTION identity.rebind_control_plane_administrator(')){installed=true;return {rows:[]};}
       if(sql.includes('AS runtime_insert_hmac'))return {rows:[{runtime_insert_hmac:true,runtime_select:false,
         admin_select_ciphertext:true,admin_select_hmac:false,admin_update_status:true,admin_update_ciphertext:false,
         privacy_delete:true,privacy_select_purge:true,privacy_select_ciphertext:false}]};
       if(sql.includes('AS rate_limit_select'))return {rows:[{system_usage:true,rate_limit_select:true,rate_limit_insert:true,rate_limit_update:true}]};
-      if(['BEGIN','COMMIT','ROLLBACK'].includes(sql)||sql.startsWith('SET LOCAL ')||sql.includes('pg_advisory_xact_lock'))return {rows:[]};
-      throw new Error('unexpected_sql_in_capability_only_scope');
+      return state.query(sql,args);
     }
   }
   mock.module('pg',{defaultExport:{Client}});
@@ -58,27 +49,36 @@ test('opt-in installation CLI executes only the reviewed capability and preserve
     verifyMediaQuarantineMigration:async()=>{},inspectMediaQuarantineMigration:async()=>{throw new Error('unexpected_schema_inspection');},
     applyMediaQuarantineMigration:async()=>{throw new Error('unexpected_schema_migration');},
   }});
-  const expected=JSON.parse(fs.readFileSync('infrastructure/cloudflare/native-hyperdrive-production.json','utf8'));
-  mock.module('../ci/planetscale-0021-target-identity.mjs',{namedExports:{branchQualifiedDatabaseTarget:()=>({
-    branchId:'vqa2g2xc9wsl',sqlDatabaseName:'postgres',originFingerprint:expected.expectedMainOriginFingerprint,role:roles.lythaus_migrations,
-  })}});
-  const env={CI:'false',GITHUB_REPOSITORY:repository,GITHUB_REPOSITORY_ID:'1010752912',GITHUB_REF:'refs/heads/main',
+  mock.module('../ci/admin-subject-rebind-executor.mjs',{namedExports:{...implementation,
+    assertRebindExecutorTarget:(value,map,_manifestOrigin,approved)=>implementation.assertRebindExecutorTarget(value,map,origin,approved),
+    assertRebindMetadataVerifierTarget:(value,_manifestOrigin)=>implementation.assertRebindMetadataVerifierTarget(value,origin),
+    verifyRebindExecutorProvider:async(environment,approved)=>{
+      providerChecks++;assert.equal(approved.roleFingerprint,binding.roleFingerprint);
+      assert.equal(environment.PLANETSCALE_ADMIN_DATABASE_URL,raw);return {executorVerified:true};
+    },
+  }});
+  const now=Date.now(),env={CI:'false',GITHUB_REPOSITORY:repository,GITHUB_REPOSITORY_ID:'1010752912',GITHUB_REF:'refs/heads/main',
     REF_PROTECTED:'true',GITHUB_RUN_ATTEMPT:'1',GITHUB_SHA:'a'.repeat(40),RELEASE_SHA:'a'.repeat(40),
     GITHUB_WORKFLOW_REF:`${repository}/.github/workflows/planetscale-production-migrations.yml@refs/heads/main`,
     GITHUB_ACTOR:repository.split('/')[0],GITHUB_ACTOR_ID:'211295889',PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:'true',
     PSCALE_BRANCH_NAME:'main',PSCALE_ROLE_IDENTIFIERS:JSON.stringify(roles),PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED:'approved',
-    PLANETSCALE_MIGRATION_USAGE_APPROVED:'approved',PLANETSCALE_MIGRATION_USAGE_MAX_USD:'0',
-    PLANETSCALE_ADMIN_DATABASE_URL:'postgresql://synthetic:synthetic@127.0.0.1:1/postgres?sslmode=verify-full',
-    ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:JSON.stringify({schemaVersion:'lythaus-admin-subject-rebind-install-v1',
-      scope:'install_disabled_capability_only',releaseSha:'a'.repeat(40),grantSha256:payload.sha256,roleGrantsSha256:payload.roleGrantsSha256,
-      operator:repository.split('/')[0],approvalReference:'synthetic-specific-approval',approvedAt:new Date(now-1000).toISOString(),expiresAt:new Date(now+60000).toISOString()})};
+    PLANETSCALE_MIGRATION_USAGE_APPROVED:'approved',PLANETSCALE_MIGRATION_USAGE_MAX_USD:'0',PLANETSCALE_ADMIN_DATABASE_URL:raw,
+    PLANETSCALE_VERIFIER_DATABASE_URL:raw.replace('pscale_api_executor.','pscale_api_qodocjs6vgrb.'),
+    ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:JSON.stringify({schemaVersion:'lythaus-admin-subject-rebind-install-v2',
+      scope:'install_disabled_capability_only',executor:binding,releaseSha:'a'.repeat(40),grantSha256:payload.sha256,roleGrantsSha256:payload.roleGrantsSha256,
+      metadataVerifierPermission:'disabled_restore_state_only',
+      operator:repository.split('/')[0],approvalReference:'synthetic-specific-approval',approvedAt:new Date(now-1000).toISOString(),
+      expiresAt:new Date(now+60000).toISOString()})};
   const previous=Object.fromEntries(Object.keys(env).map(key=>[key,process.env[key]]));
-  Object.assign(process.env,env);
-  try{await import('../ci/apply-planetscale-production-migrations.mjs');}
-  finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
-  assert.equal(installed,true);
-  const payloads=calls.filter(sql=>/\b(?:CREATE|ALTER|GRANT|REVOKE|INSERT|UPDATE|DELETE)\b/.test(sql)&&!sql.startsWith('SELECT'));
-  assert.equal(payloads.length,1);
-  assert.equal(payloads[0],payload.sql.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g,label=>`"${roles[label]}"`));
-  assert.equal(calls.filter(sql=>sql==='COMMIT').length,1);
+  try {
+    Object.assign(process.env,env);await import('../ci/apply-planetscale-production-migrations.mjs');
+    assert.equal(providerChecks,1);assert.equal(connections,2,'one write connection and one read-only reconciliation');
+    assert.equal(state.installed,true);assert.equal(state.policy,'DISABLED');assert.equal(state.revision,0);
+    const writes=calls.filter(sql=>/\b(CREATE|ALTER|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRUNCATE)\b/.test(sql)&&!/^\s*SELECT\b/.test(sql));
+    assert.equal(writes.filter(sql=>sql.includes('CREATE TABLE admin_recovery.subject_rebind_control (')).length,1);
+    assert.ok(writes.every(sql=>sql.includes('CREATE TABLE admin_recovery.subject_rebind_control (')
+      ||sql.startsWith('INSERT INTO admin_recovery.subject_rebind_control')));
+    assert.equal(calls.filter(sql=>sql==='BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY').length,1);
+    assert.equal(state.alters,0);
+  } finally {for(const key of Object.keys(env)){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
 });

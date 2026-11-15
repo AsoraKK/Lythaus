@@ -12,6 +12,7 @@ import { ownerContext, canonicalRoles, mainConnection, roleInventory, auditMigra
 import { RESTORE } from '../ci/planetscale-native-restore-contract.mjs';
 import { runProbe, probeConsent, PROFILE_SHA256, REQUEST_PROFILE, SESSION_SQL, OBSERVER_SQL } from '../ci/planetscale-migration-probe.mjs';
 import { quietConsumers, proveOneUseRun, proveAudit, extractAudit } from '../ci/planetscale-migration-probe-evidence.mjs';
+import {rebindGrantPayload,REBIND_BOUNDARY_SQL} from '../ci/admin-subject-rebind-capability.mjs';
 
 const canary = 'private-fixture-secret-must-never-be-output';
 const source = 'a'.repeat(40), baseTime = Date.parse('2026-11-14T21:00:00.000Z');
@@ -115,6 +116,18 @@ function noSecrets(value) {
     assert.equal(text.includes(secret), false, secret);
   }
 }
+
+test('legacy catalog audit cannot certify the rebuilt capability disabled without private-state proof',async()=>{
+  const payload=rebindGrantPayload(),body=[...payload.sql.matchAll(/AS \$\$([\s\S]*?)\$\$;/g)][2][1];
+  const f=fixture({changeSql:(answer,text)=>{
+    if(text===REBIND_BOUNDARY_SQL){answer.rowCount=1;answer.rows=[{body,security_definer:true,owner:'postgres',
+      language_matches:true,return_matches:true,behavior_matches:true,arguments_match:true,settings:['search_path=pg_catalog'],
+      admin_execute:true,runtime_execute:false,jobs_execute:false,privacy_execute:false,admin_direct_update:false,
+      admin_acts_as_owner:false,unexpected_execute:false,unexpected_role_reach:false}];}
+  }});
+  await assert.rejects(auditMigrationRole({...f.options,now:baseTime}),/existing_capability_disabled_state_unverified/);
+  assert.ok(f.sql.every(call=>!/^\s*(CREATE|GRANT|ALTER|INSERT|UPDATE|DELETE)\b/.test(call.text)));
+});
 
 test('protected owner source context rejects tampering', () => {
   ownerContext(env);
@@ -309,10 +322,13 @@ test('workflow keeps old defaults and scopes protected inputs after synthetic te
   const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
   assert.equal(workflow.on.workflow_dispatch.inputs.inspection.default, 'identity');
   const job = workflow.jobs.migration_role; assert.equal(job.environment, 'production'); assert.equal(job['timeout-minutes'], 30);
-  assert.deepEqual(job.permissions, { contents: 'read', actions: 'read' });
+  assert.deepEqual(job.permissions, { contents: 'read', actions: 'read', checks: 'read' });
   assert.equal(workflow.on.workflow_dispatch.inputs.migration_probe_approval.default, '');
   const runtime = job.steps.findIndex(step => step.env?.PLANETSCALE_ADMIN_DATABASE_URL);
-  assert.ok(runtime > job.steps.findIndex(step => step.run?.includes('node --test')));
+  const synthetic=job.steps.findIndex(step => step.run?.includes('scripts/tests/planetscale-migration-role-probe.test.mjs'));
+  assert.ok(synthetic>=0&&runtime>synthetic);
+  assert.equal(job.steps[runtime].env.PLANETSCALE_SCHEMA_READ_DATABASE_URL,
+    "${{ inputs.inspection == 'rebind-install-packet' && secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL || '' }}");
   assert.equal(job.steps.filter(step => step.env?.PLANETSCALE_ADMIN_DATABASE_URL).length, 1);
   for (const name of ['inspect', 'install_target', 'restore_inventory']) assert.equal(JSON.stringify(workflow.jobs[name]).includes('migration_probe_approval'), false);
   assert.doesNotMatch(JSON.stringify(job), /secrets: write|wrangler|apply-planetscale/);

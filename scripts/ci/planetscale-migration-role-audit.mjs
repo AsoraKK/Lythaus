@@ -311,9 +311,10 @@ export async function auditMigrationRole({ env, fetchImpl = fetch, clientFactory
       'disabled_function_inventory_unverified');
     if (boundary.rows.length) {
       try { assertRebindBoundary(boundary.rows[0], payload); } catch { throw new AuditFailure('existing_function_boundary_unsafe'); }
+      throw new AuditFailure('existing_capability_disabled_state_unverified');
     }
     const result = { authority, publicProfile, authorityReady, probeProfileReady, roleDetails, publicFunctionCategories,
-      functionState: boundary.rows.length ? 'VERIFIED_DISABLED' : 'ABSENT' };
+      functionState: 'ABSENT' };
     if (underLock) {
       check(authorityReady && probeProfileReady, 'fresh_role_or_public_profile_blocked');
       await underLock({ roles, inventory, catalog: result, query });

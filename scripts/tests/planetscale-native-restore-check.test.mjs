@@ -12,6 +12,7 @@ import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-ide
 import { checkSetupWindow, DEPENDENCY_SETUP_RESERVE_MS } from '../ci/planetscale-native-restore-admission.mjs';
 import { expectedMigrationPrefix } from '../ci/planetscale-migration-manifest.mjs';
 import { canonicalReleaseSchemaContract } from '../ci/product-integrity-schema-contract.mjs';
+import { REBIND_OBJECTS_SQL } from '../ci/admin-subject-rebind-capability.mjs';
 import { syntheticRun12Metadata } from './planetscale-native-restore-run12-fixture.mjs';
 import { syntheticRun14Metadata } from './planetscale-native-restore-run14-fixture.mjs';
 import { TEST_RELEASE_SHA, TEST_BACKUP_ID, TEST_BACKUP_COMPLETED_AT, TEST_TARGET, TEST_TARGET_BYTES,
@@ -241,6 +242,8 @@ function syntheticCatalog({ version = '0021_media_quarantine_cleanup.sql', regis
   const rows = registry ?? expectedMigrationPrefix(version).map(row => ({ version: row.name, checksum: row.appliedSha256 }));
   return { queries, query: async sql => {
     queries.push(sql);
+    if (sql===REBIND_OBJECTS_SQL) return { rowCount:1,rows:[{namespace_present:false,control_present:false,
+      reader_present:false,restore_state_present:false,mutator_present:false}] };
     if (sql.includes('AS table_type,') && sql.includes('AS table_schema')) return { rows: relations ?? canonical.relations };
     if (sql.startsWith('SELECT version, checksum FROM system.schema_migrations')) return { rows };
     if (sql.includes('AS index_absent')) return { rows: [{ index_absent: absent, column_absent: absent }] };

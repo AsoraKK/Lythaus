@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { parseRebindPolicy, parseRebindIntent, sealRebindPolicy, rebindCommitment } from '../src/solo-recovery/rebind-protocol.ts';
+import { REBIND_CAPABILITY_SHA256, parseRebindPolicy, parseRebindIntent, sealRebindPolicy, rebindCommitment } from '../src/solo-recovery/rebind-protocol.ts';
 import { rebindRuntimeTarget, rebindSessionMatches } from '../src/solo-recovery/rebind-target.ts';
 
 const input = { principalId: '01900000-0000-7000-8000-000000000001',
   previousDigest: Buffer.alloc(32,1), nextDigest: Buffer.alloc(32,2), sourceSha:'a'.repeat(40),
   workerVersionId:'01900000-0000-7000-8000-000000000002', emailSha256:'b'.repeat(64),
-  nonceHex:'c'.repeat(64), expiresAt:1900000000 };
-const intent = () => ({ schemaVersion:'lythaus-admin-subject-rebind-v2', mode:'preview', origin:'https://admin.lythaus.co',
+  nonceHex:'c'.repeat(64), expiresAt:1900000000, controlRevision:2, capabilitySha256:REBIND_CAPABILITY_SHA256 };
+const intent = () => ({ schemaVersion:'lythaus-admin-subject-rebind-v3', controlRevision:1, capabilitySha256:REBIND_CAPABILITY_SHA256,
+  mode:'preview', origin:'https://admin.lythaus.co',
   accessIssuer:'https://fixture.cloudflareaccess.com', accessAudience:'synthetic-api',
   notBefore:1899999700, expiresAt:1900000000, sourceSha:input.sourceSha, workerVersionId:input.workerVersionId,
   emailSha256:input.emailSha256, nonceHex:null, commitmentSha256:null, reference:'canonical-release:123:admin-subject-rebind',
@@ -88,24 +89,33 @@ test('repair policy defaults disabled and refuses malformed, unbounded or ambigu
 
 test('opaque approval commitment matches an independently constructed binary protocol vector', async () => {
   const expires=Buffer.alloc(8);expires.writeBigInt64BE(BigInt(input.expiresAt));
-  const preimage=Buffer.concat([Buffer.from('lythaus:admin-subject-rebind:v1\0'),
+  const revision=Buffer.alloc(8);revision.writeBigInt64BE(BigInt(input.controlRevision));
+  const preimage=Buffer.concat([Buffer.from('lythaus:admin-subject-rebind:v2\0'),
     Buffer.from(input.principalId.replaceAll('-',''),'hex'), input.previousDigest, input.nextDigest,
     Buffer.from(input.sourceSha,'hex'),Buffer.from(input.workerVersionId.replaceAll('-',''),'hex'),
-    Buffer.from(input.emailSha256,'hex'),Buffer.from(input.nonceHex,'hex'),expires]);
+    Buffer.from(input.emailSha256,'hex'),Buffer.from(input.nonceHex,'hex'),expires,revision,Buffer.from(input.capabilitySha256,'hex')]);
   const result=await rebindCommitment(input);
   assert.equal(result,createHash('sha256').update(preimage).digest('hex'));
   assert.match(result,/^[a-f0-9]{64}$/);
   for (const patch of [{principalId:'01900000-0000-7000-8000-000000000003'},
     {previousDigest:Buffer.alloc(32,4)},{nextDigest:Buffer.alloc(32,4)},
     {sourceSha:'e'.repeat(40)},{workerVersionId:'01900000-0000-7000-8000-000000000003'},
-    {emailSha256:'e'.repeat(64)},{nonceHex:'e'.repeat(64)},{expiresAt:input.expiresAt+1}]) {
+    {emailSha256:'e'.repeat(64)},{nonceHex:'e'.repeat(64)},{expiresAt:input.expiresAt+1},{controlRevision:input.controlRevision+1}]) {
     assert.notEqual(await rebindCommitment({...input,...patch}),result);
   }
 });
 
 test('malformed identifiers and binary lengths cannot enter the commitment protocol', async () => {
   for (const patch of [{principalId:'invalid'},{previousDigest:Buffer.alloc(31)},{nextDigest:Buffer.alloc(33)},
-    {sourceSha:'A'.repeat(40)},{emailSha256:'invalid'},{nonceHex:'invalid'},{expiresAt:Infinity},{expiresAt:-1}]) {
+    {sourceSha:'A'.repeat(40)},{emailSha256:'invalid'},{nonceHex:'invalid'},{expiresAt:Infinity},{expiresAt:-1},
+    {controlRevision:0},{controlRevision:1.5},{controlRevision:Number.MAX_SAFE_INTEGER},{capabilitySha256:'e'.repeat(64)}]) {
     await assert.rejects(()=>rebindCommitment({...input,...patch}),/admin_rebind_commitment_input_invalid/);
+  }
+});
+
+test('legacy policies, a different capability and unsafe revisions never arm recovery',()=>{
+  for(const patch of [{schemaVersion:'lythaus-admin-subject-rebind-v2'},{capabilitySha256:'e'.repeat(64)},
+    {controlRevision:0},{controlRevision:'1'},{controlRevision:1.5},{controlRevision:Number.MAX_SAFE_INTEGER}]) {
+    assert.equal(parseRebindPolicy({...policy(),...patch}),null);
   }
 });

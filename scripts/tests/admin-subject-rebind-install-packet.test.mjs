@@ -1,0 +1,117 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {prepareRebindInstallPacket,requireRebindPacketMain,rebindPacketGithubRead,REBIND_PACKET_CAPACITY_SQL} from '../ci/admin-subject-rebind-install-packet.mjs';
+import {REBIND_OBJECTS_SQL,REBIND_SOURCE_STATE_SQL,rebindInstallConsent} from '../ci/admin-subject-rebind-capability.mjs';
+import {REBIND_EXECUTOR_SESSION_SQL} from '../ci/admin-subject-rebind-executor.mjs';
+import {loadApprovedMigrations} from '../ci/planetscale-migration-manifest.mjs';
+import {roles} from './admin-subject-rebind-fixtures.mjs';
+
+const source='a'.repeat(40),repository=new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1,-1);
+const canary='synthetic-password-never-in-packet',now=Date.parse('2026-11-15T04:00:00.000Z');
+const environment=()=>({GITHUB_REPOSITORY:repository,GITHUB_REPOSITORY_ID:'1010752912',GITHUB_ACTOR:repository.split('/')[0],
+  GITHUB_ACTOR_ID:'211295889',GITHUB_RUN_ATTEMPT:'1',GITHUB_RUN_ID:'123',GITHUB_RUN_NUMBER:'24',GITHUB_REF:'refs/heads/main',
+  REF_PROTECTED:'true',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_WORKFLOW_REF:`${repository}/.github/workflows/planetscale-cutover-identity-preflight.yml@refs/heads/main`,
+  RELEASE_SHA:source,GITHUB_SHA:source,INSPECTION:'rebind-install-packet',MIGRATION_PROBE_APPROVAL_JSON:'',
+  PLANETSCALE_ADMIN_DATABASE_URL:`postgresql://pscale_api_executor.vqa2g2xc9wsl:${canary}@aws-eu-central-1-1.pg.psdb.cloud:5432/postgres?sslmode=verify-full`,
+  PLANETSCALE_SCHEMA_READ_DATABASE_URL:`postgresql://pscale_api_qodocjs6vgrb.vqa2g2xc9wsl:${canary}@aws-eu-central-1-1.pg.psdb.cloud:5432/postgres?sslmode=verify-full`,
+  PLANETSCALE_API_TOKEN:'synthetic-id:synthetic-token',PSCALE_ROLE_IDENTIFIERS:JSON.stringify(roles)});
+const checkNames=['Repository hygiene','Workflow lint','Native Workers and PlanetScale','OpenAPI contract','Flutter analyze and test',
+  'Web frontends','Dependency audit','CodeQL JavaScript TypeScript','dependency-review','scan','Disabled activity pilot integration',
+  'Offline posting feedback evaluation','Validate mobile security contracts'];
+
+function fixture(){
+  const env=environment(),calls=[],sql=[];
+  const branch={protected:true,commit:{sha:source},protection:{required_status_checks:{contexts:['Repository hygiene']}}};
+  const checks=checkNames.map(name=>({name,app:{id:15368},head_sha:source,status:'completed',conclusion:'success'}));
+  const objects={namespace_present:false,control_present:false,reader_present:false,restore_state_present:false,mutator_present:false};
+  const capacity={namespace_create:true,functions_create:true,verifier_ready:true};
+  const session={database_name:'postgres',current_role:'pscale_api_executor',session_role:'pscale_api_executor',may_set_owner:true,login_valid:true,apps_isolated:true};
+  const options={env,now,assertCheckout:async()=>{},read:async suffix=>{
+    if(suffix==='/branches/main')return branch;
+    if(suffix.includes('/check-runs?'))return {total_count:checks.length,check_runs:checks};
+    assert.ok(suffix.startsWith('/actions/runs?status='));return {total_count:0,workflow_runs:[]};
+  },fetchImpl:async(url,request)=>{
+    assert.equal(request.method,'GET');assert.equal(request.body,undefined);calls.push(url);
+    const names=[...Object.values(roles),'pscale_api_executor','pscale_api_qodocjs6vgrb'];
+    const data=names.map((name,index)=>({id:'syntheticrole'+index,base_username:name,username:`${name}.vqa2g2xc9wsl`,
+      ready:true,deleted_at:null,expires_at:null,database_name:'postgres',branch:{id:'vqa2g2xc9wsl',name:'main',deleted_at:null}}));
+    return new Response(JSON.stringify(url.includes('/roles?')?{current_page:1,total_count:data.length,next_page:null,data}
+      :{id:'vqa2g2xc9wsl',name:'main',kind:'postgresql',deleted_at:null}),{status:200});
+  },clientFactory:config=>{
+    assert.equal(config.options,'-c default_transaction_read_only=on');
+    return {on(){},connect:async()=>{},end:async()=>{},query:async(text)=>{
+      sql.push(text);const one=row=>({rowCount:1,rows:[row]});
+      if(text==='BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')return {rowCount:0,rows:[]};
+      if(text.includes('pg_try_advisory_xact_lock'))return one({locked:true});
+      if(text===REBIND_EXECUTOR_SESSION_SQL)return one(session);
+      if(text===REBIND_PACKET_CAPACITY_SQL)return one(capacity);
+      if(text==='SELECT version,checksum FROM system.schema_migrations ORDER BY version')return {rows:loadApprovedMigrations().migrations.map(row=>({version:row.name,checksum:row.checksum}))};
+      if(text===REBIND_SOURCE_STATE_SQL)return one({one_membership:true,bootstrap_closed:true,one_bootstrap:true,original_administrator:true});
+      if(text===REBIND_OBJECTS_SQL)return one(objects);
+      assert.fail('unexpected packet SQL');
+    }};
+  }};
+  return {env,options,branch,checks,objects,capacity,session,calls,sql};
+}
+
+test('packet preparation reads existing bindings and emits a non-executable exact-source consent draft',async()=>{
+  const f=fixture(),result=await prepareRebindInstallPacket(f.options);
+  assert.equal(result.status,'REVIEW_PACKET_NOT_INSTALL_AUTHORITY');assert.equal(result.capabilityState,'ABSENT');
+  assert.equal(result.executable,false);assert.equal(result.databaseWrites,false);assert.equal(result.providerMutations,false);
+  assert.equal(result.credentialsCreated,false);assert.equal(result.ownerLoginVerified,false);
+  assert.equal(result.consentDraft.approvedAt,null);assert.equal(result.consentDraft.expiresAt,null);
+  assert.equal(result.consentDraft.approvalReference,null);assert.equal(result.sourceMainSha,source);
+  assert.equal(f.calls.length,2);assert.equal(f.sql.length,7);
+  assert.ok(f.sql.every(text=>/^SELECT\s/.test(text)||text==='BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'));
+  const serialized=JSON.stringify(result);
+  for(const value of [canary,f.env.PLANETSCALE_ADMIN_DATABASE_URL,...Object.values(roles),'pscale_api_executor'])assert.equal(serialized.includes(value),false);
+  assert.throws(()=>rebindInstallConsent({...f.env,
+    GITHUB_WORKFLOW_REF:`${repository}/.github/workflows/planetscale-production-migrations.yml@refs/heads/main`,
+    PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:'true',ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:JSON.stringify(result.consentDraft)},
+  {now,committedOnly:false}));
+});
+
+test('old modes, credential consent, wrong owner and retried runs cannot prepare a packet',async()=>{
+  for(const change of [{INSPECTION:'migration-role-audit'},{MIGRATION_PROBE_APPROVAL_JSON:'{}'},
+    {GITHUB_RUN_ATTEMPT:'2'},{GITHUB_ACTOR_ID:'1'},{GITHUB_SHA:'b'.repeat(40)}]){
+    const f=fixture();Object.assign(f.env,change);await assert.rejects(prepareRebindInstallPacket(f.options));
+    assert.equal(f.calls.length,0);assert.equal(f.sql.length,0);
+  }
+});
+
+test('default packet reader reaches only exact GET endpoints and fails closed on transport or redirect',async t=>{
+  const f=fixture(),requests=[];f.env.GH_TOKEN='synthetic-github-token';
+  t.mock.method(globalThis,'fetch',async(url,request)=>{
+    requests.push(url);assert.equal(request.method,'GET');assert.equal(request.redirect,'manual');assert.equal(request.body,undefined);
+    assert.equal(request.headers.authorization,`Bearer ${f.env.GH_TOKEN}`);
+    const suffix=url.slice(`https://api.github.com/repos/${repository}`.length);
+    return new Response(JSON.stringify(await f.options.read(suffix)),{status:200});
+  });
+  const result=await prepareRebindInstallPacket({...f.options,read:undefined});
+  assert.equal(result.status,'REVIEW_PACKET_NOT_INSTALL_AUTHORITY');
+  assert.equal(requests.filter(url=>url.endsWith('/branches/main')).length,2);
+  assert.equal(requests.filter(url=>url.includes(`/commits/${source}/check-runs?`)).length,2);
+  for(const suffix of ['/branches/other',`/commits/${'b'.repeat(40)}/check-runs?filter=latest&per_page=100`,'/settings','//other.test'])
+    await assert.rejects(rebindPacketGithubRead(f.env,suffix),/packet_github_path_invalid/);
+  for(const fetchImpl of [async()=>new Response('{}',{status:302}),async()=>new Response('{}',{status:403}),
+    async()=>{throw new Error('synthetic transport canary');},async()=>new Response('x'.repeat(1048577),{status:200})])
+    await assert.rejects(rebindPacketGithubRead(f.env,'/branches/main',fetchImpl),/packet_github_read_failed/);
+});
+
+test('main movement, incomplete or failing exact checks block before protected database access',async()=>{
+  for(const mutate of [f=>f.branch.commit.sha='b'.repeat(40),f=>f.branch.protected=false,
+    f=>f.checks.pop(),f=>f.checks[0].conclusion='failure',f=>f.checks[0].head_sha='b'.repeat(40),
+    f=>f.checks[0].app.id=1,f=>f.branch.protection.required_status_checks.contexts.push('additional-required-check')]){
+    const f=fixture();mutate(f);await assert.rejects(requireRebindPacketMain(f.env,f.options.read));
+    await assert.rejects(prepareRebindInstallPacket(f.options));assert.equal(f.calls.length,0);assert.equal(f.sql.length,0);
+  }
+});
+
+test('missing existing authority or any existing/partial capability blocks instead of creating or replacing it',async()=>{
+  for(const mutate of [f=>f.capacity.namespace_create=false,f=>f.capacity.functions_create=false,f=>f.session.may_set_owner=false,
+    f=>f.session.apps_isolated=false,f=>f.objects.namespace_present=true,f=>f.objects.mutator_present=true,
+    f=>{for(const key of Object.keys(f.objects))f.objects[key]=true;}]){
+    const f=fixture();mutate(f);await assert.rejects(prepareRebindInstallPacket(f.options));
+    assert.ok(f.sql.every(text=>!text.startsWith('CREATE ')&&!text.startsWith('GRANT ')&&!text.startsWith('SET ROLE')));
+  }
+});

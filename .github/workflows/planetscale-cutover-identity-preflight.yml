@@ -8,11 +8,11 @@ on:
         required: true
         type: string
       inspection:
-        description: Existing inspection, read-only role audit, or separately approved credential probe
+        description: Existing inspection, read-only audit/install packet, or separately approved credential probe
         required: true
         type: choice
         default: identity
-        options: [identity, restore-inventory, install-target, migration-role-audit, migration-probe]
+        options: [identity, restore-inventory, install-target, migration-role-audit, migration-probe, rebind-install-packet]
       migration_probe_approval:
         description: Separate source-bound one-use credential approval JSON; blank for every read-only mode
         required: false
@@ -28,14 +28,15 @@ concurrency:
 
 jobs:
   migration_role:
-    if: inputs.inspection == 'migration-role-audit' || inputs.inspection == 'migration-probe'
-    name: ${{ inputs.inspection == 'migration-role-audit' && 'Audit intended migration role without issuing credentials' || 'Separate short-lived migration probe' }}
+    if: inputs.inspection == 'migration-role-audit' || inputs.inspection == 'migration-probe' || inputs.inspection == 'rebind-install-packet'
+    name: ${{ inputs.inspection == 'rebind-install-packet' && 'Prepare read-only disabled installation approval packet' || inputs.inspection == 'migration-role-audit' && 'Audit intended migration role without issuing credentials' || 'Separate short-lived migration probe' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
     permissions:
       contents: read
       actions: read
+      checks: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
@@ -72,11 +73,12 @@ jobs:
       - name: Install locked dependencies without protected inputs
         run: npm ci --ignore-scripts
       - name: Validate audit and dormant probe with synthetic inputs
-        run: node --test scripts/tests/planetscale-migration-role-probe.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/planetscale-migration-role-probe.test.mjs scripts/tests/admin-subject-rebind-install-packet.test.mjs
       - name: Protected audit or separately approved single probe
         env:
           GH_TOKEN: ${{ github.token }}
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ inputs.inspection == 'rebind-install-packet' && secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL || '' }}
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
         shell: bash
@@ -84,6 +86,8 @@ jobs:
           set -euo pipefail
           if [[ "$INSPECTION" == migration-probe ]]; then
             node scripts/ci/run-planetscale-migration-probe.mjs probe
+          elif [[ "$INSPECTION" == rebind-install-packet ]]; then
+            node scripts/ci/admin-subject-rebind-install-packet.mjs > "$RUNNER_TEMP/rebind-install-packet.json"
           else
             node scripts/ci/run-planetscale-migration-probe.mjs audit > "$RUNNER_TEMP/migration-role-audit.json"
           fi
@@ -93,6 +97,14 @@ jobs:
         with:
           name: migration-role-audit-${{ inputs.release_sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/migration-role-audit.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Retain non-executable disabled installation approval packet
+        if: always() && inputs.inspection == 'rebind-install-packet'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rebind-install-packet-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/rebind-install-packet.json
           if-no-files-found: ignore
           retention-days: 7
       - name: Retain sanitized probe checkpoint

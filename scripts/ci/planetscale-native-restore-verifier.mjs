@@ -3,6 +3,8 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig } from './
 import { expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
 import { runtimeSchemaFingerprint, canonicalReleaseSchemaContract, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
+import {rebindGrantPayload,inspectRebindCapabilityCatalog} from './admin-subject-rebind-capability.mjs';
+import {checkedRebindControl} from './admin-subject-rebind-control.mjs';
 import { RESTORE, ROLE_NAMES, EXTENSIONS, requireThat, hash, restoreSchemaMode, restoreSchemaVersion,
   assertRestoreRoleSqlBaseline, checkCopiedRoleMetadata } from './planetscale-native-restore-contract.mjs';
 
@@ -65,6 +67,12 @@ export async function readOnly(raw, branchId, role, work, clientFactory = config
 
 export async function collectRestoreCatalog(client, mode = 'pre-0021') {
   const schemaMode = restoreSchemaMode(mode), schemaVersion = restoreSchemaVersion(schemaMode);
+  const rebindPayload=rebindGrantPayload({committedOnly:process.env.CI==='true'});
+  const rebindCapability=await inspectRebindCapabilityCatalog(client,{
+    lythaus_admin:RESTORE.admin,lythaus_runtime:RESTORE.runtime,lythaus_jobs:RESTORE.jobs,
+    lythaus_privacy:RESTORE.privacy,lythaus_migrations:RESTORE.setup,
+  },rebindPayload);
+  const schemas=rebindCapability.state==='CATALOG_VERIFIED'?[...APPLICATION_SCHEMAS,'admin_recovery']:APPLICATION_SCHEMAS;
   const sections = {};
   const queries = {
     schemaOwnership: `SELECT n.nspname AS schema, pg_get_userbyid(n.nspowner) AS owner
@@ -111,7 +119,7 @@ export async function collectRestoreCatalog(client, mode = 'pre-0021') {
       FROM objects ORDER BY schema,relation,column_name,kind`,
   };
   for (const [section, query] of Object.entries(queries)) {
-    sections[section] = (await client.query(query, [APPLICATION_SCHEMAS])).rows;
+    sections[section] = (await client.query(query, [schemas])).rows;
     requireThat(sections[section].length < 10000, 'catalog_bound_exceeded');
   }
   const migrations = (await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version LIMIT 23')).rows;
@@ -145,12 +153,27 @@ export async function collectRestoreCatalog(client, mode = 'pre-0021') {
   }
   checks.push((await client.query("SELECT has_schema_privilege($1,'editorial','USAGE') AS permitted", [RESTORE.runtime])).rows[0]?.permitted);
   requireThat(checks.length === 17 && checks.every(value => value === true), 'restored_approved_grants_not_present');
-  const relations = sections.relations.map(({ table_type, table_schema, table_name }) => ({ table_type, table_schema, table_name }));
+  if(rebindCapability.state==='CATALOG_VERIFIED') {
+    requireThat(schemaMode==='post-0021','rebind_capability_requires_post_0021');
+    const state=await client.query(`SELECT id,disabled,revision,capability_sha256,disabled_from_policy_sha256
+      FROM identity.admin_subject_rebind_restore_state() LIMIT 2`);
+    const row=state.rows[0];
+    requireThat(state.rowCount===1&&state.rows.length===1&&row.disabled===true,'restore_rebind_control_not_disabled');
+    requireThat(typeof row.id==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(row.id),
+      'restore_rebind_control_identity_invalid');
+    checkedRebindControl({...row,policy_text:'DISABLED'},rebindPayload);
+    sections.rebindControl=state.rows;
+  }
+  const allRelations=sections.relations.map(({ table_type, table_schema, table_name })=>({table_type,table_schema,table_name}));
+  const relations=allRelations.filter(row=>!(rebindCapability.state==='CATALOG_VERIFIED'
+    &&row.table_schema==='admin_recovery'&&row.table_name==='subject_rebind_control'));
   const canonicalRelations = canonicalReleaseSchemaContract().relations;
   const keys = rows => rows.map(row => `${row.table_type}:${row.table_schema}.${row.table_name}`).sort();
   requireThat(JSON.stringify(keys(relations)) === JSON.stringify(keys(canonicalRelations)), 'restore_relation_contract_incomplete');
   return { catalogSha256: restoreCatalogDigest({ sections, migrations, roles, members, extensions }),
     schemaFingerprint: runtimeSchemaFingerprint(relations, migrations), relationCount: relations.length,
+    catalogRelationCount:allRelations.length,rebindCapability:rebindCapability.state==='CATALOG_VERIFIED'
+      ?{...rebindCapability,disabledStateVerified:true}:rebindCapability,
     schemaVersion, approvedPrivilegeChecks: 17, extensionCount: extensions.length,
     extensionSpecifications: extensions };
 }
