@@ -100,6 +100,14 @@ The approval reference and approval/expiry timestamps are null, making the
 draft non-executable. An existing capability blocks this preparation mode
 instead of replacing it.
 
+A rejected executor session retains only boolean/unknown diagnostic observations:
+source/session/role matches, owner SET authority, application-role isolation and
+the SQL login, superuser, replication and expiry flags. The acceptance predicates
+stay unchanged. Provider with_replication metadata is a separate observation;
+it does not establish every SQL predicate. Do not change a role flag, grant,
+credential or acceptance rule to force a passing result. Reconcile the exact
+failed condition before requesting a new inspection or installation approval.
+
 Installation consent uses schema version
 lythaus-admin-subject-rebind-install-v2, scope
 install_disabled_capability_only, and exactly these fields:

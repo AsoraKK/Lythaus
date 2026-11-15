@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {prepareRebindInstallPacket,requireRebindPacketMain,rebindPacketGithubRead,REBIND_PACKET_CAPACITY_SQL} from '../ci/admin-subject-rebind-install-packet.mjs';
+import {prepareRebindInstallPacket,requireRebindPacketMain,rebindPacketGithubRead,rebindInstallPacketFailure,REBIND_PACKET_CAPACITY_SQL} from '../ci/admin-subject-rebind-install-packet.mjs';
 import {REBIND_OBJECTS_SQL,REBIND_SOURCE_STATE_SQL,rebindInstallConsent} from '../ci/admin-subject-rebind-capability.mjs';
 import {REBIND_EXECUTOR_SESSION_SQL} from '../ci/admin-subject-rebind-executor.mjs';
 import {loadApprovedMigrations} from '../ci/planetscale-migration-manifest.mjs';
@@ -114,4 +114,22 @@ test('missing existing authority or any existing/partial capability blocks inste
     const f=fixture();mutate(f);await assert.rejects(prepareRebindInstallPacket(f.options));
     assert.ok(f.sql.every(text=>!text.startsWith('CREATE ')&&!text.startsWith('GRANT ')&&!text.startsWith('SET ROLE')));
   }
+});
+
+test('blocked packet retains sanitized session facts without publishing an executable draft or identity material',async()=>{
+  const f=fixture();Object.assign(f.session,{login_valid:false,role_present:true,can_login:true,is_superuser:false,
+    replication_enabled:true,unexpired:true,private_field:canary});
+  let caught;await assert.rejects(prepareRebindInstallPacket(f.options),error=>{caught=error;return /owner_authority/.test(error.message);});
+  const report=rebindInstallPacketFailure(caught,{env:f.env,now});
+  assert.equal(report.status,'BLOCKED');assert.equal(report.blocker,'admin_rebind_existing_owner_authority_unverified');
+  assert.equal(report.sourceMainSha,source);assert.equal(report.runId,f.env.GITHUB_RUN_ID);
+  assert.equal(report.executorSession.checks.sqlReplicationEnabled,true);assert.equal(report.executorSession.checks.loginProfileAllowed,false);
+  assert.equal(report.executorSession.checks.roleMatchesApproval,true);assert.equal(report.executable,false);
+  assert.equal(report.databaseWrites,false);assert.equal(report.providerMutations,false);assert.equal(report.credentialsCreated,false);
+  assert.equal(report.consentDraft,undefined);assert.equal(f.sql.length,3);
+  for(const value of [canary,f.env.PLANETSCALE_ADMIN_DATABASE_URL,...Object.values(roles),'pscale_api_executor'])
+    assert.equal(JSON.stringify(report).includes(value),false);
+  const generic=rebindInstallPacketFailure(Object.assign(new Error(canary),{executorSession:{private_field:canary}}),{env:f.env,now});
+  assert.equal(generic.blocker,'read_only_packet_unverified');assert.equal(generic.executorSession,undefined);
+  assert.equal(JSON.stringify(generic).includes(canary),false);
 });

@@ -6,7 +6,7 @@ import {ownerContext,canonicalRoles,mainConnection,roleInventory,activeRole,read
 import {quietConsumers} from './planetscale-migration-probe-evidence.mjs';
 import {githubRead} from './planetscale-native-restore-evidence.mjs';
 import {rebindGrantPayload,REBIND_OBJECTS_SQL,REBIND_SOURCE_STATE_SQL} from './admin-subject-rebind-capability.mjs';
-import {rebindExecutorRoleFingerprint,rebindRoleMapSha256,assertRebindExecutorTarget,assertRebindExecutorSession,assertRebindMetadataVerifierTarget} from './admin-subject-rebind-executor.mjs';
+import {rebindExecutorRoleFingerprint,rebindRoleMapSha256,assertRebindExecutorTarget,assertRebindExecutorSession,assertRebindMetadataVerifierTarget,rebindExecutorSessionDiagnostic} from './admin-subject-rebind-executor.mjs';
 import {REBIND_METADATA_VERIFIER_ROLE,REBIND_METADATA_VERIFIER_READY_EXPR} from './admin-subject-rebind-control.mjs';
 import {loadApprovedMigrations} from './planetscale-migration-manifest.mjs';
 
@@ -103,10 +103,19 @@ export async function prepareRebindInstallPacket({env=process.env,clientFactory,
       approvalReference:null,approvedAt:null,expiresAt:null}};
 }
 
+export function rebindInstallPacketFailure(error,{env=process.env,now=Date.now()}={}) {
+  const executorSession=rebindExecutorSessionDiagnostic(error);
+  return {status:'BLOCKED',blocker:error instanceof AuditFailure||/^admin_rebind_[a-z_]+$/.test(error?.message??'')
+    ?error.message:'read_only_packet_unverified',
+    sourceMainSha:/^[a-f0-9]{40}$/.test(env.RELEASE_SHA??'')?env.RELEASE_SHA:null,
+    runId:/^[1-9][0-9]{0,14}$/.test(env.GITHUB_RUN_ID??'')?env.GITHUB_RUN_ID:null,
+    generatedAt:new Date(now).toISOString(),...(executorSession?{executorSession}:{}),
+    executable:false,databaseWrites:false,providerMutations:false,credentialsCreated:false,ownerLoginVerified:false};
+}
+
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   let report;
   try{const {default:pg}=await import('pg');report=await prepareRebindInstallPacket({clientFactory:config=>new pg.Client(config)});}
-  catch(error){report={status:'BLOCKED',blocker:error instanceof AuditFailure||/^admin_rebind_[a-z_]+$/.test(error?.message??'')
-    ?error.message:'read_only_packet_unverified',executable:false,databaseWrites:false,providerMutations:false,credentialsCreated:false,ownerLoginVerified:false};}
+  catch(error){report=rebindInstallPacketFailure(error);}
   console.log(JSON.stringify(report,null,2));if(report.status!=='REVIEW_PACKET_NOT_INSTALL_AUTHORITY')process.exitCode=1;
 }
