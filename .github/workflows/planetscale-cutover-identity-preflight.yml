@@ -12,7 +12,7 @@ on:
         required: true
         type: choice
         default: identity
-        options: [identity, restore-inventory, install-target, migration-role-audit, migration-probe, rebind-install-packet]
+        options: [identity, restore-inventory, install-target, migration-role-audit, migration-probe, rebind-install-packet, rebind-service-token-audit]
       migration_probe_approval:
         description: Separate source-bound one-use credential approval JSON; blank for every read-only mode
         required: false
@@ -33,6 +33,70 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  rebind_service_token:
+    if: inputs.inspection == 'rebind-service-token-audit'
+    name: Audit existing rebind service-token capability without issuing credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      INSPECTION: ${{ inputs.inspection }}
+      MIGRATION_PROBE_APPROVAL_JSON: ${{ inputs.migration_probe_approval }}
+      ADMIN_REBIND_CONNECTION: ${{ inputs.rebind_connection }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Require first-attempt owner and exact protected source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = 1010752912
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$GITHUB_ACTOR" = "${GITHUB_REPOSITORY%%/*}"
+          test "$GITHUB_ACTOR_ID" = 211295889
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          test -z "$MIGRATION_PROBE_APPROVAL_JSON"
+          test "${ADMIN_REBIND_CONNECTION:-existing}" = existing
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install locked dependencies without protected inputs
+        run: npm ci --ignore-scripts
+      - name: Validate service-token audit with synthetic inputs
+        run: node --test scripts/tests/admin-subject-rebind-service-token.test.mjs
+      - name: Read existing service-token metadata without database connections
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/admin-subject-rebind-service-token.mjs > "$RUNNER_TEMP/rebind-service-token-audit.json"
+      - name: Retain sanitized service-token audit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rebind-service-token-audit-${{ inputs.release_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/rebind-service-token-audit.json
+          if-no-files-found: ignore
+          retention-days: 7
+
   migration_role:
     if: inputs.inspection == 'migration-role-audit' || inputs.inspection == 'migration-probe' || inputs.inspection == 'rebind-install-packet'
     name: ${{ inputs.inspection == 'rebind-install-packet' && 'Prepare read-only disabled installation approval packet' || inputs.inspection == 'migration-role-audit' && 'Audit intended migration role without issuing credentials' || 'Separate short-lived migration probe' }}

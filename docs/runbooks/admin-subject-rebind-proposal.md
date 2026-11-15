@@ -57,6 +57,51 @@ control identity and disabled state in its full catalog/data digest. Its
 runtime-visible baseline remains the canonical application schema. This is
 not an arbitrary relation or archive exception.
 
+## Existing service-token audit before temporary-connection preparation
+
+Use the protected cutover preflight workflow above with the full current main
+SHA, attempt 1, repository-owner actor, inspection=rebind-service-token-audit,
+rebind_connection=existing and migration_probe_approval blank. Complete normal
+production review. This exclusive mode requires all 13 exact-main checks and a
+quiet protected consumer window. It never connects to PostgreSQL, starts an
+installation, creates a credential, changes a secret or deploys.
+
+The job examines the existing migration service-token pair and existing combined
+API token separately, in place. It sends only GET requests to the fixed Lythaus
+database, main branch, each token's self metadata and completely paginated grants.
+Unknown/denied metadata, ambiguous pagination, another resource, wildcard or
+unrecognized permissions do not establish authority. Native token expiry must
+cover a two-hour window plus five minutes. A permanent existing token may pass
+this lifetime check; the future database credential must still have native expiry.
+
+The sanitized rebind-service-token-audit-SHA-RUN_ID artifact records source labels,
+token-ID fingerprints, exact token expiry, permission booleans and pagination
+counts. It never records token material, provider bodies, connection strings or
+database rows. Verify original artifact bytes, SHA-256, run/attempt/job/source
+provenance and freshness before using its evidence in any later approval.
+
+Declared create/delete production-password permissions are not issuance or SQL
+qualification proof. No qualified existing source means BLOCKED; do not create a
+token, extend privileges or substitute credentials to overcome that result.
+
+The next separately reviewed implementation and exact approval must bind one
+selected audited source, one POST and the one-hour qualification-only profile
+(ttl=3600, inherited_roles=[postgres], with_replication=false). Reserve a named
+operator/reviewer for two hours; use a 90-minute protected job. Prove the actual
+returned role ID, main target, native expiry, SQL no-replication/least-privilege
+boundary, independent session visibility, durable checkpoints and expiry with
+authentication denial and no sessions. Do not treat a local checkpoint or a
+declared TTL as verified containment. Do not retry an uncertain issuance. The
+first qualification uses expiry, with no permanent role-record deletion absent
+separate action-time confirmation. Credential creation and installation remain
+unavailable in this audit mode; the old probe and installation modes are unchanged.
+
+Even successful qualification will not install the repair or verify login. A
+later exact disabled installation approval, fresh post-install native restore
+qualification, activation/binding approval, release and fresh owner acceptance
+remain required. Keep the working connection, canonical role map and all recovery,
+cost, security and release gates intact.
+
 ## Managed-owner installation and review packet
 
 The earlier GUC-based design depended on unavailable custom parameter authority.

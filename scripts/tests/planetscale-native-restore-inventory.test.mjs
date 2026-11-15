@@ -245,7 +245,7 @@ test('manual inventory is an exclusive protected mode with fixed credentials and
   assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection', 'migration_probe_approval', 'rebind_connection']);
   assert.equal(workflow.on.workflow_dispatch.inputs.rebind_connection.default, 'existing');
   assert.deepEqual(workflow.on.workflow_dispatch.inputs.rebind_connection.options, ['existing', 'separate']);
-  assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory', 'install-target', 'migration-role-audit', 'migration-probe', 'rebind-install-packet']);
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory', 'install-target', 'migration-role-audit', 'migration-probe', 'rebind-install-packet', 'rebind-service-token-audit']);
   assert.equal(workflow.on.workflow_dispatch.inputs.inspection.default, 'identity');
   assert.equal(workflow.jobs.inspect.if, "inputs.inspection == 'identity'");
   assert.equal(workflow.jobs.install_target.if, "inputs.inspection == 'install-target'");
