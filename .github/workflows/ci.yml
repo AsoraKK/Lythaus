@@ -73,6 +73,8 @@ jobs:
         run: node --test scripts/tests/admin-subject-rebind-target-diagnostic.test.mjs
       - name: Validate migration role audit and dormant credential probe
         run: node --test scripts/tests/planetscale-migration-role-probe.test.mjs
+      - name: Validate read-only rebind service-token audit
+        run: node --test scripts/tests/admin-subject-rebind-service-token.test.mjs
       - name: Verify fixed native restore runner without provider access
         run: node --test scripts/tests/planetscale-native-restore-plan.test.mjs scripts/tests/planetscale-native-restore-check.test.mjs scripts/tests/planetscale-native-restore-cleanup.test.mjs scripts/tests/planetscale-native-restore-run12-reconciliation.test.mjs scripts/tests/planetscale-native-restore-run12-history.test.mjs scripts/tests/planetscale-native-restore-run14-reconciliation.test.mjs scripts/tests/planetscale-native-restore-early-history.test.mjs
       - name: Verify reviewed restore cleanup transport and staged Actions handoff
