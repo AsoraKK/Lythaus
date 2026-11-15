@@ -242,12 +242,15 @@ test('CLI success, denial and transport failure retain only sanitized JSON with 
 
 test('manual inventory is an exclusive protected mode with fixed credentials and registered offline checks', () => {
   const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
-  assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection', 'migration_probe_approval']);
+  assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection', 'migration_probe_approval', 'rebind_connection']);
+  assert.equal(workflow.on.workflow_dispatch.inputs.rebind_connection.default, 'existing');
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs.rebind_connection.options, ['existing', 'separate']);
   assert.deepEqual(workflow.on.workflow_dispatch.inputs.inspection.options, ['identity', 'restore-inventory', 'install-target', 'migration-role-audit', 'migration-probe', 'rebind-install-packet']);
   assert.equal(workflow.on.workflow_dispatch.inputs.inspection.default, 'identity');
   assert.equal(workflow.jobs.inspect.if, "inputs.inspection == 'identity'");
   assert.equal(workflow.jobs.install_target.if, "inputs.inspection == 'install-target'");
   const job = workflow.jobs.restore_inventory;
+  assert.equal(job.steps[0].run, 'test "${ADMIN_REBIND_CONNECTION:-existing}" = existing');
   assert.equal(job.if, "inputs.inspection == 'restore-inventory'");
   assert.equal(job.environment, 'production');
   assert.deepEqual(workflow.permissions, { contents: 'read' });
@@ -268,9 +271,10 @@ test('manual inventory is an exclusive protected mode with fixed credentials and
 
 test('protected install target diagnostic is exclusive, owner-bound and scopes secrets after source verification', () => {
   const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
-  assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection', 'migration_probe_approval']);
+  assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs), ['release_sha', 'inspection', 'migration_probe_approval', 'rebind_connection']);
   assert.deepEqual(workflow.permissions, { contents: 'read' });
   const job = workflow.jobs.install_target;
+  assert.equal(job.steps[0].run, 'test "${ADMIN_REBIND_CONNECTION:-existing}" = existing');
   assert.equal(job.if, "inputs.inspection == 'install-target'");
   assert.equal(job.environment, 'production');
   assert.equal(job['timeout-minutes'], 5);
