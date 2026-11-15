@@ -103,7 +103,8 @@ test('PG17 policy handoff uses existing managed-owner authority and preserves th
         const diagnostic=rebindExecutorSessionDiagnostic(caught);
         assert.deepEqual(diagnostic.checks,{oneRow:true,databaseMatches:true,sessionIdentityMatches:true,roleMatchesApproval:true,
           maySetOwner:true,loginProfileAllowed:false,applicationRolesIsolated:true,sqlRolePresent:true,sqlCanLogin:true,
-          sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true});
+          sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true,sqlCreateDatabase:false,sqlCreateRole:false,sqlBypassRls:false,
+          ownerSuperuser:true,ownerReplication:false,otherSetReachableSuperuser:false,otherSetReachableReplication:false,sqlClientBackend:true});
         assert.equal(JSON.stringify(diagnostic).includes(executorRole),false);
       }finally{
         try{if(client){try{await client.query('ROLLBACK');}finally{await client.end();}}}

@@ -17,6 +17,7 @@ export const REBIND_PACKET_CAPACITY_SQL=`SELECT
 const requiredChecks=['Repository hygiene','Workflow lint','Native Workers and PlanetScale','OpenAPI contract','Flutter analyze and test',
   'Web frontends','Dependency audit','CodeQL JavaScript TypeScript','dependency-review','scan','Disabled activity pilot integration',
   'Offline posting feedback evaluation','Validate mobile security contracts'];
+const failureBindings=new WeakMap();
 
 export async function rebindPacketGithubRead(env,suffix,fetchImpl=fetch) {
   if(/^\/actions\//.test(suffix))return githubRead(env,suffix,fetchImpl);
@@ -74,7 +75,8 @@ export async function prepareRebindInstallPacket({env=process.env,clientFactory,
   assertRebindMetadataVerifierTarget(env.PLANETSCALE_SCHEMA_READ_DATABASE_URL,manifest.expectedMainOriginFingerprint);
   const payload=rebindGrantPayload({root,committedOnly:env.CI==='true'});
   const expected=loadApprovedMigrations({root,committedOnly:env.CI==='true'}).migrations.map(row=>({version:row.name,checksum:row.checksum}));
-  const state=await readOnly(env.PLANETSCALE_ADMIN_DATABASE_URL,clientFactory,async query=>{
+  let state;
+  try{state=await readOnly(env.PLANETSCALE_ADMIN_DATABASE_URL,clientFactory,async query=>{
     const client={query};
     const lock=await query("SELECT pg_try_advisory_xact_lock(hashtext('lythaus-schema-migrations')) AS locked");
     check(lock.rowCount===1&&lock.rows[0]?.locked===true,'migration_coordination_busy');
@@ -92,7 +94,14 @@ export async function prepareRebindInstallPacket({env=process.env,clientFactory,
     check(objects.rowCount===1&&objects.rows.length===1&&flags.length===5&&flags.every(value=>value===false),
       'existing_capability_requires_separate_read_only_reconciliation');
     return {capabilityState:'ABSENT',existingAuthorityVerified:true,originalAdministratorVerified:true,migrationBaselineVerified:true};
-  },'lythaus-rebind-install-packet');
+  },'lythaus-rebind-install-packet');}
+  catch(error){
+    if(rebindExecutorSessionDiagnostic(error))failureBindings.set(error,Object.freeze({
+      mode:executor.mode,branchId:executor.branchId,databaseName:executor.databaseName,roleId:executor.roleId,
+      roleFingerprint:executor.roleFingerprint,originFingerprint:executor.originFingerprint,roleMapSha256:executor.roleMapSha256,
+    }));
+    throw error;
+  }
   await requireRebindPacketMain(env,read);
   return {schemaVersion:'lythaus-admin-rebind-install-packet-v1',status:'REVIEW_PACKET_NOT_INSTALL_AUTHORITY',
     sourceMainSha:env.RELEASE_SHA,runId:env.GITHUB_RUN_ID,runAttempt:1,generatedAt:new Date(now).toISOString(),...state,
@@ -105,11 +114,14 @@ export async function prepareRebindInstallPacket({env=process.env,clientFactory,
 
 export function rebindInstallPacketFailure(error,{env=process.env,now=Date.now()}={}) {
   const executorSession=rebindExecutorSessionDiagnostic(error);
+  const configuredExecutor=executorSession?failureBindings.get(error):null;
   return {status:'BLOCKED',blocker:error instanceof AuditFailure||/^admin_rebind_[a-z_]+$/.test(error?.message??'')
     ?error.message:'read_only_packet_unverified',
     sourceMainSha:/^[a-f0-9]{40}$/.test(env.RELEASE_SHA??'')?env.RELEASE_SHA:null,
     runId:/^[1-9][0-9]{0,14}$/.test(env.GITHUB_RUN_ID??'')?env.GITHUB_RUN_ID:null,
     generatedAt:new Date(now).toISOString(),...(executorSession?{executorSession}:{}),
+    ...(configuredExecutor?{configuredExecutor:{...configuredExecutor},
+      configuredExecutorStatus:'PROVIDER_IDENTITY_VERIFIED_SQL_QUALIFICATION_FAILED'}:{}),
     executable:false,databaseWrites:false,providerMutations:false,credentialsCreated:false,ownerLoginVerified:false};
 }
 

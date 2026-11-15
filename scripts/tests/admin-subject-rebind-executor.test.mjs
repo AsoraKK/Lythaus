@@ -66,14 +66,16 @@ test('actual session requires the approved login, unchanged map and pre-existing
 test('failed owner guard exposes only boolean observations and still rejects a replication-enabled profile',async()=>{
   const client=new PolicyClient(),canary='synthetic-private-session-value';
   client.sessionOverride={role_present:true,can_login:true,is_superuser:false,replication_enabled:true,unexpired:true,
-    login_valid:false,private_field:canary};
+    can_create_database:false,can_create_role:false,bypass_rls:false,owner_superuser:false,owner_replication:false,
+    other_set_superuser:false,other_set_replication:false,client_backend:true,login_valid:false,private_field:canary};
   let caught;
   await assert.rejects(assertRebindExecutorSession(client,executor,roles),error=>{caught=error;return /owner_authority/.test(error.message);});
   const diagnostic=rebindExecutorSessionDiagnostic(caught);
   assert.equal(diagnostic.schemaVersion,'lythaus-rebind-executor-session-v1');
   assert.deepEqual(diagnostic.checks,{oneRow:true,databaseMatches:true,sessionIdentityMatches:true,roleMatchesApproval:true,
     maySetOwner:true,loginProfileAllowed:false,applicationRolesIsolated:true,sqlRolePresent:true,sqlCanLogin:true,
-    sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true});
+    sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true,sqlCreateDatabase:false,sqlCreateRole:false,sqlBypassRls:false,
+    ownerSuperuser:false,ownerReplication:false,otherSetReachableSuperuser:false,otherSetReachableReplication:false,sqlClientBackend:true});
   assert.equal(JSON.stringify(diagnostic).includes(canary),false);
   assert.equal(JSON.stringify(diagnostic).includes('pscale_api_'),false);
   assert.equal(client.queries.length,1);assert.ok(client.queries[0].startsWith('SELECT '));

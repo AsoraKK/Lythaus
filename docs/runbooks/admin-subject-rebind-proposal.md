@@ -108,6 +108,19 @@ it does not establish every SQL predicate. Do not change a role flag, grant,
 credential or acceptance rule to force a passing result. Reconcile the exact
 failed condition before requesting a new inspection or installation approval.
 
+The same query also observes current-role CREATEDB/CREATEROLE/BYPASSRLS,
+postgres SUPERUSER/REPLICATION, other SET-reachable SUPERUSER/REPLICATION flags
+and the own backend's client-backend type. Missing or untyped observations remain
+unknown. Catalog reachability is not comprehensive effective-authority proof;
+the backend observation is not a guarantee about future protocol configuration.
+An early failure leaves later CREATE/baseline/principal/capability checks unverified.
+For an internally recognized session failure after provider/target/map checks,
+the report retains the configured executor's non-credential binding pins. These
+identify the configured/provider-verified target, not a qualified SQL executor.
+Failure remains BLOCKED with no executable consent. A future profile decision
+still requires independent review and its own exact security approval, including
+review of process/client transport controls and existing PGREPLICATION behavior.
+
 Installation consent uses schema version
 lythaus-admin-subject-rebind-install-v2, scope
 install_disabled_capability_only, and exactly these fields:
