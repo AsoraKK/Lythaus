@@ -5,8 +5,9 @@ import { APPROVED_MIGRATIONS, loadApprovedMigrations } from './planetscale-migra
 import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
 import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-contract.mjs';
-import { rebindInstallConsent, installReviewedRebindCapability } from './admin-subject-rebind-capability.mjs';
+import { rebindInstallConsent, installReviewedRebindCapability, withVerifiedRebindInstallation } from './admin-subject-rebind-capability.mjs';
 import { branchQualifiedDatabaseTarget } from './planetscale-0021-target-identity.mjs';
+import {assertRebindExecutorTarget,assertRebindMetadataVerifierTarget,verifyRebindExecutorProvider} from './admin-subject-rebind-executor.mjs';
 
 const { Client } = pg;
 const root = process.cwd();
@@ -38,13 +39,11 @@ for (const label of ['runtime', 'admin', 'jobs', 'privacy', 'migrations']) {
   quoteRoleIdentifier(roleIdentifiers[`lythaus_${label}`]);
 }
 if (rebindConsent) {
-  const target = branchQualifiedDatabaseTarget(databaseUrl);
   const expected = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/native-hyperdrive-production.json'), 'utf8'));
-  if (target.branchId !== 'vqa2g2xc9wsl' || target.sqlDatabaseName !== 'postgres'
-    || target.originFingerprint !== expected.expectedMainOriginFingerprint
-    || target.role !== roleIdentifiers.lythaus_migrations) {
-    throw new Error('admin_rebind_install_migration_target_mismatch');
-  }
+  assertRebindExecutorTarget(databaseUrl,roleIdentifiers,expected.expectedMainOriginFingerprint,rebindConsent.record.executor);
+  assertRebindMetadataVerifierTarget(process.env.PLANETSCALE_VERIFIER_DATABASE_URL,expected.expectedMainOriginFingerprint);
+  await verifyRebindExecutorProvider(process.env,rebindConsent.record.executor,
+    {requiredThrough:Date.parse(rebindConsent.record.expiresAt)+300000});
 }
 
 async function registryRows(client) {
@@ -177,6 +176,7 @@ async function applyGrants(client) {
 
 const { migrations } = loadApprovedMigrations({ root, committedOnly: process.env.CI === 'true' });
 const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
+let installationOwnsConnection=false;
 await client.connect();
 try {
   if (rebindConsent) {
@@ -251,12 +251,24 @@ try {
   }
   const finalRegistry = await registryRows(client);
   if (!finalRegistry || !exactRegistryPrefix(finalRegistry, migrations.at(-1).name)) throw new Error('production migration registry is incomplete after apply');
-  await applyGrants(client);
-  await verifyWaitlistPrivileges(client);
-  await verifyRuntimeRateLimitPrivileges(client);
+  if(rebindConsent){
+    await verifyWaitlistPrivileges(client);
+    await verifyRuntimeRateLimitPrivileges(client);
+    let first=true;installationOwnsConnection=true;
+    const capability=await withVerifiedRebindInstallation({consent:rebindConsent,roles:roleIdentifiers,connect:async()=>{
+      if(first){first=false;return client;}
+      const reader=new Client({connectionString:connection.toString(),ssl:{rejectUnauthorized:true}});
+      try{await reader.connect();return reader;}catch{try{await reader.end();}catch{}throw new Error('admin_rebind_install_readback_connection_unverified');}
+    }});
+    console.log(JSON.stringify({adminSubjectRebindCapability:capability}));
+  }else{
+    await applyGrants(client);
+    await verifyWaitlistPrivileges(client);
+    await verifyRuntimeRateLimitPrivileges(client);
+  }
   console.log(rebindConsent
     ? 'Verified the existing baseline and installed only the disabled admin identity-rebind capability; canonical role grants and migrations were not applied.'
     : `Validated and applied PlanetScale production migrations on ${branch} (${mode}); no migration checksum was updated.`);
 } finally {
-  await client.end();
+  if(!installationOwnsConnection)await client.end();
 }

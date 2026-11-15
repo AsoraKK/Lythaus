@@ -4,14 +4,19 @@ import { assertAdminMutationRequest } from '../admin-cors-policy.ts';
 import { readBoundedJson } from '../request-body-policy.ts';
 import { verifiedHumanAccessIdentity } from './human-access.ts';
 import { rebindRuntimeTarget, rebindSessionMatches } from './rebind-target.ts';
-import { REBIND_POLICY_SETTING, parseRebindPolicy, rebindCommitment } from './rebind-protocol.ts';
+import { REBIND_CAPABILITY_SHA256, REBIND_READER_BODY_SHA256, REBIND_MUTATOR_BODY_SHA256, parseRebindPolicy, rebindCommitment } from './rebind-protocol.ts';
 
 export const SUBJECT_REBIND_PATH = '/api/admin/recovery/subject-rebind';
 export const SUBJECT_REBIND_CONFIRMATION = 'MOVE EXISTING ADMINISTRATOR SIGN-IN';
-export const REBIND_POLICY_SQL = `SELECT proconfig, prosecdef AS security_definer,
-       proowner = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) AS owned_by_caller
-  FROM pg_catalog.pg_proc
- WHERE oid = to_regprocedure('identity.rebind_control_plane_administrator(bytea,text,uuid,text,bytea,bigint,uuid,text)')`;
+export const REBIND_POLICY_SQL = `SELECT p.prosecdef AS security_definer, p.proconfig AS settings,
+       p.proowner = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) AS owned_by_caller,
+       p.proowner = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'postgres') AS stable_owner,
+       r.prosecdef AND r.proowner = p.proowner AND r.proconfig = ARRAY['search_path=pg_catalog']::text[] AS reader_boundary,
+       encode(sha256(convert_to(p.prosrc,'UTF8')),'hex') AS mutator_body_sha256,
+       encode(sha256(convert_to(r.prosrc,'UTF8')),'hex') AS reader_body_sha256
+  FROM pg_catalog.pg_proc AS p
+  JOIN pg_catalog.pg_proc AS r ON r.oid = to_regprocedure('identity.admin_subject_rebind_policy()')
+ WHERE p.oid = to_regprocedure('identity.rebind_control_plane_administrator(bytea,text,uuid,text,bytea,bigint,uuid,text)')`;
 export const REBIND_MEMBERSHIP_SQL = `SELECT membership.user_id, membership.access_subject_hmac, membership.role,
        membership.active, membership.revoked_at, account.status AS principal_status, account.deleted_at,
        (SELECT count(*)::integer FROM identity.admin_memberships) AS membership_count,
@@ -88,13 +93,24 @@ export async function handleSubjectRebind(request: Request, env: Env, deps: Depe
       if (method === 'GET') await client.query('SET TRANSACTION READ ONLY');
       await client.query("SET LOCAL statement_timeout = '5s'");
       await client.query("SET LOCAL lock_timeout = '2s'");
-      const metadata = await client.query<{ proconfig: unknown; security_definer: unknown; owned_by_caller: unknown }>(REBIND_POLICY_SQL);
-      if (metadata.rowCount !== 1 || metadata.rows[0].security_definer !== true || metadata.rows[0].owned_by_caller !== false
-        || !Array.isArray(metadata.rows[0].proconfig)) fail();
-      const settings = (metadata.rows[0].proconfig as unknown[]).filter(value => typeof value === 'string' && value.startsWith(REBIND_POLICY_SETTING + '='));
-      if (settings.length !== 1) fail();
-      const policy = parseRebindPolicy((settings[0] as string).slice(REBIND_POLICY_SETTING.length + 1));
+      const metadata = await client.query<{ settings: unknown; security_definer: unknown; owned_by_caller: unknown; stable_owner: unknown; reader_boundary: unknown;
+        mutator_body_sha256: unknown; reader_body_sha256: unknown }>(REBIND_POLICY_SQL);
+      const boundary = metadata.rows[0];
+      if (metadata.rowCount !== 1 || !boundary || boundary.security_definer !== true || boundary.owned_by_caller !== false
+        || boundary.stable_owner !== true || boundary.reader_boundary !== true
+        || boundary.mutator_body_sha256 !== REBIND_MUTATOR_BODY_SHA256 || boundary.reader_body_sha256 !== REBIND_READER_BODY_SHA256
+        || JSON.stringify(boundary.settings) !== JSON.stringify(['search_path=pg_catalog'])) fail();
+      const control = await client.query<{ policy_text: unknown; revision: unknown; capability_sha256: unknown;
+        disabled_from_policy_sha256: unknown }>('SELECT * FROM identity.admin_subject_rebind_policy()');
+      const capability = control.rows[0];
+      if (control.rowCount !== 1 || !capability || capability.capability_sha256 !== REBIND_CAPABILITY_SHA256
+        || capability.disabled_from_policy_sha256 !== null) fail();
+      const revision = capability.revision;
+      if (!(typeof revision === 'string' && /^[1-9][0-9]*$/.test(revision) || typeof revision === 'number')
+        || !Number.isSafeInteger(Number(revision))) fail();
+      const policy = parseRebindPolicy(capability.policy_text);
       if (!policy || !live(policy.notBefore, policy.expiresAt)
+        || policy.controlRevision !== Number(revision)
         || policy.sourceSha !== env.WORKER_VERSION!.tag || policy.workerVersionId !== env.WORKER_VERSION!.id
         || policy.accessIssuer !== `https://${env.ACCESS_TEAM_DOMAIN}`
         || policy.bindingProof.checkedAt * 1000 > Date.now()) fail();
@@ -120,15 +136,18 @@ export async function handleSubjectRebind(request: Request, env: Env, deps: Depe
       }
       const nonceHex = policy.mode === 'execute' ? policy.nonceHex! : hex(crypto.getRandomValues(new Uint8Array(32)));
       const expiresAt = Math.min(policy.expiresAt, Math.floor(identity.expiresAt / 1000));
+      const controlRevision = policy.controlRevision + (policy.mode === 'preview' ? 1 : 0);
       const commitmentSha256 = await rebindCommitment({ principalId: original.user_id, previousDigest: original.access_subject_hmac,
-        nextDigest, sourceSha: policy.sourceSha, workerVersionId: policy.workerVersionId, emailSha256, nonceHex, expiresAt });
+        nextDigest, sourceSha: policy.sourceSha, workerVersionId: policy.workerVersionId, emailSha256, nonceHex, expiresAt,
+        controlRevision, capabilitySha256: REBIND_CAPABILITY_SHA256 });
       if (policy.mode === 'execute' && (expiresAt !== policy.expiresAt || commitmentSha256 !== policy.commitmentSha256)) fail();
       if (!live(policy.notBefore, expiresAt) || identity.expiresAt <= Date.now()) fail();
       if (method === 'GET') return {
         status: policy.mode === 'preview' ? 'preview_ready' : 'approved_ready', correlationId,
         databaseTransactionReadOnly: true, databaseTargetMatchesApprovedMain: true, approvedEmailMatchesVerifiedIdentity: true,
         subjectBindingMatches: false, existingRole: 'administrator',
-        reviewPacket: { sourceSha: policy.sourceSha, workerVersionId: policy.workerVersionId, nonceHex, expiresAt, commitmentSha256 },
+        reviewPacket: { sourceSha: policy.sourceSha, workerVersionId: policy.workerVersionId, nonceHex, expiresAt, commitmentSha256,
+          controlRevision, capabilitySha256: REBIND_CAPABILITY_SHA256 },
       };
       if (policy.mode !== 'execute') fail();
       mutationAttempted = true;

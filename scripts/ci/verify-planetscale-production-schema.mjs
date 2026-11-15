@@ -3,6 +3,7 @@ import pg from 'pg';
 import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { APPLICATION_SCHEMAS, approvedReleaseExpectation, REQUIRED_RELEASE_SCHEMA_VERSION, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
+import {rebindGrantPayload,inspectRebindCapabilityCatalog} from './admin-subject-rebind-capability.mjs';
 
 const { Client } = pg;
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
@@ -36,6 +37,8 @@ if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('p
 if (connection.searchParams.get('sslrootcert') === 'system') connection.searchParams.delete('sslrootcert');
 
 async function schemaContract(client, registryRows) {
+  const rebindCapability=await inspectRebindCapabilityCatalog(client,JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS??'{}'),
+    rebindGrantPayload({committedOnly}));
   const schemaParams = APPLICATION_SCHEMAS.map((_, index) => `$${index + 1}`).join(', ');
   // Keep a single pg.Client strictly sequential. Concurrent client.query()
   // calls are deprecated by node-postgres and will be rejected in pg@9.
@@ -78,12 +81,14 @@ async function schemaContract(client, registryRows) {
     ['extensions', extensions.rows],
     ['migrations', registryRows],
   ];
+  if(rebindCapability.state==='CATALOG_VERIFIED')catalogSections.push(['adminRecoveryCapability',[rebindCapability]]);
   const catalogPayload = catalogSections
     .map(([name, rows]) => `--${name}--\n${rows.map((row) => JSON.stringify(row)).join('\n')}`)
     .join('\n');
   return {
     fingerprint: runtimeSchemaFingerprint(relations.rows, registryRows),
-    relationCount: relations.rowCount ?? relations.rows.length,
+    relationCount: relations.rowCount??relations.rows.length,
+    rebindCapability,
     relations: relations.rows,
     catalogFingerprint: createHash('sha256').update(catalogPayload).digest('hex'),
   };

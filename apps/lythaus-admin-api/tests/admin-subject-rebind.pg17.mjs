@@ -5,9 +5,11 @@ import { createHash } from 'node:crypto';
 import test, { mock } from 'node:test';
 import pg from 'pg';
 import * as jose from 'jose';
-import { parseRebindPolicy, rebindCommitment } from '../src/solo-recovery/rebind-protocol.ts';
+import { REBIND_CAPABILITY_SHA256, parseRebindPolicy, rebindCommitment } from '../src/solo-recovery/rebind-protocol.ts';
 import {rebindGrantPayload,installReviewedRebindCapability,REBIND_BOUNDARY_SQL}
   from '../../../scripts/ci/admin-subject-rebind-capability.mjs';
+import {rebindExecutorRoleFingerprint,rebindRoleMapSha256} from '../../../scripts/ci/admin-subject-rebind-executor.mjs';
+import {REBIND_METADATA_VERIFIER_ROLE} from '../../../scripts/ci/admin-subject-rebind-control.mjs';
 
 const RealClient = pg.Client;
 let transactionFault = null;
@@ -59,7 +61,8 @@ const sql = fs.readFileSync(new URL('../../../database/planetscale/grants/admin-
 const id = n => '01900000-0000-7000-8000-' + n.toString().padStart(12, '0');
 const previousDigest = Buffer.alloc(32, 1), nextDigest = Buffer.alloc(32, 2);
 const input = { principalId: id(1), previousDigest, nextDigest, sourceSha: 'a'.repeat(40),
-  workerVersionId: id(2), emailSha256: 'b'.repeat(64), nonceHex: 'c'.repeat(64) };
+  workerVersionId: id(2), emailSha256: 'b'.repeat(64), nonceHex: 'c'.repeat(64),
+  controlRevision:2,capabilitySha256:REBIND_CAPABILITY_SHA256 };
 const connect = async () => { const client = new pg.Client({ connectionString, ssl: false }); await client.connect(); return client; };
 const args = (policy, overrides = {}) => {
   const value = { ...input, expiresAt: policy.expiresAt, auditId: id(10), correlationId: 'synthetic-rebind', ...overrides };
@@ -68,13 +71,14 @@ const args = (policy, overrides = {}) => {
 };
 async function policy(patch = {}) {
   const now = Math.floor(Date.now() / 1000);
-  const value = { schemaVersion: 'lythaus-admin-subject-rebind-v2', mode: 'execute', origin: 'https://admin.lythaus.co',
+  const value = { schemaVersion: 'lythaus-admin-subject-rebind-v3', controlRevision:2,capabilitySha256:REBIND_CAPABILITY_SHA256,
+    mode: 'execute', origin: 'https://admin.lythaus.co',
     accessIssuer: 'https://fixture.cloudflareaccess.com', accessAudience: 'synthetic-api',
     sourceSha: input.sourceSha, workerVersionId: input.workerVersionId, emailSha256: input.emailSha256,
     notBefore: now - 5, expiresAt: now + 300, commitmentSha256: null, nonceHex: input.nonceHex,
     reference: 'canonical-release:123:admin-subject-rebind',
     databaseTarget: { branchId: 'vqa2g2xc9wsl', databaseName: 'postgres', originFingerprint: 'd'.repeat(64), roleFingerprint: 'e'.repeat(64) }, ...patch };
-  value.commitmentSha256 = await rebindCommitment({ ...input, expiresAt: value.expiresAt });
+  value.commitmentSha256 = await rebindCommitment({ ...input, expiresAt: value.expiresAt,controlRevision:value.controlRevision });
   value.bindingProof=proofFor(value);
   return value;
 }
@@ -82,8 +86,8 @@ function proofFor(value){return {schemaVersion:'lythaus-admin-rebind-binding-v1'
   hyperdriveId:'6bfbb0eab42642e8ad294dbf59294ed3',sourceSha:value.sourceSha,workerVersionId:value.workerVersionId,
   releaseRunId:'123',...value.databaseTarget,checkedAt:value.notBefore,expiresAt:value.expiresAt};}
 async function approve(owner, value) {
-  const literal = JSON.stringify(value).replaceAll("'", "''");
-  await owner.query(`ALTER FUNCTION ${signature} SET lythaus.admin_subject_rebind_approval = '${literal}'`);
+  await owner.query('UPDATE admin_recovery.subject_rebind_control SET policy_text=$1,revision=$2,disabled_from_policy_sha256=NULL WHERE singleton',
+    [JSON.stringify(value),Number.isSafeInteger(value?.controlRevision)?value.controlRevision:2]);
 }
 async function call(value, overrides = {}, role = 'lythaus_admin', prepare = async () => {}) {
   const client = await connect();
@@ -101,7 +105,12 @@ async function seed(owner) {
   assert.equal((await owner.query('SELECT identity.bootstrap_first_administrator($1,$2,$3,$4) AS created',
     [id(1), previousDigest, id(3), 'synthetic-bootstrap'])).rows[0].created, true);
   await owner.query(`DROP FUNCTION IF EXISTS ${signature}`);
+  await owner.query('DROP FUNCTION IF EXISTS identity.admin_subject_rebind_policy()');
+  await owner.query('DROP FUNCTION IF EXISTS identity.admin_subject_rebind_restore_state()');
+  await owner.query('DROP TABLE IF EXISTS admin_recovery.subject_rebind_control');
+  await owner.query('DROP SCHEMA IF EXISTS admin_recovery');
   await owner.query(sql);
+  await owner.query('INSERT INTO admin_recovery.subject_rebind_control(id,singleton,capability_sha256) VALUES($1,true,$2)',[id(90),REBIND_CAPABILITY_SHA256]);
 }
 async function unchanged(owner, digest = previousDigest) {
   const result = await owner.query(`SELECT
@@ -128,6 +137,8 @@ test('local PG17 proposal preserves authorization while permitting only an exact
   try {
     const version = Number((await owner.query("SELECT current_setting('server_version_num') AS version")).rows[0].version);
     assert.ok(version >= 170000 && version < 180000);
+    await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${REBIND_METADATA_VERIFIER_ROLE}') THEN CREATE ROLE ${REBIND_METADATA_VERIFIER_ROLE} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
+    await owner.query(`GRANT USAGE ON SCHEMA identity TO ${REBIND_METADATA_VERIFIER_ROLE}`);
     await t.test('disabled function ignores a caller-created approval GUC', async () => {
       await seed(owner); const p = await policy();
       assert.equal(await call(p, {}, 'lythaus_admin', client => client.query(
@@ -140,7 +151,8 @@ test('local PG17 proposal preserves authorization while permitting only an exact
         await assert.rejects(() => call(p,{},role), error => error.code === '42501');
       }
       for (const statement of ['UPDATE identity.admin_memberships SET active=false',
-        `ALTER FUNCTION ${signature} RESET lythaus.admin_subject_rebind_approval`]) {
+        'UPDATE admin_recovery.subject_rebind_control SET policy_text=\'DISABLED\'',
+        `ALTER FUNCTION ${signature} COST 100`]) {
         await assert.rejects(() => call(p,{},'lythaus_admin',client => client.query(statement)), error => error.code === '42501');
       }
       await unchanged(owner);
@@ -279,6 +291,23 @@ test('local PG17 proposal preserves authorization while permitting only an exact
       const previewPolicy=async()=>{const value={...await policy(),mode:'preview',commitmentSha256:null,nonceHex:null,
         emailSha256:sha(email),databaseTarget:dbTarget};return {...value,bindingProof:proofFor(value)};};
       await seed(owner);
+      const getterDefinition=(await owner.query("SELECT pg_get_functiondef('identity.admin_subject_rebind_policy()'::regprocedure) AS definition")).rows[0].definition;
+      await owner.query('CREATE SEQUENCE public.rebind_getter_effect_probe');
+      try {
+        await owner.query(`CREATE OR REPLACE FUNCTION identity.admin_subject_rebind_policy()
+          RETURNS TABLE(policy_text text,revision bigint,capability_sha256 text,disabled_from_policy_sha256 text)
+          LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$ BEGIN
+          PERFORM nextval('public.rebind_getter_effect_probe');
+          RETURN QUERY SELECT c.policy_text,c.revision,c.capability_sha256,c.disabled_from_policy_sha256
+            FROM admin_recovery.subject_rebind_control c WHERE c.singleton; END $$`);
+        assert.equal((await handleSubjectRebind(await request({method:'POST'}),env,{run})).status,404);
+        assert.equal((await owner.query('SELECT is_called FROM public.rebind_getter_effect_probe')).rows[0].is_called,false,
+          'changed getter is rejected from catalog metadata before it executes');
+        await unchanged(owner);
+      } finally {
+        await owner.query(getterDefinition);
+        await owner.query('DROP SEQUENCE public.rebind_getter_effect_probe');
+      }
       assert.equal((await handleSubjectRebind(await request(),env,{run})).status,404,'installed proposal remains disabled');
       const safeRead=async(claims={})=>adminWorker.fetch(new Request('https://admin.lythaus.co/api/admin/moderation/cases',{
         headers:{'cf-access-jwt-assertion':await sign(claims),accept:'application/json'},
@@ -344,18 +373,19 @@ test('local PG17 proposal preserves authorization while permitting only an exact
         const result=await authenticated.query(`SELECT user_id,role FROM identity.admin_memberships WHERE access_subject_hmac=decode($1,'base64') AND active=true`,[hmacLookup(verified,key)]);
         assert.equal(result.rowCount,1);assert.deepEqual(requireActiveAdminMembership(result.rows[0]),{userId:id(1),role:'administrator'});
       }finally{await authenticated.end();}
-      assert.equal((await handleSubjectRebind(await request(),env,{run})).status,200);
+      assert.equal((await handleSubjectRebind(await request(),env,{run})).status,404,'consumed approval is disabled');
       const replay=await handleSubjectRebind(await request({method:'POST'}),env,{run});
-      assert.equal(replay.status,200);assert.equal((await replay.json()).writePerformed,false,'HTTP replay performs no write');
+      assert.equal(replay.status,404,'HTTP replay cannot use the consumed policy');
       assert.equal((await owner.query("SELECT count(*)::integer AS count FROM system.audit_events WHERE action='identity.admin_subject_rebound'")).rows[0].count,1);
       for(const fault of ['commit_ack','close']) {
         await seed(owner);await approve(owner,p);transactionFault=fault;
         const uncertain=await handleSubjectRebind(await request({method:'POST'}),env);
         assert.equal(uncertain.status,409);assert.equal((await uncertain.json()).readOnlyReconciliationRequired,true);
         const check=await handleSubjectRebind(await request(),env);
-        assert.equal(check.status,200);assert.equal((await check.json()).status,'already_bound');
+        assert.equal(check.status,404,'disabled recovery endpoint does not establish the binding outcome');
+        assert.equal((await safeRead()).status,200,'normal authenticated read reconciles the committed binding');
         const again=await handleSubjectRebind(await request({method:'POST'}),env);
-        assert.equal(again.status,200);assert.equal((await again.json()).writePerformed,false);
+        assert.equal(again.status,404);
         assert.equal((await owner.query("SELECT count(*)::integer AS count FROM system.audit_events WHERE action='identity.admin_subject_rebound'")).rows[0].count,1);
       }
       await seed(owner);p=await previewPolicy();await approve(owner,p);
@@ -366,80 +396,102 @@ test('local PG17 proposal preserves authorization while permitting only an exact
       const proxyApplied=await handleSubjectRebind(await request({method:'POST'}),proxyEnv,{run});
       assert.equal(proxyApplied.status,200);assert.equal((await proxyApplied.json()).existingPrincipalPreserved,true);
       const proxyReplay=await handleSubjectRebind(await request({method:'POST'}),proxyEnv,{run});
-      assert.equal(proxyReplay.status,200);assert.equal((await proxyReplay.json()).writePerformed,false);
+      assert.equal(proxyReplay.status,404);
       assert.equal((await safeRead()).status,200,'proxy repair preserves ordinary administrator access');
     });
-    await t.test('canonical disabled installation is atomic, verifies real ACLs and refuses active or drifted definitions',async()=>{
+    await t.test('disabled installation uses existing non-super owner authority and preserves exact boundaries',async()=>{
       await seed(owner);
       const roles=Object.fromEntries(['runtime','admin','jobs','privacy','migrations'].map(name=>['lythaus_'+name,'pscale_api_test'+name]));
       for(const [label,role] of Object.entries(roles)){
-        await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role}; END IF; END $$`);
-        await owner.query(`GRANT ${label} TO ${role}`);
+        await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role} LOGIN NOSUPERUSER INHERIT; END IF; END $$;`);
+        if(label!=='lythaus_migrations')await owner.query(`GRANT ${label} TO ${role}`);
       }
-      const payload=rebindGrantPayload(),now=Date.now(),consent={payload,record:{approvedAt:new Date(now-1000).toISOString(),expiresAt:new Date(now+300000).toISOString()}};
-      await owner.query(`DROP FUNCTION ${signature}`);
-      await owner.query('BEGIN');let inventoried=false;
-      const conflictingCreation={query:async(statement,values)=>{
-        const result=await owner.query(statement,values);
-        if(statement===REBIND_BOUNDARY_SQL&&!inventoried){
-          inventoried=true;assert.equal(result.rowCount,0);
-          const other=await connect();try{await other.query(sql);await approve(other,await policy());}finally{await other.end();}
-        }
-        return result;
+      const executorRole='pscale_api_testexecutor';
+      await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${executorRole}') THEN CREATE ROLE ${executorRole} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
+      await owner.query(`GRANT postgres TO ${executorRole} WITH INHERIT FALSE, SET TRUE`);
+      const payload=rebindGrantPayload(),consent={payload,record:{
+        approvedAt:new Date(Date.now()-1000).toISOString(),expiresAt:new Date(Date.now()+300000).toISOString(),
+        executor:{mode:'existing_owner_connection',roleId:'syntheticexecutor',branchId:'vqa2g2xc9wsl',databaseName:'postgres',
+          originFingerprint:'d'.repeat(64),roleFingerprint:rebindExecutorRoleFingerprint(executorRole),roleMapSha256:rebindRoleMapSha256(roles)},
       }};
-      await assert.rejects(()=>installReviewedRebindCapability(conflictingCreation,consent,roles),error=>error.code==='42723');
-      await owner.query('ROLLBACK');
-      const kept=(await owner.query("SELECT proconfig FROM pg_proc WHERE oid=to_regprocedure($1)",[signature])).rows[0].proconfig;
-      assert.ok(kept.some(value=>value.startsWith('lythaus.admin_subject_rebind_approval=')&&!value.endsWith('=DISABLED')),
-        'a concurrently created active definition is preserved');
-      await owner.query(`DROP FUNCTION ${signature}`);
-      await owner.query('BEGIN');let reads=0;
-      const failedReadback={query:async(statement,values)=>{
-        const result=await owner.query(statement,values);
-        if(statement===REBIND_BOUNDARY_SQL&&++reads===2)result.rows[0].security_definer=false;
-        return result;
-      }};
-      await assert.rejects(()=>installReviewedRebindCapability(failedReadback,consent,roles),/admin_rebind_capability_definition_changed/);
-      await owner.query('ROLLBACK');
-      assert.equal((await owner.query('SELECT to_regprocedure($1) IS NULL AS absent',[signature])).rows[0].absent,true);
-      await owner.query(`GRANT postgres TO ${roles.lythaus_migrations}`);
-      const operator=await connect();
+      const transaction=async(work,{commit=false}={})=>{
+        const operatorUrl=new URL(connectionString);operatorUrl.username=executorRole;
+        const operator=new pg.Client({connectionString:operatorUrl.href,ssl:false});await operator.connect();
+        try{
+          await operator.query('BEGIN');
+          const result=await work(operator);
+          await operator.query(commit?'COMMIT':'ROLLBACK');
+          return result;
+        }catch(error){await operator.query('ROLLBACK');throw error;}finally{await operator.end();}
+      };
+      const drop=async client=>{
+        await client.query(`DROP FUNCTION IF EXISTS ${signature}`);
+        await client.query('DROP FUNCTION IF EXISTS identity.admin_subject_rebind_policy()');
+        await client.query('DROP FUNCTION IF EXISTS identity.admin_subject_rebind_restore_state()');
+        await client.query('DROP TABLE IF EXISTS admin_recovery.subject_rebind_control');
+        await client.query('DROP SCHEMA IF EXISTS admin_recovery');
+      };
+      await drop(owner);
+      await owner.query('CREATE ROLE pscale_api_rebuildtestroot LOGIN SUPERUSER');
+      const rootUrl=new URL(connectionString);rootUrl.username='pscale_api_rebuildtestroot';
+      const localRoot=new pg.Client({connectionString:rootUrl.href,ssl:false});await localRoot.connect();
       try{
-        await operator.query(`SET SESSION AUTHORIZATION ${roles.lythaus_migrations}`);
-        assert.equal((await operator.query('SELECT rolsuper FROM pg_roles WHERE rolname=current_user')).rows[0].rolsuper,false);
-        await operator.query('BEGIN');
-        const installed=await installReviewedRebindCapability(operator,consent,roles);
-        await operator.query('COMMIT');
-        assert.equal(installed.status,'INSTALLED_DISABLED');
-        assert.equal((await operator.query('SELECT current_user AS role')).rows[0].role,roles.lythaus_migrations,
-          'function-owner context is confined to the installation transaction');
-      }finally{await operator.end();}
-      await owner.query('BEGIN');const repeated=await installReviewedRebindCapability(owner,consent,roles);await owner.query('COMMIT');
-      assert.equal(repeated.status,'ALREADY_INSTALLED_DISABLED');
-      await owner.query('BEGIN');await owner.query(`GRANT EXECUTE ON FUNCTION ${signature} TO ${roles.lythaus_runtime}`);
-      await assert.rejects(()=>installReviewedRebindCapability(owner,consent,roles),/admin_rebind_capability_privilege_boundary_invalid/);
-      await owner.query('ROLLBACK');
-      await owner.query('BEGIN');await owner.query(`GRANT EXECUTE ON FUNCTION ${signature} TO ${roles.lythaus_admin} WITH GRANT OPTION`);
-      await assert.rejects(()=>installReviewedRebindCapability(owner,consent,roles),/admin_rebind_capability_privilege_boundary_invalid/);
-      await owner.query('ROLLBACK');
-      for(const [memberRole,parentRole] of [[roles.lythaus_admin,'postgres'],
-        [roles.lythaus_runtime,roles.lythaus_admin],[roles.lythaus_jobs,'postgres'],[roles.lythaus_privacy,roles.lythaus_admin]]){
-        await owner.query('BEGIN');await owner.query(`GRANT ${parentRole} TO ${memberRole} WITH INHERIT FALSE, SET TRUE`);
-        await assert.rejects(()=>installReviewedRebindCapability(owner,consent,roles),/admin_rebind_capability_privilege_boundary_invalid/);
-        await owner.query('ROLLBACK');
+        await localRoot.query('ALTER ROLE postgres NOSUPERUSER');
+        const installed=await transaction(client=>installReviewedRebindCapability(client,consent,roles),{commit:true});
+        assert.equal(installed.status,'INSTALLED_DISABLED','no custom parameter SET authority is needed');
+        assert.equal((await owner.query('SELECT rolsuper FROM pg_roles WHERE rolname=current_user')).rows[0].rolsuper,false);
+      }finally{
+        await localRoot.query('ALTER ROLE postgres SUPERUSER');await localRoot.end();
+        await owner.query('DROP ROLE pscale_api_rebuildtestroot');
       }
-      await owner.query('BEGIN');await owner.query('CREATE ROLE pscale_api_testwriter');
-      await owner.query('GRANT UPDATE ON identity.admin_memberships TO pscale_api_testwriter');
-      await owner.query(`GRANT pscale_api_testwriter TO ${roles.lythaus_admin} WITH INHERIT FALSE, SET TRUE`);
-      await assert.rejects(()=>installReviewedRebindCapability(owner,consent,roles),/admin_rebind_capability_privilege_boundary_invalid/);
-      await owner.query('ROLLBACK');
-      await owner.query('BEGIN');await approve(owner,await policy());
-      await assert.rejects(()=>installReviewedRebindCapability(owner,consent,roles),/admin_rebind_capability_not_disabled/);
-      await owner.query('ROLLBACK');
-      const client=await connect();try{
-        await client.query('SET ROLE '+roles.lythaus_admin);
-        assert.equal((await client.query(statement,args(await policy()))).rows[0].changed,false,'installation does not activate the rebind');
-      }finally{await client.end();}
+      assert.equal((await transaction(client=>installReviewedRebindCapability(client,consent,roles))).status,'ALREADY_INSTALLED_DISABLED');
+      await owner.query('UPDATE admin_recovery.subject_rebind_control SET revision=5,disabled_from_policy_sha256=$1 WHERE singleton',['f'.repeat(64)]);
+      await transaction(client=>installReviewedRebindCapability(client,consent,roles),{commit:true});
+      assert.equal((await owner.query('SELECT revision FROM admin_recovery.subject_rebind_control')).rows[0].revision,'5','idempotence never resets history');
+      const corruptions=[
+        ['GRANT USAGE ON SCHEMA admin_recovery TO PUBLIC',/control_boundary/],
+        ['CREATE TABLE admin_recovery.unreviewed(id integer)',/control_boundary/],
+        ["CREATE TYPE admin_recovery.unreviewed AS ENUM('unexpected')",/control_boundary/],
+        [`GRANT EXECUTE ON FUNCTION identity.admin_subject_rebind_restore_state() TO ${roles.lythaus_runtime}`,/restore_state_boundary/],
+        [`GRANT pg_read_all_data TO ${roles.lythaus_runtime} WITH INHERIT FALSE, SET TRUE`,/control_boundary/],
+        [`GRANT EXECUTE ON FUNCTION ${signature} TO ${roles.lythaus_runtime}`,/privilege_boundary/],
+        [`GRANT EXECUTE ON FUNCTION ${signature} TO ${roles.lythaus_admin} WITH GRANT OPTION`,/privilege_boundary/],
+        ['GRANT EXECUTE ON FUNCTION identity.admin_subject_rebind_policy() TO PUBLIC',/reader_boundary/],
+        ['GRANT SELECT ON admin_recovery.subject_rebind_control TO PUBLIC',/control_boundary/],
+        ['GRANT UPDATE(policy_text) ON admin_recovery.subject_rebind_control TO '+roles.lythaus_admin,/control_boundary/],
+        ['ALTER TABLE admin_recovery.subject_rebind_control ENABLE ROW LEVEL SECURITY',/control_boundary/],
+        ['ALTER TABLE admin_recovery.subject_rebind_control ADD COLUMN unreviewed text',/control_boundary/],
+        ['DROP FUNCTION identity.admin_subject_rebind_policy()',/partial_or_legacy/],
+        [`ALTER FUNCTION ${signature} SECURITY INVOKER`,/definition_changed/],
+        [`ALTER FUNCTION ${signature} SET search_path=public`,/configuration_changed/],
+        ["UPDATE admin_recovery.subject_rebind_control SET policy_text='{}',disabled_from_policy_sha256=NULL WHERE singleton",/not_disabled/],
+      ];
+      for(const [corruption,expected] of corruptions){
+        await assert.rejects(transaction(async client=>{
+          await client.query('SET LOCAL ROLE postgres');await client.query(corruption);await client.query('SET LOCAL ROLE NONE');
+          return installReviewedRebindCapability(client,consent,roles);
+        }),expected);
+      }
+      for(const [member,parent] of [[roles.lythaus_admin,'postgres'],[roles.lythaus_runtime,roles.lythaus_admin],
+        [roles.lythaus_jobs,'postgres'],[roles.lythaus_privacy,roles.lythaus_admin]]){
+        await assert.rejects(transaction(async client=>{
+          await client.query('SET LOCAL ROLE postgres');
+          await client.query(`GRANT ${parent} TO ${member} WITH INHERIT FALSE, SET TRUE`);
+          await client.query('SET LOCAL ROLE NONE');
+          return installReviewedRebindCapability(client,consent,roles);
+        }),/privilege_boundary|owner_authority/);
+      }
+      await transaction(async client=>{
+        await client.query('SET LOCAL ROLE postgres');await drop(client);await client.query('SET LOCAL ROLE NONE');
+        const wrapper={query:async(statement,values)=>{
+          const result=await client.query(statement,values);
+          if(statement===REBIND_BOUNDARY_SQL&&result.rowCount===1)result.rows[0].security_definer=false;
+          return result;
+        }};
+        await assert.rejects(installReviewedRebindCapability(wrapper,consent,roles),/definition_changed/);
+      });
+      assert.equal((await owner.query('SELECT policy_text FROM admin_recovery.subject_rebind_control')).rows[0].policy_text,'DISABLED');
+      await unchanged(owner);
     });
     t.diagnostic('PostgreSQL 17, synthetic local data only; no production operations or identity values reported.');
   } finally {

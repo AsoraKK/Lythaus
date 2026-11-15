@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import {verifyHyperdriveTargets} from './verify-cloudflare-hyperdrive-targets.mjs';
 import {branchQualifiedDatabaseTarget} from './planetscale-0021-target-identity.mjs';
+import {assertRebindExecutorTarget,assertRebindMetadataVerifierTarget} from './admin-subject-rebind-executor.mjs';
 
 const accountId='e5b7ae46e04698f507b7e4b3d4ef1af0';
 const zoneId='7bc572c8b7cd3c00be9c655176c29382';
@@ -9,16 +10,17 @@ const worker='lythaus-admin-api-development';
 const check=(condition,code)=>{if(!condition)throw new Error(code);};
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 
-export async function verifyRebindLiveTarget({env,policy,roles,fetchImpl=fetch,verifyTargets=verifyHyperdriveTargets,
+export async function verifyRebindLiveTarget({env,policy,roles,executor,fetchImpl=fetch,verifyTargets=verifyHyperdriveTargets,
   manifest=JSON.parse(fs.readFileSync('infrastructure/cloudflare/native-hyperdrive-production.json','utf8')),now=Date.now}) {
   const checkedAt=Math.floor(now()/1000);
   check(env.CLOUDFLARE_ACCOUNT_ID===accountId&&env.CLOUDFLARE_API_TOKEN,'admin_rebind_provider_context_invalid');
   const binding=manifest.bindings.filter(value=>value.worker===worker&&value.binding==='DB_ADMIN_FRESH');
   check(binding.length===1,'admin_rebind_admin_binding_invalid');
-  const target=branchQualifiedDatabaseTarget(env.PLANETSCALE_ADMIN_DATABASE_URL);
+  const target=assertRebindExecutorTarget(env.PLANETSCALE_ADMIN_DATABASE_URL,roles,manifest.expectedMainOriginFingerprint,executor);
+  assertRebindMetadataVerifierTarget(env.PLANETSCALE_SCHEMA_READ_DATABASE_URL,manifest.expectedMainOriginFingerprint);
   const metadataTarget=branchQualifiedDatabaseTarget(env.PLANETSCALE_SCHEMA_READ_DATABASE_URL);
   check(target.branchId===policy.databaseTarget.branchId&&target.sqlDatabaseName==='postgres'
-    &&target.role===roles.lythaus_migrations&&target.originFingerprint===policy.databaseTarget.originFingerprint
+    &&target.originFingerprint===policy.databaseTarget.originFingerprint
     &&target.originFingerprint===manifest.expectedMainOriginFingerprint
     &&metadataTarget.branchId===target.branchId&&metadataTarget.sqlDatabaseName===target.sqlDatabaseName
     &&metadataTarget.originFingerprint===target.originFingerprint

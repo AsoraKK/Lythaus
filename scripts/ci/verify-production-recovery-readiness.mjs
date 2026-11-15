@@ -35,6 +35,19 @@ const assessment = assessPlanetScaleBackupEvidence({
   restoreEvidenceArtifact: input.evidenceArtifact, ownerRecoveryContext: ownerRecoveryContextFromEnvironment(),
 });
 blockers.push(...assessment.blockers);
+let adminSubjectRebindRecovery={status:'NOT_REQUESTED'};
+if(process.env.REQUIRE_ADMIN_REBIND_BACKUP_CAPABILITY==='true'||process.env.ENABLE_ADMIN_SUBJECT_REBIND==='true') {
+  try {
+    const [{rebindGrantPayload},{verifyRebindRecoveryCapability}]=await Promise.all([
+      import('./admin-subject-rebind-capability.mjs'),import('./admin-subject-rebind-recovery.mjs'),
+    ]);
+    adminSubjectRebindRecovery=verifyRebindRecoveryCapability({input,assessment,
+      payload:rebindGrantPayload({root,committedOnly:process.env.CI==='true'}),releaseSha:process.env.RELEASE_SHA,root});
+  } catch(error) {
+    const code=/^admin_rebind_[a-z_]+$/.test(error?.message??'')?error.message:'admin_rebind_recovery_capability_unverified';
+    blockers.push(code);adminSubjectRebindRecovery={status:'BLOCKED',blocker:code};
+  }
+}
 const report = {
   sourceMainSha: process.env.RELEASE_SHA ?? null,
   databaseWrites: false,
@@ -43,6 +56,7 @@ const report = {
   ready: blockers.length === 0,
   blockers: [...new Set(blockers)],
   ...assessment,
+  adminSubjectRebindRecovery,
 };
 report.blockers = [...new Set(blockers)];
 report.ok = report.ready;

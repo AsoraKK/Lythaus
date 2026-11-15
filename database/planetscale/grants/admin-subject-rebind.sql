@@ -1,5 +1,50 @@
 -- Installed only by the protected migration lane with separate exact-payload consent.
 -- Installation leaves the capability disabled. Activation is a separate approval.
+CREATE SCHEMA admin_recovery AUTHORIZATION postgres;
+REVOKE ALL ON SCHEMA admin_recovery
+  FROM PUBLIC, lythaus_admin, lythaus_runtime, lythaus_jobs, lythaus_privacy;
+
+CREATE TABLE admin_recovery.subject_rebind_control (
+  id uuid PRIMARY KEY,
+  singleton boolean NOT NULL UNIQUE CHECK (singleton),
+  revision bigint NOT NULL DEFAULT 0 CHECK (revision BETWEEN 0 AND 9007199254740990),
+  policy_text text NOT NULL DEFAULT 'DISABLED' CHECK (length(policy_text) BETWEEN 1 AND 16384),
+  capability_sha256 text NOT NULL CHECK (capability_sha256 ~ '^[a-f0-9]{64}$'),
+  disabled_from_policy_sha256 text CHECK (disabled_from_policy_sha256 ~ '^[a-f0-9]{64}$')
+);
+ALTER TABLE admin_recovery.subject_rebind_control OWNER TO postgres;
+REVOKE ALL ON TABLE admin_recovery.subject_rebind_control
+  FROM PUBLIC, lythaus_admin, lythaus_runtime, lythaus_jobs, lythaus_privacy;
+
+CREATE FUNCTION identity.admin_subject_rebind_policy()
+RETURNS TABLE (policy_text text, revision bigint, capability_sha256 text, disabled_from_policy_sha256 text)
+LANGUAGE sql STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+  SELECT control.policy_text, control.revision, control.capability_sha256, control.disabled_from_policy_sha256
+    FROM admin_recovery.subject_rebind_control AS control WHERE control.singleton
+$$;
+ALTER FUNCTION identity.admin_subject_rebind_policy() OWNER TO postgres;
+REVOKE ALL ON FUNCTION identity.admin_subject_rebind_policy()
+  FROM PUBLIC, lythaus_runtime, lythaus_jobs, lythaus_privacy;
+GRANT EXECUTE ON FUNCTION identity.admin_subject_rebind_policy() TO lythaus_admin;
+
+CREATE FUNCTION identity.admin_subject_rebind_restore_state()
+RETURNS TABLE (id uuid, disabled boolean, revision bigint, capability_sha256 text, disabled_from_policy_sha256 text)
+LANGUAGE sql STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+  SELECT control.id, true, control.revision, control.capability_sha256, control.disabled_from_policy_sha256
+    FROM admin_recovery.subject_rebind_control AS control
+   WHERE control.singleton AND control.policy_text = 'DISABLED'
+$$;
+ALTER FUNCTION identity.admin_subject_rebind_restore_state() OWNER TO postgres;
+REVOKE ALL ON FUNCTION identity.admin_subject_rebind_restore_state()
+  FROM PUBLIC, lythaus_admin, lythaus_runtime, lythaus_jobs, lythaus_privacy;
+GRANT EXECUTE ON FUNCTION identity.admin_subject_rebind_restore_state() TO pscale_api_qodocjs6vgrb;
+
 CREATE FUNCTION identity.rebind_control_plane_administrator(
   p_next_subject_hmac bytea,
   p_source_sha text,
@@ -13,9 +58,12 @@ CREATE FUNCTION identity.rebind_control_plane_administrator(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog
-SET lythaus.admin_subject_rebind_approval = 'DISABLED'
 AS $$
 DECLARE
+  policy_value text;
+  control_revision bigint;
+  capability_hash text;
+  disabled_from_hash text;
   policy jsonb;
   binding_proof jsonb;
   checked_at bigint;
@@ -25,20 +73,27 @@ DECLARE
   principal identity.users%ROWTYPE;
   commitment text;
 BEGIN
-  -- A caller's SET/SET LOCAL cannot replace a function-owned SET value.
-  IF current_setting('lythaus.admin_subject_rebind_approval', true) = 'DISABLED' THEN
+  PERFORM pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'));
+  PERFORM pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'));
+  SELECT control.policy_text, control.revision, control.capability_sha256, control.disabled_from_policy_sha256
+    INTO policy_value, control_revision, capability_hash, disabled_from_hash
+    FROM admin_recovery.subject_rebind_control AS control WHERE control.singleton FOR UPDATE;
+  IF NOT FOUND OR policy_value = 'DISABLED' OR control_revision < 1 OR disabled_from_hash IS NOT NULL THEN
     RETURN false;
   END IF;
   BEGIN
-    policy := current_setting('lythaus.admin_subject_rebind_approval', true)::jsonb;
+    policy := policy_value::jsonb;
     binding_proof := policy->'bindingProof';
     IF jsonb_typeof(policy) IS DISTINCT FROM 'object'
        OR EXISTS (SELECT 1 FROM unnest(ARRAY['schemaVersion','mode','origin','accessIssuer','accessAudience',
                     'sourceSha','workerVersionId','emailSha256','nonceHex','commitmentSha256','reference']) AS key
                    WHERE jsonb_typeof(policy->key) IS DISTINCT FROM 'string')
        OR (SELECT string_agg(key, ',' ORDER BY key) FROM jsonb_object_keys(policy) AS key)
-          IS DISTINCT FROM 'accessAudience,accessIssuer,bindingProof,commitmentSha256,databaseTarget,emailSha256,expiresAt,mode,nonceHex,notBefore,origin,reference,schemaVersion,sourceSha,workerVersionId'
-       OR policy->>'schemaVersion' IS DISTINCT FROM 'lythaus-admin-subject-rebind-v2'
+          IS DISTINCT FROM 'accessAudience,accessIssuer,bindingProof,capabilitySha256,commitmentSha256,controlRevision,databaseTarget,emailSha256,expiresAt,mode,nonceHex,notBefore,origin,reference,schemaVersion,sourceSha,workerVersionId'
+       OR policy->>'schemaVersion' IS DISTINCT FROM 'lythaus-admin-subject-rebind-v3'
+       OR policy->>'capabilitySha256' IS DISTINCT FROM capability_hash
+       OR jsonb_typeof(policy->'controlRevision') IS DISTINCT FROM 'number'
+       OR policy->'controlRevision' IS DISTINCT FROM to_jsonb(control_revision)
        OR policy->>'mode' IS DISTINCT FROM 'execute'
        OR policy->>'origin' IS DISTINCT FROM 'https://admin.lythaus.co'
        OR jsonb_typeof(policy->'notBefore') IS DISTINCT FROM 'number'
@@ -113,7 +168,6 @@ BEGIN
     RETURN false;
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'));
   LOCK TABLE identity.admin_memberships IN SHARE ROW EXCLUSIVE MODE;
   -- Recheck the deadline after waiting for any concurrent operation.
   IF clock_timestamp() < to_timestamp(not_before) OR clock_timestamp() >= to_timestamp(expires_at)
@@ -141,10 +195,10 @@ BEGIN
   END IF;
 
   commitment := encode(sha256(
-    convert_to('lythaus:admin-subject-rebind:v1', 'UTF8') || decode('00', 'hex')
+    convert_to('lythaus:admin-subject-rebind:v2', 'UTF8') || decode('00', 'hex')
     || uuid_send(principal.id) || membership.access_subject_hmac || p_next_subject_hmac
     || decode(p_source_sha, 'hex') || uuid_send(p_worker_version_id) || decode(p_email_sha256, 'hex')
-    || p_nonce || int8send(p_expires_at)), 'hex');
+    || p_nonce || int8send(p_expires_at) || int8send(control_revision) || decode(capability_hash, 'hex')), 'hex');
   IF commitment IS DISTINCT FROM policy->>'commitmentSha256' THEN
     RETURN false;
   END IF;
@@ -162,6 +216,11 @@ BEGIN
     jsonb_build_object('changedCount', 1, 'role', 'administrator', 'principalType', 'control_plane',
       'sourceSha', p_source_sha, 'workerVersionId', p_worker_version_id,
       'approvalCommitmentSha256', commitment, 'approvalReference', policy->>'reference'));
+  UPDATE admin_recovery.subject_rebind_control
+     SET policy_text = 'DISABLED', revision = revision + 1,
+         disabled_from_policy_sha256 = encode(sha256(convert_to(policy_value, 'UTF8')), 'hex')
+   WHERE singleton AND revision = control_revision AND policy_text = policy_value;
+  IF NOT FOUND THEN RAISE EXCEPTION 'admin subject rebind policy changed' USING ERRCODE = '40001'; END IF;
   IF clock_timestamp() < to_timestamp(not_before) OR clock_timestamp() >= to_timestamp(expires_at) THEN
     RAISE EXCEPTION 'admin subject rebind approval expired during write' USING ERRCODE = '57014';
   END IF;

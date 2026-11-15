@@ -1,220 +1,281 @@
 # Administrator subject rebind
 
-The handler is unavailable by default. Installation and every temporary policy
-transition require their own exact security approval; publishing this code or
-approving a normal release does not authorize a binding change. This document
-is not execution approval.
+Code publication and ordinary release approval do not authorize installation,
+activation or a sign-in binding change. Each needs its own exact security
+approval. The repair is unavailable by default and remains disabled after
+installation.
 
-The owner demonstrated that the old Access identity reaches the live admin
-health route and the new identity does not. Both Access selectors were restored
-to the new address and the old session was logged out. The proposed repair
-changes only the lookup digest of the one existing, active, originally
-bootstrapped administrator. It preserves its UUID, role, locked principal,
-credentialless state and durable bootstrap closure. It creates no administrator,
-changes no key and grants no direct membership-table update permission.
+The old-address owner test reached normal administrator access while the new
+address did not. That supports a binding mismatch; it does not prove the exact
+stored identity or key history. Both Access selectors were restored to the
+current Lythaus address and the old session logged out. Do not repeat that
+experiment or change the selectors as part of this procedure.
 
-The recovered prototype export remains unchanged. The working integration now
-keeps the SQL under `database/planetscale/grants/admin-subject-rebind.sql` as an
-optional, separately approved capability. Ordinary migration runs skip it.
-The HTTP route returns
-unavailable unless the function exists with a separately approved, function-owned
-configuration. A caller's session setting cannot enable it. Only the existing
-Admin role may execute the function; other runtime roles and PUBLIC cannot.
+## Preserved identity and permission boundary
 
-The proposed flow has two separately reviewed stages in a window of at most
-15 minutes. A preview policy binds the exact serving source/version, main
-database and role fingerprints, API audience/issuer and intended email hash.
-A policy requires a version-bound control-plane binding proof in addition to
-the approval intent. An intent alone cannot enable the handler. The protected
-handoff verifies the deployed version, its exact Admin Hyperdrive binding and
-that configuration's physical main origin, role, TLS and cache settings through
-read-only provider metadata. It seals the v2 policy with those observed pins,
-the canonical run, check time and the original expiry. It requires the check to
-remain no more than two minutes old through the policy transaction.
-The Worker accepts a recognized platform-local Hyperdrive proxy URL only with
-this function-owned proof and a matching actual database session and Admin
-role. Physical URLs retain their exact origin, branch and role checks.
-This is point-in-time control-plane evidence, not an independent detector of a
-database clone. No routing or database rebinding outside the protected lane is
-permitted during the activation window; any observed drift aborts activation.
-A signed human Access request performs only a read-only preview. It computes
-both lookup values inside the Worker and returns an opaque approval commitment,
-nonce and expiry, never a raw identity, either lookup value, a JWT or key.
+Only the lookup binding of the unique original active control-plane
+administrator may change. Preserve its UUID, administrator role, locked
+credentialless principal, bootstrap closure and audit history. Do not create
+another administrator, promote a role, rotate/extract a key, rerun bootstrap,
+or add an email-only authorization fallback.
 
-Execution requires the separately approved exact commitment in function-owned
-configuration, the same verified email/subject/key output, source/version,
-database and deadline. The owner then confirms in the recovery page. The
-database function serializes concurrent attempts, rechecks expiry after lock
-waits, verifies the original bootstrap and credentialless principal, updates
-one lookup value and inserts a sanitized audit atomically. The handler verifies
-the resulting membership before committing. Replays are inert.
+The recovered prototype and its original 55-test/TypeScript receipts remain
+historical, separate evidence. Later integration tests do not replace those
+bytes or establish a production owner sign-in.
 
-Failure before commit rolls back the lookup change and audit together.
-Post-commit reversal requires a new specific security approval and a newly
-verified old identity through an approved Access selector window; it does not
-reuse the original approval. The old mailbox must remain available until the
-new identity has passed the real owner login and safe admin read. No old digest
-is copied to logs or returned as a rollback token, and no live database restore
-is part of this repair.
+The [optional SQL payload](../../database/planetscale/grants/admin-subject-rebind.sql)
+creates exactly:
 
-Independent review of the frozen export identified expiry after a principal
-row-lock wait and incorrect claims after uncertain commit outcomes. The working
-corrections recheck expiry after row locks and roll back if a subsequent write
-wait expires. The handler uses verified transaction cleanup, distinguishes
-unknown outcomes, and reconciles with read-only requests without repeating a
-write. The original export and its 55-test/TypeScript receipts are not replaced
-by these corrections or by newer integration test output.
+- The private admin_recovery schema owned by postgres.
+- One admin_recovery.subject_rebind_control record, with an application-generated
+  UUIDv7, singleton constraint, monotonic revision, reviewed capability hash,
+  disabled policy and previous-policy hash for cleanup.
+- The Admin-only policy reader identity.admin_subject_rebind_policy().
+- The verifier-only identity.admin_subject_rebind_restore_state() attestor.
+- The existing-signature identity.rebind_control_plane_administrator(...)
+  security-definer function.
 
-Optional installation uses the existing protected migration job. Consent
-must name the exact merged SHA, both canonical role-grant and capability SQL
-hashes, the operator, approval reference and a finite approval window. It
-requires the existing protected migration credential, the exact main binding
-and already complete migration baseline. It creates no credential, runs no
-schema migrations or canonical role-grant reconciliation in that scope,
-installs only a disabled function and verifies
-its source, stable owner, configuration and effective privilege boundary in the
-same transaction. The role-grant hash pins the reviewed context; that payload
-is not applied. Dedicated schema-verifier grants are also left unchanged.
-Existing active or unknown definitions fail closed.
-The transaction verifies the existing credential's session, then requires its
-already-held authority to assume the stable `postgres` function-owner role and
-set the named policy parameter. Role membership does not automatically inherit
-superuser-only parameter privileges. No role, credential, parameter grant or
-catalog-write privilege is created to overcome a refusal; missing authority
-stops before DDL. Local PostgreSQL success does not establish managed-provider
-authority, which must be checked by the protected execution preflight.
-The boundary rejects delegable execution and role-membership paths to the owner,
-Admin role or a role that can update memberships. Installation uses
-`CREATE FUNCTION`, so a concurrent definition is not replaced.
+All three functions use only search_path=pg_catalog. The control schema/table have
+no PUBLIC or application-role access, including inherited/SET paths. Only the
+existing Admin role may execute the reader and mutation; no runtime role gets
+direct membership or policy-table writes. Extra objects, triggers, rules,
+privileges, ownership, configuration or definitions fail verification.
 
-The source backup selected for later isolated qualification must include the
-installed disabled function and reviewed role grants: restore catalog comparison
-includes function definitions and ACLs. This is not permission to install or
-protect anything, take a backup or run a restore. Normal backup, rollback,
-reconciliation, cost and approval requirements remain in force.
+The existing pinned schema verifier may execute only the restore-state attestor.
+It returns only disabled-state/control metadata, never policy text, membership
+data or identity material. An active/missing record produces no acceptable row.
+The verifier cannot call the policy reader/mutation or read the private table,
+including through SET-role paths. This new metadata-only function permission
+must be explicit in the future exact installation approval. It does not authorize
+another credential or a sixth copied-role reset during restore qualification.
 
-Local validation covers PostgreSQL 17 restricted-role execution, real signed
-Access assertions, binding/version/email/subject/key drift, invalid policies,
-caller-setting spoofing, expiry during a lock wait, concurrent execution,
-atomic rollback, separately approved reversal and the unchanged ordinary
-subject-lookup authorization code. This is not a live owner sign-in test.
+The private schema is outside the existing application schema list. Keep
+packages/db and the ordinary application fingerprint unchanged. Production
+schema verification checks the exact optional catalog independently. Native
+restore verification includes the private schema, definitions, ACLs, UUIDv7
+control identity and disabled state in its full catalog/data digest. Its
+runtime-visible baseline remains the canonical application schema. This is
+not an arbitrary relation or archive exception.
 
-## A blocked installation target
+## Managed-owner installation and review packet
 
-If installation stops at `admin_rebind_install_migration_target_mismatch`, the
-guard has rejected the configured target before opening a database connection.
-Do not retry installation, replace a credential or relax that guard on a guess.
-The protected `planetscale-cutover-identity-preflight.yml` workflow provides
-`inspection=install-target` for a first-attempt repository-owner run on exact
-current protected main. It uses the existing migration URL and role map only
-in runner memory and makes no database connection or provider request. Its
-sanitized report gives four match booleans: branch, database, physical origin
-and canonical migration role. It never emits a URL, password, role value or
-derived fingerprint. It does not test existing SQL authority or function state,
-and a match is not installation approval. Settings can change between runs;
-the comparison describes its own current inputs, not immutable proof of a past
-run's private inputs. Resolve a confirmed mismatch only under the applicable
-specific security approval. Any new merged source needs its own exact-source
-installation consent; the earlier source approval does not transfer.
+The earlier GUC-based design depended on unavailable custom parameter authority.
+This replacement does not grant parameter rights or update system catalogs
+directly. The old migration-role audit/probe criteria remain unchanged; their
+failure is not converted into migration readiness.
 
-## Acceptance without unrelated grants
+The replacement uses an explicit existing_owner_connection installation mode.
+It is never a fallback from a failed canonical migration check. Ordinary
+migration identities and role-grant behavior stay unchanged. The current
+protected connection and canonical five-role mapping are used in place and are
+not replaced or rewritten.
 
-The unchanged administrator role cannot use `GET /api/admin/overview?period=today`:
-that route requires an active owner account. A successful binding repair must
-not promote the locked control-plane principal to satisfy that different gate.
-Use `GET /api/admin/moderation/cases`, which uses the normal verified Access
-lookup and is permitted for the existing administrator. The response remains
-private/no-store; record only HTTP status, response-shape validity, correlation
-ID and serving version, never the returned case rows. This path does not use
-the separate auth-summary column grants from PR #1153.
+Before an installation request, inspect existing run/receipt provenance and
+the exact committed SQL hash. Reuse a verified identical disabled installation;
+do not start another write. Any active, partial, legacy or different object
+state requires separate read-only reconciliation.
 
-The confirmation page submits at most one mutation, then reads health and the
-permitted cases route. Both must identify the exact approved Worker version and
-source in their response headers. Lost acknowledgements are reconciled by reads;
-they are not reported as proof that no write happened. Those checks alone do not
-prove the owner's fresh browser sign-in or panel navigation.
+When the protected connection/map are unavailable in the operator workspace,
+use the distinct read-only packet mode:
 
-After an authorized deployment and binding change, the owner must sign out,
-open a fresh browser session, sign in using the current Lythaus address, open
-`https://admin.lythaus.co`, then open
-`https://admin.lythaus.co/api/admin/moderation/cases` in that same session. Report
-only whether the panel opened and the read succeeded, with the sanitized version
-and correlation receipt. Leave both Access selectors unchanged. Owner-only
-metrics remaining unavailable is expected for the preserved administrator role.
+https://github.com/AsoraKK/Lythaus/actions/workflows/planetscale-cutover-identity-preflight.yml
 
-## Protected activation handoff
+- Protected main, full release_sha, attempt 1, repository-owner actor.
+- inspection=rebind-install-packet.
+- Leave migration_probe_approval blank; complete normal production review.
 
-The canonical `production-release.yml` workflow retains its ten dispatch inputs.
-Opt in by setting the repository variable `ADMIN_SUBJECT_REBIND_RELEASE_SHA` to
-the exact reviewed merged SHA used as `release_sha`. An absent, empty or different
-value disables enabling jobs. Clear the variable after cleanup is verified;
-once preview has emitted its policy receipt, cleanup depends on that same-run
-receipt and continues even if the selector is cleared. This selector requests the handoff
-only and grants no production installation, activation or identity-write authority.
-The selected handoff is accepted only with
-`release_mode=force_auth_critical`, after normal protected review, exact-main
-CI/security/historical evidence, provider checks, fresh native recovery proof,
-independent recovery, exact-candidate authenticated acceptance, deployment,
-smoke and manifest generation. Both later enabling jobs reverify recovery and
-current main. Neither ordinary signup owner-testing nor the read-only subject
-diagnostic exception authorizes this write; this handoff rejects those modes.
-The existing exception still defers only independent recovery destination.
+This mode requires all 13 exact-main CI checks, current main, a quiet protected
+consumer window, complete provider role pagination, existing session/owner
+authority, existing namespace/function CREATE authority, the exact migration
+registry, original administrator evidence and an absent capability. It issues
+no credential, performs no database/provider write and does not deploy.
+Both existing protected connection bindings are used in place; the schema
+verifier must match its existing pinned identity and metadata-only authority.
 
-Before approving the preview job, set protected production variable
-`ADMIN_SUBJECT_REBIND_PREVIEW_APPROVAL_JSON` to a separately approved exact
-`lythaus-admin-subject-rebind-activation-v1` record. Its schema is validated by
-`rebindActivationConsent`: one first-attempt canonical run, exact merged SHA,
-actual deployed Admin version, canonical capability hash, operator/reference,
-previous disabled-policy hash and at most 15 minutes. The nested preview intent
-uses `lythaus-admin-subject-rebind-v2` without a `bindingProof` input. It
-binds the intended email hash, verified Access issuer/UI audience, origin and
-main Admin database/role fingerprints. Raw identities and keys are not inputs.
-The job verifies live routing, the serving version and source, Access selectors
-and Hyperdrive, adds its observed binding proof, then changes only function-owned
-configuration. Execute repeats those observations; a proof supplied as an
-approval input is rejected.
+The artifact is rebind-install-packet-SHA-RUN_ID. Verify its run/attempt,
+source, artifact bytes/hash and provenance before relying on it. It contains
+only an installation consent draft and sanitized predicates. Executor/role-map
+fingerprints identify reviewed bindings; they do not hash or export passwords.
+The approval reference and approval/expiry timestamps are null, making the
+draft non-executable. An existing capability blocks this preparation mode
+instead of replacing it.
 
-The owner opens `https://admin.lythaus.co/api/admin/recovery/subject-rebind`
-with the current address. The signed Access request produces a read-only opaque
-commitment, nonce and expiry. It does not authorize a membership write.
-Obtain specific action-time approval for that exact packet to replace only the
-original administrator's binding. Then populate
-`ADMIN_SUBJECT_REBIND_EXECUTE_APPROVAL_JSON`, bound to the preview-policy hash,
-unchanged original window/source/version/identity/database, and approve the
-separate production execute job. Only afterward does the owner select
-**Check approval**, then **Update sign-in** once. The workflow itself never
-calls the membership-update function.
+Installation consent uses schema version
+lythaus-admin-subject-rebind-install-v2, scope
+install_disabled_capability_only, and exactly these fields:
 
-Policy transitions use the already-authorized function-owner context, an
-uncommitted unique guard setting to serialize that function's catalog row,
-and locked definition/configuration/privilege checks. The guard is removed
-before commit. It does not lock every role or table ACL in PostgreSQL; final
-privilege checks and the shared migration/bootstrap coordination locks remain
-required. Provider authority must pass preflight rather than be inferred from
-local superuser tests.
+- Full releaseSha, grantSha256, reviewed-context roleGrantsSha256.
+- Explicit metadataVerifierPermission=disabled_restore_state_only.
+- Executor: mode existing_owner_connection, provider roleId,
+  roleFingerprint, canonical five-role roleMapSha256, originFingerprint,
+  branch vqa2g2xc9wsl, database postgres.
+- Repository-owner operator, specific approvalReference, UTC approvedAt
+  and finite UTC expiresAt no more than 24 hours later.
 
-The same-run cleanup job disables only the preview/execution hashes emitted by
-these jobs and verifies readback. It does not overwrite a different policy or
-reverse a membership change. The original policy deadline fails closed even if
-a runner or approval is unavailable; report physical disablement as unverified
-until its receipt succeeds. No automatic mutation retry follows uncertain
-COMMIT/connection outcomes: a new session reconciles the exact policy read-only.
+The role-grant hash pins context only. Do not apply roles.sql.
+Old v1 consent does not authorize this changed payload, source or schema.
 
-## Required release evidence and approvals
+Before requesting the exact installation approval, verify the pre-install
+rollback backup directly through provider metadata: exact branch/ID,
+successful non-deleted state, API timestamps and availability through the
+installation/rollback window. Nonempty GitHub variables are not proof that a
+backup exists. A backup returning 404 must never be used. Any variable change
+still needs its own exact approval.
 
-- Preserve the independent reviews of the security protocol and installer; review
-  every later integration delta against its exact source tree before publication.
-- Review the protected preview/execution handoff against the exact candidate,
-  with no implicit credential creation/rotation or arbitrary SQL input.
-- Verify the isolated CI registration on the reviewed merged source before use;
-  its synthetic default database is separate from existing native test databases.
-- Preserve normal exact-commit CI, fresh recovery evidence, cost/retention,
-  production deployment approval and rollback gates. Do not use a read-only
-  diagnostic release exception to authorize this write.
-- Obtain specific approval for production grants/identity mutation (and any
-  genuinely required credential action), then verify deployment, binding and
-  the real owner login with an authorized safe read.
+Use the existing protected production migrations workflow on approved main,
+attempt 1, started by the repository owner. Set migration_scope=all-migrations,
+execute_0021=false, owner_testing_recovery_exception=false, and provide the
+new exact admin_subject_rebind_install_approval JSON. Leave unrelated inputs
+unset. The nonempty consent selects the disabled-only path before ordinary
+migration/grant application.
 
-No local test, CI result, policy receipt or successful old-address session
-certifies the current-address owner sign-in. Preserve the source/test/review
-receipts separately from production qualification and acceptance evidence.
+The installer verifies the complete existing schema and migration baseline,
+exact main origin/TLS, current executor fingerprint/provider role and unchanged
+role mapping. It requires already-held SET authority to postgres and existing
+database/schema CREATE permissions. Missing authority stops before DDL. No
+credential, role membership or grant is added to overcome a refusal.
+
+All-absent installation creates/seeds/restricts the five objects atomically.
+Only an exact disabled existing installation can be reused, preserving its
+revision/history. Partial or unknown state is not replaced. Installation never
+changes the principal, role, subject binding or key.
+
+After COMMIT and connection closure, a separate bounded repeatable-read,
+read-only session verifies the exact catalog and disabled revision/marker.
+Lost COMMIT or close acknowledgements do not trigger another write. If that
+readback cannot prove the result, report
+admin_rebind_install_outcome_unknown_read_only_reconciliation_required.
+A failed run is not permission to retry installation.
+
+## Fresh recovery and normal release
+
+The qualifying backup must be taken after this disabled object set was installed.
+A pre-install rollback backup cannot prove restoration of the new capability.
+Before deployment and again before preview/execute, the repair path parses the
+hash-verified native artifact and requires the exact current capability hash,
+verified disabled state on both source/restored catalogs and equal full catalog
+digests. Native verification timestamps must equal the reviewed record and
+remain within 24 hours. Only the existing evidence-only ancestry transition may
+advance the qualification source to the release source; code drift blocks it.
+Native NOT_CERTIFIED semantics remain unchanged. Full ordinary reviewed recovery
+scope and independently VERIFIED destination remain separately required.
+
+Preserve complete inventory pagination, archive/byte provenance, unknown-run
+fail-closed behavior, protected finite retention, actual current restore scope,
+all-in cost, source/target identity, reviewer, cleanup and normal approvals.
+Historical #8/#9/#12/#14 accounting is not fresh certification.
+
+Book a named operator/reviewer and two-hour execution/cleanup window. Verify
+existing token lifetime and cleanup capacity before protection or target
+creation. Permanent test-target deletion requires separate action-time approval.
+Never overwrite production, automatically retry a restore, change another
+backup or assume a provider-enforced spending cap.
+
+Bind the reviewed inventory, protected backup and useful execute=false plan
+to the exact candidate before one approved isolated qualification. Preserve
+the supported distinction between qualification SHA and later evidence-only
+commits. Code changes require reassessment; do not transfer qualification by
+assumption.
+
+The binding-change handoff still requires the canonical
+production-release.yml, release_mode=force_auth_critical, exact-main
+CI/security/historical evidence, fresh native recovery, verified independent
+recovery, exact-candidate authenticated acceptance, deployment, smoke, manifest
+and rollback evidence. Owner-testing exceptions do not authorize this write.
+They defer only their specifically defined independent recovery requirement.
+
+An absent/empty/different ADMIN_SUBJECT_REBIND_RELEASE_SHA disables enabling
+jobs. The exact-SHA selector requests the handoff; it is not security approval.
+Clear it after same-run physical cleanup is verified.
+
+## Preview, exact approval and one binding update
+
+Activation consent is lythaus-admin-subject-rebind-activation-v2, scope
+owner_control_record_and_catalog_lock, with
+catalogLock=canonical_functions_cost_100. It binds the exact merged SHA,
+canonical first-attempt release run, actual Admin version, capability hash,
+executor, previous policy hash **and revision**, operator/reference and finite
+approval window of at most 15 minutes.
+
+Its nested lythaus-admin-subject-rebind-v3 intent binds capability hash,
+control revision, exact source/version, intended email hash, Access UI audience
+and issuer, origin and main database/role fingerprints. Approval input must not
+supply a binding proof. The protected handoff obtains its own read-only provider
+observations of serving route/version, both unchanged Access selectors and the
+exact Hyperdrive origin, role, TLS and cache settings. The proof must remain
+no more than two minutes old through the policy transaction. No routing or
+database rebinding outside this lane is allowed during the window.
+
+All write paths coordinate schema/bootstrap locks before policy/membership
+locks. Operator transitions lock the three exact canonical function catalog rows
+in deterministic order using fixed ALTER FUNCTION ... COST 100 normalization,
+then reverify their identities, bodies, ownership, settings and ACLs. The exact
+approval explicitly permits only that planner metadata normalization; a
+concurrent COST-only change may be normalized. It does not permit normalization
+of any security/source field or claim to detect that COST-only race.
+
+Set ADMIN_SUBJECT_REBIND_PREVIEW_APPROVAL_JSON only after exact preview approval.
+Preview can transition only the approved disabled hash/revision to its next
+revision. Kyle opens:
+
+https://admin.lythaus.co/api/admin/recovery/subject-rebind
+
+The verified current-address Access request is read-only. It computes both
+digests inside the Worker and returns only an opaque commitment, nonce,
+deadline, expected execute revision, capability/source/version pins and
+sanitized predicates. No raw identity, JWT, key or lookup digest is output.
+
+The commitment binds the original principal, previous/new digest, source,
+Worker version, email hash, nonce, expiry, expected execute revision and exact
+capability. A later disabled/reopened window cannot reuse the old commitment.
+
+Obtain separate action-time approval for that exact packet. Populate
+ADMIN_SUBJECT_REBIND_EXECUTE_APPROVAL_JSON, bound to the preview hash/revision,
+same executor, identity/database/source and original window. Complete the
+separate production execute approval. Kyle then selects **Check approval**
+and **Update sign-in** once. The workflow never submits the membership mutation.
+
+Execution rechecks policy/revision, original bootstrap/principal/membership and
+deadline after lock waits. Binding update, sanitized audit and approval
+consumption to DISABLED commit atomically. Any failure rolls them all back.
+Ordinary verified subject-lookup authorization remains unchanged.
+
+Same-run cleanup compares only its emitted hashes/revisions and verifies the
+disabled marker. Clearing the selector cannot cancel that cleanup. Expiry fails
+closed but does not prove physical disablement. A disabled marker alone never
+proves that membership changed. Uncertain policy or binding outcomes require
+exact read-only reconciliation, not a second write.
+
+## Rollback and owner acceptance
+
+Before commit, failure rolls back all changes. Post-commit reversal requires
+new specific security approval and independently verified destination identity;
+never reuse the original approval. A Worker rollback alone does not reverse
+a database binding. No live restore or automatic Access-selector change is
+part of rollback. Retain old-mailbox availability until final acceptance.
+
+Use the captured previous live Worker/version/routing/bindings for normal app
+rollback. Reverify its compatibility with the intended binding rather than
+assuming historical source 2961ad91 still serves or is the rollback target.
+
+After authorized deployment and binding execution, verify physical disablement.
+Kyle signs out and uses a fresh browser session with the current Lythaus address:
+
+1. Open https://admin.lythaus.co.
+2. Confirm the panel opens.
+3. Open https://admin.lythaus.co/api/admin/moderation/cases in that session.
+
+The permitted read must return the expected shape and exact serving source
+and version. Record only status, shape validity, correlation and serving pins;
+do not publish case rows. Privately verify the original administrator UUID/role
+were preserved. GET /api/admin/overview?period=today is owner-only and is not
+acceptance for the preserved administrator. Keep #1153's unrelated summary
+grant outside this path.
+
+The recovery endpoint is disabled after consumption. Use normal authenticated
+health/safe-read results and exact audit/principal evidence to reconcile a lost
+binding acknowledgement. Do not infer success from a 404 recovery response.
+
+Report local/reviewed/published/merged/installed/deployed/restore-qualified and
+owner-login-verified separately. CI, an installation receipt, a local signed
+test, old-address access or a deployment alone does not certify the new login.

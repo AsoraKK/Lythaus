@@ -1,8 +1,12 @@
-export const REBIND_POLICY_SETTING = 'lythaus.admin_subject_rebind_approval';
+export const REBIND_CAPABILITY_SHA256 = '266d90dd892f535d4809b58c607e1d3c0082252ca68894db89337f97bc86e58b';
+export const REBIND_READER_BODY_SHA256 = '762d43d53432c511773e82589364ecd1af66b490225270726aa53d484ad8ec3e';
+export const REBIND_MUTATOR_BODY_SHA256 = 'f8264b8ca58dc6494942777e0d8aae3a7c390ef4a0f9ef265219f28233267761';
 export const REBIND_MAX_WINDOW_SECONDS = 15 * 60;
 
 export interface RebindIntent {
-  schemaVersion: 'lythaus-admin-subject-rebind-v2';
+  schemaVersion: 'lythaus-admin-subject-rebind-v3';
+  capabilitySha256: string;
+  controlRevision: number;
   mode: 'preview' | 'execute';
   origin: string;
   accessIssuer: string;
@@ -46,8 +50,11 @@ export function parseRebindIntent(value: unknown): RebindIntent | null {
   try {
     const policy = typeof value === 'string' ? JSON.parse(value) : value;
     if (!record(policy)
-      || keys(policy) !== 'accessAudience,accessIssuer,commitmentSha256,databaseTarget,emailSha256,expiresAt,mode,nonceHex,notBefore,origin,reference,schemaVersion,sourceSha,workerVersionId'
-      || policy.schemaVersion !== 'lythaus-admin-subject-rebind-v2'
+      || keys(policy) !== 'accessAudience,accessIssuer,capabilitySha256,commitmentSha256,controlRevision,databaseTarget,emailSha256,expiresAt,mode,nonceHex,notBefore,origin,reference,schemaVersion,sourceSha,workerVersionId'
+      || policy.schemaVersion !== 'lythaus-admin-subject-rebind-v3'
+      || policy.capabilitySha256 !== REBIND_CAPABILITY_SHA256
+      || !Number.isSafeInteger(policy.controlRevision) || (policy.controlRevision as number) < 1
+      || (policy.controlRevision as number) >= Number.MAX_SAFE_INTEGER - 1
       || !['preview', 'execute'].includes(policy.mode as string)
       || policy.origin !== 'https://admin.lythaus.co'
       || typeof policy.accessIssuer !== 'string' || !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(policy.accessIssuer)
@@ -73,7 +80,7 @@ export function parseRebindIntent(value: unknown): RebindIntent | null {
   } catch { return null; }
 }
 
-// This is function-owned pg_proc configuration, never a caller's session GUC.
+// Only the owner-controlled record can arm this policy.
 export function parseRebindPolicy(value: unknown): RebindPolicy | null {
   try {
     const parsed = typeof value === 'string' ? JSON.parse(value) : value;
@@ -115,6 +122,8 @@ export interface RebindCommitmentInput {
   emailSha256: string;
   nonceHex: string;
   expiresAt: number;
+  controlRevision: number;
+  capabilitySha256: string;
 }
 
 // No digest or raw identity leaves the Worker. Only this opaque, domain-separated
@@ -124,14 +133,19 @@ export async function rebindCommitment(input: RebindCommitmentInput): Promise<st
     || !(input.previousDigest instanceof Uint8Array) || input.previousDigest.byteLength !== 32
     || !(input.nextDigest instanceof Uint8Array) || input.nextDigest.byteLength !== 32
     || !/^[a-f0-9]{40}$/.test(input.sourceSha) || !hex.test(input.emailSha256) || !hex.test(input.nonceHex)
-    || !Number.isSafeInteger(input.expiresAt) || input.expiresAt < 0 || input.expiresAt > 4102444800) {
+    || !Number.isSafeInteger(input.expiresAt) || input.expiresAt < 0 || input.expiresAt > 4102444800
+    || !Number.isSafeInteger(input.controlRevision) || input.controlRevision < 1
+    || input.controlRevision >= Number.MAX_SAFE_INTEGER - 1 || input.capabilitySha256 !== REBIND_CAPABILITY_SHA256) {
     throw new Error('admin_rebind_commitment_input_invalid');
   }
   const expiry = new Uint8Array(8);
   new DataView(expiry.buffer).setBigInt64(0, BigInt(input.expiresAt));
-  const fields = [new TextEncoder().encode('lythaus:admin-subject-rebind:v1\0'),
+  const revision = new Uint8Array(8);
+  new DataView(revision.buffer).setBigInt64(0, BigInt(input.controlRevision));
+  const fields = [new TextEncoder().encode('lythaus:admin-subject-rebind:v2\0'),
     unhex(input.principalId.replaceAll('-', '')), input.previousDigest, input.nextDigest,
-    unhex(input.sourceSha), unhex(input.workerVersionId.replaceAll('-', '')), unhex(input.emailSha256), unhex(input.nonceHex), expiry];
+    unhex(input.sourceSha), unhex(input.workerVersionId.replaceAll('-', '')), unhex(input.emailSha256), unhex(input.nonceHex),
+    expiry, revision, unhex(input.capabilitySha256)];
   const bytes = new Uint8Array(fields.reduce((count, field) => count + field.byteLength, 0));
   let offset = 0;
   for (const field of fields) { bytes.set(field, offset); offset += field.byteLength; }

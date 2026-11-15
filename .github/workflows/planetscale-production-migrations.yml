@@ -162,6 +162,16 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/planetscale-migration"
           node scripts/ci/reconcile-planetscale-migration-state.mjs > "$RUNNER_TEMP/planetscale-migration/reconciliation.json"
+      - name: Verify the complete existing schema before optional recovery installation
+        if: inputs.admin_subject_rebind_install_approval != ''
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+          REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+        run: node scripts/ci/verify-planetscale-production-schema.mjs
       - name: Require documented rollback anchor
         env:
           PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
@@ -171,6 +181,7 @@ jobs:
           test -n "$PLANETSCALE_PRODUCTION_BACKUP_CREATED_AT"
       - name: Apply canonical migrations atomically
         env:
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PSCALE_BRANCH_NAME: main
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED: approved

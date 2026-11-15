@@ -8,11 +8,14 @@ import {adminDatabaseConnectionConfig,branchQualifiedDatabaseTarget} from './pla
 import {DISABLED_POLICY_SHA256,requireRebindActivationContext,rebindActivationConsent,sealRebindActivationConsent,transitionRebindPolicy,
   disableRebindPolicy,withRebindPolicyTransaction} from './admin-subject-rebind-activation.mjs';
 import {verifyRebindLiveTarget} from './verify-admin-subject-rebind-live.mjs';
+import {validateRebindExecutor,assertRebindExecutorTarget,verifyRebindExecutorProvider} from './admin-subject-rebind-executor.mjs';
+import {read0021RestoreEvidenceRecord} from './planetscale-0021-restore-evidence-loader.mjs';
+import {verifyRebindRecoveryCapability} from './admin-subject-rebind-recovery.mjs';
 
 const check=(condition,code)=>{if(!condition)throw new Error(code);};
 const hash=/^[a-f0-9]{64}$/;
 
-export function requireRebindRecoveryReport(report,env,now=Date.now()) {
+export function requireRebindBaseRecoveryReport(report,env,now=Date.now()) {
   const generated=Date.parse(report?.generatedAt);
   check(report?.ready===true&&report.ok===true&&report.sourceMainSha===env.RELEASE_SHA
     &&report.databaseWrites===false&&report.providerMutations===false&&report.blockers?.length===0
@@ -23,16 +26,29 @@ export function requireRebindRecoveryReport(report,env,now=Date.now()) {
   'admin_rebind_fresh_recovery_not_verified');
 }
 
+export function requireRebindRecoveryReport(report,env,now=Date.now()) {
+  requireRebindBaseRecoveryReport(report,env,now);
+  check(typeof env.PLANETSCALE_PRODUCTION_BACKUP_ID==='string'&&env.PLANETSCALE_PRODUCTION_BACKUP_ID.length>0
+    &&report.backup.id===env.PLANETSCALE_PRODUCTION_BACKUP_ID,'admin_rebind_recovery_backup_changed');
+  const input=read0021RestoreEvidenceRecord(report.backup.id,process.cwd());
+  return verifyRebindRecoveryCapability({input,assessment:report,
+    payload:rebindGrantPayload({committedOnly:env.CI==='true'}),releaseSha:env.RELEASE_SHA,now});
+}
+
 export async function runRebindActivation({env=process.env,stage=process.argv[2],fetchImpl=fetch,wait=delay}={}) {
   requireRebindActivationContext(env);
   check(['preview','execute','disable'].includes(stage),'admin_rebind_activation_stage_invalid');
   const payload=rebindGrantPayload({committedOnly:env.CI==='true'});
   const roles=JSON.parse(env.PSCALE_ROLE_IDENTIFIERS??'{}');
   const manifest=JSON.parse(fs.readFileSync('infrastructure/cloudflare/native-hyperdrive-production.json','utf8'));
-  const target=branchQualifiedDatabaseTarget(env.PLANETSCALE_ADMIN_DATABASE_URL);
-  check(target.branchId==='vqa2g2xc9wsl'&&target.sqlDatabaseName==='postgres'
-    &&target.role===roles.lythaus_migrations&&target.originFingerprint===manifest.expectedMainOriginFingerprint,
-  'admin_rebind_migration_target_changed');
+  const intent=stage==='disable'?null:rebindActivationConsent(env.ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON,{env,payload,stage});
+  let executor;
+  try{executor=intent?.record.executor??JSON.parse(env.ADMIN_REBIND_EXECUTOR_BINDING_JSON);}catch{}
+  validateRebindExecutor(executor);
+  const target=assertRebindExecutorTarget(env.PLANETSCALE_ADMIN_DATABASE_URL,roles,manifest.expectedMainOriginFingerprint,executor);
+  const deadline=intent?Date.parse(intent.record.expiresAt):Number(env.ADMIN_REBIND_PREVIEW_EXPIRES_AT)*1000;
+  await verifyRebindExecutorProvider(env,executor,{fetchImpl,requiredThrough:Math.max(Date.now()+300000,deadline+300000),
+    verifyMetadataVerifier:stage!=='disable'});
   const connect=async()=>{
     const client=new pg.Client({...adminDatabaseConnectionConfig(env.PLANETSCALE_ADMIN_DATABASE_URL),connectionTimeoutMillis:10000});
     try{
@@ -46,15 +62,20 @@ export async function runRebindActivation({env=process.env,stage=process.argv[2]
   };
   let result;
   if(stage==='disable'){
-    const allowedPolicyHashes=[env.ADMIN_REBIND_PREVIEW_POLICY_SHA256,env.ADMIN_REBIND_EXECUTE_POLICY_SHA256].filter(Boolean);
-    check(allowedPolicyHashes.length>0&&allowedPolicyHashes.every(value=>hash.test(value)),'admin_rebind_cleanup_binding_invalid');
+    const allowedPolicies=[
+      {policySha256:env.ADMIN_REBIND_PREVIEW_POLICY_SHA256,controlRevision:Number(env.ADMIN_REBIND_PREVIEW_CONTROL_REVISION)},
+      ...(env.ADMIN_REBIND_EXECUTE_POLICY_SHA256?[{policySha256:env.ADMIN_REBIND_EXECUTE_POLICY_SHA256,
+        controlRevision:Number(env.ADMIN_REBIND_EXECUTE_CONTROL_REVISION)}]:[]),
+    ];
+    check(allowedPolicies.every(value=>hash.test(value.policySha256??'')&&Number.isSafeInteger(value.controlRevision)
+      &&value.controlRevision>0),'admin_rebind_cleanup_binding_invalid');
     const expiry=Number(env.ADMIN_REBIND_PREVIEW_EXPIRES_AT);
     check(Number.isSafeInteger(expiry)&&expiry>0&&expiry*1000-Date.now()<=900000,'admin_rebind_cleanup_deadline_invalid');
     while(Date.now()<expiry*1000)await wait(Math.min(30000,expiry*1000-Date.now()));
-    result=await withRebindPolicyTransaction({connect,roles,payload,expectedPolicySha256:DISABLED_POLICY_SHA256,
-      work:client=>disableRebindPolicy(client,{roles,payload,allowedPolicyHashes})});
+    result=await withRebindPolicyTransaction({connect,roles,payload,executor,expectedPolicySha256:DISABLED_POLICY_SHA256,
+      work:client=>disableRebindPolicy(client,{roles,payload,executor,allowedPolicies,
+        previousDisabledRevision:Number(env.ADMIN_REBIND_PREVIOUS_DISABLED_REVISION)})});
   }else{
-    const intent=rebindActivationConsent(env.ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON,{env,payload,stage});
     const reportPath=env.RECOVERY_READINESS_REPORT_FILE;
     check(typeof reportPath==='string'&&path.isAbsolute(reportPath)&&reportPath.startsWith(`${env.RUNNER_TEMP}${path.sep}`),
       'admin_rebind_recovery_report_path_invalid');
@@ -66,11 +87,11 @@ export async function runRebindActivation({env=process.env,stage=process.argv[2]
       main=await response.json();
     }catch{throw new Error('admin_rebind_current_main_unverified');}
     check(response.ok&&main.protected===true&&main.commit?.sha===env.RELEASE_SHA,'admin_rebind_current_main_changed');
-    const verified=await verifyRebindLiveTarget({env,policy:intent.policy,roles,fetchImpl});
+    const verified=await verifyRebindLiveTarget({env,policy:intent.policy,roles,executor,fetchImpl});
     const consent=sealRebindActivationConsent(intent,verified.bindingProof);
     requireRebindRecoveryReport(JSON.parse(fs.readFileSync(reportPath,'utf8')),env);
-    if(env.GITHUB_OUTPUT)fs.appendFileSync(env.GITHUB_OUTPUT,`policy_sha256=${consent.policySha256}\nexpires_at=${consent.policy.expiresAt}\n`);
-    result=await withRebindPolicyTransaction({connect,roles,payload,expectedPolicySha256:consent.policySha256,
+    if(env.GITHUB_OUTPUT)fs.appendFileSync(env.GITHUB_OUTPUT,`policy_sha256=${consent.policySha256}\nexpires_at=${consent.policy.expiresAt}\ncontrol_revision=${consent.policy.controlRevision}\nprevious_disabled_revision=${consent.record.previousPolicyRevision}\nexecutor_binding=${JSON.stringify(executor)}\n`);
+    result=await withRebindPolicyTransaction({connect,roles,payload,executor,expectedPolicySha256:consent.policySha256,
       work:client=>transitionRebindPolicy(client,{consent,roles})});
   }
   return {...result,sourceSha:env.RELEASE_SHA,releaseRunId:env.GITHUB_RUN_ID,stage,
