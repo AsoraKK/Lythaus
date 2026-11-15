@@ -42,7 +42,9 @@ export function selectRebindConnection(env,{stage}={}) {
       &&selected.originFingerprint===previous.originFingerprint&&selected.role!==previous.role,
     'admin_rebind_separate_connection_unverified');
   }
-  return {mode,env:{...env,PLANETSCALE_ADMIN_DATABASE_URL:raw,PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:'true'}};
+  return {mode,env:{...env,PLANETSCALE_ADMIN_DATABASE_URL:raw,
+    PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:mode==='separate_owner_connection'
+      ?'true':env.PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT}};
 }
 
 // node-postgres may fall back to PGREPLICATION even when replication:false is

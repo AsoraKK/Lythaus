@@ -8,6 +8,8 @@ import {approvedRebindInstallationConnection,exportApprovedRebindInstallationCon
 import {assertRebindExecutorProviderProfile,assertRebindExecutorSession,rebindExecutorRoleFingerprint,rebindRoleMapSha256}
   from '../ci/admin-subject-rebind-executor.mjs';
 import {branchQualifiedDatabaseTarget} from '../ci/planetscale-0021-target-identity.mjs';
+import {requireRebindActivationContext} from '../ci/admin-subject-rebind-activation.mjs';
+import {runRebindActivation} from '../ci/run-admin-subject-rebind-activation.mjs';
 import {roles,payload,PolicyClient} from './admin-subject-rebind-fixtures.mjs';
 
 const now=Date.parse('2026-11-15T10:00:00Z'),source='a'.repeat(40);
@@ -84,6 +86,36 @@ test('complete install consent and target pins are validated before any runner e
     assert.throws(()=>exportApprovedRebindInstallationConnection({...env,ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:JSON.stringify(record)},
       {now,write:()=>calls++,mask:()=>calls++}));assert.equal(calls,0);
   }
+});
+
+test('existing-mode install preserves false or missing credential proof and rejects before export',()=>{
+  const env=installation(),record=JSON.parse(env.ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON);
+  record.executor={...executor,mode:'existing_owner_connection',roleFingerprint:rebindExecutorRoleFingerprint(branchQualifiedDatabaseTarget(raw).role)};
+  env.ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON=JSON.stringify(record);
+  env.PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT='true';
+  assert.equal(approvedRebindInstallationConnection(env,{now}).mode,'existing_owner_connection');
+  for(const marker of ['false',undefined]) {
+    const rejected={...env,PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:marker};
+    assert.equal(selectRebindConnection(rejected,{stage:'install'}).env.PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT,marker);
+    assert.throws(()=>exportApprovedRebindInstallationConnection(rejected,{now,write:()=>assert.fail('unexpected export'),
+      mask:()=>assert.fail('unexpected secret mask')}),/install_requires_existing_credential/);
+  }
+});
+
+test('existing-mode preview, execute and cleanup preserve credential proof and reject before any connection',async t=>{
+  let connections=0,requests=0;
+  t.mock.method(pg.Client.prototype,'connect',async()=>{connections++;throw new Error('unexpected connection');});
+  const env={...installation(),ENABLE_ADMIN_SUBJECT_REBIND:'true',RELEASE_MODE:'force_auth_critical',GITHUB_RUN_ID:'456',
+    GITHUB_WORKFLOW_REF:'AsoraKK/Lythaus/.github/workflows/production-release.yml@refs/heads/main',
+    ADMIN_SUBJECT_REBIND_ACTIVATION_APPROVAL_JSON:JSON.stringify({executor:{...executor,mode:'existing_owner_connection'}}),
+    ADMIN_REBIND_EXECUTOR_BINDING_JSON:JSON.stringify({...executor,mode:'existing_owner_connection'})};
+  for(const stage of ['preview','execute','disable']) {
+    requireRebindActivationContext(selectRebindConnection({...env,PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:'true'},{stage}).env);
+    for(const marker of ['false',undefined])await assert.rejects(runRebindActivation({stage,
+      env:{...env,PREPROVISIONED_MIGRATION_CREDENTIAL_PRESENT:marker},fetchImpl:async()=>{requests++;assert.fail('unexpected request');}}),
+    /activation_requires_existing_credential/);
+  }
+  assert.equal(connections,0);assert.equal(requests,0);
 });
 
 test('approved runner-local export masks first, emits no credential report, and rejects another destination',()=>{
