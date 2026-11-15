@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {branchQualifiedDatabaseTarget} from './planetscale-0021-target-identity.mjs';
 import {roleInventory,activeRole} from './planetscale-migration-role-audit.mjs';
 import {REBIND_METADATA_VERIFIER_ROLE} from './admin-subject-rebind-control.mjs';
+import {REBIND_CONNECTION_MODES} from './admin-subject-rebind-connection.mjs';
 
 const check=(condition,code)=>{if(!condition)throw new Error(code);};
 const hash=/^[a-f0-9]{64}$/;
@@ -13,7 +14,7 @@ export const rebindRoleMapSha256=roles=>digest(JSON.stringify(labels.map(label=>
 export function validateRebindExecutor(value) {
   check(value&&typeof value==='object'&&!Array.isArray(value)
     &&Object.keys(value).sort().join(',')==='branchId,databaseName,mode,originFingerprint,roleFingerprint,roleId,roleMapSha256'
-    &&value.mode==='existing_owner_connection'&&value.branchId==='vqa2g2xc9wsl'&&value.databaseName==='postgres'
+    &&REBIND_CONNECTION_MODES.includes(value.mode)&&value.branchId==='vqa2g2xc9wsl'&&value.databaseName==='postgres'
     &&hash.test(value.originFingerprint??'')&&hash.test(value.roleFingerprint??'')&&hash.test(value.roleMapSha256??'')
     &&typeof value.roleId==='string'&&/^[a-z0-9]{1,64}$/.test(value.roleId),
   'admin_rebind_executor_consent_invalid');
@@ -51,13 +52,37 @@ export function assertRebindMetadataVerifierTarget(raw,expectedOrigin) {
   return target;
 }
 
+export function assertRebindExecutorProviderProfile(row,executor,{now=Date.now(),requiredThrough=now+300000}={}) {
+  validateRebindExecutor(executor);
+  check(row?.id===executor.roleId&&rebindExecutorRoleFingerprint(row?.base_username??'')===executor.roleFingerprint,
+    'admin_rebind_executor_provider_mismatch');
+  activeRole(row,now);
+  if(executor.mode==='separate_owner_connection') {
+    const utcMicros=value=>{
+      const match=typeof value==='string'?/^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,6}))?Z$/.exec(value):null;
+      if(!match)return null;
+      const seconds=Date.parse(`${match[1]}Z`);
+      if(!Number.isSafeInteger(seconds)||new Date(seconds).toISOString().slice(0,19)!==match[1])return null;
+      return BigInt(seconds)*1000n+BigInt((match[2]??'').padEnd(6,'0'));
+    };
+    const created=utcMicros(row.created_at),expires=utcMicros(row.expires_at);
+    check(row.with_replication===false,'admin_rebind_separate_executor_replication_profile_unverified');
+    check(created!==null&&expires!==null&&Number.isSafeInteger(now)
+      &&created<=BigInt(now)*1000n&&expires>created&&expires-created<=86400000000n,
+    'admin_rebind_separate_executor_lifetime_unverified');
+  }
+  check(Number.isFinite(requiredThrough)&&requiredThrough>=now
+    &&(row.expires_at===null||Date.parse(row.expires_at)>requiredThrough),
+  'admin_rebind_executor_expires_before_cleanup');
+}
+
 export async function verifyRebindExecutorProvider(env,executor,{fetchImpl=fetch,now=Date.now(),requiredThrough=now+300000,verifyMetadataVerifier=true}={}) {
   validateRebindExecutor(executor);
   try {
     const inventory=await roleInventory(env,fetchImpl);
     const matches=inventory.filter(row=>rebindExecutorRoleFingerprint(row.base_username)===executor.roleFingerprint);
     check(matches.length===1&&matches[0].id===executor.roleId,'admin_rebind_executor_provider_mismatch');
-    activeRole(matches[0],now);
+    assertRebindExecutorProviderProfile(matches[0],executor,{now,requiredThrough});
     if(verifyMetadataVerifier){
       const verifier=inventory.filter(row=>row.base_username===REBIND_METADATA_VERIFIER_ROLE);
       check(verifier.length===1,'admin_rebind_metadata_verifier_identity_unverified');
@@ -65,12 +90,9 @@ export async function verifyRebindExecutorProvider(env,executor,{fetchImpl=fetch
       check(verifier[0].expires_at===null||Date.parse(verifier[0].expires_at)>requiredThrough,
         'admin_rebind_metadata_verifier_expires_before_cleanup');
     }
-    check(Number.isFinite(requiredThrough)&&requiredThrough>=now
-      &&(matches[0].expires_at===null||Date.parse(matches[0].expires_at)>requiredThrough),
-    'admin_rebind_executor_expires_before_cleanup');
     return {executorVerified:true};
   } catch(error) {
-    if(/^admin_rebind_(executor|metadata_verifier)_[a-z_]+$/.test(error?.message??''))throw error;
+    if(/^admin_rebind_(executor|metadata_verifier|separate_executor)_[a-z_]+$/.test(error?.message??''))throw error;
     throw new Error('admin_rebind_executor_provider_unverified');
   }
 }

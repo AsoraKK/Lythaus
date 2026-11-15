@@ -29,6 +29,7 @@ test('opt-in installation CLI installs the fixed disabled objects and reads back
   const raw='postgresql://pscale_api_executor.vqa2g2xc9wsl:synthetic@fixture.psdb.cloud/postgres?sslmode=verify-full';
   const origin=branchQualifiedDatabaseTarget(raw).originFingerprint,binding={...executor,originFingerprint:origin};
   class Client {
+    constructor(){this.connectionParameters={replication:undefined};}
     async connect(){connections++;}
     async end(){}
     async query(sql,args){

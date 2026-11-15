@@ -5,6 +5,7 @@ import pg from 'pg';
 import {rebindGrantPayload,REBIND_SIGNATURE} from '../ci/admin-subject-rebind-capability.mjs';
 import {REBIND_READER_SIGNATURE,REBIND_CONTROL_UPDATE_SQL,REBIND_METADATA_VERIFIER_ROLE,REBIND_RESTORE_STATE_SIGNATURE} from '../ci/admin-subject-rebind-control.mjs';
 import {rebindExecutorRoleFingerprint,rebindRoleMapSha256,assertRebindExecutorSession,rebindExecutorSessionDiagnostic} from '../ci/admin-subject-rebind-executor.mjs';
+import {rebindSqlClient} from '../ci/admin-subject-rebind-connection.mjs';
 import {DISABLED_POLICY_SHA256,rebindActivationConsent,sealRebindActivationConsent,transitionRebindPolicy,disableRebindPolicy,
   withRebindPolicyTransaction,REBIND_POLICY_ID_SQL,rebindCatalogLockSql} from '../ci/admin-subject-rebind-activation.mjs';
 
@@ -20,7 +21,8 @@ const repository=new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1
 const id=n=>`01900000-0000-7000-8000-${String(n).padStart(12,'0')}`;
 const connect=async(role=url.username)=>{const target=new URL(url);target.username=role;
   if(role!==url.username)target.password='synthetic-handoff-fixture';
-  const c=new pg.Client({connectionString:target.href,ssl:false});await c.connect();return c;};
+  const config={connectionString:target.href,ssl:false};
+  const c=role===executorRole?rebindSqlClient(config,pg.Client):new pg.Client(config);await c.connect();return c;};
 const operator=()=>connect(executorRole);
 const policyText=async c=>(await c.query('SELECT policy_text FROM admin_recovery.subject_rebind_control')).rows[0].policy_text;
 const mapped=sql=>sql.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g,label=>roles[label]);
@@ -98,20 +100,27 @@ test('PG17 policy handoff uses existing managed-owner authority and preserves th
       let client;
       try{
         await owner.query(`ALTER ROLE ${executorRole} REPLICATION`);client=await operator();
-        await client.query('BEGIN READ ONLY');let caught;
-        await assert.rejects(assertRebindExecutorSession(client,executor,roles),error=>{caught=error;return /owner_authority/.test(error.message);});
-        const diagnostic=rebindExecutorSessionDiagnostic(caught);
-        assert.deepEqual(diagnostic.checks,{oneRow:true,databaseMatches:true,sessionIdentityMatches:true,roleMatchesApproval:true,
-          maySetOwner:true,loginProfileAllowed:false,applicationRolesIsolated:true,sqlRolePresent:true,sqlCanLogin:true,
-          sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true,sqlCreateDatabase:false,sqlCreateRole:false,sqlBypassRls:false,
-          ownerSuperuser:true,ownerReplication:false,otherSetReachableSuperuser:false,otherSetReachableReplication:false,sqlClientBackend:true});
-        assert.equal(JSON.stringify(diagnostic).includes(executorRole),false);
+        await client.query('BEGIN READ ONLY');
+        for(const mode of ['existing_owner_connection','separate_owner_connection']){
+          let caught;
+          await assert.rejects(assertRebindExecutorSession(client,{...executor,mode},roles),error=>{caught=error;return /owner_authority/.test(error.message);});
+          const diagnostic=rebindExecutorSessionDiagnostic(caught);
+          assert.deepEqual(diagnostic.checks,{oneRow:true,databaseMatches:true,sessionIdentityMatches:true,roleMatchesApproval:true,
+            maySetOwner:true,loginProfileAllowed:false,applicationRolesIsolated:true,sqlRolePresent:true,sqlCanLogin:true,
+            sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true,sqlCreateDatabase:false,sqlCreateRole:false,sqlBypassRls:false,
+            ownerSuperuser:true,ownerReplication:false,otherSetReachableSuperuser:false,otherSetReachableReplication:false,sqlClientBackend:true});
+          assert.equal(JSON.stringify(diagnostic).includes(executorRole),false);
+        }
       }finally{
         try{if(client){try{await client.query('ROLLBACK');}finally{await client.end();}}}
         finally{await owner.query(`ALTER ROLE ${executorRole} NOREPLICATION`);}
       }
       const clean=await operator();
-      try{await clean.query('BEGIN READ ONLY');await assertRebindExecutorSession(clean,executor,roles);}
+      try{
+        await clean.query('BEGIN READ ONLY');
+        for(const mode of ['existing_owner_connection','separate_owner_connection'])
+          await assertRebindExecutorSession(clean,{...executor,mode},roles);
+      }
       finally{try{await clean.query('ROLLBACK');}finally{await clean.end();}}
     });
     await t.test('preview, execution and cleanup CAS exact control revisions without changing membership',async()=>{

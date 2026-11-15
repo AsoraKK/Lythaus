@@ -127,11 +127,92 @@ install_disabled_capability_only, and exactly these fields:
 
 - Full releaseSha, grantSha256, reviewed-context roleGrantsSha256.
 - Explicit metadataVerifierPermission=disabled_restore_state_only.
-- Executor: mode existing_owner_connection, provider roleId,
+- Executor: mode existing_owner_connection or explicit separate_owner_connection, provider roleId,
   roleFingerprint, canonical five-role roleMapSha256, originFingerprint,
   branch vqa2g2xc9wsl, database postgres.
 - Repository-owner operator, specific approvalReference, UTC approvedAt
   and finite UTC expiresAt no more than 24 hours later.
+
+### Separate temporary connection
+
+The default executor mode remains `existing_owner_connection`. A separately
+approved connection can instead use `separate_owner_connection`, with identical
+main target, role-map, provider identity, SQL owner/isolation, NOSUPERUSER and
+NOREPLICATION requirements. This names a connection source, not a replication
+exception. Neither mode can bootstrap or promote an administrator.
+
+The proposed separate production secret is
+`PLANETSCALE_ADMIN_REBIND_DATABASE_URL`. Verify that the name is unused and that
+no equivalent already-provisioned connection can be reused before creating or
+storing anything. Preserve `PLANETSCALE_ADMIN_DATABASE_URL` and
+`PSCALE_ROLE_IDENTIFIERS`. Publication of this integration creates no credential,
+setting, grant or live authorization.
+
+For the read-only packet, explicitly select `rebind_connection=separate`.
+Existing remains the default, and other inspection modes reject separate
+selection. The disabled installer selects only the executor mode in its exact
+installation consent. Later preview/execute actions select only their own
+separately approved executor mode; cleanup retains the same-run executor tuple.
+Missing, invalid or expired separate credentials block rather than falling back.
+Ordinary migrations, audits and the existing empty-inheritance probe retain
+their existing behavior. That probe's approval cannot authorize owner inheritance.
+
+Both the working and separate URLs must describe the same main origin and SQL
+database, with distinct physical login roles. The complete installation consent
+and target/map pins are validated before a selected credential is masked and
+written only to the protected runner's environment file. Pre-consent selection
+does not connect, create a credential or publish a binding diagnostic. URLs,
+passwords and tokens must never enter chat, artifacts or ordinary output.
+
+The dedicated provider record must explicitly report replication off and finite
+UTC creation/expiry timestamps, with a total lifetime at most 24 hours. The
+comparison preserves provider microsecond precision. This maximum is not an
+automatic lifetime choice or approval: select the shortest specific window that
+covers setup, review, the approved operation and reconciliation/cleanup margin.
+Normal expiry must remain later than the operation's required cleanup deadline.
+SQL independently verifies the login flags, owner authority and application
+isolation before installation or policy changes.
+
+Owner inheritance remains broad authority. A NOREPLICATION login able to assume
+the replication-enabled `postgres` owner does not eliminate every reachable
+replication-capable SQL operation. Separation and finite lifetime reduce direct
+startup privileges and credential exposure; do not describe the credential as a
+fully isolated or narrowly privileged owner.
+
+The provider's official SDK at
+[commit 9f93a8f48a82674c39254b036345184b8fe0d0a6](https://github.com/planetscale/planetscale-go/blob/9f93a8f48a82674c39254b036345184b8fe0d0a6/planetscale/postgres_roles.go)
+defines creation TTL, inherited role-name strings and `with_replication`. Its
+response type does not establish an `inherited_roles` readback representation.
+Verify the supported creation/permission contract and the exact approved request
+before creation; do not invent response evidence or normalize unknown objects.
+The creation request must explicitly encode replication false rather than rely
+on an SDK serializer that can omit false booleans.
+
+Before creation/storage, obtain specific approval naming the new role and main
+branch, inherited owner authority, non-replication profile, finite UTC window and
+expiry, distinct production secret, one read-only qualification and cleanup.
+First establish a supported confidential writer. Do not assume GITHUB_TOKEN can
+write environment secrets or create a credential to test access. If no supported
+authorized writer is available, use the owner's provider console and direct
+production-secret entry; never send the connection material through chat or an
+artifact. No new privileged token or replacement of the working secret is implied.
+
+Rebind clients reject any inherited PGREPLICATION value, including empty, and
+check the constructed client's parsed replication setting before connect. The
+locked driver can use process environment fallback despite replication:false;
+that configuration alone and an earlier normal backend observation are insufficient.
+TLS verification and all credential/SQL identity checks remain mandatory.
+
+Rollback stops dedicated use while preserving the working binding/map. Expire or
+revoke only the new credential through the specifically approved cleanup route,
+verify no remaining sessions and rejected new logins, and remove only the new
+setting if authorized. Expiry alone is not proof of session termination, role
+deletion or secret removal. Never extend a window or fall back automatically.
+Credential or Worker rollback neither uninstalls a function nor reverses a
+committed membership binding; either security-sensitive reversal needs its own
+specific approval. Installation remains disabled-only, and fresh post-install
+native recovery proof, activation, deployment and real owner acceptance remain
+separate gates.
 
 The role-grant hash pins context only. Do not apply roles.sql.
 Old v1 consent does not authorize this changed payload, source or schema.

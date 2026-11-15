@@ -11,6 +11,7 @@ import {verifyRebindLiveTarget} from './verify-admin-subject-rebind-live.mjs';
 import {validateRebindExecutor,assertRebindExecutorTarget,verifyRebindExecutorProvider} from './admin-subject-rebind-executor.mjs';
 import {read0021RestoreEvidenceRecord} from './planetscale-0021-restore-evidence-loader.mjs';
 import {verifyRebindRecoveryCapability} from './admin-subject-rebind-recovery.mjs';
+import {selectRebindConnection,rebindSqlClient} from './admin-subject-rebind-connection.mjs';
 
 const check=(condition,code)=>{if(!condition)throw new Error(code);};
 const hash=/^[a-f0-9]{64}$/;
@@ -36,6 +37,7 @@ export function requireRebindRecoveryReport(report,env,now=Date.now()) {
 }
 
 export async function runRebindActivation({env=process.env,stage=process.argv[2],fetchImpl=fetch,wait=delay}={}) {
+  env=selectRebindConnection(env,{stage}).env;
   requireRebindActivationContext(env);
   check(['preview','execute','disable'].includes(stage),'admin_rebind_activation_stage_invalid');
   const payload=rebindGrantPayload({committedOnly:env.CI==='true'});
@@ -50,7 +52,7 @@ export async function runRebindActivation({env=process.env,stage=process.argv[2]
   await verifyRebindExecutorProvider(env,executor,{fetchImpl,requiredThrough:Math.max(Date.now()+300000,deadline+300000),
     verifyMetadataVerifier:stage!=='disable'});
   const connect=async()=>{
-    const client=new pg.Client({...adminDatabaseConnectionConfig(env.PLANETSCALE_ADMIN_DATABASE_URL),connectionTimeoutMillis:10000});
+    const client=rebindSqlClient({...adminDatabaseConnectionConfig(env.PLANETSCALE_ADMIN_DATABASE_URL),connectionTimeoutMillis:10000},pg.Client);
     try{
       await client.connect();
       const session=await client.query('SELECT current_database() AS database_name, current_user AS current_role, session_user AS session_role');

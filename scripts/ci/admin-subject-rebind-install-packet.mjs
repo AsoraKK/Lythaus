@@ -6,9 +6,10 @@ import {ownerContext,canonicalRoles,mainConnection,roleInventory,activeRole,read
 import {quietConsumers} from './planetscale-migration-probe-evidence.mjs';
 import {githubRead} from './planetscale-native-restore-evidence.mjs';
 import {rebindGrantPayload,REBIND_OBJECTS_SQL,REBIND_SOURCE_STATE_SQL} from './admin-subject-rebind-capability.mjs';
-import {rebindExecutorRoleFingerprint,rebindRoleMapSha256,assertRebindExecutorTarget,assertRebindExecutorSession,assertRebindMetadataVerifierTarget,rebindExecutorSessionDiagnostic} from './admin-subject-rebind-executor.mjs';
+import {rebindExecutorRoleFingerprint,rebindRoleMapSha256,assertRebindExecutorTarget,assertRebindExecutorSession,assertRebindMetadataVerifierTarget,rebindExecutorSessionDiagnostic,assertRebindExecutorProviderProfile} from './admin-subject-rebind-executor.mjs';
 import {REBIND_METADATA_VERIFIER_ROLE,REBIND_METADATA_VERIFIER_READY_EXPR} from './admin-subject-rebind-control.mjs';
 import {loadApprovedMigrations} from './planetscale-migration-manifest.mjs';
+import {selectRebindConnection,rebindSqlClient} from './admin-subject-rebind-connection.mjs';
 
 export const REBIND_PACKET_CAPACITY_SQL=`SELECT
   has_database_privilege('postgres','postgres','CREATE') AS namespace_create,
@@ -61,6 +62,7 @@ export async function prepareRebindInstallPacket({env=process.env,clientFactory,
   check(env.INSPECTION==='rebind-install-packet'&&!env.MIGRATION_PROBE_APPROVAL_JSON,'read_only_packet_context_required');
   read??=suffix=>rebindPacketGithubRead(env,suffix);
   await assertCheckout();await requireRebindPacketMain(env,read);await quietConsumers(env,read);
+  const selection=selectRebindConnection(env,{stage:'packet'});env=selection.env;
   const roles=canonicalRoles(env.PSCALE_ROLE_IDENTIFIERS),target=mainConnection(env.PLANETSCALE_ADMIN_DATABASE_URL);
   const inventory=await roleInventory(env,fetchImpl);
   for(const role of new Set([...Object.values(roles),target.role,REBIND_METADATA_VERIFIER_ROLE])) {
@@ -68,9 +70,10 @@ export async function prepareRebindInstallPacket({env=process.env,clientFactory,
     check(matches.length===1,'packet_role_identity_unverified');activeRole(matches[0],now);
   }
   const observed=inventory.find(value=>value.base_username===target.role);
-  const executor={mode:'existing_owner_connection',branchId:'vqa2g2xc9wsl',databaseName:'postgres',roleId:observed.id,
+  const executor={mode:selection.mode,branchId:'vqa2g2xc9wsl',databaseName:'postgres',roleId:observed.id,
     roleFingerprint:rebindExecutorRoleFingerprint(target.role),originFingerprint:target.originFingerprint,roleMapSha256:rebindRoleMapSha256(roles)};
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'infrastructure/cloudflare/native-hyperdrive-production.json'),'utf8'));
+  assertRebindExecutorProviderProfile(observed,executor,{now,requiredThrough:now});
   assertRebindExecutorTarget(env.PLANETSCALE_ADMIN_DATABASE_URL,roles,manifest.expectedMainOriginFingerprint,executor);
   assertRebindMetadataVerifierTarget(env.PLANETSCALE_SCHEMA_READ_DATABASE_URL,manifest.expectedMainOriginFingerprint);
   const payload=rebindGrantPayload({root,committedOnly:env.CI==='true'});
@@ -127,7 +130,7 @@ export function rebindInstallPacketFailure(error,{env=process.env,now=Date.now()
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   let report;
-  try{const {default:pg}=await import('pg');report=await prepareRebindInstallPacket({clientFactory:config=>new pg.Client(config)});}
+  try{const {default:pg}=await import('pg');report=await prepareRebindInstallPacket({clientFactory:config=>rebindSqlClient(config,pg.Client)});}
   catch(error){report=rebindInstallPacketFailure(error);}
   console.log(JSON.stringify(report,null,2));if(report.status!=='REVIEW_PACKET_NOT_INSTALL_AUTHORITY')process.exitCode=1;
 }

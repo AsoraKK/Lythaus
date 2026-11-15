@@ -21,7 +21,7 @@ const checkNames=['Repository hygiene','Workflow lint','Native Workers and Plane
   'Offline posting feedback evaluation','Validate mobile security contracts'];
 
 function fixture(){
-  const env=environment(),calls=[],sql=[];
+  const env=environment(),calls=[],sql=[],extraRoles=[],configs=[];
   const branch={protected:true,commit:{sha:source},protection:{required_status_checks:{contexts:['Repository hygiene']}}};
   const checks=checkNames.map(name=>({name,app:{id:15368},head_sha:source,status:'completed',conclusion:'success'}));
   const objects={namespace_present:false,control_present:false,reader_present:false,restore_state_present:false,mutator_present:false};
@@ -34,11 +34,12 @@ function fixture(){
   },fetchImpl:async(url,request)=>{
     assert.equal(request.method,'GET');assert.equal(request.body,undefined);calls.push(url);
     const names=[...Object.values(roles),'pscale_api_executor','pscale_api_qodocjs6vgrb'];
-    const data=names.map((name,index)=>({id:'syntheticrole'+index,base_username:name,username:`${name}.vqa2g2xc9wsl`,
-      ready:true,deleted_at:null,expires_at:null,database_name:'postgres',branch:{id:'vqa2g2xc9wsl',name:'main',deleted_at:null}}));
+    const data=[...names.map((name,index)=>({id:'syntheticrole'+index,base_username:name,username:`${name}.vqa2g2xc9wsl`,
+      ready:true,deleted_at:null,expires_at:null,database_name:'postgres',branch:{id:'vqa2g2xc9wsl',name:'main',deleted_at:null}})),...extraRoles];
     return new Response(JSON.stringify(url.includes('/roles?')?{current_page:1,total_count:data.length,next_page:null,data}
       :{id:'vqa2g2xc9wsl',name:'main',kind:'postgresql',deleted_at:null}),{status:200});
   },clientFactory:config=>{
+    configs.push(config);
     assert.equal(config.options,'-c default_transaction_read_only=on');
     return {on(){},connect:async()=>{},end:async()=>{},query:async(text)=>{
       sql.push(text);const one=row=>({rowCount:1,rows:[row]});
@@ -52,8 +53,40 @@ function fixture(){
       assert.fail('unexpected packet SQL');
     }};
   }};
-  return {env,options,branch,checks,objects,capacity,session,calls,sql};
+  return {env,options,branch,checks,objects,capacity,session,calls,sql,extraRoles,configs};
 }
+
+function separateFixture(){
+  const f=fixture(),role='pscale_api_dedicated';
+  f.env.ADMIN_REBIND_CONNECTION='separate';
+  f.env.PLANETSCALE_ADMIN_REBIND_DATABASE_URL=f.env.PLANETSCALE_ADMIN_DATABASE_URL.replace('pscale_api_executor',role);
+  f.extraRoles.push({id:'separatefixture',base_username:role,username:`${role}.vqa2g2xc9wsl`,ready:true,deleted_at:null,
+    database_name:'postgres',branch:{id:'vqa2g2xc9wsl',name:'main',deleted_at:null},with_replication:false,
+    created_at:new Date(now-60000).toISOString(),expires_at:new Date(now+3600000).toISOString()});
+  Object.assign(f.session,{current_role:role,session_role:role});
+  return f;
+}
+
+test('dedicated packet uses only the explicit separate binding and retains a non-executable exact-mode draft',async()=>{
+  const f=separateFixture(),original=f.env.PLANETSCALE_ADMIN_DATABASE_URL,result=await prepareRebindInstallPacket(f.options);
+  assert.equal(result.consentDraft.executor.mode,'separate_owner_connection');
+  assert.equal(result.consentDraft.executor.roleId,'separatefixture');assert.equal(result.executable,false);
+  assert.equal(result.consentDraft.approvalReference,null);assert.equal(f.sql.length,7);assert.equal(f.configs.length,1);
+  assert.equal(new URL(f.configs[0].connectionString).username,'pscale_api_dedicated.vqa2g2xc9wsl');
+  assert.equal(f.env.PLANETSCALE_ADMIN_DATABASE_URL,original);
+  for(const value of [canary,f.env.PLANETSCALE_ADMIN_REBIND_DATABASE_URL])assert.equal(JSON.stringify(result).includes(value),false);
+});
+
+test('dedicated packet never falls back or produces consent after profile or SQL qualification failure',async()=>{
+  for(const change of [f=>delete f.env.PLANETSCALE_ADMIN_REBIND_DATABASE_URL,f=>f.extraRoles[0].with_replication=true,
+    f=>f.extraRoles[0].expires_at=null,f=>f.session.login_valid=false]) {
+    const f=separateFixture();change(f);let caught;
+    await assert.rejects(prepareRebindInstallPacket(f.options),error=>{caught=error;return true;});
+    const report=rebindInstallPacketFailure(caught,{env:f.env,now});
+    assert.equal(report.status,'BLOCKED');assert.equal(report.executable,false);assert.equal(Object.hasOwn(report,'consentDraft'),false);
+    assert.ok(f.configs.every(config=>new URL(config.connectionString).username==='pscale_api_dedicated.vqa2g2xc9wsl'));
+  }
+});
 
 test('packet preparation reads existing bindings and emits a non-executable exact-source consent draft',async()=>{
   const f=fixture(),result=await prepareRebindInstallPacket(f.options);

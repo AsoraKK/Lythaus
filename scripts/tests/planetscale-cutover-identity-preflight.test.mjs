@@ -253,7 +253,9 @@ test('manual workflow is protected, exact-SHA gated, read-only, and has no bypas
   assert.match(workflow, /\[\[ "\$RELEASE_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
   assert.doesNotMatch(identityWorkflow, /PLANETSCALE_SERVICE_TOKEN|PSCALE_ROLE_IDENTIFIERS|execute_0021|reconcile-planetscale|apply-planetscale/);
   assert.doesNotMatch(workflow, /\b(GRANT|REVOKE|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)\b/i);
-  assert.equal((workflow.match(/^      [a-zA-Z0-9_]+:\s*$/gm) ?? []).length, 3);
+  assert.equal((workflow.match(/^      [a-zA-Z0-9_]+:\s*$/gm) ?? []).length, 4);
+  assert.match(workflow, /rebind_connection:[\s\S]*?default: existing[\s\S]*?options: \[existing, separate\]/);
+  assert.match(identityWorkflow, /test "\$\{ADMIN_REBIND_CONNECTION:-existing\}" = existing/);
   assert.match(workflow, /if: inputs.inspection == 'identity'/);
   const source = fs.readFileSync('scripts/ci/planetscale-cutover-identity-preflight.mjs', 'utf8');
   assert.match(source, /method: 'GET'/);

@@ -88,11 +88,18 @@ jobs:
           npm run test:planetscale-production-migrations
           node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
       - name: Validate optional disabled admin identity-rebind installation consent
+        env:
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_ADMIN_REBIND_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_REBIND_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
         run: node scripts/ci/verify-admin-subject-rebind-install-consent.mjs
       - name: Resolve protected migration database credential
         shell: bash
         env:
           STATIC_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_ADMIN_REBIND_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_REBIND_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
         run: |
@@ -102,9 +109,9 @@ jobs:
             exit 1
           }
 
-          if [[ -n "${ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:-}" && -z "${STATIC_ADMIN_DATABASE_URL:-}" ]]; then
-            echo 'Admin identity-rebind capability installation requires the existing protected migration credential; no credential will be created.' >&2
-            exit 1
+          if [[ -n "${ADMIN_SUBJECT_REBIND_INSTALL_APPROVAL_JSON:-}" ]]; then
+            node scripts/ci/resolve-admin-subject-rebind-connection.mjs
+            exit 0
           fi
 
           if [[ -n "${STATIC_ADMIN_DATABASE_URL:-}" ]]; then
