@@ -4,7 +4,7 @@ import test from 'node:test';
 import pg from 'pg';
 import {rebindGrantPayload,REBIND_SIGNATURE} from '../ci/admin-subject-rebind-capability.mjs';
 import {REBIND_READER_SIGNATURE,REBIND_CONTROL_UPDATE_SQL,REBIND_METADATA_VERIFIER_ROLE,REBIND_RESTORE_STATE_SIGNATURE} from '../ci/admin-subject-rebind-control.mjs';
-import {rebindExecutorRoleFingerprint,rebindRoleMapSha256} from '../ci/admin-subject-rebind-executor.mjs';
+import {rebindExecutorRoleFingerprint,rebindRoleMapSha256,assertRebindExecutorSession,rebindExecutorSessionDiagnostic} from '../ci/admin-subject-rebind-executor.mjs';
 import {DISABLED_POLICY_SHA256,rebindActivationConsent,sealRebindActivationConsent,transitionRebindPolicy,disableRebindPolicy,
   withRebindPolicyTransaction,REBIND_POLICY_ID_SQL,rebindCatalogLockSql} from '../ci/admin-subject-rebind-activation.mjs';
 
@@ -94,6 +94,26 @@ test('PG17 policy handoff uses existing managed-owner authority and preserves th
     }
     await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${executorRole}') THEN CREATE ROLE ${executorRole} LOGIN NOSUPERUSER NOINHERIT PASSWORD 'synthetic-handoff-fixture'; END IF; END $$;`);
     await owner.query(`GRANT postgres TO ${executorRole} WITH INHERIT FALSE, SET TRUE`);
+    await t.test('replication-enabled executor remains refused and reports exact SQL flags without role names',async()=>{
+      let client;
+      try{
+        await owner.query(`ALTER ROLE ${executorRole} REPLICATION`);client=await operator();
+        await client.query('BEGIN READ ONLY');let caught;
+        await assert.rejects(assertRebindExecutorSession(client,executor,roles),error=>{caught=error;return /owner_authority/.test(error.message);});
+        const diagnostic=rebindExecutorSessionDiagnostic(caught);
+        assert.deepEqual(diagnostic.checks,{oneRow:true,databaseMatches:true,sessionIdentityMatches:true,roleMatchesApproval:true,
+          maySetOwner:true,loginProfileAllowed:false,applicationRolesIsolated:true,sqlRolePresent:true,sqlCanLogin:true,
+          sqlSuperuser:false,sqlReplicationEnabled:true,sqlUnexpired:true,sqlCreateDatabase:false,sqlCreateRole:false,sqlBypassRls:false,
+          ownerSuperuser:true,ownerReplication:false,otherSetReachableSuperuser:false,otherSetReachableReplication:false,sqlClientBackend:true});
+        assert.equal(JSON.stringify(diagnostic).includes(executorRole),false);
+      }finally{
+        try{if(client){try{await client.query('ROLLBACK');}finally{await client.end();}}}
+        finally{await owner.query(`ALTER ROLE ${executorRole} NOREPLICATION`);}
+      }
+      const clean=await operator();
+      try{await clean.query('BEGIN READ ONLY');await assertRebindExecutorSession(clean,executor,roles);}
+      finally{try{await clean.query('ROLLBACK');}finally{await clean.end();}}
+    });
     await t.test('preview, execution and cleanup CAS exact control revisions without changing membership',async()=>{
       await seed(owner);const preview=approval();
       await transition(preview);assert.equal(await policyText(owner),preview.policyText);await unchanged(owner);

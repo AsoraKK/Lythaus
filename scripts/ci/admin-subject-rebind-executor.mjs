@@ -77,19 +77,68 @@ export async function verifyRebindExecutorProvider(env,executor,{fetchImpl=fetch
 
 export const REBIND_EXECUTOR_SESSION_SQL=`SELECT current_database() AS database_name,current_user AS current_role,
   session_user AS session_role,pg_has_role(current_user,'postgres','SET') AS may_set_owner,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user) AS role_present,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolcanlogin) AS can_login,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolsuper) AS is_superuser,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolreplication) AS replication_enabled,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolcreatedb) AS can_create_database,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolcreaterole) AS can_create_role,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolbypassrls) AS bypass_rls,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user
+    AND (r.rolvaliduntil IS NULL OR r.rolvaliduntil>clock_timestamp())) AS unexpired,
+  (SELECT r.rolsuper FROM pg_roles r WHERE r.rolname='postgres') AS owner_superuser,
+  (SELECT r.rolreplication FROM pg_roles r WHERE r.rolname='postgres') AS owner_replication,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname NOT IN('postgres',current_user)
+    AND pg_has_role(current_user,r.oid,'SET') AND r.rolsuper) AS other_set_superuser,
+  EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname NOT IN('postgres',current_user)
+    AND pg_has_role(current_user,r.oid,'SET') AND r.rolreplication) AS other_set_replication,
+  (SELECT a.backend_type='client backend' FROM pg_catalog.pg_stat_activity a
+    WHERE a.pid=pg_catalog.pg_backend_pid()) AS client_backend,
   EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=current_user AND r.rolcanlogin AND NOT r.rolsuper
     AND NOT r.rolreplication AND (r.rolvaliduntil IS NULL OR r.rolvaliduntil>clock_timestamp())) AS login_valid,
   NOT EXISTS(SELECT 1 FROM unnest($1::text[]) AS app JOIN pg_roles reachable
     ON pg_has_role(app,reachable.oid,'MEMBER') OR pg_has_role(app,reachable.oid,'SET')
     WHERE reachable.rolname IN('postgres',current_user)) AS apps_isolated`;
 
+const sessionCheckKeys=['oneRow','databaseMatches','sessionIdentityMatches','roleMatchesApproval',
+  'maySetOwner','loginProfileAllowed','applicationRolesIsolated','sqlRolePresent','sqlCanLogin',
+  'sqlSuperuser','sqlReplicationEnabled','sqlUnexpired','sqlCreateDatabase','sqlCreateRole','sqlBypassRls',
+  'ownerSuperuser','ownerReplication','otherSetReachableSuperuser','otherSetReachableReplication','sqlClientBackend'];
+const sessionDiagnostics=new WeakMap();
+const booleanOrUnknown=value=>typeof value==='boolean'?value:null;
+
+export function rebindExecutorSessionDiagnostic(error) {
+  const checks=error instanceof Error?sessionDiagnostics.get(error):null;
+  if(!checks)return null;
+  return {schemaVersion:'lythaus-rebind-executor-session-v1',checks:Object.fromEntries(
+    sessionCheckKeys.map(key=>[key,booleanOrUnknown(checks[key])]))};
+}
+
 export async function assertRebindExecutorSession(client,executor,roles) {
   validateRebindExecutor(executor);
   check(rebindRoleMapSha256(roles)===executor.roleMapSha256,'admin_rebind_executor_role_map_changed');
   const result=await client.query(REBIND_EXECUTOR_SESSION_SQL,[['admin','runtime','jobs','privacy'].map(label=>roles[`lythaus_${label}`])]);
-  const row=result.rows[0],base=typeof row?.current_role==='string'?row.current_role.replace(/\.vqa2g2xc9wsl$/,''):null;
-  check(result.rowCount===1&&result.rows.length===1&&row.database_name===executor.databaseName
+  const oneRow=result?.rowCount===1&&Array.isArray(result.rows)&&result.rows.length===1&&result.rows[0]!==null
+    &&typeof result.rows[0]==='object'&&!Array.isArray(result.rows[0]);
+  const row=oneRow?result.rows[0]:{},base=typeof row.current_role==='string'?row.current_role.replace(/\.vqa2g2xc9wsl$/,''):null;
+  const accepted=oneRow&&row.database_name===executor.databaseName
     &&row.current_role===row.session_role&&rebindExecutorRoleFingerprint(base)===executor.roleFingerprint
-    &&row.may_set_owner===true&&row.login_valid===true&&row.apps_isolated===true,
-  'admin_rebind_existing_owner_authority_unverified');
+    &&row.may_set_owner===true&&row.login_valid===true&&row.apps_isolated===true;
+  if(!accepted){
+    const error=new Error('admin_rebind_existing_owner_authority_unverified');
+    sessionDiagnostics.set(error,{
+      oneRow, databaseMatches:typeof row.database_name==='string'?row.database_name===executor.databaseName:null,
+      sessionIdentityMatches:typeof row.current_role==='string'&&typeof row.session_role==='string'?row.current_role===row.session_role:null,
+      roleMatchesApproval:base!==null?rebindExecutorRoleFingerprint(base)===executor.roleFingerprint:null,
+      maySetOwner:booleanOrUnknown(row.may_set_owner),loginProfileAllowed:booleanOrUnknown(row.login_valid),
+      applicationRolesIsolated:booleanOrUnknown(row.apps_isolated),sqlRolePresent:booleanOrUnknown(row.role_present),
+      sqlCanLogin:booleanOrUnknown(row.can_login),sqlSuperuser:booleanOrUnknown(row.is_superuser),
+      sqlReplicationEnabled:booleanOrUnknown(row.replication_enabled),sqlUnexpired:booleanOrUnknown(row.unexpired),
+      sqlCreateDatabase:booleanOrUnknown(row.can_create_database),sqlCreateRole:booleanOrUnknown(row.can_create_role),
+      sqlBypassRls:booleanOrUnknown(row.bypass_rls),ownerSuperuser:booleanOrUnknown(row.owner_superuser),
+      ownerReplication:booleanOrUnknown(row.owner_replication),otherSetReachableSuperuser:booleanOrUnknown(row.other_set_superuser),
+      otherSetReachableReplication:booleanOrUnknown(row.other_set_replication),sqlClientBackend:booleanOrUnknown(row.client_backend),
+    });
+    throw error;
+  }
 }
