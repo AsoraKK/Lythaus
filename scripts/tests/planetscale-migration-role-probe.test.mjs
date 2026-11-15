@@ -322,10 +322,13 @@ test('workflow keeps old defaults and scopes protected inputs after synthetic te
   const workflow = parse(fs.readFileSync('.github/workflows/planetscale-cutover-identity-preflight.yml', 'utf8'));
   assert.equal(workflow.on.workflow_dispatch.inputs.inspection.default, 'identity');
   const job = workflow.jobs.migration_role; assert.equal(job.environment, 'production'); assert.equal(job['timeout-minutes'], 30);
-  assert.deepEqual(job.permissions, { contents: 'read', actions: 'read' });
+  assert.deepEqual(job.permissions, { contents: 'read', actions: 'read', checks: 'read' });
   assert.equal(workflow.on.workflow_dispatch.inputs.migration_probe_approval.default, '');
   const runtime = job.steps.findIndex(step => step.env?.PLANETSCALE_ADMIN_DATABASE_URL);
-  assert.ok(runtime > job.steps.findIndex(step => step.run?.includes('node --test')));
+  const synthetic=job.steps.findIndex(step => step.run?.includes('scripts/tests/planetscale-migration-role-probe.test.mjs'));
+  assert.ok(synthetic>=0&&runtime>synthetic);
+  assert.equal(job.steps[runtime].env.PLANETSCALE_SCHEMA_READ_DATABASE_URL,
+    "${{ inputs.inspection == 'rebind-install-packet' && secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL || '' }}");
   assert.equal(job.steps.filter(step => step.env?.PLANETSCALE_ADMIN_DATABASE_URL).length, 1);
   for (const name of ['inspect', 'install_target', 'restore_inventory']) assert.equal(JSON.stringify(workflow.jobs[name]).includes('migration_probe_approval'), false);
   assert.doesNotMatch(JSON.stringify(job), /secrets: write|wrangler|apply-planetscale/);
