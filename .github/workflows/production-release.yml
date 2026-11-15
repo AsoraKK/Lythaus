@@ -515,6 +515,7 @@ jobs:
         id: activate
         env:
           RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
+          PLANETSCALE_ADMIN_REBIND_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_REBIND_DATABASE_URL }}
         run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs preview
       - name: Describe the owner preview handoff
         run: |
@@ -567,6 +568,7 @@ jobs:
         id: activate
         env:
           RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/admin-rebind-recovery.json
+          PLANETSCALE_ADMIN_REBIND_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_REBIND_DATABASE_URL }}
         run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs execute
       - name: Describe the owner confirmation and acceptance
         run: |
@@ -605,6 +607,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Wait for the finite deadline and verify disablement without changing the membership
+        env:
+          PLANETSCALE_ADMIN_REBIND_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_REBIND_DATABASE_URL }}
         run: node --experimental-strip-types scripts/ci/run-admin-subject-rebind-activation.mjs disable
 
   provider_evidence:

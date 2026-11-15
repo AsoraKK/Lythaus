@@ -8,6 +8,7 @@ import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-
 import { rebindInstallConsent, installReviewedRebindCapability, withVerifiedRebindInstallation } from './admin-subject-rebind-capability.mjs';
 import { branchQualifiedDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import {assertRebindExecutorTarget,assertRebindMetadataVerifierTarget,verifyRebindExecutorProvider} from './admin-subject-rebind-executor.mjs';
+import {rebindSqlClient} from './admin-subject-rebind-connection.mjs';
 
 const { Client } = pg;
 const root = process.cwd();
@@ -175,7 +176,8 @@ async function applyGrants(client) {
 }
 
 const { migrations } = loadApprovedMigrations({ root, committedOnly: process.env.CI === 'true' });
-const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
+const config = { connectionString: connection.toString(), ssl: { rejectUnauthorized: true } };
+const client = rebindConsent?rebindSqlClient(config,Client):new Client(config);
 let installationOwnsConnection=false;
 await client.connect();
 try {
@@ -257,7 +259,7 @@ try {
     let first=true;installationOwnsConnection=true;
     const capability=await withVerifiedRebindInstallation({consent:rebindConsent,roles:roleIdentifiers,connect:async()=>{
       if(first){first=false;return client;}
-      const reader=new Client({connectionString:connection.toString(),ssl:{rejectUnauthorized:true}});
+      const reader=rebindSqlClient(config,Client);
       try{await reader.connect();return reader;}catch{try{await reader.end();}catch{}throw new Error('admin_rebind_install_readback_connection_unverified');}
     }});
     console.log(JSON.stringify({adminSubjectRebindCapability:capability}));

@@ -18,6 +18,12 @@ on:
         required: false
         default: ''
         type: string
+      rebind_connection:
+        description: Existing connection or separately approved dedicated connection; packet inspection only
+        required: false
+        default: existing
+        type: choice
+        options: [existing, separate]
 
 permissions:
   contents: read
@@ -42,6 +48,7 @@ jobs:
       REF_PROTECTED: ${{ github.ref_protected }}
       MIGRATION_PROBE_APPROVAL_JSON: ${{ inputs.migration_probe_approval }}
       INSPECTION: ${{ inputs.inspection }}
+      ADMIN_REBIND_CONNECTION: ${{ inputs.rebind_connection }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -62,6 +69,9 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          if [[ "$INSPECTION" != rebind-install-packet ]]; then
+            test "${ADMIN_REBIND_CONNECTION:-existing}" = existing
+          fi
           if [[ "$INSPECTION" == migration-probe ]]; then
             node scripts/ci/run-planetscale-migration-probe.mjs validate-probe-approval
           else
@@ -73,11 +83,12 @@ jobs:
       - name: Install locked dependencies without protected inputs
         run: npm ci --ignore-scripts
       - name: Validate audit and dormant probe with synthetic inputs
-        run: node --experimental-strip-types --test scripts/tests/planetscale-migration-role-probe.test.mjs scripts/tests/admin-subject-rebind-install-packet.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/planetscale-migration-role-probe.test.mjs scripts/tests/admin-subject-rebind-install-packet.test.mjs scripts/tests/admin-subject-rebind-connection.test.mjs
       - name: Protected audit or separately approved single probe
         env:
           GH_TOKEN: ${{ github.token }}
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_ADMIN_REBIND_DATABASE_URL: ${{ inputs.inspection == 'rebind-install-packet' && secrets.PLANETSCALE_ADMIN_REBIND_DATABASE_URL || '' }}
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ inputs.inspection == 'rebind-install-packet' && secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL || '' }}
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -126,6 +137,10 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
     steps:
+      - name: Require existing binding for this inspection
+        env:
+          ADMIN_REBIND_CONNECTION: ${{ inputs.rebind_connection }}
+        run: test "${ADMIN_REBIND_CONNECTION:-existing}" = existing
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
@@ -194,6 +209,10 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
     steps:
+      - name: Require existing binding for this inspection
+        env:
+          ADMIN_REBIND_CONNECTION: ${{ inputs.rebind_connection }}
+        run: test "${ADMIN_REBIND_CONNECTION:-existing}" = existing
       - name: Checkout exact current main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -277,6 +296,10 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
     steps:
+      - name: Require existing binding for this inspection
+        env:
+          ADMIN_REBIND_CONNECTION: ${{ inputs.rebind_connection }}
+        run: test "${ADMIN_REBIND_CONNECTION:-existing}" = existing
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
