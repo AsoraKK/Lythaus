@@ -9,20 +9,15 @@ import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig, buildPlan
 import { canonicalReleaseSchemaContract, runtimeSchemaFingerprint, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { EXPECTED_MIGRATION_SET_SHA256, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
+import { NEW_CORE_ROLE_LABELS, NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS,
+  newCoreRoleCanLogin, validateNewCoreRoleMap } from './lythaus-new-core-role-profile.mjs';
 
 const { Client } = pg;
 const ROOT = process.cwd();
 const TARGET_PATH = 'infrastructure/planetscale/lythaus-new-core-clean-install.target.json';
 const WORKER_CONFIG_PATH = 'apps/lythaus-admin-api/wrangler.new-core-test.jsonc';
 const VERIFIER_GRANTS_PATH = 'database/planetscale/grants/new-core-verifier.sql';
-const ROLE_NAMES = [
-  'lythaus_runtime',
-  'lythaus_admin',
-  'lythaus_jobs',
-  'lythaus_privacy',
-  'lythaus_migrations',
-  'lythaus_verifier',
-];
+const ROLE_NAMES = NEW_CORE_ROLE_LABELS;
 const REQUIRED_EXTENSIONS = ['pgcrypto', 'pg_trgm', 'unaccent'];
 const LOCAL_URL_ENV = 'LYTHAUS_NEW_CORE_PG17_REHEARSAL_URL';
 const LIVE_MIGRATION_URL_ENV = 'LYTHAUS_NEW_CORE_MIGRATION_DATABASE_URL';
@@ -42,7 +37,7 @@ const REQUIRED_ORIGIN_SHA_ENV = 'LYTHAUS_NEW_CORE_EXPECTED_ORIGIN_FINGERPRINT';
 const REQUIRED_CLOUDFLARE_ACCESS_TOKEN_ENV = 'CLOUDFLARE_API_TOKEN';
 const EXPECTED_OWNER_EMAIL_ENV = 'LYTHAUS_NEW_CORE_OWNER_EMAIL';
 const REQUIRED_PLANETSCALE_TOKEN_ENV = 'PLANETSCALE_API_TOKEN';
-const ROLE_LABELS = ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations', 'lythaus_verifier'];
+const ROLE_LABELS = NEW_CORE_ROLE_LABELS;
 
 function fail(code) {
   throw new Error(code);
@@ -324,8 +319,8 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
       'Apply the exact 22 approved migration files in order and insert the exact filename/checksum ledger rows.',
       'Install canonical least-privilege role grants and the narrow read-only aggregate bootstrap verifier.',
       'Insert the canonical first-admin latch as false; no user, membership, audit completion row, or application record is created by setup.',
-      'Keep the one observed unlabelled broad role unused and unchanged; provision six separate least-privilege roles only after separate role and credential approval.',
-      'Provision the migration login with database CREATE WITH GRANT OPTION on postgres, but not database ownership; the live preflight verifies this scoped DDL prerequisite before any migration.',
+      'Keep the observed broad role unchanged; provision three managed logins (migration/admin/verifier) and three SQL NOLOGIN PASSWORD NULL roles (runtime/jobs/privacy), with no unused credentials.',
+      'Provision the migration login with plain database CREATE on postgres, without grant option or database ownership. The provisioner supplies CONNECT and verifies other roles lack CREATE; preflight verifies this before any migration.',
       'Provisioned provider roles and scoped credentials must already exist under separate approval; this installer does not create, rotate, or delete credentials or roles.',
     ],
     guardedEmptyDataSteps: [
@@ -344,7 +339,7 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
       'PlanetScale database and branch metadata now match the approved destination, but the SQL server major is not exposed by these metadata reads.',
       'The exact Hyperdrive origin fingerprint and caching-disabled state are verified; Cloudflare did not return mtls.sslmode or ca_certificate_id, so verify-full plus CA verification remains blocked. Cloudflare documents require-mode encryption by default; plaintext is not inferred.',
       'The branch exposes one unlabelled role matching the Hyperdrive username, with pg_read_all_data, pg_write_all_data, and one additional unreported inherited role. It does not satisfy any of the six canonical role labels or least-privilege requirements; keep it unused and unchanged.',
-      'Provision six distinct least-privilege roles and separate credentials under explicit approval; updating the Hyperdrive to the approved Admin role and verify-full CA configuration is also a separate binding approval.',
+      'Provision six distinct roles under explicit approval, issuing only migration/admin/verifier credentials. Runtime/jobs/privacy stay NOLOGIN with no passwords. Updating Hyperdrive to the Admin role and verify-full CA remains a separate approval.',
       'The isolated Cloudflare Access app, exact audience, owner-only policy, hostname binding and worker asset build are not live-verified.',
       'Published pricing reference is recorded but current account allowances, storage/usage, Access seats, and approved one-time/monthly ceilings remain unknown.',
       'Live DDL, role/grant changes, credential use, Access/binding changes, worker publication and any new spend each remain separately approval-gated.',
@@ -443,19 +438,15 @@ async function assertEmptyTarget(client) {
 
 async function createLocalRoles(client) {
   for (const role of ROLE_NAMES) {
-    await client.query(`CREATE ROLE "${role}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+    await client.query(`CREATE ROLE "${role}" ${newCoreRoleCanLogin(role) ? 'LOGIN' : 'NOLOGIN'}
+      NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD NULL`);
   }
-  await client.query('GRANT CREATE ON DATABASE postgres TO lythaus_migrations WITH GRANT OPTION');
+  await client.query('GRANT CONNECT ON DATABASE postgres TO lythaus_migrations, lythaus_admin, lythaus_verifier');
+  await client.query('GRANT CREATE ON DATABASE postgres TO lythaus_migrations');
 }
 
 export function validateRoleMap(roleMap, { local = false } = {}) {
-  if (!roleMap || typeof roleMap !== 'object' || Array.isArray(roleMap)
-    || Object.keys(roleMap).sort().join(',') !== [...ROLE_LABELS].sort().join(',')) fail('new_core_role_map_invalid');
-  const values = ROLE_LABELS.map((label) => roleMap[label]);
-  if (new Set(values).size !== ROLE_LABELS.length) fail('new_core_role_map_not_distinct');
-  const pattern = local ? /^lythaus_(runtime|admin|jobs|privacy|migrations|verifier)$/ : /^pscale_api_[a-z0-9]+$/;
-  if (!values.every((value) => typeof value === 'string' && pattern.test(value))) fail('new_core_role_map_invalid');
-  return roleMap;
+  return validateNewCoreRoleMap(roleMap, { local });
 }
 
 function substituteRoleNames(sql, roleMap) {
@@ -560,11 +551,13 @@ export function verifyProviderRoles(rows, roleMap, now = Date.now()) {
   const byLabel = new Map();
   for (const row of rows) {
     const label = row?.name ?? row?.label;
-    if (!ROLE_LABELS.includes(label)) continue;
+    if (NEW_CORE_DEFERRED_ROLE_LABELS.includes(label)) fail('new_core_deferred_role_credential_present');
+    if (!NEW_CORE_LOGIN_ROLE_LABELS.includes(label)) continue;
     if (byLabel.has(label) || typeof row.id !== 'string' || !/^[a-z0-9]{1,64}$/.test(row.id)
       || !safeProviderRoleId(row.base_username)
       || row.base_username !== roleMap[label]
       || row.username !== `${row.base_username}.${REQUIRED_BRANCH_ID}`
+      || !Array.isArray(row.inherited_roles) || row.inherited_roles.length !== 0
       || row.ready !== true || row.deleted_at !== null
       || row.database_name !== 'postgres' || row.branch?.id !== REQUIRED_BRANCH_ID
       || row.branch?.name !== 'main' || row.branch?.deleted_at !== null
@@ -573,10 +566,11 @@ export function verifyProviderRoles(rows, roleMap, now = Date.now()) {
     }
     byLabel.set(label, row.id);
   }
-  if (byLabel.size !== ROLE_LABELS.length || new Set(byLabel.values()).size !== ROLE_LABELS.length) {
+  if (byLabel.size !== NEW_CORE_LOGIN_ROLE_LABELS.length || new Set(byLabel.values()).size !== NEW_CORE_LOGIN_ROLE_LABELS.length) {
     fail('new_core_provider_role_inventory_incomplete');
   }
-  return { count: ROLE_LABELS.length, distinct: true, allReady: true, branchQualified: true };
+  return { count: NEW_CORE_LOGIN_ROLE_LABELS.length, distinct: true, allReady: true, branchQualified: true,
+    deferredSqlRoleCount: NEW_CORE_DEFERRED_ROLE_LABELS.length, deferredSqlRolesRequireCatalogVerification: true };
 }
 
 async function readRoleInventory(authorization, roleMap, fetchImpl = fetch) {
@@ -786,13 +780,12 @@ async function verifyRoleBoundary(client, roleMap) {
     has_database_privilege($1, 'postgres', 'CREATE') AS migration_database_create,
     (SELECT datdba = (SELECT oid FROM pg_roles WHERE rolname = $1)
        FROM pg_database WHERE datname = 'postgres') AS migration_database_owner,
-    EXISTS (SELECT 1 FROM pg_database database_entry,
-      LATERAL aclexplode(COALESCE(database_entry.datacl, acldefault('d', database_entry.datdba))) acl
-      WHERE database_entry.datname = 'postgres'
-        AND acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = $1)
-        AND acl.privilege_type = 'CREATE' AND acl.is_grantable) AS migration_database_create_grant_option,
+    has_database_privilege($1, 'postgres', 'CREATE WITH GRANT OPTION') AS migration_database_create_grant_option,
     (SELECT count(*)::integer FROM pg_roles WHERE rolname = ANY($7::text[]) AND
-      (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR NOT rolcanlogin)) AS unsafe_role_count,
+      (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) AS unsafe_role_count,
+    (SELECT count(*)::integer FROM pg_roles WHERE
+      (rolname = ANY($11::text[]) AND NOT rolcanlogin)
+      OR (rolname = ANY($12::text[]) AND rolcanlogin)) AS role_login_profile_mismatch_count,
     (SELECT count(*)::integer FROM pg_auth_members membership
       JOIN pg_roles role_entry ON role_entry.oid IN (membership.roleid, membership.member)
       WHERE role_entry.rolname = ANY($7::text[])) AS role_membership_count,
@@ -819,7 +812,8 @@ async function verifyRoleBoundary(client, roleMap) {
   [roleMap.lythaus_migrations, roleMap.lythaus_runtime, roleMap.lythaus_admin, roleMap.lythaus_jobs,
     roleMap.lythaus_privacy, roleMap.lythaus_verifier, Object.values(roleMap), APPLICATION_SCHEMAS,
     [roleMap.lythaus_runtime, roleMap.lythaus_admin, roleMap.lythaus_jobs, roleMap.lythaus_privacy, roleMap.lythaus_verifier],
-    APPLICATION_SCHEMAS]);
+    APPLICATION_SCHEMAS, NEW_CORE_LOGIN_ROLE_LABELS.map((label) => roleMap[label]),
+    NEW_CORE_DEFERRED_ROLE_LABELS.map((label) => roleMap[label])]);
   const row = result.rows[0];
   if (!row
     || !row.migration_identity_ddl || !row.migration_content_ddl
@@ -831,15 +825,18 @@ async function verifyRoleBoundary(client, roleMap) {
     || row.verifier_flag_select || row.verifier_flag_update || row.verifier_audit_select || row.verifier_audit_insert
     || !row.verifier_database_connect || row.verifier_database_create
     || !row.migration_database_create || row.migration_database_owner
-    || !row.migration_database_create_grant_option
+    || row.migration_database_create_grant_option !== false
     || Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0
+    || Number(row.role_login_profile_mismatch_count) !== 0
     || Number(row.non_migration_owned_object_count) !== 0
     || Number(row.restricted_schema_ddl_count) !== 0
     || Number(row.migration_schema_ddl_count) !== APPLICATION_SCHEMAS.length
     || Number(row.restricted_database_ddl_count) !== 0) fail('new_core_role_boundary_failed');
   return {
     migrationDdlOnly: true,
-    sixDistinctLoginRoles: true,
+    sixDistinctRoles: true,
+    loginRoleCount: NEW_CORE_LOGIN_ROLE_LABELS.length,
+    deferredNoLoginRoleCount: NEW_CORE_DEFERRED_ROLE_LABELS.length,
     appRuntimeRoleDistinct: true,
     adminRoleDistinct: true,
     verifierAggregateOnly: true,
@@ -849,7 +846,7 @@ async function verifyRoleBoundary(client, roleMap) {
     verifierDatabaseConnect: true,
     migrationDatabaseCreate: true,
     migrationDatabaseOwnership: false,
-    migrationDatabaseCreateGrantOption: true,
+    migrationDatabaseCreateGrantOption: false,
     restrictedSchemaDdlGrants: 0,
     migrationSchemaDdlSchemas: APPLICATION_SCHEMAS.length,
     restrictedDatabaseDdlGrants: 0,
@@ -977,11 +974,7 @@ async function assertLiveEmptyTarget(client, roleMap) {
     has_database_privilege(current_user, current_database(), 'CREATE') AS migration_database_create,
     (SELECT datdba = (SELECT oid FROM pg_roles WHERE rolname = current_user)
        FROM pg_database WHERE datname = current_database()) AS migration_database_owner,
-    EXISTS (SELECT 1 FROM pg_database database_entry,
-      LATERAL aclexplode(COALESCE(database_entry.datacl, acldefault('d', database_entry.datdba))) acl
-      WHERE database_entry.datname = current_database()
-        AND acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = current_user)
-        AND acl.privilege_type = 'CREATE' AND acl.is_grantable) AS migration_database_create_grant_option,
+    has_database_privilege(current_user, current_database(), 'CREATE WITH GRANT OPTION') AS migration_database_create_grant_option,
     (SELECT count(*)::integer FROM pg_namespace
       WHERE nspname NOT LIKE 'pg_%' AND nspname NOT IN ('information_schema', 'public')) AS application_schema_count,
     (SELECT count(*)::integer FROM pg_class relation_entry
@@ -992,11 +985,18 @@ async function assertLiveEmptyTarget(client, roleMap) {
     to_regclass('system.schema_migrations') IS NULL AS ledger_missing,
     (SELECT count(*)::integer FROM pg_roles WHERE rolname = ANY($1::text[])) AS provisioned_role_count,
     (SELECT count(*)::integer FROM pg_roles WHERE rolname = ANY($1::text[])
-      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR NOT rolcanlogin)) AS unsafe_role_count,
+      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) AS unsafe_role_count,
+    (SELECT count(*)::integer FROM pg_roles WHERE
+      (rolname = ANY($2::text[]) AND NOT rolcanlogin)
+      OR (rolname = ANY($3::text[]) AND rolcanlogin)) AS role_login_profile_mismatch_count,
+    (SELECT count(*)::integer FROM unnest($4::text[]) AS restricted(role_name)
+      WHERE has_database_privilege(restricted.role_name, current_database(), 'CREATE')) AS restricted_database_ddl_count,
     (SELECT count(*)::integer FROM pg_auth_members membership
       JOIN pg_roles role_entry ON role_entry.oid IN (membership.roleid, membership.member)
       WHERE role_entry.rolname = ANY($1::text[])) AS role_membership_count`,
-  [Object.values(roleMap)]);
+  [Object.values(roleMap), NEW_CORE_LOGIN_ROLE_LABELS.map((label) => roleMap[label]),
+    NEW_CORE_DEFERRED_ROLE_LABELS.map((label) => roleMap[label]),
+    ROLE_LABELS.filter((label) => label !== 'lythaus_migrations').map((label) => roleMap[label])]);
   const row = result.rows[0];
   if (!row || row.database_name !== 'postgres' || row.current_role !== roleMap.lythaus_migrations
     || Number(row.version_num) < 170000 || Number(row.version_num) >= 180000
@@ -1005,10 +1005,11 @@ async function assertLiveEmptyTarget(client, roleMap) {
     fail('new_core_live_database_not_empty_postgres17');
   }
   if (row.migration_database_create !== true || row.migration_database_owner !== false
-    || row.migration_database_create_grant_option !== true) {
-    fail('new_core_live_migration_database_create_missing');
+    || row.migration_database_create_grant_option !== false) {
+    fail('new_core_live_migration_database_create_profile_invalid');
   }
-  if (Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0) {
+  if (Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0
+    || Number(row.role_login_profile_mismatch_count) !== 0 || Number(row.restricted_database_ddl_count) !== 0) {
     fail('new_core_live_role_capability_precondition_failed');
   }
   return {
@@ -1017,7 +1018,9 @@ async function assertLiveEmptyTarget(client, roleMap) {
     postgresMajor: 17,
     migrationDatabaseCreate: true,
     migrationDatabaseOwnership: false,
-    migrationDatabaseCreateGrantOption: true,
+    migrationDatabaseCreateGrantOption: false,
+    loginRoleCount: NEW_CORE_LOGIN_ROLE_LABELS.length,
+    deferredNoLoginRoleCount: NEW_CORE_DEFERRED_ROLE_LABELS.length,
     provisionedRoleCount: ROLE_LABELS.length,
     unsafeRoleAttributes: 0,
     roleMemberships: 0,

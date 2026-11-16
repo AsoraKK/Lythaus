@@ -124,12 +124,12 @@
     "accessVerification": "BLOCKED_SEPARATE_ACCESS_APPROVAL_AND_LIVE_STATE_REQUIRED"
   },
   "credentialRoles": [
-    { "label": "lythaus_migrations", "purpose": "canonical DDL and grant installation; credential created separately" },
-    { "label": "lythaus_runtime", "purpose": "application runtime; no schema DDL or role administration" },
-    { "label": "lythaus_admin", "purpose": "Admin Worker; no direct user or membership insert; one-shot bootstrap function only" },
-    { "label": "lythaus_jobs", "purpose": "background jobs; no schema DDL or role administration" },
-    { "label": "lythaus_privacy", "purpose": "privacy operations; no schema DDL or role administration" },
-    { "label": "lythaus_verifier", "purpose": "read-only aggregate counts through column-scoped grants; no subject digest access" }
+    { "label": "lythaus_migrations", "login": true, "purpose": "schema owner and canonical grants; plain CREATE on postgres, no grant option or database ownership" },
+    { "label": "lythaus_runtime", "login": false, "password": "NOT_ISSUED", "purpose": "required application grant recipient; SQL NOLOGIN PASSWORD NULL during rehearsal" },
+    { "label": "lythaus_admin", "login": true, "purpose": "Admin Worker; canonical admin grants and one-shot bootstrap; no direct user or membership insert" },
+    { "label": "lythaus_jobs", "login": false, "password": "NOT_ISSUED", "purpose": "required jobs grant recipient; SQL NOLOGIN PASSWORD NULL during rehearsal" },
+    { "label": "lythaus_privacy", "login": false, "password": "NOT_ISSUED", "purpose": "required privacy grant recipient; SQL NOLOGIN PASSWORD NULL during rehearsal" },
+    { "label": "lythaus_verifier", "login": true, "purpose": "read-only aggregate bootstrap function; no direct row or subject digest access" }
   ],
   "migrationSetSha256": "49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614",
   "liveExecution": "LIVE_CONFIGURATION_BLOCKED_SEPARATE_APPROVAL_AND_TARGET_ATTESTATION_REQUIRED"

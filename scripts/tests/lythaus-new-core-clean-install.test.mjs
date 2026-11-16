@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { loadApprovedMigrations, EXPECTED_MIGRATION_SET_SHA256 } from '../ci/planetscale-migration-manifest.mjs';
+import { NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS } from '../ci/lythaus-new-core-role-profile.mjs';
 import {
   assertFixedDeploymentTarget,
   assertLocalRehearsalUrl,
@@ -93,20 +94,26 @@ test('provider region object is verified against AWS eu-central-1 Frankfurt', ()
   assert.throws(() => assertProviderRegion({ region: { ...region, slug: 'us-east' } }, {}));
 });
 
-test('provider role inventory binds six distinct ready role labels to the new branch', () => {
+test('provider inventory binds three logins and preserves three passwordless SQL roles', () => {
   const labels = ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations', 'lythaus_verifier'];
-  const roleMap = Object.fromEntries(labels.map((label, index) => [label, `pscale_api_id${index}`]));
+  const roleMap = Object.fromEntries(labels.map((label, index) => [label,
+    NEW_CORE_DEFERRED_ROLE_LABELS.includes(label) ? label : `pscale_api_id${index}`]));
   validateRoleMap(roleMap);
-  const rows = labels.map((name, index) => ({
+  const rows = NEW_CORE_LOGIN_ROLE_LABELS.map((name, index) => ({
     id: `role${index}`, name, base_username: roleMap[name], username: `${roleMap[name]}.xwkb9quljkzd`,
     ready: true, deleted_at: null, database_name: 'postgres', branch: { id: 'xwkb9quljkzd', name: 'main', deleted_at: null },
-    expires_at: null,
+    expires_at: null, inherited_roles: [],
   }));
   assert.deepEqual(verifyProviderRoles(rows, roleMap), {
-    count: 6, distinct: true, allReady: true, branchQualified: true,
+    count: 3, distinct: true, allReady: true, branchQualified: true,
+    deferredSqlRoleCount: 3, deferredSqlRolesRequireCatalogVerification: true,
   });
   assert.throws(() => verifyProviderRoles(rows.slice(1), roleMap));
   assert.throws(() => validateRoleMap({ ...roleMap, lythaus_verifier: roleMap.lythaus_admin }));
+  assert.throws(() => validateRoleMap({ ...roleMap, lythaus_jobs: 'pscale_api_unusedcredential' }));
+  assert.throws(() => verifyProviderRoles([...rows, { name: 'lythaus_jobs' }], roleMap), /deferred_role_credential_present/);
+  assert.throws(() => verifyProviderRoles(rows.map((row) => ({ ...row, inherited_roles: ['pg_read_all_data'] })), roleMap));
+  assert.doesNotThrow(() => verifyProviderRoles([...rows, { name: 'existing_provider_role' }], roleMap));
 });
 
 test('Access metadata and Worker variables bind the isolated app audience without returning the allowlisted identity', async () => {
@@ -221,7 +228,8 @@ function fakeTargetAndProvider() {
     monthlyCeilingUsd: 1, approvalStatus: 'APPROVED_COST_CEILING',
   };
   const labels = ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations', 'lythaus_verifier'];
-  const roleMap = Object.fromEntries(labels.map((label) => [label, `pscale_api_${label.slice('lythaus_'.length)}`]));
+  const roleMap = Object.fromEntries(labels.map((label) => [label,
+    NEW_CORE_DEFERRED_ROLE_LABELS.includes(label) ? label : `pscale_api_${label.slice('lythaus_'.length)}`]));
   const region = { provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'eu-central' };
   const metadata = new Map([
     ['https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-new-core', {
@@ -232,11 +240,11 @@ function fakeTargetAndProvider() {
       cluster_name: 'PS_5_AWS_ARM', replicas: 0, region,
     }],
     ['https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-new-core/branches/main/roles?page=1&per_page=100', {
-      current_page: 1, total_count: labels.length, next_page: null,
-      data: labels.map((name, index) => ({
+      current_page: 1, total_count: NEW_CORE_LOGIN_ROLE_LABELS.length, next_page: null,
+      data: NEW_CORE_LOGIN_ROLE_LABELS.map((name, index) => ({
         id: `role${index}`, name, base_username: roleMap[name], username: `${roleMap[name]}.xwkb9quljkzd`,
         ready: true, deleted_at: null, database_name: 'postgres',
-        branch: { id: 'xwkb9quljkzd', name: 'main', deleted_at: null }, expires_at: null,
+        branch: { id: 'xwkb9quljkzd', name: 'main', deleted_at: null }, expires_at: null, inherited_roles: [],
       })),
     }],
     ['https://api.cloudflare.com/client/v4/accounts/e5b7ae46e04698f507b7e4b3d4ef1af0/hyperdrive/configs/7e39fc4a286147988ed12df7a6322616', {
@@ -356,7 +364,8 @@ test('live preflight rejects a replication-capable login before DDL using catalo
       return { rows: [{
         database_name: 'postgres', current_role: fixture.roleMap.lythaus_migrations,
         migration_database_create: true, migration_database_owner: false,
-        migration_database_create_grant_option: true,
+        migration_database_create_grant_option: false,
+        role_login_profile_mismatch_count: 0, restricted_database_ddl_count: 0,
         version_num: 170011, application_schema_count: 0, application_relation_count: 0,
         ledger_missing: true, provisioned_role_count: 6,
         unsafe_role_count: sql.includes('rolreplication') ? 1 : 0, role_membership_count: 0,
@@ -384,4 +393,36 @@ test('runner has no generic connection fallback and live mode requires separate 
   assert.match(source, /APPROVE_NEW_CORE_COST_CEILING/);
   assert.match(source, /--apply-live/);
   assert.match(source, /new_core_origin_attestation_missing/);
+});
+
+test('live preflight rejects grant options, runtime DDL and enabled deferred logins before writes', async () => {
+  for (const [override, expectedError] of [
+    [{ migration_database_create_grant_option: true }, /migration_database_create_profile_invalid/],
+    [{ restricted_database_ddl_count: 1 }, /role_capability_precondition_failed/],
+    [{ role_login_profile_mismatch_count: 1 }, /role_capability_precondition_failed/],
+  ]) {
+    const fixture = fakeTargetAndProvider();
+    Object.assign(fixture.environment, bindApprovalMarkers(fixture));
+    const queries = [];
+    const client = {
+      async connect() {}, async end() {},
+      async query(sql) {
+        queries.push(sql);
+        if (sql.includes('current_user AS user_name')) return { rows: [{
+          database_name: 'postgres', user_name: fixture.roleMap.lythaus_migrations,
+        }] };
+        return { rows: [{
+          database_name: 'postgres', current_role: fixture.roleMap.lythaus_migrations,
+          version_num: 170011, application_schema_count: 0, application_relation_count: 0,
+          ledger_missing: true, provisioned_role_count: 6, unsafe_role_count: 0, role_membership_count: 0,
+          migration_database_create: true, migration_database_owner: false,
+          migration_database_create_grant_option: false, restricted_database_ddl_count: 0,
+          role_login_profile_mismatch_count: 0, ...override,
+        }] };
+      },
+    };
+    await assert.rejects(() => installLiveCleanSchema({ ...fixture, worktreeHasChanges: false,
+      createClient: () => client }), expectedError);
+    assert.ok(queries.length > 0 && queries.every((sql) => /^\s*SELECT\b/i.test(sql)));
+  }
 });

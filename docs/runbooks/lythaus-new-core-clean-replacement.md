@@ -53,9 +53,12 @@ replicas. Its role inventory contains one ready, nondeleted, unexpired role
 whose username matches the Hyperdrive origin. It has no canonical role label
 and inherits `pg_read_all_data`, `pg_write_all_data`, and one additional role.
 This identity is unsuitable for the Admin Worker and must remain unused and
-unchanged. The setup requires six separately provisioned, distinct least-
-privilege role identities. The read-only probe did not create credentials or
-make changes.
+unchanged. The setup requires six distinct scoped roles: managed logins for
+migrations, admin and verification, plus SQL `NOLOGIN PASSWORD NULL` roles for
+runtime, jobs and privacy. SQL-created roles are not listed by the provider's
+role API; the catalog check must prove all six. The updated local inspector
+allows the preserved broad role without counting it as a scoped role. No
+credentials were created by the read-only probe.
 
 Published pricing is reference only, not spending approval. PlanetScale lists
 the observed single-instance `PS-5` ARM compute at $5/month; storage and usage
@@ -90,18 +93,26 @@ the branch-qualified URLs, origin fingerprint, database name, TLS mode, and
 connected database/user. It checks the new target is empty, all six roles are
 present and distinct, roles have no superuser/database/role-creation/BYPASSRLS
 attributes, and no role memberships exist **before the first migration**.
-Because canonical `roles.sql` revokes database `CREATE` from restricted roles,
-the migration login must arrive with a scoped `CREATE` grant on database
-`postgres` **with grant option**, provisioned by an explicitly authorized
-provider/database administrator. The migration login must not own the database
+The migration login must arrive with plain `CREATE` on database `postgres`,
+**without grant option**, provisioned by an explicitly authorized administrator
+of this exact new branch. That administrator supplies the required `CONNECT`
+grants and verifies other scoped roles have no database `CREATE` before any
+migration. The migration login must not own the database
 and must not have superuser, `CREATEDB`, `CREATEROLE`, replication, `BYPASSRLS`,
 or inherited role privileges. The runner verifies these properties before
-DDL, then confirms all application schemas, relations, and functions are owned
+DDL, including the three required `NOLOGIN` roles, then confirms all application schemas, relations, and functions are owned
 by the migration login and restricted logins have no database/schema `CREATE`.
 The disposable rehearsal provisions only this narrow grant, runs migrations
 and canonical grants under `SET ROLE lythaus_migrations`, and verifies the
 application-object owners. Public extension objects are outside the
-application schemas.
+application schemas. A focused PostgreSQL 17 experiment proved plain `CREATE`
+works. Canonical database-level `GRANT CONNECT` / `REVOKE CREATE` statements
+from the migration session can emit notices `01007` / `01006`; the provisioner
+has already established their required state. Grant option would only remove
+a revoke notice and cannot revoke privileges issued by another grantor. It is
+therefore not issued or needed. The installer independently checks the actual
+database ACLs before DDL and after canonical grants; it does not rely on those
+redundant revoke statements to remove privileges.
 It applies each committed migration file in its own transaction, records the
 exact ledger checksum, and never calls the legacy `ci-*` generic URL runner or
 the production 0021 cleanup helper. A partial install stops for review; there
@@ -110,11 +121,13 @@ revocation.
 
 The planned role labels are `lythaus_migrations`, `lythaus_runtime`,
 `lythaus_admin`, `lythaus_jobs`, `lythaus_privacy`, and `lythaus_verifier`.
-PlanetScale generated `pscale_api_*` SQL identifiers must be mapped from live
-provider metadata; labels are not SQL identifiers. The installer does not
-create roles or credentials. Provisioning six distinct logins, assigning their
-approved capabilities, and creating scoped migration/runtime/admin/verifier
-credentials each need the required separate authorization. The Admin Worker
+The three managed `pscale_api_*` SQL identifiers must be mapped from provider
+metadata; their labels are not SQL identifiers. The deferred SQL roles use the
+literal names `lythaus_runtime`, `lythaus_jobs`, and `lythaus_privacy`. The
+installer does not create roles or credentials. Provisioning the six roles,
+their initial database grants, and only the three required credentials needs
+the separate approval described in [role provisioning](lythaus-new-core-role-provisioning.md).
+The Admin Worker
 must use only the new Hyperdrive Admin role. The verifier receives only a
 fixed `SECURITY DEFINER` aggregate returning membership/latch/audit/control
 plane counts; it cannot select the subject digest, memberships, user rows, or
@@ -166,7 +179,7 @@ target, expected changes, and cost/credential boundary for user approval:
    guards, role grants, false latch insertion, and the no-cleanup behavior.
 5. A reviewed cost estimate with one-time and monthly ceilings.
 6. Separate exact approval for schema DDL, role/grant provisioning (including
-   the migration login's database `CREATE WITH GRANT OPTION`), credential use
+   the migration login's plain database `CREATE`, without grant option), credential use
    or provisioning, and spend. The runner binds approval values to the candidate
    SHA, migration-set SHA, new database/branch IDs, origin fingerprint, and
    role-map fingerprint.
@@ -224,6 +237,13 @@ above; no production workflow was dispatched. The pricing receipt is at
 `/workspace/scratch/lythaus-new-core-live-readonly/pricing-reference.json`.
 
 ## Owner-only acceptance after all live approvals
+
+The designated owner's exact email remains a private Access-policy input.
+Acceptance requires that owner's fresh Access session to open the normal
+protected `/flags` page on `admin-new-core-test.lythaus.co` at the approved
+build, followed by proof that a second bootstrap request is refused. A
+successful isolated test does not authorize production cutover or establish
+that a fresh sign-in at `admin.lythaus.co` succeeds: those are separate gates.
 
 Do not use this sequence until the separate database, role/grant/credential,
 cost, Access, binding, and deployment gates above are complete and the exact
