@@ -2,6 +2,15 @@
 
 ## Current status
 
+Current execution handoff:
+[schema-only installation approval](lythaus-new-core-schema-installation.md).
+The six initial SQL roles and grants are live-verified, PostgreSQL 17.12 and
+the exact empty HypoPG baseline were confirmed read-only, and console access
+is off. Schema installation remains unapproved; private scoped credential
+delivery is still blocked. The observations below describe the earlier
+preparation snapshot and the later deployment gates, not permission to run
+the production workflow or to re-provision existing roles.
+
 **PREPARATION / LIVE CONFIGURATION BLOCKED.** The proposed test URL
 `https://admin-new-core-test.lythaus.co/flags` is **NOT DEPLOYED**. No live
 SQL connection, DDL, role or grant change, credential creation, Access change,

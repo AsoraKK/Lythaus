@@ -127,6 +127,22 @@ test('reads only the pinned new database branch and paginated role inventory', a
   assert.equal(serialized.includes(token), false);
 });
 
+test('explicit SQL-console mode preserves the broad API role and leaves all six SQL roles unverified', async () => {
+  const rows = roleRows().slice(-1);
+  const fixture = fetchFixture(rows);
+  const result = await inspectNewCorePlanetScaleRoles({ token, sourceSha,
+    roleMode: 'sql-console', fetchImpl: fixture.fetchImpl });
+  assert.equal(result.status, 'READ_ONLY_ROLE_INVENTORY_SQL_CHECK_PENDING');
+  assert.equal(result.expectedApiLoginRoleCount, 0);
+  assert.equal(result.requiredSqlRoles.length, 6);
+  assert.equal(result.scopedSqlRolesVerified, false);
+  assert.equal(result.preservedRoleCount, 1);
+  assert.equal((await inspectNewCorePlanetScaleRoles({ token, sourceSha,
+    roleMode: 'sql-console', fetchImpl: fetchFixture(roleRows()).fetchImpl })).inventoryMatches, false);
+  assert.equal((await inspectNewCorePlanetScaleRoles({ token, sourceSha,
+    fetchImpl: fixture.fetchImpl })).inventoryMatches, false);
+});
+
 test('reports only approved inherited pg role names and blocks broad role inheritance', async () => {
   const { fetchImpl } = fetchFixture(roleRows({ inherited_roles: ['pg_read_all_data', 'private_custom_role'] }));
   const result = await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl });

@@ -11,6 +11,11 @@ import {
   assertDistinctRolePasswords,
   assertProviderRegion,
   buildPreparationPlan,
+  buildSchemaInstallationPlan,
+  assertSchemaInstallationScope,
+  schemaOnlyObjectGrantSql,
+  rehearseScopedLocalPostgres17,
+  assertSchemaOnlyBaseline,
   installLiveCleanSchema,
   readBootstrapStateAsVerifier,
   validateRoleMap,
@@ -19,6 +24,83 @@ import {
   verifyNewCoreAccessMetadata,
   verifyProviderRoles,
 } from '../ci/lythaus-new-core-clean-install.mjs';
+
+test('schema-only plan pins the six SQL identities, all migration checksums and contract files without deployment authority', () => {
+  const plan = buildSchemaInstallationPlan();
+  assert.equal(plan.roleMode, 'sql-console');
+  assert.equal(plan.migrations.length, 22);
+  assert.equal(plan.migrations[0].checksum, loadApprovedMigrations({ committedOnly: true }).migrations[0].checksum);
+  assert.equal(plan.contractFiles.length, 3);
+  assert.equal(plan.destination.branchId, 'xwkb9quljkzd');
+  assert.equal(plan.protectedMainSha, 'ba10cfb16941cd163e345af3c00b9bd739884646');
+  assert.match(plan.approvalEnvironment.value, /^APPROVE_NEW_CORE_SCHEMA_ONLY:/);
+  assert.ok(plan.exclusions.includes('Hyperdrive or Access changes'));
+});
+
+test('schema-only grant adapter excludes exactly the preverified database ACL statements and preserves object SQL', () => {
+  const canonical = fsSync.readFileSync('database/planetscale/grants/roles.sql', 'utf8');
+  const narrow = schemaOnlyObjectGrantSql(canonical);
+  assert.doesNotMatch(narrow, /(?:GRANT|REVOKE)[^;]*ON DATABASE/);
+  assert.ok(narrow.includes('CREATE OR REPLACE FUNCTION identity.bootstrap_first_administrator('));
+  assert.throws(() => schemaOnlyObjectGrantSql(canonical.replace('GRANT CONNECT ON DATABASE', 'GRANT TEMP ON DATABASE')), /template_changed/);
+  assert.throws(() => schemaOnlyObjectGrantSql(canonical + '\nGRANT CREATE ON DATABASE postgres TO lythaus_admin;'), /statement_forbidden/);
+});
+
+test('schema-only live mode refuses missing approval, wrong creator and changed protected main before SQL or provider calls', async () => {
+  const target = JSON.parse(fsSync.readFileSync('infrastructure/planetscale/lythaus-new-core-clean-install.target.json', 'utf8'));
+  const plan = buildSchemaInstallationPlan();
+  const environment = {
+    LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA: plan.sourceSha,
+    LYTHAUS_NEW_CORE_ROLE_IDENTIFIERS: JSON.stringify(plan.roleMap),
+  };
+  let calls = 0;
+  const options = { contract: { target, migrations: loadApprovedMigrations({ committedOnly: true }) },
+    environment, sourceSha: plan.sourceSha, worktreeHasChanges: false, schemaOnly: true,
+    readMain: () => { calls += 1; return { protected: true, commit: { sha: 'f'.repeat(40) } }; },
+    fetchImpl: () => { throw new Error('provider_must_not_be_called'); },
+    createClient: () => { throw new Error('SQL_must_not_be_called'); } };
+  await assert.rejects(installLiveCleanSchema(options), /schema_install_approval_missing/);
+  assert.equal(calls, 0);
+  environment.LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL = plan.approvalEnvironment.value;
+  await assert.rejects(installLiveCleanSchema(options), /protected_main_changed/);
+  assert.equal(calls, 1);
+  target.schemaInstallation.creatorRoleSha256 = 'b'.repeat(64);
+  assert.throws(() => assertSchemaInstallationScope(target), /scope_mismatch/);
+});
+
+test('scoped local rehearsal refuses a provider URL, admin login and shared passwords', async () => {
+  const migrationUrl = 'postgresql://lythaus_migrations:first@127.0.0.1:55442/postgres?sslmode=disable';
+  const verifierUrl = 'postgresql://lythaus_verifier:second@127.0.0.1:55442/postgres?sslmode=disable';
+  await assert.rejects(rehearseScopedLocalPostgres17({ migrationUrl: migrationUrl.replace('127.0.0.1', 'provider.psdb.cloud'), verifierUrl }), /not_allowlisted/);
+  await assert.rejects(rehearseScopedLocalPostgres17({ migrationUrl: migrationUrl.replace('lythaus_migrations', 'postgres'), verifierUrl }), /not_allowlisted/);
+  await assert.rejects(rehearseScopedLocalPostgres17({ migrationUrl, verifierUrl: verifierUrl.replace('second', 'first') }), /must_be_distinct/);
+});
+
+test('SQL-console provider inventory preserves only the pinned broad role and never substitutes API logins', () => {
+  const plan = buildSchemaInstallationPlan();
+  const row = { id: 'syntheticoriginal', name: 'original', base_username: 'pscale_api_original',
+    username: 'pscale_api_original.xwkb9quljkzd', ready: true, deleted_at: null, expires_at: null,
+    database_name: 'postgres', branch: { id: 'xwkb9quljkzd', name: 'main', deleted_at: null },
+    inherited_roles: ['pg_read_all_data', 'pg_write_all_data', 'synthetic_internal'] };
+  const options = { mode: 'sql-console', preservedRoleHashes: {
+    id: createHash('sha256').update(row.id).digest('hex'),
+    username: createHash('sha256').update(row.username).digest('hex'),
+  } };
+  assert.equal(verifyProviderRoles([row], plan.roleMap, Date.now(), options).scopedApiRoleCount, 0);
+  for (const invalid of [[], [row, row], [{ ...row, ready: false }],
+    [{ ...row, inherited_roles: ['pg_read_all_data'] }], [{ ...row, name: 'lythaus_migrations' }]]) {
+    assert.throws(() => verifyProviderRoles(invalid, plan.roleMap, Date.now(), options), /preserved_provider_role_mismatch/);
+  }
+});
+
+test('schema-only initial grants baseline refuses catalog drift using reads only', async () => {
+  const queries = [];
+  const client = { async query(sql) { queries.push(sql); return { rows: [{ scoped_role_count: 5 }] }; } };
+  await assert.rejects(assertSchemaOnlyBaseline(client), /initial_grants_baseline_mismatch/);
+  assert.equal(queries.length, 1);
+  assert.match(queries[0], /WITH scoped AS/);
+  assert.doesNotMatch(queries[0], /\b(?:CREATE|GRANT|REVOKE|ALTER)\s+(?:ROLE|TABLE|ON)\b/);
+});
 
 test('preparation plan pins the new database, branch, Hyperdrive and approved migration set', () => {
   const plan = buildPreparationPlan();

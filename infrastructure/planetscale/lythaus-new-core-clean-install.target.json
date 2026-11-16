@@ -132,5 +132,22 @@
     { "label": "lythaus_verifier", "login": true, "purpose": "read-only aggregate bootstrap function; no direct row or subject digest access" }
   ],
   "migrationSetSha256": "49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614",
+  "schemaInstallation": {
+    "scope": "SCHEMA_AND_CANONICAL_OBJECT_GRANTS_ONLY",
+    "roleMode": "sql-console",
+    "creatorRoleSha256": "a942b37ccfaf5a813b1432caa209a43b9d144e47ad0de1549c289c253e556cd5",
+    "protectedMainSha": "ba10cfb16941cd163e345af3c00b9bd739884646",
+    "expectedProviderExtension": "hypopg",
+    "expectedInstalledExtensions": ["hypopg", "plpgsql"],
+    "expectedProviderSchemas": 1,
+    "expectedProviderViews": 2,
+    "originEvidenceRunId": "43835553248",
+    "expectedSchemaDefinitionFingerprintSha256": "69769fb59964a84355d5cc24e8f6c1a23595076a3d1d5f39e45add3e58dff90e",
+    "expectedGrantFingerprintSha256": "65ae6c5e98cacafdd1de5fd58703bd5358a65b9f73781881ee35383debbb4513",
+    "providerResourceChangesAllowed": false,
+    "credentialChangesAllowed": false,
+    "credentialDelivery": "OWNER_PRIVATE_SESSION_ONLY_NOT_GITHUB_OR_CHAT_ATTACHMENTS",
+    "approvalStatus": "SCHEMA_INSTALLATION_APPROVAL_PENDING"
+  },
   "liveExecution": "LIVE_CONFIGURATION_BLOCKED_SEPARATE_APPROVAL_AND_TARGET_ATTESTATION_REQUIRED"
 }

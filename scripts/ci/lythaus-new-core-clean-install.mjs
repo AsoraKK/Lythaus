@@ -4,14 +4,17 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
-import { assertNewCoreEmptyCatalog } from './lythaus-new-core-empty-catalog.mjs';
+import { assertNewCoreEmptyCatalog, assertNewCoreProviderBaseline, NEW_CORE_PROVIDER_BASELINE_SQL,
+  NEW_CORE_PROVIDER_BASELINE } from './lythaus-new-core-empty-catalog.mjs';
+import { PRESERVED_ROLE_HASHES } from './inspect-new-core-planetscale-roles.mjs';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig, buildPlanetScaleTargetIdentity, assertConnectedAdminDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import { canonicalReleaseSchemaContract, runtimeSchemaFingerprint, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
 import { EXPECTED_MIGRATION_SET_SHA256, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
 import { NEW_CORE_ROLE_LABELS, NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS,
-  newCoreRoleCanLogin, validateNewCoreRoleMap, verifyNewCoreRoleMemberships } from './lythaus-new-core-role-profile.mjs';
+  newCoreRoleCanLogin, validateNewCoreRoleMap, verifyNewCoreRoleMemberships,
+  NEW_CORE_SQL_ROLE_MODE, NEW_CORE_SQL_CREATOR_SHA256 } from './lythaus-new-core-role-profile.mjs';
 
 const { Client } = pg;
 const ROOT = process.cwd();
@@ -348,6 +351,47 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
   };
 }
 
+export function buildSchemaInstallationPlan() {
+  const { target, migrations } = loadCleanInstallContract();
+  const scope = assertSchemaInstallationScope(target);
+  const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  const roleMap = Object.fromEntries(ROLE_LABELS.map((label) => [label, label]));
+  const roleMapSha = crypto.createHash('sha256').update(JSON.stringify(roleMap)).digest('hex');
+  const files = ['database/planetscale/grants/roles.sql', VERIFIER_GRANTS_PATH,
+    'database/planetscale/verification/verify.sql'];
+  return {
+    status: 'SCHEMA_INSTALLATION_APPROVAL_PENDING', sourceSha,
+    protectedMainSha: scope.protectedMainSha,
+    destination: { organization: REQUIRED_ORGANIZATION, database: REQUIRED_DATABASE, databaseId: REQUIRED_DATABASE_ID,
+      branch: 'main', branchId: REQUIRED_BRANCH_ID, logicalDatabase: 'postgres', region: 'AWS eu-central-1 Frankfurt',
+      cluster: 'PS_5_AWS_ARM', replicas: 0, postgresMajor: 17, originFingerprint: target.provider.sqlOriginFingerprint },
+    roleMode: scope.roleMode, roleMap, roleMapSha256: roleMapSha,
+    migrationSetSha256: migrations.checksum, migrationBytes: migrations.bytes,
+    expectedVerification: { applicationSchemas: 11, tables: 102, relations: 103, ledgerRows: 22,
+      definitionFingerprintSha256: scope.expectedSchemaDefinitionFingerprintSha256,
+      grantFingerprintSha256: scope.expectedGrantFingerprintSha256,
+      bootstrapMemberships: 0, bootstrapLatchConsumed: false, bootstrapCompletionEvents: 0,
+      remainingApplicationDataRows: 0 },
+    migrations: migrations.migrations.map(({ name, checksum }) => ({ name, checksum })),
+    contractFiles: files.map((file) => ({ file, sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, file))).digest('hex') })),
+    objectGrantPayloads: files.slice(0, 2).map((file, index) => ({ file,
+      sha256: crypto.createHash('sha256').update(schemaOnlyObjectGrantSql(fs.readFileSync(path.join(ROOT, file), 'utf8'),
+        { verifier: index === 1 })).digest('hex'), databaseAclStatementsExcluded: index === 1 ? 1 : 2 })),
+    approvalEnvironment: { name: 'LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL', value: candidateApprovalValue(
+      'APPROVE_NEW_CORE_SCHEMA_ONLY', sourceSha, migrations.checksum, target.provider.sqlOriginFingerprint, roleMapSha) },
+    liveCommandAfterApprovalOnly: 'node scripts/ci/lythaus-new-core-clean-install.mjs --apply-live-schema-only',
+    credentials: { migration: LIVE_MIGRATION_URL_ENV, verifier: LIVE_VERIFIER_URL_ENV,
+      custody: scope.credentialDelivery, providerMetadata: 'existing authorized read-only PlanetScale service-token pair',
+      github: 'no database credentials or provisioning authority required in Actions' },
+    writes: ['exact 22 canonical migrations and ledger', 'canonical roles.sql object grants and default privileges',
+      'new-core aggregate verifier function and grants', 'one unconsumed bootstrap latch'],
+    exclusions: ['production records', 'credential or role provisioning', 'database-level privilege escalation or revocation',
+      'Hyperdrive or Access changes', 'bindings', 'deployment', 'new resources or spend', 'bootstrap execution', 'traffic switch'],
+    failurePolicy: 'stop on any difference; roll back the active transaction; preserve prior committed migrations; no automatic resume, reset, drop or cleanup',
+    acceptance: 'schema verification is separate from fresh owner login at the isolated protected /flags page and second-bootstrap refusal; production cutover and live admin hostname login remain separate gates',
+  };
+}
+
 async function assertMigrationEmptyDataGuard(client, migrationName) {
   let guarded = null;
   let targets = [];
@@ -445,8 +489,8 @@ async function createLocalRoles(client) {
   await client.query('GRANT CREATE ON DATABASE postgres TO lythaus_migrations');
 }
 
-export function validateRoleMap(roleMap, { local = false } = {}) {
-  return validateNewCoreRoleMap(roleMap, { local });
+export function validateRoleMap(roleMap, options = {}) {
+  return validateNewCoreRoleMap(roleMap, options);
 }
 
 function substituteRoleNames(sql, roleMap) {
@@ -546,8 +590,29 @@ function safeProviderRoleId(value) {
   return typeof value === 'string' && /^pscale_api_[a-z0-9]{1,64}$/.test(value);
 }
 
-export function verifyProviderRoles(rows, roleMap, now = Date.now()) {
+export function verifyProviderRoles(rows, roleMap, now = Date.now(), { mode = 'api-managed',
+  preservedRoleHashes = PRESERVED_ROLE_HASHES } = {}) {
   if (!Array.isArray(rows) || rows.length > 500) fail('new_core_provider_role_inventory_invalid');
+  if (mode === NEW_CORE_SQL_ROLE_MODE) {
+    validateRoleMap(roleMap, { mode });
+    const row = rows[0];
+    const hash = (value) => typeof value === 'string'
+      ? crypto.createHash('sha256').update(value).digest('hex') : null;
+    if (rows.length !== 1 || hash(row?.id) !== preservedRoleHashes.id
+      || hash(row?.username) !== preservedRoleHashes.username
+      || !safeProviderRoleId(row?.base_username)
+      || row.username !== `${row.base_username}.${REQUIRED_BRANCH_ID}`
+      || ROLE_LABELS.includes(row.name ?? row.label)
+      || row.ready !== true || row.deleted_at !== null || row.expires_at !== null
+      || row.database_name !== 'postgres' || row.branch?.id !== REQUIRED_BRANCH_ID
+      || row.branch?.name !== 'main' || row.branch?.deleted_at !== null
+      || !Array.isArray(row.inherited_roles) || row.inherited_roles.length !== 3
+      || !row.inherited_roles.includes('pg_read_all_data')
+      || !row.inherited_roles.includes('pg_write_all_data')) fail('new_core_preserved_provider_role_mismatch');
+    return { count: 1, preservedBroadRoleCount: 1, scopedApiRoleCount: 0,
+      scopedSqlRoleCount: 6, scopedSqlRolesRequireCatalogVerification: true };
+  }
+  if (mode !== 'api-managed') fail('new_core_role_mode_invalid');
   const byLabel = new Map();
   for (const row of rows) {
     const label = row?.name ?? row?.label;
@@ -573,7 +638,7 @@ export function verifyProviderRoles(rows, roleMap, now = Date.now()) {
     deferredSqlRoleCount: NEW_CORE_DEFERRED_ROLE_LABELS.length, deferredSqlRolesRequireCatalogVerification: true };
 }
 
-async function readRoleInventory(authorization, roleMap, fetchImpl = fetch) {
+async function readRoleInventory(authorization, roleMap, fetchImpl = fetch, mode = 'api-managed') {
   const rows = [];
   let total;
   for (let page = 1; page <= 5; page += 1) {
@@ -587,7 +652,7 @@ async function readRoleInventory(authorization, roleMap, fetchImpl = fetch) {
     rows.push(...body.data);
     if (body.next_page === null) {
       if (rows.length !== total) fail('new_core_provider_role_inventory_incomplete');
-      return verifyProviderRoles(rows, roleMap);
+      return verifyProviderRoles(rows, roleMap, Date.now(), { mode });
     }
     if (body.next_page !== page + 1 || page === 5) fail('new_core_provider_role_inventory_incomplete');
   }
@@ -604,9 +669,9 @@ function originFingerprint(origin) {
   })).digest('hex');
 }
 
-function assertSqlOriginAttestation(target, environment) {
+function assertSqlOriginAttestation(target, environment, { schemaOnly = false } = {}) {
   const sqlOriginSha = target.provider.sqlOriginFingerprint;
-  if (target.provider.sqlOriginVerification !== 'VERIFIED_NEW_HYPERDRIVE_DESTINATION'
+  if ((!schemaOnly && target.provider.sqlOriginVerification !== 'VERIFIED_NEW_HYPERDRIVE_DESTINATION')
     || !/^[a-f0-9]{64}$/.test(sqlOriginSha ?? '')
     || environment[REQUIRED_ORIGIN_SHA_ENV] !== sqlOriginSha) fail('new_core_origin_attestation_missing');
   return sqlOriginSha;
@@ -621,8 +686,8 @@ function assertCostApproval(target) {
     || !Number.isFinite(cost.monthlyCeilingUsd) || cost.monthlyCeilingUsd < 0) fail('new_core_cost_approval_missing');
 }
 
-async function verifyPlanetScaleTarget({ target, roleMap, environment = process.env, fetchImpl = fetch }) {
-  const sqlOriginSha = assertSqlOriginAttestation(target, environment);
+async function verifyPlanetScaleTarget({ target, roleMap, environment = process.env, fetchImpl = fetch, schemaOnly = false }) {
+  const sqlOriginSha = assertSqlOriginAttestation(target, environment, { schemaOnly });
   let psAuthorization;
   try {
     psAuthorization = planetScaleServiceTokenAuthorizationHeader(environment[REQUIRED_PLANETSCALE_TOKEN_ENV] ?? '');
@@ -643,8 +708,13 @@ async function verifyPlanetScaleTarget({ target, roleMap, environment = process.
     || branch.deleted_at !== null || branch.ready !== true || branch.state !== 'ready'
     || branch.cluster_name !== 'PS_5_AWS_ARM' || branch.replicas !== 0
     || target.provider.cluster !== 'PS-5 aarch64' || target.provider.replicas !== 0) fail('new_core_provider_target_mismatch');
+  if (schemaOnly && (database.production_branch_web_console !== false
+    || database.resizing !== false || database.config_changing !== false
+    || database.resize_queued !== false || database.config_change_queued !== false
+    || branch.frozen !== false || branch.read_only_at !== null)) fail('new_core_schema_provider_baseline_mismatch');
   const region = assertProviderRegion(database, branch);
-  const roleInventory = await readRoleInventory(psAuthorization, roleMap, fetchImpl);
+  const roleInventory = await readRoleInventory(psAuthorization, roleMap, fetchImpl,
+    schemaOnly ? NEW_CORE_SQL_ROLE_MODE : 'api-managed');
   return { databaseId: database.id, branchId: branch.id, region, originFingerprint: sqlOriginSha, roleInventory };
 }
 
@@ -752,7 +822,7 @@ export async function readBootstrapStateAsVerifier(client, { asLogin = false, ex
   }
 }
 
-async function verifyRoleBoundary(client, roleMap, provisionerRoleSha256 = null) {
+async function verifyRoleBoundary(client, roleMap, provisionerRoleSha256 = null, { mode = 'api-managed' } = {}) {
   validateRoleMap(roleMap, { local: ROLE_LABELS.every((label) => roleMap[label] === label) });
   const result = await client.query(`SELECT
     has_schema_privilege($1, 'identity', 'CREATE') AS migration_identity_ddl,
@@ -832,7 +902,7 @@ async function verifyRoleBoundary(client, roleMap, provisionerRoleSha256 = null)
     || Number(row.restricted_schema_ddl_count) !== 0
     || Number(row.migration_schema_ddl_count) !== APPLICATION_SCHEMAS.length
     || Number(row.restricted_database_ddl_count) !== 0) fail('new_core_role_boundary_failed');
-  const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256);
+  const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256, { mode });
   if (Number(row.role_membership_count) !== memberships.totalMemberships) fail('new_core_role_membership_boundary_failed');
   return {
     migrationDdlOnly: true,
@@ -947,14 +1017,14 @@ async function rehearseLocalPostgres17() {
   }
 }
 
-function liveRoleMap(environment = process.env) {
+function liveRoleMap(environment = process.env, mode = 'api-managed') {
   let roleMap;
   try {
     roleMap = JSON.parse(environment[LIVE_ROLES_ENV] ?? '');
   } catch {
     fail('new_core_role_map_missing_or_invalid');
   }
-  validateRoleMap(roleMap);
+  validateRoleMap(roleMap, { mode });
   return roleMap;
 }
 
@@ -970,7 +1040,7 @@ function plannedLiveDatabaseTarget(originSha) {
   });
 }
 
-async function assertLiveEmptyTarget(client, roleMap, provisionerRoleSha256 = null) {
+async function assertLiveEmptyTarget(client, roleMap, provisionerRoleSha256 = null, { mode = 'api-managed' } = {}) {
   const result = await client.query(`SELECT
     current_database() AS database_name,
     current_user AS current_role,
@@ -1016,7 +1086,7 @@ async function assertLiveEmptyTarget(client, roleMap, provisionerRoleSha256 = nu
     fail('new_core_live_role_capability_precondition_failed');
   }
   const catalog = await assertNewCoreEmptyCatalog(client, row);
-  const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256);
+  const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256, { mode });
   if (Number(row.role_membership_count) !== memberships.totalMemberships) fail('new_core_role_membership_boundary_failed');
   return {
     cleanSchema: true,
@@ -1049,6 +1119,269 @@ async function assertLiveConnection(client, raw, roleLabel, roleMap, target) {
   if (config.identity.role !== roleMap[roleLabel]) fail(`new_core_${roleLabel}_role_mismatch`);
 }
 
+export function assertSchemaInstallationScope(target) {
+  const scope = target.schemaInstallation;
+  if (!scope || scope.scope !== 'SCHEMA_AND_CANONICAL_OBJECT_GRANTS_ONLY'
+    || scope.roleMode !== NEW_CORE_SQL_ROLE_MODE || scope.creatorRoleSha256 !== NEW_CORE_SQL_CREATOR_SHA256
+    || scope.protectedMainSha !== 'ba10cfb16941cd163e345af3c00b9bd739884646'
+    || scope.expectedProviderExtension !== 'hypopg'
+    || JSON.stringify(scope.expectedInstalledExtensions) !== JSON.stringify(['hypopg', 'plpgsql'])
+    || scope.expectedProviderSchemas !== 1 || scope.expectedProviderViews !== 2
+    || scope.originEvidenceRunId !== '43835553248'
+    || scope.expectedSchemaDefinitionFingerprintSha256 !== '69769fb59964a84355d5cc24e8f6c1a23595076a3d1d5f39e45add3e58dff90e'
+    || scope.expectedGrantFingerprintSha256 !== '65ae6c5e98cacafdd1de5fd58703bd5358a65b9f73781881ee35383debbb4513'
+    || scope.providerResourceChangesAllowed !== false || scope.credentialChangesAllowed !== false
+    || scope.credentialDelivery !== 'OWNER_PRIVATE_SESSION_ONLY_NOT_GITHUB_OR_CHAT_ATTACHMENTS'
+    || target.provider.sqlOriginFingerprint !== '30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558') {
+    fail('new_core_schema_installation_scope_mismatch');
+  }
+  return scope;
+}
+
+function readProtectedMain() {
+  try {
+    return JSON.parse(execFileSync('gh', ['api', 'repos/AsoraKK/Lythaus/branches/main'], {
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000,
+    }));
+  } catch { fail('new_core_protected_main_read_unavailable'); }
+}
+
+export async function assertSchemaOnlyBaseline(client) {
+  const result = await client.query(fs.readFileSync(path.join(ROOT,
+    'database/planetscale/verification/new-core-initial-grants-state.sql'), 'utf8'));
+  const expected = {
+    logical_database_matches: true, postgres_major_matches: true, scoped_role_count: 6,
+    login_count: 3, nologin_count: 3, unsafe_role_count: 0, inherit_attribute_count: 0,
+    nonexpiring_login_count: 3, scoped_membership_count: 6, creator_admin_only_membership_count: 6,
+    migration_database_create: true, migration_create_grant_option: false,
+    restricted_database_create_count: 0, login_connect_count: 3, connect_grant_option_count: 0,
+    scoped_database_owner_count: 0, expected_durable_database_acl_count: 4,
+    unexpected_application_schema_count: 0, non_system_relation_count: 2,
+    provider_hypopg_view_count: 2, migration_ledger_absent: true,
+  };
+  if (result.rows.length !== 1 || Object.entries(expected).some(([key, value]) => result.rows[0][key] !== value)) {
+    fail('new_core_schema_initial_grants_baseline_mismatch');
+  }
+  const state = await client.query(`SELECT session_user = current_user AND current_user = 'lythaus_migrations' AS direct_migration_login,
+    (SELECT array_agg(extname::text ORDER BY extname) FROM pg_extension) AS extensions,
+    (SELECT count(*)::integer FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname='public') AS public_function_count,
+    (SELECT count(*)::integer FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+      WHERE n.nspname='public') AS public_type_count`);
+  const row = state.rows[0];
+  if (!row || row.direct_migration_login !== true || row.public_function_count !== 0 || row.public_type_count !== 0
+    || JSON.stringify(row.extensions) !== JSON.stringify(['hypopg', 'plpgsql'])) fail('new_core_schema_catalog_baseline_mismatch');
+  const available = await client.query(`SELECT name::text FROM pg_available_extension_versions v
+    WHERE name = ANY($1::text[]) AND trusted AND version = (SELECT default_version FROM pg_available_extensions e WHERE e.name=v.name)
+    ORDER BY name COLLATE "C"`, [REQUIRED_EXTENSIONS]);
+  if (JSON.stringify(available.rows.map((entry) => entry.name)) !== JSON.stringify([...REQUIRED_EXTENSIONS].sort())) {
+    fail('new_core_schema_trusted_extensions_unavailable');
+  }
+  return { directMigrationLogin: true, initialGrantsMatch: true, providerViews: 2,
+    installedExtensions: row.extensions, applicationRelations: 0, migrationLedgerAbsent: true };
+}
+
+export async function verifyPreservedProviderExtension(client) {
+  const result = await client.query(NEW_CORE_PROVIDER_BASELINE_SQL, [NEW_CORE_PROVIDER_BASELINE.schema,
+    NEW_CORE_PROVIDER_BASELINE.extension, [...NEW_CORE_PROVIDER_BASELINE.views]]);
+  if (result.rows.length !== 1) fail('new_core_provider_extension_baseline_mismatch');
+  assertNewCoreProviderBaseline(result.rows[0]);
+  const extensions = await client.query('SELECT extname FROM pg_extension ORDER BY extname');
+  if (JSON.stringify(extensions.rows.map((row) => row.extname))
+    !== JSON.stringify(['hypopg', 'pg_trgm', 'pgcrypto', 'plpgsql', 'unaccent'])) {
+    fail('new_core_schema_extension_set_mismatch');
+  }
+  const unexpected = await client.query(`SELECT
+    (SELECT count(*)::integer FROM pg_namespace WHERE nspname !~ '^pg_'
+      AND nspname <> ALL($1::text[]) AND nspname NOT IN ('public','information_schema','pscale_extensions')) AS schemas,
+    (SELECT count(*)::integer FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+      AND n.nspname <> ALL($1::text[]) AND n.nspname <> 'pscale_extensions'
+      AND c.relkind IN ('r','p','v','m','S','f')) AS relations`, [APPLICATION_SCHEMAS]);
+  if (unexpected.rows[0]?.schemas !== 0 || unexpected.rows[0]?.relations !== 0) fail('new_core_schema_unexpected_catalog_objects');
+  return { hypopgPreserved: true, providerViewsPreserved: 2, extensionSetVerified: true };
+}
+
+export async function verifySchemaOnlyData(client) {
+  const tables = await client.query('SELECT schemaname, tablename FROM pg_tables WHERE schemaname = ANY($1::text[]) ORDER BY schemaname, tablename', [APPLICATION_SCHEMAS]);
+  const quote = (value) => '"' + value.replaceAll('"', '""') + '"';
+  const sql = tables.rows.map(({ schemaname, tablename }, index) => `SELECT ${index}::integer AS index, count(*)::integer AS count FROM ${quote(schemaname)}.${quote(tablename)}`).join(' UNION ALL ');
+  const counts = await client.query(sql);
+  if (tables.rows.length !== 102 || counts.rows.length !== 102) fail('new_core_schema_data_count_incomplete');
+  for (const row of counts.rows) {
+    const table = tables.rows[row.index];
+    const expected = table?.schemaname === 'system' && table.tablename === 'schema_migrations' ? 22
+      : table?.schemaname === 'system' && table.tablename === 'feature_flags' ? 1 : 0;
+    if (row.count !== expected) fail('new_core_schema_unexpected_data');
+  }
+  return { applicationTablesChecked: 102, migrationLedgerRows: 22, unconsumedLatchRows: 1, otherApplicationRows: 0 };
+}
+
+export function schemaOnlyObjectGrantSql(sql, { verifier = false } = {}) {
+  const databaseStatements = verifier ? ['GRANT CONNECT ON DATABASE postgres TO lythaus_verifier;'] : [
+    'GRANT CONNECT ON DATABASE postgres TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy, lythaus_migrations;',
+    'REVOKE CREATE ON DATABASE postgres FROM lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;',
+  ];
+  let result = sql;
+  for (const statement of databaseStatements) {
+    if (result.split(statement).length !== 2) fail('new_core_schema_database_acl_template_changed');
+    result = result.replace(statement, '-- Database ACL preconditions are verified separately; this schema-only run cannot change them.');
+  }
+  if (/\b(?:GRANT|REVOKE)\b[^;]*\bON\s+DATABASE\b/i.test(result)) fail('new_core_schema_database_acl_statement_forbidden');
+  return result;
+}
+
+export async function schemaGrantFingerprint(client) {
+  const result = await client.query(`SELECT kind, object_name, privileges FROM (
+    SELECT 'schema' AS kind, nspname AS object_name, coalesce(nspacl::text, '') AS privileges
+      FROM pg_namespace WHERE nspname = ANY($1::text[])
+    UNION ALL
+    SELECT 'relation', n.nspname || '.' || c.relname, coalesce(c.relacl::text, '')
+      FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname = ANY($1::text[])
+    UNION ALL
+    SELECT 'column', n.nspname || '.' || c.relname || '.' || a.attname, a.attacl::text
+      FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname = ANY($1::text[]) AND a.attacl IS NOT NULL
+    UNION ALL
+    SELECT 'function', n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', coalesce(p.proacl::text, '')
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname = ANY($1::text[])
+    UNION ALL
+    SELECT 'default', r.rolname || ':' || coalesce(n.nspname, '') || ':' || d.defaclobjtype::text, d.defaclacl::text
+      FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace
+      WHERE r.rolname='lythaus_migrations'
+  ) grants ORDER BY kind COLLATE "C", object_name COLLATE "C"`, [APPLICATION_SCHEMAS]);
+  return { sha256: crypto.createHash('sha256').update(JSON.stringify(result.rows)).digest('hex'), objectCount: result.rows.length };
+}
+
+export async function schemaDefinitionFingerprint(client) {
+  await client.query('BEGIN READ ONLY');
+  try {
+    await client.query('SET LOCAL search_path = pg_catalog');
+    const result = await client.query(`SELECT kind, object_name, definition FROM (
+      SELECT 'relation' AS kind, n.nspname || '.' || c.relname AS object_name,
+        jsonb_build_array(c.relkind, c.relrowsecurity, c.relforcerowsecurity, c.reloptions)::text AS definition
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname = ANY($1::text[]) AND c.relkind IN ('r','p','v','m','S','f')
+      UNION ALL
+      SELECT 'column', n.nspname || '.' || c.relname || '.' || a.attname,
+        jsonb_build_array(a.attnum, format_type(a.atttypid,a.atttypmod), a.attnotnull,
+          a.attidentity, a.attgenerated, pg_get_expr(d.adbin,d.adrelid))::text
+        FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+        LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+        WHERE n.nspname = ANY($1::text[]) AND a.attnum>0 AND NOT a.attisdropped
+      UNION ALL
+      SELECT 'constraint', n.nspname || '.' || c.relname || '.' || k.conname,
+        jsonb_build_array(pg_get_constraintdef(k.oid,true), k.convalidated, k.condeferrable, k.condeferred)::text
+        FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname = ANY($1::text[])
+      UNION ALL
+      SELECT 'index', n.nspname || '.' || c.relname,
+        jsonb_build_array(pg_get_indexdef(i.indexrelid), i.indisvalid, i.indisready)::text
+        FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname = ANY($1::text[])
+      UNION ALL
+      SELECT 'function', n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', pg_get_functiondef(p.oid)
+        FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname = ANY($1::text[])
+      UNION ALL
+      SELECT 'view', n.nspname || '.' || c.relname, pg_get_viewdef(c.oid,true)
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname = ANY($1::text[]) AND c.relkind IN ('v','m')
+      UNION ALL
+      SELECT 'trigger', n.nspname || '.' || c.relname || '.' || t.tgname, pg_get_triggerdef(t.oid,true)
+        FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname = ANY($1::text[]) AND NOT t.tgisinternal
+      UNION ALL
+      SELECT 'enum', n.nspname || '.' || t.typname || ':' || e.enumsortorder, e.enumlabel::text
+        FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid JOIN pg_namespace n ON n.oid=t.typnamespace
+        WHERE n.nspname = ANY($1::text[])
+      UNION ALL
+      SELECT 'policy', n.nspname || '.' || c.relname || '.' || p.polname,
+        jsonb_build_array(p.polcmd, p.polpermissive, pg_get_expr(p.polqual,p.polrelid), pg_get_expr(p.polwithcheck,p.polrelid),
+          (SELECT array_agg(CASE WHEN oid=0 THEN 'PUBLIC' ELSE pg_get_userbyid(oid)::text END ORDER BY oid) FROM unnest(p.polroles) oid))::text
+        FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname = ANY($1::text[])
+    ) catalog ORDER BY kind COLLATE "C", object_name COLLATE "C"`, [APPLICATION_SCHEMAS]);
+    await client.query('COMMIT');
+    return { sha256: crypto.createHash('sha256').update(JSON.stringify(result.rows)).digest('hex'), objectCount: result.rows.length };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  }
+}
+
+async function immutableRoleState(client) {
+  const result = await client.query(`SELECT
+    (SELECT datacl::text FROM pg_database WHERE datname='postgres') AS database_acl,
+    (SELECT jsonb_agg(to_jsonb(r) ORDER BY r.rolname) FROM pg_roles r WHERE r.rolname = ANY($1::text[])) AS roles,
+    (SELECT jsonb_agg(to_jsonb(m) ORDER BY m.roleid, m.member, m.grantor) FROM pg_auth_members m
+      JOIN pg_roles r ON r.oid=m.roleid WHERE r.rolname = ANY($1::text[])) AS memberships`, [ROLE_LABELS]);
+  return crypto.createHash('sha256').update(JSON.stringify(result.rows)).digest('hex');
+}
+
+async function applyAndVerifyCleanSchema({ migrationClient, verifierClient, migrations, roleMap,
+  creatorSha = null, mode = 'api-managed', schemaOnly = false }) {
+  const initialRoleState = schemaOnly ? await immutableRoleState(migrationClient) : null;
+  const pendingRegistry = [];
+  const emptyDataGuards = [];
+  for (const migration of migrations.migrations) {
+    const guard = await applyMigration(migrationClient, migration, pendingRegistry);
+    if (guard) emptyDataGuards.push(guard);
+  }
+  if (pendingRegistry.length !== 0) fail('new_core_migration_ledger_missing');
+  const ledger = await migrationClient.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
+  if (ledger.rows.length !== migrations.migrations.length) fail('new_core_migration_ledger_incomplete');
+  migrations.migrations.forEach((migration, index) => {
+    if (ledger.rows[index]?.version !== migration.name || ledger.rows[index]?.checksum !== migration.checksum) {
+      fail('new_core_migration_ledger_checksum_mismatch');
+    }
+  });
+  const releaseNames = migrations.migrations.filter(({ name }) => name >= '0017_').map(({ name }) => name);
+  for (const state of await classifyMigrationState(migrationClient, releaseNames)) assertCompleteMigrationPostconditions(state);
+  try {
+    await migrationClient.query('BEGIN');
+    const roleSql = fs.readFileSync(path.join(ROOT, 'database/planetscale/grants/roles.sql'), 'utf8');
+    const verifierSql = fs.readFileSync(path.join(ROOT, VERIFIER_GRANTS_PATH), 'utf8');
+    await migrationClient.query(substituteRoleNames(schemaOnly ? schemaOnlyObjectGrantSql(roleSql) : roleSql, roleMap));
+    await migrationClient.query(substituteRoleNames(schemaOnly ? schemaOnlyObjectGrantSql(verifierSql, { verifier: true }) : verifierSql, roleMap));
+    await migrationClient.query(fs.readFileSync(path.join(ROOT, 'database/planetscale/verification/verify.sql'), 'utf8'));
+    await migrationClient.query('COMMIT');
+  } catch {
+    await migrationClient.query('ROLLBACK').catch(() => undefined);
+    fail('new_core_role_grant_install_failed');
+  }
+  const extensionRows = await migrationClient.query('SELECT extname FROM pg_extension WHERE extname = ANY($1::text[]) ORDER BY extname', [REQUIRED_EXTENSIONS]);
+  if (JSON.stringify(extensionRows.rows.map((row) => row.extname)) !== JSON.stringify([...REQUIRED_EXTENSIONS].sort())) {
+    fail('new_core_required_extensions_missing');
+  }
+  const counts = await migrationClient.query(`SELECT
+    (SELECT count(*)::integer FROM pg_tables WHERE schemaname = ANY($1::text[])) AS table_count,
+    (SELECT count(*)::integer FROM information_schema.tables WHERE table_schema = ANY($1::text[])) AS relation_count`, [APPLICATION_SCHEMAS]);
+  const tableCount = Number(counts.rows[0]?.table_count ?? -1);
+  const relationCount = Number(counts.rows[0]?.relation_count ?? -1);
+  if (tableCount !== 102 || relationCount !== 103) fail('new_core_schema_counts_mismatch');
+  const roles = await verifyRoleBoundary(migrationClient, roleMap, creatorSha, { mode });
+  const schemaFingerprint = await verifyCanonicalSchemaFingerprint(migrationClient, migrations);
+  const bootstrapState = await readBootstrapStateAsVerifier(verifierClient, { asLogin: true });
+  const version = await migrationClient.query("SELECT current_setting('server_version_num')::integer AS version_num");
+  if (schemaOnly && await immutableRoleState(migrationClient) !== initialRoleState) fail('new_core_schema_database_acl_or_role_state_changed');
+  const grantFingerprint = schemaOnly ? await schemaGrantFingerprint(migrationClient) : null;
+  if (schemaOnly && grantFingerprint.sha256 !== '65ae6c5e98cacafdd1de5fd58703bd5358a65b9f73781881ee35383debbb4513') {
+    fail('new_core_schema_grant_fingerprint_mismatch');
+  }
+  const definitionFingerprint = schemaOnly ? await schemaDefinitionFingerprint(migrationClient) : null;
+  if (schemaOnly && definitionFingerprint.sha256 !== '69769fb59964a84355d5cc24e8f6c1a23595076a3d1d5f39e45add3e58dff90e') {
+    fail('new_core_schema_definition_fingerprint_mismatch');
+  }
+  return {
+    serverVersionNum: Number(version.rows[0]?.version_num), migrationCount: migrations.migrations.length,
+    migrations: migrations.migrations.map(({ name, checksum }) => ({ name, checksum })),
+    migrationSetSha256: migrations.checksum, requiredExtensions: extensionRows.rows.map((row) => row.extname),
+    tableCount, relationCount, schemaFingerprint, definitionFingerprint, emptyDataGuards, roles, bootstrapState, grantFingerprint,
+    providerBaseline: schemaOnly ? await verifyPreservedProviderExtension(migrationClient) : null,
+    dataState: schemaOnly ? await verifySchemaOnlyData(migrationClient) : null,
+  };
+}
+
 export async function installLiveCleanSchema({
   contract = loadCleanInstallContract(),
   environment = process.env,
@@ -1056,20 +1389,36 @@ export async function installLiveCleanSchema({
   createClient = (config) => new Client(config),
   sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(),
   worktreeHasChanges = environmentHasUncommittedChanges(),
+  schemaOnly = false,
+  readMain = readProtectedMain,
 } = {}) {
   const { target, migrations } = contract;
   if (migrations.checksum !== EXPECTED_MIGRATION_SET_SHA256) fail('new_core_migration_manifest_mismatch');
   if (!/^[a-f0-9]{40}$/.test(sourceSha)
     || worktreeHasChanges
     || environment.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA !== sourceSha) fail('new_core_candidate_source_not_approved');
-  const roleMap = liveRoleMap(environment);
+  const mode = schemaOnly ? NEW_CORE_SQL_ROLE_MODE : 'api-managed';
+  const scope = schemaOnly ? assertSchemaInstallationScope(target) : null;
+  const creatorSha = schemaOnly ? scope.creatorRoleSha256 : target.provisioningManagementRoleSha256 ?? null;
+  const roleMap = liveRoleMap(environment, mode);
   const roleMapSha = crypto.createHash('sha256').update(JSON.stringify(
     Object.fromEntries(ROLE_LABELS.map((label) => [label, roleMap[label]])),
   )).digest('hex');
-  const providerEvidence = await verifyNewCoreProviderTarget({ target, roleMap, environment, fetchImpl });
-  const originSha = providerEvidence.originFingerprint;
-  assertCostApproval(target);
-  requireLiveApprovals({ sourceSha, manifestSha: migrations.checksum, originSha, roleMapSha, environment });
+  if (schemaOnly) {
+    const approval = candidateApprovalValue('APPROVE_NEW_CORE_SCHEMA_ONLY', sourceSha,
+      migrations.checksum, target.provider.sqlOriginFingerprint, roleMapSha);
+    if (environment.LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL !== approval) fail('new_core_schema_install_approval_missing');
+    const main = await readMain();
+    if (main?.protected !== true || main?.commit?.sha !== scope.protectedMainSha) fail('new_core_protected_main_changed');
+  }
+  const providerEvidence = schemaOnly
+    ? await verifyPlanetScaleTarget({ target, roleMap, environment, fetchImpl, schemaOnly: true })
+    : await verifyNewCoreProviderTarget({ target, roleMap, environment, fetchImpl });
+  if (!schemaOnly) {
+    assertCostApproval(target);
+    requireLiveApprovals({ sourceSha, manifestSha: migrations.checksum,
+      originSha: providerEvidence.originFingerprint, roleMapSha, environment });
+  }
 
   const migrationRaw = environment[LIVE_MIGRATION_URL_ENV] ?? '';
   const verifierRaw = environment[LIVE_VERIFIER_URL_ENV] ?? '';
@@ -1086,7 +1435,12 @@ export async function installLiveCleanSchema({
       fail('new_core_migration_connection_failed');
     }
     await assertLiveConnection(migrationClient, migrationRaw, 'lythaus_migrations', roleMap, target);
-    const cleanTarget = await assertLiveEmptyTarget(migrationClient, roleMap, target.provisioningManagementRoleSha256 ?? null);
+    if (schemaOnly) {
+      const lock = await migrationClient.query("SELECT pg_try_advisory_lock(hashtext('lythaus-schema-migrations')) AS acquired");
+      if (lock.rows[0]?.acquired !== true) fail('new_core_schema_another_installer_active');
+    }
+    const cleanTarget = await assertLiveEmptyTarget(migrationClient, roleMap, creatorSha, { mode });
+    const schemaBaseline = schemaOnly ? await assertSchemaOnlyBaseline(migrationClient) : null;
     try {
       await verifierClient.connect();
     } catch {
@@ -1096,68 +1450,22 @@ export async function installLiveCleanSchema({
     await verifierClient.query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
     const verifierReadOnly = await verifierClient.query('SHOW transaction_read_only');
     if (verifierReadOnly.rows[0]?.transaction_read_only !== 'on') fail('new_core_verifier_read_only_not_confirmed');
+    if (schemaOnly) {
+      const verifierLogin = await verifierClient.query("SELECT session_user = current_user AND current_user = 'lythaus_verifier' AS direct_verifier_login");
+      if (verifierLogin.rows[0]?.direct_verifier_login !== true) fail('new_core_verifier_direct_login_required');
+    }
 
     writesStarted = true;
-    const pendingRegistry = [];
-    const emptyDataGuards = [];
-    for (const migration of migrations.migrations) {
-      const guard = await applyMigration(migrationClient, migration, pendingRegistry);
-      if (guard) emptyDataGuards.push(guard);
-    }
-    if (pendingRegistry.length !== 0) fail('new_core_migration_ledger_missing');
-    const ledger = await migrationClient.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
-    if (ledger.rows.length !== migrations.migrations.length) fail('new_core_migration_ledger_incomplete');
-    migrations.migrations.forEach((migration, index) => {
-      if (ledger.rows[index]?.version !== migration.name || ledger.rows[index]?.checksum !== migration.checksum) {
-        fail('new_core_migration_ledger_checksum_mismatch');
-      }
-    });
-    const releaseNames = migrations.migrations.filter(({ name }) => name >= '0017_').map(({ name }) => name);
-    for (const state of await classifyMigrationState(migrationClient, releaseNames)) assertCompleteMigrationPostconditions(state);
-
-    const roleSql = substituteRoleNames(fs.readFileSync(path.join(ROOT, 'database/planetscale/grants/roles.sql'), 'utf8'), roleMap);
-    const verifierSql = substituteRoleNames(fs.readFileSync(path.join(ROOT, VERIFIER_GRANTS_PATH), 'utf8'), roleMap);
-    try {
-      await migrationClient.query('BEGIN');
-      await migrationClient.query(roleSql);
-      await migrationClient.query(verifierSql);
-      await migrationClient.query(fs.readFileSync(path.join(ROOT, 'database/planetscale/verification/verify.sql'), 'utf8'));
-      await migrationClient.query('COMMIT');
-    } catch {
-      await migrationClient.query('ROLLBACK').catch(() => undefined);
-      fail('new_core_role_grant_install_failed');
-    }
-
-    const extensionRows = await migrationClient.query('SELECT extname FROM pg_extension WHERE extname = ANY($1::text[]) ORDER BY extname', [REQUIRED_EXTENSIONS]);
-    if (JSON.stringify(extensionRows.rows.map((row) => row.extname)) !== JSON.stringify([...REQUIRED_EXTENSIONS].sort())) {
-      fail('new_core_required_extensions_missing');
-    }
-    const counts = await migrationClient.query(`SELECT
-      (SELECT count(*)::integer FROM pg_tables WHERE schemaname = ANY($1::text[])) AS table_count,
-      (SELECT count(*)::integer FROM information_schema.tables WHERE table_schema = ANY($1::text[])) AS relation_count`, [APPLICATION_SCHEMAS]);
-    const tableCount = Number(counts.rows[0]?.table_count ?? -1);
-    const relationCount = Number(counts.rows[0]?.relation_count ?? -1);
-    if (tableCount !== 102 || relationCount !== 103) fail('new_core_schema_counts_mismatch');
-    const roleBoundary = await verifyRoleBoundary(migrationClient, roleMap, target.provisioningManagementRoleSha256 ?? null);
-    const schemaFingerprint = await verifyCanonicalSchemaFingerprint(migrationClient, migrations);
-    const bootstrapState = await readBootstrapStateAsVerifier(verifierClient, { asLogin: true });
-    const version = await migrationClient.query("SELECT current_setting('server_version_num')::integer AS version_num");
+    const schema = await applyAndVerifyCleanSchema({ migrationClient, verifierClient, migrations,
+      roleMap, creatorSha, mode, schemaOnly });
     return {
-      status: 'LIVE_NEW_CORE_SCHEMA_READY_FOR_OWNER_BOOTSTRAP',
+      status: schemaOnly ? 'LIVE_NEW_CORE_SCHEMA_INSTALLED_OWNER_ACCEPTANCE_PENDING' : 'LIVE_NEW_CORE_SCHEMA_READY_FOR_OWNER_BOOTSTRAP',
       sourceSha,
       destination: { organization: REQUIRED_ORGANIZATION, databaseId: REQUIRED_DATABASE_ID,
         branchId: REQUIRED_BRANCH_ID, region: REQUIRED_REGION, logicalDatabase: 'postgres' },
-      serverVersionNum: Number(version.rows[0]?.version_num),
-      migrationCount: migrations.migrations.length,
-      migrations: migrations.migrations.map(({ name, checksum }) => ({ name, checksum })),
-      migrationSetSha256: migrations.checksum,
-      requiredExtensions: extensionRows.rows.map((row) => row.extname),
-      tableCount,
-      relationCount,
-      schemaFingerprint,
-      emptyDataGuards,
-      roles: roleBoundary,
-      bootstrapState,
+      ...schema,
+      cleanTarget,
+      schemaBaseline,
       providerEvidence,
       cleanup: 'none; partial install stops for review; no rollback/drop/truncate/delete automation',
     };
@@ -1167,6 +1475,39 @@ export async function installLiveCleanSchema({
       fail(`new_core_partial_install_stopped_${code}`);
     }
     throw error;
+  } finally {
+    await verifierClient.end().catch(() => undefined);
+    await migrationClient.end().catch(() => undefined);
+  }
+}
+
+export async function rehearseScopedLocalPostgres17({ migrationUrl, verifierUrl } = {}) {
+  const urls = [migrationUrl, verifierUrl].map((raw, index) => {
+    let url;
+    try { url = new URL(raw); } catch { fail('new_core_scoped_local_url_invalid'); }
+    if (!['postgres:', 'postgresql:'].includes(url.protocol)
+      || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)
+      || decodeURIComponent(url.username) !== ['lythaus_migrations', 'lythaus_verifier'][index]
+      || !url.password || url.pathname !== '/postgres' || url.hash !== ''
+      || url.search !== '?sslmode=disable') fail('new_core_scoped_local_target_not_allowlisted');
+    return url;
+  });
+  if (urls[0].host !== urls[1].host) fail('new_core_scoped_local_target_mismatch');
+  assertDistinctRolePasswords(migrationUrl, verifierUrl);
+  const migrationClient = new Client({ connectionString: urls[0].toString(), ssl: false });
+  const verifierClient = new Client({ connectionString: urls[1].toString(), ssl: false });
+  const roleMap = Object.fromEntries(ROLE_LABELS.map((label) => [label, label]));
+  try {
+    await migrationClient.connect();
+    const baseline = await assertLiveEmptyTarget(migrationClient, roleMap, NEW_CORE_SQL_CREATOR_SHA256, { mode: NEW_CORE_SQL_ROLE_MODE });
+    await assertSchemaOnlyBaseline(migrationClient);
+    await verifierClient.connect();
+    await verifierClient.query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
+    const schema = await applyAndVerifyCleanSchema({ migrationClient, verifierClient,
+      migrations: loadApprovedMigrations({ root: ROOT, committedOnly: true }), roleMap,
+      creatorSha: NEW_CORE_SQL_CREATOR_SHA256, mode: NEW_CORE_SQL_ROLE_MODE, schemaOnly: true });
+    return { status: 'LOCAL_PG17_SCOPED_SQL_LOGIN_SCHEMA_PASS', sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+      directMigrationLogin: true, directVerifierLogin: true, baseline, ...schema, liveActions: 0 };
   } finally {
     await verifierClient.end().catch(() => undefined);
     await migrationClient.end().catch(() => undefined);
@@ -1193,8 +1534,10 @@ export async function verifyLiveBootstrapState({
   if (!/^[a-f0-9]{40}$/.test(sourceSha)
     || environment.LYTHAUS_NEW_CORE_EXPECTED_SOURCE_SHA !== sourceSha) fail('new_core_bootstrap_verification_source_unpinned');
   const { target, migrations } = contract;
-  const roleMap = liveRoleMap(environment);
-  const providerEvidence = await verifyPlanetScaleTarget({ target, roleMap, environment, fetchImpl });
+  const schemaOnly = target.schemaInstallation?.roleMode === NEW_CORE_SQL_ROLE_MODE;
+  if (schemaOnly) assertSchemaInstallationScope(target);
+  const roleMap = liveRoleMap(environment, schemaOnly ? NEW_CORE_SQL_ROLE_MODE : 'api-managed');
+  const providerEvidence = await verifyPlanetScaleTarget({ target, roleMap, environment, fetchImpl, schemaOnly });
   const verifierRaw = environment[LIVE_VERIFIER_URL_ENV] ?? '';
   const verifierConfig = liveSqlConnectionConfig(verifierRaw, 'lythaus_verifier', roleMap, target);
   const verifierClient = createClient(verifierConfig);
@@ -1234,12 +1577,27 @@ async function main() {
       console.log(JSON.stringify(buildPreparationPlan(), null, 2));
       return;
     }
+    if (mode === '--schema-only-plan') {
+      console.log(JSON.stringify(buildSchemaInstallationPlan(), null, 2));
+      return;
+    }
+    if (mode === '--rehearse-local-scoped-pg17') {
+      console.log(JSON.stringify(await rehearseScopedLocalPostgres17({
+        migrationUrl: process.env.LYTHAUS_NEW_CORE_LOCAL_MIGRATION_URL,
+        verifierUrl: process.env.LYTHAUS_NEW_CORE_LOCAL_VERIFIER_URL,
+      }), null, 2));
+      return;
+    }
     if (mode === '--rehearse-local-pg17') {
       console.log(JSON.stringify(await rehearseLocalPostgres17(), null, 2));
       return;
     }
     if (mode === '--apply-live') {
       console.log(JSON.stringify(await installLiveCleanSchema(), null, 2));
+      return;
+    }
+    if (mode === '--apply-live-schema-only') {
+      console.log(JSON.stringify(await installLiveCleanSchema({ schemaOnly: true }), null, 2));
       return;
     }
     if (mode === '--verify-live-bootstrap-state') {

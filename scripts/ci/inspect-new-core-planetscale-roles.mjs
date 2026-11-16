@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
-import { NEW_CORE_ROLE_LABELS, NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS } from './lythaus-new-core-role-profile.mjs';
+import { NEW_CORE_ROLE_LABELS, NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS,
+  NEW_CORE_SQL_ROLE_MODE, assertNewCoreRoleMode } from './lythaus-new-core-role-profile.mjs';
 
 const ORGANIZATION = 'lythaus';
 const DATABASE = 'lythaus-new-core';
@@ -20,7 +21,7 @@ const MAX_RESPONSE_BYTES = 1024 * 1024;
 const MAX_PAGES = 5;
 const PAGE_SIZE = 100;
 const ROLE_LABELS = NEW_CORE_ROLE_LABELS;
-const PRESERVED_ROLE_HASHES = Object.freeze({
+export const PRESERVED_ROLE_HASHES = Object.freeze({
   id: '53b6a1e60ecb50cb1441d8d70a23882f6080ad81dd3561861d4507543a94ebf6',
   username: '0a63555f1de68fd83e5c4517b18acfec36c4528d5a1db76a627807d8f2cd6042',
 });
@@ -188,9 +189,11 @@ export async function inspectNewCorePlanetScaleRoles({
   fetchImpl = fetch,
   now = Date.now(),
   preservedRoleHashes = PRESERVED_ROLE_HASHES,
+  roleMode = process.env.LYTHAUS_NEW_CORE_ROLE_MODE ?? 'api-managed',
 } = {}) {
   const validSourceSha = typeof sourceSha === 'string' && /^[a-f0-9]{40}$/.test(sourceSha) ? sourceSha : null;
   if (!validSourceSha) return blocked(null, 'source_sha_unavailable');
+  try { assertNewCoreRoleMode(roleMode); } catch { return blocked(validSourceSha, 'role_mode_invalid'); }
   let authorization;
   try {
     authorization = planetScaleServiceTokenAuthorizationHeader(token ?? '');
@@ -355,9 +358,12 @@ export async function inspectNewCorePlanetScaleRoles({
     };
   });
 
-  const inventoryMatches = canonicalLabelCount === NEW_CORE_LOGIN_ROLE_LABELS.length
-    && duplicateLabelCount === 0 && NEW_CORE_LOGIN_ROLE_LABELS.every((label) => seenLabels.has(label))
-    && activeCanonicalRoleCount === NEW_CORE_LOGIN_ROLE_LABELS.length
+  const scopedInventoryMatches = roleMode === NEW_CORE_SQL_ROLE_MODE
+    ? canonicalLabelCount === 0 && rows.length === 1
+    : canonicalLabelCount === NEW_CORE_LOGIN_ROLE_LABELS.length
+      && duplicateLabelCount === 0 && NEW_CORE_LOGIN_ROLE_LABELS.every((label) => seenLabels.has(label))
+      && activeCanonicalRoleCount === NEW_CORE_LOGIN_ROLE_LABELS.length;
+  const inventoryMatches = scopedInventoryMatches
     && preservedRoleCount === 1 && unexpectedRoleCount === 0 && deferredCredentialRoleCount === 0
     && roleSummaries.every((role) => role.branchMatch && role.databaseMatch && role.ready && !role.deleted && role.notExpired)
     && scopedInheritedRoleCount === 0;
@@ -369,6 +375,7 @@ export async function inspectNewCorePlanetScaleRoles({
   return {
     status: inventoryMatches && originRoleMatches ? 'READ_ONLY_ROLE_INVENTORY_SQL_CHECK_PENDING' : 'READ_ONLY_ROLE_INVENTORY_BLOCKED',
     sourceSha: validSourceSha,
+    roleMode,
     httpStatus,
     organization: ORGANIZATION,
     database: DATABASE,
@@ -383,7 +390,9 @@ export async function inspectNewCorePlanetScaleRoles({
     logicalDatabase: LOGICAL_DATABASE,
     roleCount: rows.length,
     expectedScopedRoleCount: ROLE_LABELS.length,
-    expectedApiLoginRoleCount: NEW_CORE_LOGIN_ROLE_LABELS.length,
+    expectedApiLoginRoleCount: roleMode === NEW_CORE_SQL_ROLE_MODE ? 0 : NEW_CORE_LOGIN_ROLE_LABELS.length,
+    requiredSqlRoles: roleMode === NEW_CORE_SQL_ROLE_MODE ? [...ROLE_LABELS] : [...NEW_CORE_DEFERRED_ROLE_LABELS],
+    scopedSqlRolesVerified: false,
     requiredDeferredSqlRoles: [...NEW_CORE_DEFERRED_ROLE_LABELS],
     deferredSqlRolesVerified: false,
     requiredNextCheck: 'read-only SQL catalog proof of all six roles, three NOLOGIN roles, memberships and scoped database ACLs',
