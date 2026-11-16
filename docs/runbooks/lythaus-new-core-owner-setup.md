@@ -25,6 +25,38 @@ dashboard/API-managed logins and SQL-created roles. The
 and inheritance from `postgres`; `pscale connect` is not supported for Postgres.
 These are documented capabilities, not proof of this branch's current settings.
 
+### Owner-reported diagnostic evidence
+
+The owner supplied console results for the approved read-only diagnostic:
+PostgreSQL major 17, database `postgres`, durable creator/switch/grant authority
+all true, migration ledger absent, no canonical SQL-label collisions and no
+PUBLIC database CREATE. The first query counted one additional namespace and
+two relations. The follow-up identified exactly:
+
+| Namespace | Relation | Kind | Extension |
+| --- | --- | --- | --- |
+| `pscale_extensions` | `hypopg_hidden_indexes` | View | `hypopg` |
+| `pscale_extensions` | `hypopg_list_indexes` | View | `hypopg` |
+
+Both relation and schema owner-is-`postgres` flags were false. The catalog
+dependency query establishes extension membership; do not infer the actual
+owner identifier from those booleans. PlanetScale documents that
+[HypoPG is installed by default](https://planetscale.com/docs/postgres/monitoring/schema-recommendations#caveats).
+These views explain the observed counts and are extension baseline objects,
+not evidence of Lythaus application relations. Preserve them and the extension.
+Both transcripts include completed ROLLBACK results. This is owner-supplied
+evidence, not an independent assistant connection or complete schema fingerprint.
+
+The automated zero-count guards still reject this raw provider baseline.
+Before any future live installation, review a narrow extension-aware contract
+for these exact views and namespace, with catalog membership checks. Never
+exclude every `pscale_*` namespace or arbitrary extra relations by name, and
+never remove the extension to force an empty-target check to pass.
+
+Console disconnection, restoration of the access toggle to off and cleanup of
+the temporary provider login have not yet been evidenced. No role/grant or
+schema writes were authorized by these diagnostics.
+
 The temporary primary Administrator session is broad: the documented `postgres`
 role has CREATEDB, CREATEROLE, replication, BYPASSRLS and inherited data/admin
 permissions, while remaining NOSUPERUSER. The session can do more than the
