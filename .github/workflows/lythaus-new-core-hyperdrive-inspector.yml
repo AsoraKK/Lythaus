@@ -1,0 +1,71 @@
+name: Lythaus new-core Hyperdrive read-only inspector
+
+on:
+  push:
+    branches:
+      - codex/new-core-hyperdrive-inspector
+    paths:
+      - .github/workflows/lythaus-new-core-hyperdrive-inspector.yml
+      - scripts/ci/inspect-new-core-hyperdrive.mjs
+      - scripts/ci/inspect-new-core-planetscale-roles.mjs
+      - scripts/tests/inspect-new-core-hyperdrive.test.mjs
+      - scripts/tests/inspect-new-core-planetscale-roles.test.mjs
+      - scripts/tests/inspect-new-core-workflow.test.mjs
+
+permissions:
+  contents: read
+
+env:
+  NODE_OPTIONS: ''
+  NODE_DEBUG: ''
+
+concurrency:
+  group: lythaus-new-core-hyperdrive-read-only
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 20.x
+      - name: Test sanitized inspector
+        run: node --test scripts/tests/inspect-new-core-hyperdrive.test.mjs scripts/tests/inspect-new-core-planetscale-roles.test.mjs scripts/tests/inspect-new-core-workflow.test.mjs
+      - name: Verify exact repository, branch, workflow and source
+        id: context
+        env:
+          EXPECTED_REPOSITORY_ID: '1010752912'
+          EXPECTED_REPOSITORY: AsoraKK/Lythaus
+          EXPECTED_REF: refs/heads/codex/new-core-hyperdrive-inspector
+          EXPECTED_WORKFLOW_REF: AsoraKK/Lythaus/.github/workflows/lythaus-new-core-hyperdrive-inspector.yml@refs/heads/codex/new-core-hyperdrive-inspector
+        run: |
+          set -eu
+          test "$GITHUB_REPOSITORY_ID" = "$EXPECTED_REPOSITORY_ID"
+          test "$GITHUB_REPOSITORY" = "$EXPECTED_REPOSITORY"
+          test "$GITHUB_REF" = "$EXPECTED_REF"
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_WORKFLOW_REF" = "$EXPECTED_WORKFLOW_REF"
+          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
+          printf 'verified=true\n' >> "$GITHUB_OUTPUT"
+      - name: Read the pinned new Hyperdrive metadata
+        if: steps.context.outputs.verified == 'true'
+        id: hyperdrive
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NODE_OPTIONS: ''
+          NODE_DEBUG: ''
+        run: node scripts/ci/inspect-new-core-hyperdrive.mjs
+      - name: Read only the new branch role inventory
+        if: always() && steps.context.outputs.verified == 'true'
+        env:
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          LYTHAUS_NEW_CORE_EXPECTED_ORIGIN_USERNAME_SHA256: ${{ steps.hyperdrive.outputs.origin_username_sha256 }}
+          NODE_OPTIONS: ''
+          NODE_DEBUG: ''
+        run: node scripts/ci/inspect-new-core-planetscale-roles.mjs
