@@ -3,9 +3,9 @@ import test from 'node:test';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { parse } from 'yaml';
-import { auditRebindServiceTokens, inspectServiceAuthority, serviceGrantInventory, serviceSource, serviceAuditFailure,
+import { auditRebindServiceTokens, inspectServiceAuthority, explicitServicePermissions, serviceSource, serviceAuditFailure,
   RebindServiceReader, TOKEN_SOURCES, REQUIRED_ROLE_PERMISSIONS, QUALIFICATION_PROFILE, QUALIFICATION_PROFILE_SHA256,
-  SERVICE_AUDIT_SCHEMA, SERVICE_AUDIT_JOB, digest, utcMicros } from '../ci/admin-subject-rebind-service-token.mjs';
+  SERVICE_AUDIT_SCHEMA, SERVICE_AUTHORITY_EVIDENCE_MODE, SERVICE_AUDIT_JOB, digest, utcMicros } from '../ci/admin-subject-rebind-service-token.mjs';
 
 const source = 'a'.repeat(40), now = Date.parse('2026-11-15T14:00:00.000Z');
 const repository = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
@@ -24,10 +24,10 @@ function fixture() {
   const env = environment(), calls = [], gates = [];
   const database = { id: 'hzhe0cbn6rxi', name: 'lythaus-core', kind: 'postgresql' };
   const branch = { id: 'vqa2g2xc9wsl', name: 'main', kind: 'postgresql', deleted_at: null, production: true };
-  const token = { expires_at: '2026-11-15T18:00:00.000001Z', token: canary, name: canary };
-  const grants = { type: 'list', current_page: 1, total_count: 1, next_page: null,
-    data: [{ id: 'grant1', resource_type: 'Database', resource_id: database.id, resource_name: database.name,
-      accesses: REQUIRED_ROLE_PERMISSIONS.map(access => ({ access, description: canary })) }] };
+  const resource = { ...database, created_at: '2026-07-27T12:14:22.422Z', updated_at: '2026-11-15T12:00:00.000Z', deleted_at: null };
+  const accesses = REQUIRED_ROLE_PERMISSIONS.map((access, i) => ({ id: `access${i}`, access, description: canary,
+    resource_type: 'Database', resource_id: database.id, resource_name: database.name, resource: { ...resource } }));
+  const token = { expires_at: '2026-11-15T18:00:00.000001Z', token: canary, name: canary, service_token_accesses: accesses };
   const fetchImpl = async (url, request) => {
     calls.push({ url, method: request.method });
     assert.equal(request.method, 'GET'); assert.equal(request.body, undefined); assert.equal(request.redirect, 'error');
@@ -35,14 +35,13 @@ function fixture() {
     let body;
     if (url.endsWith('/databases/lythaus-core')) body = database;
     else if (url.endsWith('/branches/main')) body = branch;
-    else if (url.includes('/grants?')) body = grants;
     else if (/\/service-tokens\/[a-z]+$/.test(url)) body = { ...token, id: url.split('/').at(-1) };
     else assert.fail('unexpected GET route');
     return new Response(JSON.stringify(body), { status: 200 });
   };
   const options = { env, now, fetchImpl, assertCheckout: async () => gates.push('checkout'),
     assertMain: async () => gates.push('main'), quiet: async () => gates.push('quiet') };
-  return { env, options, database, branch, token, grants, calls, gates, fetchImpl };
+  return { env, options, database, branch, token, accesses, calls, gates, fetchImpl };
 }
 
 function redacted(report) {
@@ -57,8 +56,9 @@ function redacted(report) {
 
 test('audit is GET-only, source-specific, sanitized and explicitly not issuance or installation proof', async () => {
   const f = fixture(), report = await auditRebindServiceTokens(f.options);
-  assert.deepEqual(f.gates, ['checkout', 'main', 'quiet', 'main']); assert.equal(f.calls.length, 8);
+  assert.deepEqual(f.gates, ['checkout', 'main', 'quiet', 'main']); assert.equal(f.calls.length, 6);
   assert.equal(report.schemaVersion, SERVICE_AUDIT_SCHEMA);
+  assert.equal(SERVICE_AUDIT_SCHEMA, 'lythaus-admin-rebind-service-token-audit-v2');
   assert.equal(report.status, 'REVIEWED_SOURCE_AVAILABLE_NOT_CREDENTIAL_APPROVAL');
   assert.equal(report.recommendedSource, 'migration_service_pair'); assert.equal(report.sourceMainSha, source);
   assert.equal(report.runId, '123'); assert.equal(report.runAttempt, 1);
@@ -66,8 +66,12 @@ test('audit is GET-only, source-specific, sanitized and explicitly not issuance 
   for (const row of report.sources) {
     assert.equal(row.status, 'DECLARED_AUTHORITY_VERIFIED_NOT_ISSUANCE_PROOF');
     assert.equal(row.issuanceObserved, false); assert.equal(row.sqlProfileVerified, false); assert.equal(row.credentialCreated, false);
-    assert.equal(row.grantPaginationComplete, true); assert.equal(row.grantPages, 1); assert.equal(row.grantRows, 1);
-    assert.deepEqual(row.missingPermissions, []); assert.match(row.tokenFingerprint, /^[a-f0-9]{64}$/);
+    assert.equal(row.authorityEvidenceMode, SERVICE_AUTHORITY_EVIDENCE_MODE);
+    assert.equal(row.explicitPermissionEvidenceValidated, true); assert.equal(row.explicitTargetPermissionsVerified, true);
+    assert.equal(row.grantInventoryComplete, false); assert.equal(row.grantPaginationPerformed, false);
+    for (const key of ['grantPaginationComplete', 'grantPages', 'grantRows', 'missingPermissions']) assert.equal(Object.hasOwn(row, key), false);
+    assert.equal(row.observedAccessRows, 4); assert.equal(row.observedTargetAccessRows, 4);
+    assert.deepEqual(row.missingExplicitPermissions, []); assert.match(row.tokenFingerprint, /^[a-f0-9]{64}$/);
     assert.equal(row.tokenExpiresAt, f.token.expires_at);
   }
   assert.notEqual(report.sources[0].tokenFingerprint, report.sources[1].tokenFingerprint); redacted(report);
@@ -98,7 +102,7 @@ test('missing, partial and malformed existing sources fail closed without fallba
 test('qualified combined token is a distinct explicit recommendation when the dedicated pair is missing', async () => {
   const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
   const report = await auditRebindServiceTokens(f.options);
-  assert.equal(report.recommendedSource, 'existing_api_token'); assert.equal(f.calls.length, 4); redacted(report);
+  assert.equal(report.recommendedSource, 'existing_api_token'); assert.equal(f.calls.length, 3); redacted(report);
 });
 
 test('denied authority is reported once per source without raw response or error leakage', async () => {
@@ -115,8 +119,8 @@ test('denied authority is reported once per source without raw response or error
 });
 
 test('404 failures retain the exact fixed operation and only previously verified checkpoints without retries', async () => {
-  const operations = ['database_metadata_read', 'main_branch_metadata_read', 'service_token_metadata_read', 'service_token_grants_read'];
-  const names = ['databaseVerified', 'productionBranchVerified', 'selfMetadataVerified', 'tokenExpiryKnown', 'grantPaginationComplete'];
+  const operations = ['database_metadata_read', 'main_branch_metadata_read', 'service_token_metadata_read'];
+  const names = ['databaseVerified', 'productionBranchVerified', 'selfMetadataVerified', 'tokenExpiryKnown', 'explicitPermissionEvidenceValidated'];
   const requestId = '01900000-0000-7000-8000-000000000001';
   for (let failed = 0; failed < operations.length; failed++) {
     const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
@@ -129,26 +133,30 @@ test('404 failures retain the exact fixed operation and only previously verified
     const report = await auditRebindServiceTokens(f.options), failure = report.sources[1];
     assert.equal(report.status, 'BLOCKED_NO_QUALIFIED_EXISTING_SOURCE'); assert.equal(report.recommendedSource, null);
     assert.equal(failure.operationClass, operations[failed]); assert.equal(failure.httpStatus, 404);
-    assert.equal(failure.requestId, requestId); assert.equal(failure.requestPage, failed === 3 ? 1 : null);
+    assert.equal(failure.requestId, requestId); assert.equal(Object.hasOwn(failure, 'requestPage'), false);
     assert.match(failure.tokenFingerprint, /^[a-f0-9]{64}$/); assert.equal(count, failed + 1); assert.equal(bodyReads, 0); assert.equal(cancelled, 1);
-    const verified = failed === 3 ? 4 : failed;
+    const verified = failed;
     assert.deepEqual(failure.completedChecks, Object.fromEntries(names.map((name, index) => [name, index < verified])));
     assert.equal(JSON.stringify(report).includes('https://'), false); redacted(report);
   }
 });
 
-test('partial grants remain unqualified and identify the failed page without exposing rows or provider text', async () => {
-  const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
-  f.grants.next_page = 2; f.grants.total_count = 2;
-  let failedRequests = 0;
-  f.options.fetchImpl = async (url, request) => {
-    if (url.includes('/grants?page=2&')) { failedRequests++; return new Response(canary, { status: 403 }); }
-    return f.fetchImpl(url, request);
-  };
-  const report = await auditRebindServiceTokens(f.options), row = report.sources[1];
-  assert.equal(row.operationClass, 'service_token_grants_read'); assert.equal(row.requestPage, 2); assert.equal(failedRequests, 1);
-  assert.equal(row.completedChecks.tokenExpiryKnown, true); assert.equal(row.completedChecks.grantPaginationComplete, false);
-  assert.equal(report.recommendedSource, null); assert.equal(row.status, 'BLOCKED_AUTHORITY_UNVERIFIED'); redacted(report);
+test('only the documented self GET supplies permissions; missing embedded evidence has no grants fallback', async () => {
+  for (const unavailable of [false, true]) {
+    const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
+    if (unavailable) f.token.service_token_accesses = null;
+    // Even a legacy-looking provider field cannot stand in for explicit access rows.
+    f.token.grants = { data: f.accesses, next_page: null };
+    f.token.oauth_accesses_by_resource = { database: { databases: [f.database], accesses: REQUIRED_ROLE_PERMISSIONS.map(name => ({ name })) } };
+    const report = await auditRebindServiceTokens(f.options), row = report.sources[1];
+    assert.equal(f.calls.length, 3); assert.equal(f.calls.some(call => /\/grants|\/access\?/.test(call.url)), false);
+    if (unavailable) {
+      assert.equal(report.recommendedSource, null); assert.equal(row.status, 'BLOCKED_AUTHORITY_UNVERIFIED');
+      assert.equal(row.blocker, 'service_access_evidence_unavailable'); assert.equal(row.operationClass, 'service_token_metadata_read');
+      assert.equal(row.completedChecks.tokenExpiryKnown, true); assert.equal(row.completedChecks.explicitPermissionEvidenceValidated, false);
+    } else assert.equal(report.recommendedSource, 'existing_api_token');
+    redacted(report);
+  }
 });
 
 test('request-ID headers are a strict consistent UUID whitelist; error bodies are never read', async () => {
@@ -181,20 +189,27 @@ test('transport or malformed success failures keep the safe operation without ma
 
 test('successful database metadata alone never establishes token grant authority', async () => {
   for (const permission of REQUIRED_ROLE_PERMISSIONS) {
-    const f = fixture(); f.grants.data[0].accesses = f.grants.data[0].accesses.filter(row => row.access !== permission);
+    const f = fixture(); f.token.service_token_accesses = f.accesses.filter(row => row.access !== permission);
     const report = await auditRebindServiceTokens(f.options);
-    assert.equal(report.recommendedSource, null); assert.ok(report.sources.every(row => row.missingPermissions.includes(permission)));
+    assert.equal(report.recommendedSource, null); assert.ok(report.sources.every(row => row.missingExplicitPermissions.includes(permission)));
+    assert.ok(report.sources.every(row => row.explicitTargetPermissionsVerified === false && row.grantInventoryComplete === false));
     redacted(report);
   }
 });
 
-test('grants for another resource, wildcards and unrecognized access names never supply target authority', async () => {
-  for (const change of [row => { row.resource_id = 'anotherdatabase'; }, row => { row.resource_name = 'anotherdatabase'; },
-    row => { row.resource_type = 'Organization'; }, row => { row.accesses = [{ access: '*' }]; },
-    row => { row.accesses = [{ access: 'create_branch_password' }]; }]) {
-    const f = fixture(); change(f.grants.data[0]); const report = await auditRebindServiceTokens(f.options);
-    assert.equal(report.recommendedSource, null); assert.equal(report.sources[0].status, 'BLOCKED'); redacted(report);
+test('another resource, wildcards, OAuth scopes and unrecognized names never supply target authority', async () => {
+  for (const change of [row => { row.resource_id = row.resource.id = 'anotherdatabase'; },
+    row => { row.resource_name = row.resource.name = 'anotherdatabase'; },
+    row => { row.resource_type = 'Organization'; }, row => { row.access = '*'; },
+    row => { row.access = 'create_branch_password'; }]) {
+    const f = fixture(); f.accesses.forEach(change); const report = await auditRebindServiceTokens(f.options);
+    assert.equal(report.recommendedSource, null); redacted(report);
   }
+  const f = fixture(); f.token.service_token_accesses = [];
+  f.token.oauth_accesses_by_resource = { database: { databases: [f.database], accesses: REQUIRED_ROLE_PERMISSIONS.map(name => ({ name })) } };
+  const report = await auditRebindServiceTokens(f.options);
+  assert.equal(report.recommendedSource, null); assert.deepEqual(report.sources[0].missingExplicitPermissions, REQUIRED_ROLE_PERMISSIONS);
+  redacted(report);
 });
 
 test('exact database, main branch and native self identity are required', async () => {
@@ -226,39 +241,68 @@ test('native token expiry must be known and cover the entire two-hour window plu
   }
 });
 
-test('complete paginated grants combine only exact target grants and reject inconsistent or ambiguous pages', async () => {
-  const f = fixture();
-  const first = structuredClone(f.grants); first.total_count = 2; first.next_page = 2;
-  const second = structuredClone(f.grants); second.current_page = 2; second.total_count = 2; second.data[0].id = 'grant2';
-  first.data[0].accesses = first.data[0].accesses.slice(0, 2); second.data[0].accesses = second.data[0].accesses.slice(2);
-  const reader = { get: async path => path.includes('page=1&') ? first : second };
-  assert.deepEqual((await serviceGrantInventory(reader)).pages, 2);
-  for (const change of [() => { second.current_page = 1; }, () => { second.total_count = 3; },
-    () => { second.data[0].id = 'grant1'; }, () => { second.next_page = 4; },
-    () => { second.data = []; }, () => { second.type = 'unknown'; }, () => { delete second.next_page; }]) {
-    const saved = structuredClone(second); change();
-    await assert.rejects(serviceGrantInventory(reader));
-    for (const key of Object.keys(second)) delete second[key]; Object.assign(second, saved);
-  }
-  let pages = 0;
-  await assert.rejects(serviceGrantInventory({ get: async () => ({ type: 'list', current_page: ++pages,
-    next_page: pages + 1, data: [{ ...first.data[0], id: `grant${pages}` }] }) }), /pagination_unverified/);
-  assert.equal(pages, 5);
+test('embedded evidence cannot claim exhaustive pagination or silently retain the legacy v1 proof shape', () => {
+  const f = fixture(), evidence = explicitServicePermissions(f.token);
+  assert.equal(evidence.authorityEvidenceMode, SERVICE_AUTHORITY_EVIDENCE_MODE);
+  assert.equal(evidence.grantInventoryComplete, false); assert.equal(evidence.grantPaginationPerformed, false);
+  assert.equal(Object.hasOwn(evidence, 'grantPaginationComplete'), false);
+  assert.equal(Object.hasOwn(evidence, 'grantPages'), false);
+  assert.notEqual(SERVICE_AUDIT_SCHEMA, 'lythaus-admin-rebind-service-token-audit-v1');
 });
 
-test('malformed grant records fail closed without exposing resource contents', async () => {
-  for (const change of [row => { row.id = '../escape'; }, row => { delete row.resource_type; },
-    row => { row.accesses = ['read_database']; }, row => { row.accesses = [{ access: null }]; },
-    row => { row.accesses = Array.from({ length: 101 }, () => ({ access: 'read_database' })); }]) {
-    const f = fixture(); change(f.grants.data[0]); const report = await auditRebindServiceTokens(f.options);
+test('missing, null, malformed or excessive embedded evidence fails closed without inventory inference', async () => {
+  for (const value of [undefined, null, {}, 'all', Array(501).fill({})]) {
+    const f = fixture(); f.token.service_token_accesses = value;
+    const report = await auditRebindServiceTokens(f.options);
+    assert.equal(report.recommendedSource, null); assert.equal(report.sources[0].blocker, 'service_access_evidence_unavailable');
+    redacted(report);
+  }
+});
+
+test('ambiguous access IDs, duplicate bindings and inconsistent resource records fail closed', async () => {
+  for (const change of [f => { f.accesses[1].id = f.accesses[0].id; },
+    f => { f.accesses.push({ ...f.accesses[0], id: 'duplicate' }); },
+    f => { f.accesses[1].resource.updated_at = '2026-11-15T12:00:00.001Z'; },
+    f => { f.accesses[0].resource.id = 'wrongid'; }, f => { f.accesses[0].resource.name = 'wrongname'; },
+    f => { f.accesses[0].resource.deleted_at = '2026-11-15T12:00:00.000Z'; }]) {
+    const f = fixture(); change(f); const report = await auditRebindServiceTokens(f.options);
     assert.equal(report.recommendedSource, null); redacted(report);
   }
+});
+
+test('every documented access field and resource identity field must have its required type', async () => {
+  const changes = [row => { row.id = '../escape'; }, row => { row.access = null; }, row => { row.description = null; },
+    row => { row.description = 'x'.repeat(4097); }, row => { row.resource_type = 'FutureType'; },
+    row => { row.resource_id = null; }, row => { row.resource_name = ''; }, row => { row.resource = null; },
+    row => { row.resource.created_at = null; }, row => { row.resource.updated_at = 'invalid'; },
+    row => { row.resource.deleted_at = false; }];
+  for (const key of ['id', 'access', 'description', 'resource_type', 'resource_id', 'resource_name', 'resource']) {
+    changes.push(row => { delete row[key]; });
+  }
+  for (const key of ['id', 'name', 'created_at', 'updated_at', 'deleted_at']) changes.push(row => { delete row.resource[key]; });
+  for (const change of changes) {
+    const f = fixture(); change(f.accesses[0]); const report = await auditRebindServiceTokens(f.options);
+    assert.equal(report.recommendedSource, null); assert.ok(report.sources.every(row => row.status === 'BLOCKED_AUTHORITY_UNVERIFIED'));
+    redacted(report);
+  }
+});
+
+test('extra resources and unknown access names are observations, never inferred permissions or least-privilege proof', async () => {
+  const f = fixture();
+  f.accesses.push({ ...f.accesses[0], id: 'otherresource', resource_id: 'anotherdatabase', resource_name: 'otherdatabase',
+    resource: { ...f.accesses[0].resource, id: 'anotherdatabase', name: 'otherdatabase' } });
+  f.accesses.push({ ...f.accesses[0], id: 'unknownaccess', access: 'future_access' });
+  const report = await auditRebindServiceTokens(f.options), row = report.sources[0];
+  assert.equal(row.observedOtherResourceAccessRows, 1); assert.equal(row.observedUnknownTargetPermissionCount, 1);
+  assert.equal(row.grantInventoryComplete, false); assert.equal(row.issuanceObserved, false); assert.equal(row.sqlProfileVerified, false);
+  assert.deepEqual(Object.keys(row.permissions), REQUIRED_ROLE_PERMISSIONS); redacted(report);
 });
 
 test('GET transport is closed to foreign paths, redirects, malformed/large bodies and arbitrary methods', async () => {
   const f = fixture(), reader = new RebindServiceReader(f.env, TOKEN_SOURCES[0], f.fetchImpl);
   for (const path of ['https://evil.test', '/token/../escape', '/branches/other', '/branches/main/roles?page=6&per_page=100',
-    '/token/grants?page=1&per_page=100&extra=true', '/branches/main/roles/id/extra']) {
+    '/token/grants?page=1&per_page=100', '/token/grants?page=1&per_page=100&extra=true', '/token/access',
+    '/branches/main/roles?page=1&per_page=100', '/branches/main/roles/id/extra']) {
     await assert.rejects(reader.get(path), /path_forbidden/);
   }
   assert.equal(f.calls.length, 0); assert.equal(reader.request, undefined); assert.equal(reader.authorization, undefined);

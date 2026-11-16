@@ -7,7 +7,8 @@ import { ownerContext, AuditFailure, check, object, safeId } from './planetscale
 import { requireRebindPacketMain, rebindPacketGithubRead } from './admin-subject-rebind-install-packet.mjs';
 import { quietConsumers } from './planetscale-migration-probe-evidence.mjs';
 
-export const SERVICE_AUDIT_SCHEMA = 'lythaus-admin-rebind-service-token-audit-v1';
+export const SERVICE_AUDIT_SCHEMA = 'lythaus-admin-rebind-service-token-audit-v2';
+export const SERVICE_AUTHORITY_EVIDENCE_MODE = 'self-metadata-explicit-service-token-accesses-v1';
 export const SERVICE_AUDIT_JOB = 'Audit existing rebind service-token capability without issuing credentials';
 export const TOKEN_SOURCES = Object.freeze(['migration_service_pair', 'existing_api_token']);
 export const QUALIFICATION_PROFILE = Object.freeze({ ttl: 3600, inherited_roles: Object.freeze(['postgres']), with_replication: false });
@@ -17,11 +18,10 @@ export const DATABASE_BASE = 'https://api.planetscale.com/v1/organizations/lytha
 const ORGANIZATION_BASE = 'https://api.planetscale.com/v1/organizations/lythaus';
 export const REQUIRED_ROLE_PERMISSIONS = Object.freeze(['read_database', 'read_branch',
   'create_production_branch_password', 'delete_production_branch_password']);
-const operationClasses = Object.freeze(['database_metadata_read', 'main_branch_metadata_read',
-  'service_token_metadata_read', 'service_token_grants_read', 'role_metadata_read']);
+const operationClasses = Object.freeze(['database_metadata_read', 'main_branch_metadata_read', 'service_token_metadata_read']);
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const completedCheckNames = Object.freeze(['databaseVerified', 'productionBranchVerified', 'selfMetadataVerified',
-  'tokenExpiryKnown', 'grantPaginationComplete']);
+  'tokenExpiryKnown', 'explicitPermissionEvidenceValidated']);
 
 export function utcMicros(value) {
   const match = typeof value === 'string' ? /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,6}))?Z$/.exec(value) : null;
@@ -66,18 +66,14 @@ export class RebindServiceReader {
   get tokenUrl() { return `${ORGANIZATION_BASE}/service-tokens/${this.#tokenId}`; }
   get tokenId() { return this.#tokenId; }
   async get(path) {
-    const allowed = ['', '/branches/main', '/token'].includes(path)
-      || /^\/branches\/main\/roles(?:\?page=[1-5]&per_page=100|\/[a-z0-9]{1,64})$/.test(path)
-      || /^\/token\/grants\?page=[1-5]&per_page=100$/.test(path);
+    const allowed = ['', '/branches/main', '/token'].includes(path);
     check(allowed, 'service_audit_get_path_forbidden');
     const url = path.startsWith('/token') ? this.tokenUrl + path.slice(6) : DATABASE_BASE + path;
     try { return await this.#read(url); }
     catch (error) {
       if (error instanceof AuditFailure) {
         error.operationClass = path === '' ? 'database_metadata_read' : path === '/branches/main' ? 'main_branch_metadata_read'
-          : path === '/token' ? 'service_token_metadata_read' : path.startsWith('/token/grants?') ? 'service_token_grants_read' : 'role_metadata_read';
-        const page = /^\/token\/grants\?page=([1-5])&per_page=100$/.exec(path);
-        if (page) error.requestPage = Number(page[1]);
+          : 'service_token_metadata_read';
       }
       throw error;
     }
@@ -112,32 +108,46 @@ export class RebindServiceReader {
   }
 }
 
-export async function serviceGrantInventory(reader) {
-  const rows = [], ids = new Set(); let total;
-  for (let page = 1; page <= 5; page++) {
-    const body = await reader.get(`/token/grants?page=${page}&per_page=100`);
-    check(body.type === 'list' && body.current_page === page && Array.isArray(body.data) && body.data.length <= 100
-      && Object.hasOwn(body, 'next_page'), 'service_grants_pagination_unverified');
-    if (Object.hasOwn(body, 'total_count')) {
-      check(Number.isSafeInteger(body.total_count) && body.total_count >= 0 && body.total_count <= 500
-        && (total === undefined || total === body.total_count), 'service_grants_pagination_unverified');
-      total = body.total_count;
+// The documented single-token GET embeds explicit, resource-bound permissions.
+// Their presence proves only those permissions, not an exhaustive grant inventory.
+export function explicitServicePermissions(token) {
+  const rows = token.service_token_accesses;
+  check(Array.isArray(rows) && rows.length <= 500, 'service_access_evidence_unavailable');
+  const ids = new Set(), bindings = new Set(), resources = new Map(), target = [];
+  for (const row of rows) {
+    check(object(row) && safeId(row.id) && !ids.has(row.id)
+      && typeof row.access === 'string' && /^[a-z][a-z0-9_]{0,127}$/.test(row.access)
+      && typeof row.description === 'string' && row.description.length <= 4096
+      && ['Database', 'Organization', 'Branch', 'User'].includes(row.resource_type)
+      && safeId(row.resource_id) && typeof row.resource_name === 'string' && row.resource_name.length > 0
+      && row.resource_name.length <= 256 && object(row.resource), 'service_access_shape_unverified');
+    const resource = row.resource;
+    check(resource.id === row.resource_id && resource.name === row.resource_name
+      && utcMicros(resource.created_at) !== null && utcMicros(resource.updated_at) !== null
+      && Object.hasOwn(resource, 'deleted_at') && (resource.deleted_at === null || utcMicros(resource.deleted_at) !== null),
+    'service_access_resource_unverified');
+    const resourceKey = `${row.resource_type}:${row.resource_id}`;
+    const resourceIdentity = JSON.stringify([resource.id, resource.name, resource.created_at, resource.updated_at, resource.deleted_at]);
+    check(!resources.has(resourceKey) || resources.get(resourceKey) === resourceIdentity, 'service_access_resource_conflict');
+    const binding = `${resourceKey}:${row.access}`;
+    check(!bindings.has(binding), 'service_access_duplicate_binding');
+    ids.add(row.id); bindings.add(binding); resources.set(resourceKey, resourceIdentity);
+    if (row.resource_id === RESTORE.databaseId || row.resource_name === 'lythaus-core') {
+      check(row.resource_type === 'Database' && row.resource_id === RESTORE.databaseId && row.resource_name === 'lythaus-core',
+        'service_access_target_conflict');
+      check(resource.deleted_at === null, 'service_access_target_deleted');
+      target.push(row);
     }
-    for (const row of body.data) {
-      check(object(row) && safeId(row.id) && !ids.has(row.id) && typeof row.resource_type === 'string'
-        && typeof row.resource_id === 'string' && typeof row.resource_name === 'string'
-        && Array.isArray(row.accesses) && row.accesses.length <= 100
-        && row.accesses.every(access => object(access) && typeof access.access === 'string' && access.access.length <= 128),
-      'service_grant_shape_unverified');
-      ids.add(row.id); rows.push(row);
-    }
-    if (body.next_page === null) {
-      check(total === undefined || rows.length === total, 'service_grants_pagination_unverified');
-      return { rows, pages: page };
-    }
-    check(body.next_page === page + 1 && body.data.length > 0 && page < 5, 'service_grants_pagination_unverified');
   }
-  throw new AuditFailure('service_grants_pagination_unverified');
+  const accesses = new Set(target.map(row => row.access));
+  const permissions = Object.fromEntries(REQUIRED_ROLE_PERMISSIONS.map(permission => [permission, accesses.has(permission)]));
+  const missingExplicitPermissions = REQUIRED_ROLE_PERMISSIONS.filter(permission => !permissions[permission]);
+  return { authorityEvidenceMode: SERVICE_AUTHORITY_EVIDENCE_MODE,
+    explicitPermissionEvidenceValidated: true, explicitTargetPermissionsVerified: missingExplicitPermissions.length === 0,
+    permissions, missingExplicitPermissions, observedAccessRows: rows.length, observedTargetAccessRows: target.length,
+    observedOtherResourceAccessRows: rows.length - target.length,
+    observedUnknownTargetPermissionCount: [...accesses].filter(access => !REQUIRED_ROLE_PERMISSIONS.includes(access)).length,
+    grantInventoryComplete: false, grantPaginationPerformed: false };
 }
 
 export async function inspectServiceAuthority(reader, { now = Date.now(), requiredThrough = now + 2 * 3600000 + 300000,
@@ -157,21 +167,18 @@ export async function inspectServiceAuthority(reader, { now = Date.now(), requir
   check(Object.hasOwn(token, 'expires_at') && (token.expires_at === null || expiry !== null), 'service_audit_token_expiry_unverified');
   onCheckpoint('tokenExpiryKnown');
   const lifetimeCoversWindow = token.expires_at === null || expiry > BigInt(requiredThrough) * 1000n;
-  const grants = await serviceGrantInventory(reader);
-  onCheckpoint('grantPaginationComplete');
-  const target = grants.rows.filter(row => row.resource_type.toLowerCase() === 'database'
-    && row.resource_id === RESTORE.databaseId && row.resource_name === 'lythaus-core');
-  const accesses = new Set(target.flatMap(row => row.accesses.map(access => access.access)));
-  const permissions = Object.fromEntries(REQUIRED_ROLE_PERMISSIONS.map(permission => [permission, accesses.has(permission)]));
-  const missingPermissions = REQUIRED_ROLE_PERMISSIONS.filter(permission => !permissions[permission]);
+  let evidence;
+  try { evidence = explicitServicePermissions(token); }
+  catch (error) {
+    if (error instanceof AuditFailure) error.operationClass = 'service_token_metadata_read';
+    throw error;
+  }
+  onCheckpoint('explicitPermissionEvidenceValidated');
   return { source: reader.source, configured: true, tokenFingerprint: reader.tokenFingerprint,
-    status: lifetimeCoversWindow && missingPermissions.length === 0 ? 'DECLARED_AUTHORITY_VERIFIED_NOT_ISSUANCE_PROOF' : 'BLOCKED',
+    status: lifetimeCoversWindow && evidence.explicitTargetPermissionsVerified ? 'DECLARED_AUTHORITY_VERIFIED_NOT_ISSUANCE_PROOF' : 'BLOCKED',
     databaseVerified: true, productionBranchVerified: true, selfMetadataVerified: true,
-    grantPaginationComplete: true, grantPages: grants.pages, grantRows: grants.rows.length,
+    ...evidence,
     tokenExpiresAt: token.expires_at, requiredThrough: new Date(requiredThrough).toISOString(), lifetimeCoversWindow,
-    permissions, missingPermissions,
-    otherResourceGrantCount: grants.rows.length - target.length,
-    unknownPermissionCount: [...accesses].filter(access => !REQUIRED_ROLE_PERMISSIONS.includes(access)).length,
     issuanceObserved: false, sqlProfileVerified: false, credentialCreated: false };
 }
 
@@ -206,8 +213,6 @@ export async function auditRebindServiceTokens({ env = process.env, fetchImpl = 
         blocker: error instanceof AuditFailure ? error.message : 'service_audit_unverified',
         httpStatus: Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? error.httpStatus : null,
         operationClass: operationClasses.includes(error?.operationClass) ? error.operationClass : null,
-        requestPage: error?.operationClass === 'service_token_grants_read' && Number.isInteger(error.requestPage)
-          && error.requestPage >= 1 && error.requestPage <= 5 ? error.requestPage : null,
         requestId: uuid(error?.requestId) ? error.requestId : null, completedChecks });
     }
   }
