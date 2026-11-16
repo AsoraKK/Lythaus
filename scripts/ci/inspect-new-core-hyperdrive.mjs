@@ -99,7 +99,7 @@ export async function inspectNewCoreHyperdrive({
 
   const config = payload.result;
   const origin = config.origin;
-  const host = typeof origin?.host === 'string' ? origin.host.trim().toLowerCase().replace(/\.$/, '') : '';
+  const host = typeof origin?.host === 'string' ? origin.host.trim().toLowerCase() : '';
   const port = Number(origin?.port);
   const rawDatabase = typeof origin?.database === 'string' ? origin.database.trim() : '';
   const databaseMatches = rawDatabase === LOGICAL_DATABASE;
