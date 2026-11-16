@@ -69,11 +69,11 @@ part of the receipt. PlanetScale documents that connector query credentials
 are ephemeral and deleted immediately after execution; that lifecycle was
 not independently enumerated through an API role inventory.
 
-**Cleanup outstanding:** the latest database metadata read reported production
-web-console access enabled. The connector did not change that setting. A direct
-API read for cleanup was unavailable, and no setting update was attempted.
-Restore the new database's console-access setting to off in Settings and save;
-disconnect any owner console session. Do not change the old database's setting.
+**Console setting cleanup verified:** after the owner restored the setting to
+off and saved database settings, an exact-target provider metadata read confirmed
+`production_branch_web_console: false` on database `87dbkhprjh30`, Ready.
+The assistant made no setting update. This verifies the saved access setting;
+provider-managed temporary-role deletion was not independently enumerated.
 
 The SQL block creates `lythaus_migrations`, `lythaus_admin`, and
 `lythaus_verifier` directly as PostgreSQL LOGIN roles. PlanetScale supports
