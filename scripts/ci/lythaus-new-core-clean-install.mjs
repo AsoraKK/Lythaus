@@ -40,6 +40,7 @@ const REQUIRED_DATABASE = 'lythaus-new-core';
 const REQUIRED_REGION = 'eu-central';
 const REQUIRED_ORIGIN_SHA_ENV = 'LYTHAUS_NEW_CORE_EXPECTED_ORIGIN_FINGERPRINT';
 const REQUIRED_CLOUDFLARE_ACCESS_TOKEN_ENV = 'CLOUDFLARE_API_TOKEN';
+const EXPECTED_OWNER_EMAIL_ENV = 'LYTHAUS_NEW_CORE_OWNER_EMAIL';
 const REQUIRED_PLANETSCALE_TOKEN_ENV = 'PLANETSCALE_API_TOKEN';
 const ROLE_LABELS = ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations', 'lythaus_verifier'];
 
@@ -122,30 +123,64 @@ export function validateTestAccessEnvironment(target, environment) {
   };
 }
 
-export function verifyAccessAppAndPolicies({ application, policies, target }) {
+function normalizeExpectedOwnerEmail(value) {
+  if (typeof value !== 'string' || value.length > 320 || value.trim() !== value
+    || !/^[^@\s]+@[^@\s]+$/.test(value)) fail('new_core_access_expected_owner_unavailable');
+  return value.toLowerCase();
+}
+
+function exactEmailSelector(selector) {
+  if (!selector || typeof selector !== 'object' || Array.isArray(selector)
+    || Object.keys(selector).length !== 1 || !Object.hasOwn(selector, 'email')) return null;
+  const email = selector.email;
+  if (typeof email === 'string') return email;
+  if (!email || typeof email !== 'object' || Array.isArray(email)
+    || Object.keys(email).length !== 1 || typeof email.email !== 'string') return null;
+  return email.email;
+}
+
+function exactEveryoneSelector(selector) {
+  if (!selector || typeof selector !== 'object' || Array.isArray(selector)
+    || Object.keys(selector).length !== 1 || !Object.hasOwn(selector, 'everyone')) return false;
+  return selector.everyone === true || (selector.everyone && typeof selector.everyone === 'object'
+    && !Array.isArray(selector.everyone) && Object.keys(selector.everyone).length === 0);
+}
+
+export function verifyAccessAppAndPolicies({ application, policies, target, expectedOwnerEmail }) {
   const access = target?.adminTest;
   if (!access || !Array.isArray(policies) || application?.id !== access.accessApplicationId
-    || typeof application.aud !== 'string'
+    || application.type !== 'self_hosted' || typeof application.aud !== 'string'
     || crypto.createHash('sha256').update(application.aud).digest('hex') !== access.audienceSha256) {
     fail('new_core_access_application_metadata_mismatch');
   }
+  const ownerEmail = normalizeExpectedOwnerEmail(expectedOwnerEmail);
   const destinations = [application.domain, application.destination,
     ...(Array.isArray(application.domains) ? application.domains : []),
     ...(Array.isArray(application.self_hosted_domains) ? application.self_hosted_domains : [])]
     .filter((value) => typeof value === 'string').map((value) => value.toLowerCase());
-  if (!destinations.includes(REQUIRED_HOSTNAME)) fail('new_core_access_application_hostname_mismatch');
+  const uniqueDestinations = [...new Set(destinations)];
+  if (uniqueDestinations.length !== 1 || uniqueDestinations[0] !== REQUIRED_HOSTNAME) {
+    fail('new_core_access_application_hostname_mismatch');
+  }
   const decision = (policy) => String(policy?.decision ?? policy?.action ?? '').toLowerCase();
   const allows = policies.filter((policy) => decision(policy) === 'allow');
+  if (policies.length !== 2 || policies.some((policy) => !['allow', 'deny', 'block'].includes(decision(policy)))) {
+    fail('new_core_access_policy_metadata_mismatch');
+  }
   const ownerPolicy = policies.find((policy) => policy?.id === access.accessPolicyId);
   const include = ownerPolicy?.include;
-  const emailSelector = include?.[0]?.email?.email ?? include?.[0]?.email;
-  const denyAll = policies.some((policy) => ['deny', 'block'].includes(decision(policy))
-    && Array.isArray(policy.include) && policy.include.some((selector) => selector?.everyone === true));
+  const emailSelector = Array.isArray(include) && include.length === 1 ? exactEmailSelector(include[0]) : null;
+  const denyPolicy = policies.find((policy) => ['deny', 'block'].includes(decision(policy)));
+  const denyAll = Array.isArray(denyPolicy?.include) && denyPolicy.include.length === 1
+    && exactEveryoneSelector(denyPolicy.include[0]);
   if (allows.length !== 1 || !ownerPolicy || decision(ownerPolicy) !== 'allow'
-    || !Array.isArray(include) || include.length !== 1 || typeof emailSelector !== 'string'
-    || !emailSelector.includes('@') || (ownerPolicy.exclude?.length ?? 0) !== 0
-    || (ownerPolicy.require?.length ?? 0) !== 0 || !denyAll
-    || policies.some((policy) => decision(policy) === 'bypass')) fail('new_core_access_policy_metadata_mismatch');
+    || typeof emailSelector !== 'string' || emailSelector.toLowerCase() !== ownerEmail
+    || !Array.isArray(ownerPolicy.exclude) || ownerPolicy.exclude.length !== 0
+    || !Array.isArray(ownerPolicy.require) || ownerPolicy.require.length !== 0
+    || ownerPolicy.enabled === false || !denyAll
+    || !Array.isArray(denyPolicy.exclude) || denyPolicy.exclude.length !== 0
+    || !Array.isArray(denyPolicy.require) || denyPolicy.require.length !== 0
+    || denyPolicy.enabled === false) fail('new_core_access_policy_metadata_mismatch');
   if (access.ownerOnlyPolicyVerified !== true || access.allowlistedHumanCount !== 1) fail('new_core_access_owner_not_verified');
   return {
     accessApplicationId: access.accessApplicationId,
@@ -196,7 +231,12 @@ export async function verifyNewCoreAccessMetadata({ target, environment = proces
   const policyResponse = await providerGet(policyUrl, `Bearer ${token}`, 'new_core_access_policy_metadata_unavailable', fetchImpl);
   if (policyResponse.success !== true) fail('new_core_access_policy_metadata_unavailable');
   const policies = assertCompleteProviderList(policyResponse, 1000, 'new_core_access_policy_inventory_incomplete');
-  return verifyAccessAppAndPolicies({ application: hostnameMatches[0], policies, target });
+  return verifyAccessAppAndPolicies({
+    application: hostnameMatches[0],
+    policies,
+    target,
+    expectedOwnerEmail: environment[EXPECTED_OWNER_EMAIL_ENV],
+  });
 }
 
 function loadCleanInstallContract() {

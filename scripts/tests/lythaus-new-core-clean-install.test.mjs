@@ -124,6 +124,7 @@ test('Access metadata and Worker variables bind the isolated app audience withou
   });
   Object.assign(fixture.environment, {
     CLOUDFLARE_API_TOKEN: 'synthetic-token',
+    LYTHAUS_NEW_CORE_OWNER_EMAIL: 'synthetic-owner@example.invalid',
     ACCESS_TEAM_DOMAIN: 'lythaus.cloudflareaccess.com',
     NEW_CORE_ACCESS_ISSUER: 'https://lythaus.cloudflareaccess.com',
     NEW_CORE_ACCESS_AUDIENCE_SHA256: audienceSha256,
@@ -131,15 +132,38 @@ test('Access metadata and Worker variables bind the isolated app audience withou
     ACCESS_JWKS_URL: 'https://lythaus.cloudflareaccess.com/cdn-cgi/access/certs',
   });
   assert.equal(validateTestAccessEnvironment(fixture.target, fixture.environment).allowlistedHumanCount, 1);
-  const fixtureEmail = 'synthetic-owner@example.invalid';
-  const application = { id: 'test-app-id', domain: 'admin-new-core-test.lythaus.co', aud: audience };
+  const fixtureEmail = fixture.environment.LYTHAUS_NEW_CORE_OWNER_EMAIL;
+  const application = { id: 'test-app-id', type: 'self_hosted', domain: 'admin-new-core-test.lythaus.co', aud: audience };
   const policies = [
     { id: 'test-policy-id', decision: 'allow', include: [{ email: { email: fixtureEmail } }], exclude: [], require: [] },
-    { id: 'deny-policy-id', decision: 'deny', include: [{ everyone: true }] },
+    { id: 'deny-policy-id', decision: 'deny', include: [{ everyone: {} }], exclude: [], require: [] },
   ];
-  const direct = verifyAccessAppAndPolicies({ application, policies, target: fixture.target });
+  const direct = verifyAccessAppAndPolicies({ application, policies, target: fixture.target, expectedOwnerEmail: fixtureEmail });
   assert.equal(direct.accessApplicationId, 'test-app-id');
   assert.equal(JSON.stringify(direct).includes(fixtureEmail), false);
+  assert.throws(() => verifyAccessAppAndPolicies({
+    application, policies, target: fixture.target, expectedOwnerEmail: 'different-owner@example.invalid',
+  }), /new_core_access_policy_metadata_mismatch/);
+  assert.throws(() => verifyAccessAppAndPolicies({
+    application: { ...application, domains: ['admin-new-core-test.lythaus.co', 'admin.lythaus.co'] },
+    policies, target: fixture.target, expectedOwnerEmail: fixtureEmail,
+  }), /new_core_access_application_hostname_mismatch/);
+  assert.throws(() => verifyAccessAppAndPolicies({
+    application: { ...application, type: 'service_auth' },
+    policies, target: fixture.target, expectedOwnerEmail: fixtureEmail,
+  }), /new_core_access_application_metadata_mismatch/);
+  assert.throws(() => verifyAccessAppAndPolicies({
+    application,
+    policies: [
+      { ...policies[0], include: [{ email: { email: fixtureEmail, extra: 'selector' } }] },
+      policies[1],
+    ],
+    target: fixture.target, expectedOwnerEmail: fixtureEmail,
+  }), /new_core_access_policy_metadata_mismatch/);
+  assert.throws(() => verifyAccessAppAndPolicies({
+    application, policies: [{ ...policies[0], decision: 'service_auth' }, policies[1]],
+    target: fixture.target, expectedOwnerEmail: fixtureEmail,
+  }), /new_core_access_policy_metadata_mismatch/);
 
   const calls = [];
   const fetchImpl = async (url, init) => {

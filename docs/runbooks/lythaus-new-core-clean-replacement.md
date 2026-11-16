@@ -143,6 +143,9 @@ node --experimental-strip-types scripts/ci/lythaus-new-core-clean-install.mjs --
 The first checks only aggregate database state through the verifier login. The
 second checks the exact new Access application, sole-human allow policy,
 deny-all policy, audience hash, issuer, and JWKS binding. Both are read-only.
+Supply `LYTHAUS_NEW_CORE_OWNER_EMAIL` only through the private runtime secret
+store for that metadata check. The verifier compares it in memory to the single
+email selector and never returns, hashes, logs, or writes the identity.
 `--apply-live` is a separate write path and requires the individual approvals
 above; it must not be run until that review is complete.
 
