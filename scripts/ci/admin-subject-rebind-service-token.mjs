@@ -17,6 +17,11 @@ export const DATABASE_BASE = 'https://api.planetscale.com/v1/organizations/lytha
 const ORGANIZATION_BASE = 'https://api.planetscale.com/v1/organizations/lythaus';
 export const REQUIRED_ROLE_PERMISSIONS = Object.freeze(['read_database', 'read_branch',
   'create_production_branch_password', 'delete_production_branch_password']);
+const operationClasses = Object.freeze(['database_metadata_read', 'main_branch_metadata_read',
+  'service_token_metadata_read', 'service_token_grants_read', 'role_metadata_read']);
+const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
+const completedCheckNames = Object.freeze(['databaseVerified', 'productionBranchVerified', 'selfMetadataVerified',
+  'tokenExpiryKnown', 'grantPaginationComplete']);
 
 export function utcMicros(value) {
   const match = typeof value === 'string' ? /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,6}))?Z$/.exec(value) : null;
@@ -66,7 +71,16 @@ export class RebindServiceReader {
       || /^\/token\/grants\?page=[1-5]&per_page=100$/.test(path);
     check(allowed, 'service_audit_get_path_forbidden');
     const url = path.startsWith('/token') ? this.tokenUrl + path.slice(6) : DATABASE_BASE + path;
-    return this.#read(url);
+    try { return await this.#read(url); }
+    catch (error) {
+      if (error instanceof AuditFailure) {
+        error.operationClass = path === '' ? 'database_metadata_read' : path === '/branches/main' ? 'main_branch_metadata_read'
+          : path === '/token' ? 'service_token_metadata_read' : path.startsWith('/token/grants?') ? 'service_token_grants_read' : 'role_metadata_read';
+        const page = /^\/token\/grants\?page=([1-5])&per_page=100$/.exec(path);
+        if (page) error.requestPage = Number(page[1]);
+      }
+      throw error;
+    }
   }
   async #read(url) {
     let response;
@@ -79,6 +93,10 @@ export class RebindServiceReader {
       void response.body?.cancel().catch(() => {});
       const error = new AuditFailure([401, 403].includes(response.status) ? 'service_audit_access_denied' : 'service_audit_request_failed');
       if (Number.isInteger(response.status) && response.status >= 100 && response.status <= 599) error.httpStatus = response.status;
+      const requestIds = ['x-request-id', 'x-planetscale-request-id', 'x-pscale-request-id']
+        .map(name => response.headers?.get?.(name)).filter(value => value !== null && value !== undefined);
+      error.requestId = requestIds.length > 0 && requestIds.every(value => value === requestIds[0]) && uuid(requestIds[0])
+        ? requestIds[0] : null;
       throw error;
     }
     try {
@@ -122,19 +140,25 @@ export async function serviceGrantInventory(reader) {
   throw new AuditFailure('service_grants_pagination_unverified');
 }
 
-export async function inspectServiceAuthority(reader, { now = Date.now(), requiredThrough = now + 2 * 3600000 + 300000 } = {}) {
+export async function inspectServiceAuthority(reader, { now = Date.now(), requiredThrough = now + 2 * 3600000 + 300000,
+  onCheckpoint = () => {} } = {}) {
   check(Number.isSafeInteger(now) && Number.isSafeInteger(requiredThrough) && requiredThrough >= now, 'service_audit_window_invalid');
   const database = await reader.get('');
   check(database.id === RESTORE.databaseId && database.name === 'lythaus-core' && database.kind === 'postgresql', 'service_audit_database_mismatch');
+  onCheckpoint('databaseVerified');
   const branch = await reader.get('/branches/main');
   check(branch.id === RESTORE.sourceId && branch.name === 'main' && branch.kind === 'postgresql'
     && branch.deleted_at === null && branch.production === true, 'service_audit_branch_mismatch');
+  onCheckpoint('productionBranchVerified');
   const token = await reader.get('/token');
   check(token.id === reader.tokenId && (!Object.hasOwn(token, 'deleted_at') || token.deleted_at === null), 'service_audit_token_identity_unverified');
+  onCheckpoint('selfMetadataVerified');
   const expiry = utcMicros(token.expires_at);
   check(Object.hasOwn(token, 'expires_at') && (token.expires_at === null || expiry !== null), 'service_audit_token_expiry_unverified');
+  onCheckpoint('tokenExpiryKnown');
   const lifetimeCoversWindow = token.expires_at === null || expiry > BigInt(requiredThrough) * 1000n;
   const grants = await serviceGrantInventory(reader);
+  onCheckpoint('grantPaginationComplete');
   const target = grants.rows.filter(row => row.resource_type.toLowerCase() === 'database'
     && row.resource_id === RESTORE.databaseId && row.resource_name === 'lythaus-core');
   const accesses = new Set(target.flatMap(row => row.accesses.map(access => access.access)));
@@ -173,11 +197,18 @@ export async function auditRebindServiceTokens({ env = process.env, fetchImpl = 
   for (const source of TOKEN_SOURCES) {
     const configured = serviceSource(env, source);
     if (!configured.configured) { report.sources.push({ source, configured: false, status: configured.status }); continue; }
-    try { report.sources.push(await inspectServiceAuthority(new RebindServiceReader(env, source, fetchImpl), { now })); }
+    const reader = new RebindServiceReader(env, source, fetchImpl);
+    const completedChecks = Object.fromEntries(completedCheckNames.map(name => [name, false]));
+    try { report.sources.push(await inspectServiceAuthority(reader, { now,
+      onCheckpoint: name => { check(completedCheckNames.includes(name), 'service_audit_checkpoint_invalid'); completedChecks[name] = true; } })); }
     catch (error) {
-      report.sources.push({ source, configured: true, status: 'BLOCKED_AUTHORITY_UNVERIFIED',
+      report.sources.push({ source, configured: true, status: 'BLOCKED_AUTHORITY_UNVERIFIED', tokenFingerprint: reader.tokenFingerprint,
         blocker: error instanceof AuditFailure ? error.message : 'service_audit_unverified',
-        httpStatus: Number.isInteger(error?.httpStatus) ? error.httpStatus : null });
+        httpStatus: Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? error.httpStatus : null,
+        operationClass: operationClasses.includes(error?.operationClass) ? error.operationClass : null,
+        requestPage: error?.operationClass === 'service_token_grants_read' && Number.isInteger(error.requestPage)
+          && error.requestPage >= 1 && error.requestPage <= 5 ? error.requestPage : null,
+        requestId: uuid(error?.requestId) ? error.requestId : null, completedChecks });
     }
   }
   report.recommendedSource = TOKEN_SOURCES.find(source => report.sources.some(row => row.source === source
