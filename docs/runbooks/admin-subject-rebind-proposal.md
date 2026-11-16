@@ -95,10 +95,12 @@ Run 43775096758 on source 1813b0da returned a missing migration-token pair and
 HTTP404 for the existing API-token source. That older receipt omitted the
 operation class; its logs cannot recover which endpoint failed. Do not infer
 expired credentials, missing permissions or a missing database from that alone,
-or rerun the unchanged job. Token metadata/grants endpoints additionally require
-organization read_service_tokens permission according to the provider's
+or rerun the unchanged job. The token metadata endpoint requires organization
+read_service_tokens permission according to the provider's
 [API reference](https://planetscale.com/docs/api/reference/get_service_token).
-This is a documented requirement, not proof that it caused that run's404.
+That reference does not establish the grants endpoint's minimum scope. The
+[immutable CLI fixture](https://github.com/planetscale/cli/blob/d4dd5a80ef64eb48ee8148d571fe10e4ffb1efd1/internal/planetscale/service_tokens_test.go#L137-L168)
+corroborates its response shape. Neither is proof of that run's404 cause.
 Any later read-only reconciliation must use the reviewed contextual receipt,
 current protected main/checks and normal production review. Keep the working
 connection and secrets unchanged; credential/grant changes need exact approval.
