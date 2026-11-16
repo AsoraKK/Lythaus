@@ -55,7 +55,8 @@ function fetchFixture(rows, {
     }
     if (url.endsWith('/branches/main')) {
       return Response.json({ id: branchId, name: 'main', kind: 'postgresql', deleted_at: null,
-        ready: true, state: 'ready', cluster: 'PS_5_AWS_ARM', replicas: 0 });
+        ready: true, state: 'ready', cluster_name: 'PS_5_AWS_ARM', cluster_architecture: 'aarch64',
+        cluster_display_name: 'PS-5 AWS Arm', replicas: 0 });
     }
     const urlObject = new URL(url);
     const page = Number(urlObject.searchParams.get('page'));
@@ -82,7 +83,7 @@ test('reads only the pinned new database branch and paginated role inventory', a
   assert.equal(result.databaseFields.deletedAtAllowed, true);
   assert.equal(result.databaseFields.regionProviderMatch, true);
   assert.equal(result.databaseFields.regionSlugMatch, true);
-  assert.equal(result.branchFields.clusterMatch, true);
+  assert.equal(result.branchFields.clusterNameMatch, true);
   assert.equal(result.branchFields.replicasZero, true);
   assert.equal(result.logicalDatabase, 'postgres');
   assert.equal(result.roleCount, 6);
@@ -164,7 +165,8 @@ test('blocks branch mismatch, failed provider reads, and malformed pagination wi
         region: { provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'eu-central' } })
       : url.endsWith('/branches/main')
         ? Response.json({ id: 'xwkb9quljkzd', name: 'main', kind: 'postgresql', deleted_at: null,
-          ready: true, state: 'ready', cluster: 'PS_5_AWS_ARM', replicas: 0 })
+          ready: true, state: 'ready', cluster_name: 'PS_5_AWS_ARM', cluster_architecture: 'aarch64',
+          cluster_display_name: 'PS-5 AWS Arm', replicas: 0 })
         : Response.json({ total_count: 1, data: [], next_page: null }),
   });
   assert.equal(malformed.code, 'role_pagination_invalid');

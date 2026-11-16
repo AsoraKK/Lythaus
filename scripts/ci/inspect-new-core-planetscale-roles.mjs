@@ -117,8 +117,8 @@ function databaseFieldEvidence(database) {
 function branchFieldEvidence(branch) {
   const kindClass = recognizedValue(branch.kind, RECOGNIZED_DATABASE_KINDS);
   const stateClass = recognizedValue(branch.state, RECOGNIZED_RESOURCE_STATES);
-  const clusterClass = branch.cluster === 'PS_5_AWS_ARM' ? 'PS_5_AWS_ARM'
-    : typeof branch.cluster === 'string' ? 'other' : branch.cluster === undefined ? 'missing' : 'nonstring';
+  const clusterNameClass = branch.cluster_name === 'PS_5_AWS_ARM' ? 'PS_5_AWS_ARM'
+    : typeof branch.cluster_name === 'string' ? 'other' : branch.cluster_name === undefined ? 'missing' : 'nonstring';
   return {
     idPresent: Object.hasOwn(branch, 'id'),
     idType: valueType(branch, 'id'),
@@ -140,10 +140,14 @@ function branchFieldEvidence(branch) {
     deletedAtPresent: Object.hasOwn(branch, 'deleted_at'),
     deletedAtType: valueType(branch, 'deleted_at'),
     deletedAtNull: branch.deleted_at === null,
-    clusterPresent: Object.hasOwn(branch, 'cluster'),
-    clusterType: valueType(branch, 'cluster'),
-    clusterClass,
-    clusterMatch: branch.cluster === 'PS_5_AWS_ARM',
+    clusterNamePresent: Object.hasOwn(branch, 'cluster_name'),
+    clusterNameType: valueType(branch, 'cluster_name'),
+    clusterNameClass,
+    clusterNameMatch: branch.cluster_name === 'PS_5_AWS_ARM',
+    clusterArchitecturePresent: Object.hasOwn(branch, 'cluster_architecture'),
+    clusterArchitectureType: valueType(branch, 'cluster_architecture'),
+    clusterDisplayNamePresent: Object.hasOwn(branch, 'cluster_display_name'),
+    clusterDisplayNameType: valueType(branch, 'cluster_display_name'),
     replicasPresent: Object.hasOwn(branch, 'replicas'),
     replicasType: valueType(branch, 'replicas'),
     replicasZero: branch.replicas === 0,
@@ -236,7 +240,7 @@ export async function inspectNewCorePlanetScaleRoles({
   const branchFields = branchFieldEvidence(branch);
   const branchMatches = branch.id === BRANCH_ID && branch.name === BRANCH && branch.kind === 'postgresql'
     && branch.deleted_at === null && branch.ready === true && branch.state === 'ready'
-    && branch.cluster === 'PS_5_AWS_ARM' && branch.replicas === 0
+    && branch.cluster_name === 'PS_5_AWS_ARM' && branch.replicas === 0
     && (!Object.hasOwn(branch, 'database_id') || branch.database_id === DATABASE_ID);
   if (!branchMatches) {
     return {
