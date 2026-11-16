@@ -37,6 +37,45 @@ test('schema-only plan pins the six SQL identities, all migration checksums and 
   assert.ok(plan.exclusions.includes('Hyperdrive or Access changes'));
 });
 
+test('an explicitly reviewed main pin changes the schema approval marker without changing migration payloads', () => {
+  const previous = buildSchemaInstallationPlan();
+  const reviewedMain = 'd'.repeat(40);
+  const next = buildSchemaInstallationPlan({ protectedMainSha: reviewedMain });
+  assert.equal(next.protectedMainSha, reviewedMain);
+  assert.equal(next.schemaSourceBaselineSha, previous.protectedMainSha);
+  assert.deepEqual(next.migrations, previous.migrations);
+  assert.deepEqual(next.objectGrantPayloads, previous.objectGrantPayloads);
+  assert.match(next.approvalEnvironment.value, /^APPROVE_NEW_CORE_SCHEMA_ONLY_ON_REVIEWED_MAIN:/);
+  assert.ok(next.approvalEnvironment.value.endsWith(':' + reviewedMain));
+  assert.notEqual(next.approvalEnvironment.value, previous.approvalEnvironment.value);
+  assert.throws(() => buildSchemaInstallationPlan({ protectedMainSha: 'main' }), /reviewed_main_pin_invalid/);
+});
+
+test('the old approval cannot authorize an updated protected main and mismatched current main stops before provider access', async () => {
+  const target = JSON.parse(fsSync.readFileSync('infrastructure/planetscale/lythaus-new-core-clean-install.target.json', 'utf8'));
+  const previous = buildSchemaInstallationPlan();
+  const next = buildSchemaInstallationPlan({ protectedMainSha: 'd'.repeat(40) });
+  const environment = { LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA: next.sourceSha,
+    LYTHAUS_NEW_CORE_ROLE_IDENTIFIERS: JSON.stringify(next.roleMap),
+    LYTHAUS_NEW_CORE_APPROVED_PROTECTED_MAIN_SHA: next.protectedMainSha,
+    LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL: previous.approvalEnvironment.value };
+  let mainReads = 0;
+  const options = { contract: { target, migrations: loadApprovedMigrations({ committedOnly: true }) },
+    environment, sourceSha: next.sourceSha, worktreeHasChanges: false, schemaOnly: true,
+    readMain: () => { mainReads += 1; return { protected: true, commit: { sha: 'f'.repeat(40) } }; },
+    fetchImpl: () => { throw new Error('provider_must_not_be_called'); },
+    createClient: () => { throw new Error('SQL_must_not_be_called'); } };
+  await assert.rejects(installLiveCleanSchema(options), /schema_install_approval_missing/);
+  assert.equal(mainReads, 0);
+  environment.LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL = next.approvalEnvironment.value;
+  await assert.rejects(installLiveCleanSchema(options), /protected_main_changed/);
+  assert.equal(mainReads, 1);
+  options.readMain = () => { mainReads += 1; return { protected: true, commit: { sha: next.protectedMainSha } }; };
+  environment.LYTHAUS_NEW_CORE_EXPECTED_ORIGIN_FINGERPRINT = target.provider.sqlOriginFingerprint;
+  await assert.rejects(installLiveCleanSchema(options), /provider_authority_unavailable/);
+  assert.equal(mainReads, 2);
+});
+
 test('schema-only grant adapter excludes exactly the preverified database ACL statements and preserves object SQL', () => {
   const canonical = fsSync.readFileSync('database/planetscale/grants/roles.sql', 'utf8');
   const narrow = schemaOnlyObjectGrantSql(canonical);

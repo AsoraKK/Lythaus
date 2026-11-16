@@ -146,7 +146,7 @@
     "expectedGrantFingerprintSha256": "65ae6c5e98cacafdd1de5fd58703bd5358a65b9f73781881ee35383debbb4513",
     "providerResourceChangesAllowed": false,
     "credentialChangesAllowed": false,
-    "credentialDelivery": "OWNER_PRIVATE_SESSION_ONLY_NOT_GITHUB_OR_CHAT_ATTACHMENTS",
+    "credentialDelivery": "EXISTING_GITHUB_ACTIONS_SECRETS_IN_PLACE",
     "approvalStatus": "SCHEMA_INSTALLATION_APPROVAL_PENDING"
   },
   "liveExecution": "LIVE_CONFIGURATION_BLOCKED_SEPARATE_APPROVAL_AND_TARGET_ATTESTATION_REQUIRED"

@@ -351,9 +351,10 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
   };
 }
 
-export function buildSchemaInstallationPlan() {
+export function buildSchemaInstallationPlan({ protectedMainSha } = {}) {
   const { target, migrations } = loadCleanInstallContract();
   const scope = assertSchemaInstallationScope(target);
+  if (protectedMainSha !== undefined && !/^[a-f0-9]{40}$/.test(protectedMainSha)) fail('new_core_reviewed_main_pin_invalid');
   const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
   const roleMap = Object.fromEntries(ROLE_LABELS.map((label) => [label, label]));
   const roleMapSha = crypto.createHash('sha256').update(JSON.stringify(roleMap)).digest('hex');
@@ -361,7 +362,8 @@ export function buildSchemaInstallationPlan() {
     'database/planetscale/verification/verify.sql'];
   return {
     status: 'SCHEMA_INSTALLATION_APPROVAL_PENDING', sourceSha,
-    protectedMainSha: scope.protectedMainSha,
+    protectedMainSha: protectedMainSha ?? scope.protectedMainSha,
+    schemaSourceBaselineSha: scope.protectedMainSha,
     destination: { organization: REQUIRED_ORGANIZATION, database: REQUIRED_DATABASE, databaseId: REQUIRED_DATABASE_ID,
       branch: 'main', branchId: REQUIRED_BRANCH_ID, logicalDatabase: 'postgres', region: 'AWS eu-central-1 Frankfurt',
       cluster: 'PS_5_AWS_ARM', replicas: 0, postgresMajor: 17, originFingerprint: target.provider.sqlOriginFingerprint },
@@ -377,12 +379,14 @@ export function buildSchemaInstallationPlan() {
     objectGrantPayloads: files.slice(0, 2).map((file, index) => ({ file,
       sha256: crypto.createHash('sha256').update(substituteRoleNames(schemaOnlyObjectGrantSql(fs.readFileSync(path.join(ROOT, file), 'utf8'),
         { verifier: index === 1 }), roleMap)).digest('hex'), databaseAclStatementsExcluded: index === 1 ? 1 : 2 })),
-    approvalEnvironment: { name: 'LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL', value: candidateApprovalValue(
-      'APPROVE_NEW_CORE_SCHEMA_ONLY', sourceSha, migrations.checksum, target.provider.sqlOriginFingerprint, roleMapSha) },
+    approvalEnvironment: { name: 'LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL', value: schemaOnlyApprovalValue({
+      sourceSha, manifestSha: migrations.checksum, originSha: target.provider.sqlOriginFingerprint, roleMapSha, protectedMainSha }) },
+    protectedMainApprovalEnvironment: protectedMainSha === undefined ? null
+      : { name: 'LYTHAUS_NEW_CORE_APPROVED_PROTECTED_MAIN_SHA', value: protectedMainSha },
     liveCommandAfterApprovalOnly: 'node scripts/ci/lythaus-new-core-clean-install.mjs --apply-live-schema-only',
     credentials: { migration: LIVE_MIGRATION_URL_ENV, verifier: LIVE_VERIFIER_URL_ENV,
       custody: scope.credentialDelivery, providerMetadata: 'existing authorized read-only PlanetScale service-token pair',
-      github: 'no database credentials or provisioning authority required in Actions' },
+      github: 'use only existing scoped Actions secrets in place; never create, copy or rescope credentials' },
     writes: ['exact 22 canonical migrations and ledger', 'canonical roles.sql object grants and default privileges',
       'new-core aggregate verifier function and grants', 'one unconsumed bootstrap latch'],
     exclusions: ['production records', 'credential or role provisioning', 'database-level privilege escalation or revocation',
@@ -751,6 +755,13 @@ async function verifyNewCoreProviderTarget({ target, roleMap, environment = proc
 
 function candidateApprovalValue(prefix, sourceSha, manifestSha, originSha, roleMapSha) {
   return `${prefix}:${sourceSha}:${manifestSha}:${REQUIRED_DATABASE_ID}:${REQUIRED_BRANCH_ID}:${originSha}:${roleMapSha}`;
+}
+
+function schemaOnlyApprovalValue({ sourceSha, manifestSha, originSha, roleMapSha, protectedMainSha }) {
+  if (protectedMainSha !== undefined && !/^[a-f0-9]{40}$/.test(protectedMainSha)) fail('new_core_reviewed_main_pin_invalid');
+  const prefix = protectedMainSha === undefined ? 'APPROVE_NEW_CORE_SCHEMA_ONLY' : 'APPROVE_NEW_CORE_SCHEMA_ONLY_ON_REVIEWED_MAIN';
+  const marker = candidateApprovalValue(prefix, sourceSha, manifestSha, originSha, roleMapSha);
+  return protectedMainSha === undefined ? marker : `${marker}:${protectedMainSha}`;
 }
 
 function requireLiveApprovals({ sourceSha, manifestSha, originSha, roleMapSha, environment = process.env }) {
@@ -1131,7 +1142,7 @@ export function assertSchemaInstallationScope(target) {
     || scope.expectedSchemaDefinitionFingerprintSha256 !== '69769fb59964a84355d5cc24e8f6c1a23595076a3d1d5f39e45add3e58dff90e'
     || scope.expectedGrantFingerprintSha256 !== '65ae6c5e98cacafdd1de5fd58703bd5358a65b9f73781881ee35383debbb4513'
     || scope.providerResourceChangesAllowed !== false || scope.credentialChangesAllowed !== false
-    || scope.credentialDelivery !== 'OWNER_PRIVATE_SESSION_ONLY_NOT_GITHUB_OR_CHAT_ATTACHMENTS'
+    || scope.credentialDelivery !== 'EXISTING_GITHUB_ACTIONS_SECRETS_IN_PLACE'
     || target.provider.sqlOriginFingerprint !== '30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558') {
     fail('new_core_schema_installation_scope_mismatch');
   }
@@ -1405,11 +1416,12 @@ export async function installLiveCleanSchema({
     Object.fromEntries(ROLE_LABELS.map((label) => [label, roleMap[label]])),
   )).digest('hex');
   if (schemaOnly) {
-    const approval = candidateApprovalValue('APPROVE_NEW_CORE_SCHEMA_ONLY', sourceSha,
-      migrations.checksum, target.provider.sqlOriginFingerprint, roleMapSha);
+    const protectedMainSha = environment.LYTHAUS_NEW_CORE_APPROVED_PROTECTED_MAIN_SHA;
+    const approval = schemaOnlyApprovalValue({ sourceSha, manifestSha: migrations.checksum,
+      originSha: target.provider.sqlOriginFingerprint, roleMapSha, protectedMainSha });
     if (environment.LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL !== approval) fail('new_core_schema_install_approval_missing');
     const main = await readMain();
-    if (main?.protected !== true || main?.commit?.sha !== scope.protectedMainSha) fail('new_core_protected_main_changed');
+    if (main?.protected !== true || main?.commit?.sha !== (protectedMainSha ?? scope.protectedMainSha)) fail('new_core_protected_main_changed');
   }
   const providerEvidence = schemaOnly
     ? await verifyPlanetScaleTarget({ target, roleMap, environment, fetchImpl, schemaOnly: true })
@@ -1578,7 +1590,7 @@ async function main() {
       return;
     }
     if (mode === '--schema-only-plan') {
-      console.log(JSON.stringify(buildSchemaInstallationPlan(), null, 2));
+      console.log(JSON.stringify(buildSchemaInstallationPlan({ protectedMainSha: process.argv[3] }), null, 2));
       return;
     }
     if (mode === '--rehearse-local-scoped-pg17') {
