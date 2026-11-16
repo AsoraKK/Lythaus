@@ -9,14 +9,15 @@ export const INPUTS = Object.freeze(['LYTHAUS_NEW_CORE_MIGRATION_DATABASE_URL',
   'LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL', 'PLANETSCALE_API_TOKEN']);
 const ORIGIN = '30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558';
 const MANIFEST = '49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614';
-const REPO = 'AsoraKK/Lythaus';
+const REPO = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
+const OWNER_LOGIN = REPO.split('/')[0];
 const OWNER = 211295889;
 
 export function assertContext(env) {
   if (env.GITHUB_ACTIONS !== 'true' || env.GITHUB_EVENT_NAME !== 'workflow_dispatch'
     || env.GITHUB_REPOSITORY !== REPO || env.GITHUB_REPOSITORY_ID !== '1010752912'
     || env.GITHUB_REF !== 'refs/heads/main' || env.GITHUB_REF_PROTECTED !== 'true'
-    || env.GITHUB_RUN_ATTEMPT !== '1' || env.GITHUB_ACTOR !== 'AsoraKK'
+    || env.GITHUB_RUN_ATTEMPT !== '1' || env.GITHUB_ACTOR !== OWNER_LOGIN
     || env.GITHUB_ACTOR_ID !== String(OWNER) || env.GITHUB_TRIGGERING_ACTOR !== env.GITHUB_ACTOR
     || !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? '')
     || env.REQUESTED_CONTROL_SHA !== env.GITHUB_SHA || env.REQUESTED_SCHEMA_SHA !== SCHEMA_SHA

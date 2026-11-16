@@ -6,10 +6,12 @@ import { SCHEMA_SHA, INPUTS, assertContext, verifyExistingGate,
   inspectSqlInput, inspectExistingSecrets } from '../ci/lythaus-new-core-secret-preflight.mjs';
 
 const url = (role) => `postgresql://${role}.xwkb9quljkzd:synthetic-private-password@fixture.psdb.cloud/postgres?sslmode=verify-full`;
+const repository = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
+const ownerLogin = repository.split('/')[0];
 function context() {
-  return { GITHUB_ACTIONS:'true', GITHUB_EVENT_NAME:'workflow_dispatch', GITHUB_REPOSITORY:'AsoraKK/Lythaus',
+  return { GITHUB_ACTIONS:'true', GITHUB_EVENT_NAME:'workflow_dispatch', GITHUB_REPOSITORY:repository,
     GITHUB_REPOSITORY_ID:'1010752912', GITHUB_REF:'refs/heads/main', GITHUB_REF_PROTECTED:'true',
-    GITHUB_RUN_ATTEMPT:'1', GITHUB_ACTOR:'AsoraKK', GITHUB_ACTOR_ID:'211295889', GITHUB_TRIGGERING_ACTOR:'AsoraKK',
+    GITHUB_RUN_ATTEMPT:'1', GITHUB_ACTOR:ownerLogin, GITHUB_ACTOR_ID:'211295889', GITHUB_TRIGGERING_ACTOR:ownerLogin,
     GITHUB_SHA:'a'.repeat(40), REQUESTED_CONTROL_SHA:'a'.repeat(40), REQUESTED_SCHEMA_SHA:SCHEMA_SHA,
     REQUESTED_TARGET:'lythaus/lythaus-new-core/main', CONFIRM_READ_ONLY:'true', GITHUB_RUN_ID:'12345', GH_TOKEN:'synthetic-private-token' };
 }

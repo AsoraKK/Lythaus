@@ -14,8 +14,8 @@ Read-only GitHub metadata returned:
 
 | Item | Observation |
 | --- | --- |
-| Repository | `AsoraKK/Lythaus`, ID `1010752912`, public, default `main` |
-| Authenticated GitHub identity | `AsoraKK`, owner; Codex dispatch under this connection is the same GitHub identity |
+| Repository | [Lythaus](https://github.com/AsoraKK/Lythaus/), ID `1010752912`, public, default `main` |
+| Authenticated GitHub identity | Repository owner; Codex dispatch under this connection is the same GitHub identity |
 | Eligible direct collaborators | Only the owner was returned; no independent dispatcher is verified |
 | Existing reviewed environment | `production`; sole required reviewer is the owner |
 | Prevent self-review | **false** on the existing environment; the owner can dispatch and approve normally |
