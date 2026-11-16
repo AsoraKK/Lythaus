@@ -4,6 +4,57 @@ Status: **PROPOSAL ONLY. No provider connection, credential creation, setting
 change or SQL execution is authorized by this document.** An existing restricted
 provisioner is **UNVERIFIED**, not a prerequisite the owner must locate.
 
+## Current selected interface: PlanetScale SQL console
+
+The owner explicitly selected the PlanetScale SQL web console. Use
+[new-core-console-logins.sql](../../database/planetscale/provisioning/new-core-console-logins.sql)
+for the already-approved three-login creation scope. The terminal/CLI-managed
+route below is retained as an alternative, not a prerequisite.
+
+The SQL block creates `lythaus_migrations`, `lythaus_admin`, and
+`lythaus_verifier` directly as PostgreSQL LOGIN roles. PlanetScale supports
+SQL-created roles and routes their connections using `.xwkb9quljkzd` usernames,
+but does not display them in the managed Roles list. Do not run this block if
+the three purpose-equivalent roles were already created using the UI/API/CLI.
+The guard refuses existing canonical SQL names without resetting credentials.
+
+Temporarily enable console access for this new database only, connect to
+`main`, Primary, `postgres`, and run the whole SQL block. It verifies the
+durable creator, PostgreSQL 17, absent ledger, empty application catalog and
+the exact provider-extension baseline before creating roles. It grants no
+database or application privileges, installs no extension/schema and creates
+no runtime/jobs/privacy credential. Automatic creator ADMIN-only memberships
+are checked; none of the logins inherits or can SET another role.
+
+PostgreSQL generates three distinct 64-character passwords using core random
+UUID generation, sets SCRAM encryption and returns the new credentials only
+in the owner's private console result. No password literal appears in the
+prepared script. Save all three rows directly to the owner's password manager;
+do not paste the result into chat or export it into a receipt. The temporary
+delivery table is dropped at COMMIT. Require COMMIT, not ROLLBACK; on any error
+run ROLLBACK and stop. Never rerun after success. Disconnect and restore the
+console toggle to off afterward.
+
+Only a sanitized success report is needed: three roles committed and passwords
+saved. Connection usernames are `lythaus_migrations.xwkb9quljkzd`,
+`lythaus_admin.xwkb9quljkzd`, and `lythaus_verifier.xwkb9quljkzd`. No connection
+string or password is needed by the assistant. Existing broad roles and all
+old-database resources remain untouched by this command.
+
+This selects SQL-managed login lifecycle instead of the earlier API-managed
+identifier contract. Before the separately approved initial-grant/schema
+steps, adapt the role-map, provider inspector and creator-membership contract
+to explicit SQL-console mode and validate them locally. Existing API-managed
+checks intentionally remain blocked for these SQL identifiers; no generic
+fallback or pretending the roles exist in API inventory is allowed. The
+initial-grant and schema steps are not authorized by this three-login command.
+
+The generated SQL was exercised on disposable PostgreSQL 17 with a synthetic
+HypoPG catalog fixture: three unique SCRAM passwords, successful password
+authentication for all three logins, wrong-password refusal, unexpected-object
+refusal, repeat refusal and removal of the temporary password table. No live
+PlanetScale execution has been performed by the assistant.
+
 Exact destination: organization `lythaus`, database `lythaus-new-core`
 (`87dbkhprjh30`), branch `main` (`xwkb9quljkzd`), logical database `postgres`,
 AWS Frankfurt. This is the existing single-node rehearsal cluster. Original
