@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "lythaus-new-core-clean-install-target-v1",
+  "provider": {
+    "organization": "lythaus",
+    "database": "lythaus-new-core",
+    "databaseId": "87dbkhprjh30",
+    "branch": "main",
+    "branchId": "xwkb9quljkzd",
+    "region": "eu-central",
+    "replicas": 0,
+    "regionMetadata": {
+      "provider": "AWS",
+      "displayName": "AWS eu-central-1",
+      "location": "Frankfurt"
+    },
+    "cluster": "PS-5 aarch64",
+    "logicalDatabase": "postgres",
+    "requiredPostgresMajor": 17,
+    "sqlOriginFingerprint": null,
+    "sqlOriginVerification": "BLOCKED_UNVERIFIED"
+  },
+  "hyperdrive": {
+    "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "id": "7e39fc4a286147988ed12df7a6322616",
+    "requiredCachingDisabled": true,
+    "originVerification": "BLOCKED_CLOUDFLARE_READ_401"
+  },
+  "costApproval": {
+    "estimateReference": null,
+    "estimateSha256": null,
+    "oneTimeCeilingUsd": null,
+    "monthlyCeilingUsd": null,
+    "approvalStatus": "BLOCKED_UNPRICED"
+  },
+  "adminTest": {
+    "worker": "lythaus-admin-api-new-core-test",
+    "hostname": "admin-new-core-test.lythaus.co",
+    "apiRoute": "admin-new-core-test.lythaus.co/api/admin/*",
+    "assetSource": "apps/control-panel",
+    "pagePath": "/flags",
+    "accessApplicationId": null,
+    "accessPolicyId": null,
+    "expectedAccessIssuer": null,
+    "audienceSha256": null,
+    "ownerOnlyPolicyVerified": false,
+    "allowlistedHumanCount": null,
+    "accessPolicy": "Create an isolated test application with the same verified owner-only policy semantics and team issuer; bind only the exact test hostname and accept only this application's audience.",
+    "accessVerification": "BLOCKED_SEPARATE_ACCESS_APPROVAL_AND_LIVE_STATE_REQUIRED"
+  },
+  "credentialRoles": [
+    { "label": "lythaus_migrations", "purpose": "canonical DDL and grant installation; credential created separately" },
+    { "label": "lythaus_runtime", "purpose": "application runtime; no schema DDL or role administration" },
+    { "label": "lythaus_admin", "purpose": "Admin Worker; no direct user or membership insert; one-shot bootstrap function only" },
+    { "label": "lythaus_jobs", "purpose": "background jobs; no schema DDL or role administration" },
+    { "label": "lythaus_privacy", "purpose": "privacy operations; no schema DDL or role administration" },
+    { "label": "lythaus_verifier", "purpose": "read-only aggregate counts through column-scoped grants; no subject digest access" }
+  ],
+  "migrationSetSha256": "49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614",
+  "liveExecution": "BLOCKED_SEPARATE_APPROVAL_AND_TARGET_ATTESTATION_REQUIRED"
+}
