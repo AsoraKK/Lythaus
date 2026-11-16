@@ -116,6 +116,41 @@ asks for the owner's password, OTP, provider session, or database password in ch
    if it is not, stop instead of inventing a membership grant or running as a
    temporary grantor. Validate all postconditions before committing.
 
+### One-command managed-login batch in the owner's terminal
+
+The owner has approved the three managed LOGIN creations and confirmed that
+console access is off. Instead of three dashboard forms, the supported CLI
+batch is [create-new-core-managed-logins.sh](../../scripts/planetscale/create-new-core-managed-logins.sh).
+Download/save that script on the owner's machine. It requires Bash, Python 3,
+and the PlanetScale CLI authenticated as the owner (`pscale auth login` if not
+already signed in). Run it in a private interactive terminal:
+
+```sh
+bash ./create-new-core-managed-logins.sh
+```
+
+This command is for the computer terminal, not the SQL web console. It checks
+the exact database/branch IDs and cluster profile, requires the one preserved
+original API role and no existing scoped labels, then creates only the three
+approved managed roles. Each password appears directly in the owner's terminal;
+save it to the private password manager and type SAVED before the next role is
+created. The script does not store passwords in files or print them to its
+redirectable stdout. Do not run it in CI, a recording, or a logged terminal.
+It performs final read-only inventory checks after the three creations.
+
+A failure or partial state causes a stop; it never retries a creation, resets
+credentials or deletes a role. Preserve saved credentials and reconcile before
+continuing. The batch does not run SQL, issue grants, create schemas or change
+console settings. It needs no database administrator password or GitHub token.
+
+SQL-created roles are a different supported provider path: they are absent
+from PlanetScale's managed Roles list and have separate credential lifecycle
+handling. They are not a silent substitute for the approved three managed
+logins. Once the generated identifiers are resolved, the initial SQL role/grant
+step can also be one guarded transaction, under its separate reviewed scope.
+No request for “more” automatically includes schema installation, production
+data, deployment or cutover.
+
 The exact SQL shape for stage 5 is below. It is a review template, **not a
 ready-to-run script**: generated identifiers and the live preflight evidence
 must be resolved and reviewed first.
