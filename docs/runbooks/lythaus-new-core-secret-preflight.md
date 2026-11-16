@@ -1,10 +1,12 @@
 # Existing Actions secrets: read-only preflight proposal
 
-Status: **LOCAL PROPOSAL ONLY. NOT PUBLISHED OR DISPATCHED.**
-The approved schema checkout remains unchanged at
-`050b1d1a3e973b367c28eae9617840e5d4816573`. This separate local worktree adds
-only a manual read-only control workflow, inspector and its tests. Schema
-approval does not authorize publishing or running this proposal.
+Status: **READ-ONLY CONTROL WORKFLOW. SCHEMA INSTALLATION EXCLUDED.**
+The approved schema candidate is published unchanged at
+`050b1d1a3e973b367c28eae9617840e5d4816573` on
+`codex/new-core-schema-050b1d1a`. The separate preflight PR contains only the
+manual read-only control workflow, inspector, tests, CI test wiring and this
+runbook. Publication and merge do not dispatch the preflight or authorize
+schema installation.
 
 ## Verified GitHub controls
 
@@ -22,7 +24,7 @@ Read-only GitHub metadata returned:
 | Dedicated new-core environment | Absent from the complete four-environment inventory |
 | Dedicated provisioning branch | HTTP 404 |
 | Role-provisioning workflow registration | HTTP 404; do not repurpose or run it |
-| Approved schema commit through GitHub commit API | HTTP 422; currently not resolvable remotely |
+| Approved schema source | Published at the exact approved SHA on `codex/new-core-schema-050b1d1a`; this branch push matches no push workflows |
 | Repository and four environment secret-name inventories | HTTP 403 with the current connection |
 
 The owner reports all three inputs already exist in Actions Secrets. Treat
@@ -99,7 +101,8 @@ and public source pins are retained in job logs/summary.
   use `production`. The proposed workflow instead runs from `main`.
 - **Workflow registration and source availability:** the new dispatch
   workflow must be registered on the default branch and the exact schema
-  commit must be fetchable. Neither publication nor registration is done.
+  commit must be fetchable. The schema branch is published; workflow
+  registration happens only after normal review and merge of this PR.
 - **Secret scope:** API metadata is denied, so repository/production scope
   cannot be independently confirmed here. If an input is only in another
   environment, this proposal reports inaccessible. Do not move/copy it. A
@@ -115,10 +118,10 @@ and public source pins are retained in job logs/summary.
   later schema job, review and approve that changed control/main pin while
   retaining the exact canonical migration candidate and checksums.
 
-The least-effort next decision is whether to publish/register **only this
-read-only wrapper plus the exact schema source**, preserving all current
-secret scopes and review settings. A later dispatch is a separate decision.
-Do not publish, dispatch, edit settings, apply SQL or deploy under this task.
+Normal PR checks and merge gates apply to this wrapper. A later dispatch is
+a separate action using the existing review environment. Never edit secret
+scopes, copy credentials, apply schema, change provider settings or deploy
+as part of this read-only workflow.
 
 Sources: [GitHub manual dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow),
 [deployment review and bypass](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/review-deployments),
