@@ -105,7 +105,7 @@ export async function inspectNewCoreHyperdrive({
   const databaseMatches = rawDatabase === LOGICAL_DATABASE;
   const username = getOriginUsername(origin);
   const rawScheme = typeof origin?.scheme === 'string' ? origin.scheme.trim().toLowerCase() : '';
-  const schemeValid = ['postgres', 'postgresql'].includes(rawScheme);
+  const schemeValid = rawScheme === 'postgres';
   const scheme = schemeValid ? 'postgres' : null;
   const rawTlsMode = typeof config.mtls?.sslmode === 'string' ? config.mtls.sslmode.trim().toLowerCase() : '';
   const tlsMode = TLS_MODES.has(rawTlsMode) ? rawTlsMode : 'unknown';
