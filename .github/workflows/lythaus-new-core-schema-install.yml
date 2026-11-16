@@ -1,0 +1,133 @@
+name: New-core schema-only installation (owner approved)
+
+on:
+  workflow_dispatch:
+    inputs:
+      control_sha:
+        description: Exact reviewed protected-main commit after install-workflow registration
+        required: true
+        type: string
+      execution_sha:
+        description: Reviewed execution adapter; canonical migrations and grants remain from 050b1d1a
+        required: true
+        default: 7242a4352c68503ea016dac1a4ec0fcb57535774
+        type: string
+      schema_sha:
+        description: Immutable reviewed canonical schema candidate
+        required: true
+        default: 050b1d1a3e973b367c28eae9617840e5d4816573
+        type: string
+      target:
+        description: Only allowed database target
+        required: true
+        type: choice
+        options:
+          - lythaus/lythaus-new-core/main
+      schema_approval_marker:
+        description: Exact public approval marker binding execution source, control SHA, manifest and target
+        required: true
+        type: string
+      preflight_run_id:
+        description: Passed read-only receipt, reused only while its relevant code and schema stay unchanged
+        required: true
+        default: '43951305901'
+        type: string
+      confirm_schema_only:
+        description: Apply only the separately approved clean schema and canonical object grants
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  REQUESTED_CONTROL_SHA: ${{ inputs.control_sha }}
+  REQUESTED_SCHEMA_SHA: ${{ inputs.schema_sha }}
+  REQUESTED_EXECUTION_SHA: ${{ inputs.execution_sha }}
+  REQUESTED_TARGET: ${{ inputs.target }}
+  CONFIRM_SCHEMA_ONLY: ${{ inputs.confirm_schema_only }}
+  PREFLIGHT_RUN_ID: ${{ inputs.preflight_run_id }}
+  NODE_OPTIONS: ''
+  NODE_DEBUG: ''
+
+concurrency:
+  group: lythaus-new-core-schema-only
+  cancel-in-progress: false
+
+jobs:
+  verify-control:
+    name: Verify exact control, source and existing receipt without provider secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      verified: ${{ steps.gate.outputs.verified }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Verify the exact source, main-only review gate and passed receipt
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/lythaus-new-core-schema-install-control.mjs --before-review
+
+  install-schema-only:
+    name: Install only the separately approved new-core schema
+    needs: verify-control
+    if: needs.verify-control.outputs.verified == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 7242a4352c68503ea016dac1a4ec0fcb57535774
+          path: schema-install
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies before provider credential injection
+        working-directory: schema-install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Recheck source and receipt and require recorded owner approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/lythaus-new-core-schema-install-control.mjs --after-review
+      - name: Apply only the approved schema through the scoped migration login
+        working-directory: schema-install
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LYTHAUS_NEW_CORE_MIGRATION_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_MIGRATION_DATABASE_URL }}
+          LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL: ${{ inputs.schema_approval_marker }}
+        run: |
+          node --input-type=module <<'JS'
+          import {execFileSync} from 'node:child_process';
+          import {buildSchemaInstallationPlan,installLiveCleanSchema} from './scripts/ci/lythaus-new-core-clean-install.mjs';
+          try {
+            const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+            if(source!==process.env.REQUESTED_EXECUTION_SHA)throw new Error('schema_source_mismatch');
+            const plan=buildSchemaInstallationPlan({protectedMainSha:process.env.REQUESTED_CONTROL_SHA});
+            process.env.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA=source;
+            process.env.LYTHAUS_NEW_CORE_APPROVED_PROTECTED_MAIN_SHA=plan.protectedMainSha;
+            process.env.LYTHAUS_NEW_CORE_EXPECTED_ORIGIN_FINGERPRINT=plan.destination.originFingerprint;
+            process.env.LYTHAUS_NEW_CORE_ROLE_IDENTIFIERS=JSON.stringify(plan.roleMap);
+            console.log(JSON.stringify(await installLiveCleanSchema({schemaOnly:true}),null,2));
+          } catch(error) {
+            console.error(JSON.stringify({status:'SCHEMA_INSTALL_STOPPED',code:/^[a-z0-9_]+$/.test(error?.message??'')?error.message:'schema_install_failed'}));
+            process.exitCode=1;
+          }
+          JS
