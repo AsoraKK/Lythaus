@@ -20,11 +20,28 @@ import {
   NEW_CORE_ENVIRONMENT,
   NEW_CORE_PROVISIONING_BRANCH,
   verifyNewCoreEnvironmentGate,
+  verifyNewCoreEnvironment,
+  assertNewCoreDispatchContext,
 } from '../ci/lythaus-new-core-environment-plan.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 
 const SOURCE_SHA = 'a'.repeat(40);
 const REVIEWER_ID = 9876543210;
+const DISPATCHER_ID = 1234567890;
+function dispatchEnvironment() {
+  return {
+    GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_RUN_ATTEMPT: '1',
+    GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REPOSITORY_ID: '1010752912',
+    GITHUB_REF: `refs/heads/${NEW_CORE_PROVISIONING_BRANCH}`, GITHUB_SHA: SOURCE_SHA,
+    GITHUB_ACTOR: 'independent-operator', GITHUB_ACTOR_ID: String(DISPATCHER_ID),
+    GITHUB_TRIGGERING_ACTOR: 'independent-operator',
+    LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA: SOURCE_SHA,
+    LYTHAUS_NEW_CORE_REQUESTED_SOURCE_SHA: SOURCE_SHA,
+    LYTHAUS_NEW_CORE_REQUESTED_TARGET: 'lythaus/lythaus-new-core/main',
+    LYTHAUS_NEW_CORE_CONFIRM_ROLES_ONLY: 'true',
+    LYTHAUS_NEW_CORE_DISPATCHER_ID: String(DISPATCHER_ID),
+  };
+}
 const WRITER_TOKEN = 'environment-writer-token-test-only-0123456789';
 const PS_TOKEN = 'test-service-token-id:test-service-token-value';
 const PROVISIONER_URL = 'postgresql://provisioner.xwkb9quljkzd:unique-provisioner-password@new-core.psdb.cloud:5432/postgres?sslmode=verify-full&sslrootcert=system';
@@ -118,6 +135,10 @@ function makeFixture({
   const githubFetch = async (url, options) => {
     const pathname = new URL(url).pathname;
     ghRequests.push({ pathname, method: options.method });
+    if (pathname === '/users/independent-operator') return jsonResponse({
+      id: DISPATCHER_ID, login: 'independent-operator', type: 'User',
+    });
+    if (pathname.endsWith('/collaborators/independent-operator/permission')) return jsonResponse({ permission: 'write' });
     if (pathname === '/repos/AsoraKK/Lythaus') {
       return jsonResponse({
         id: 1010752912,
@@ -131,7 +152,7 @@ function makeFixture({
         wait_timer: 0,
         deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
         protection_rules: [
-          { type: 'required_reviewers', prevent_self_review: false,
+          { type: 'required_reviewers', prevent_self_review: true,
             reviewers: [{ type: 'User', reviewer: { id: REVIEWER_ID } }] },
           { type: 'branch_policy' },
         ],
@@ -141,7 +162,10 @@ function makeFixture({
       return jsonResponse({ total_count: 1, branch_policies: [{ name: NEW_CORE_PROVISIONING_BRANCH, type: 'branch' }] });
     }
     if (pathname.endsWith('/variables')) {
-      return jsonResponse({ total_count: 1, variables: [{ name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: SOURCE_SHA }] });
+      return jsonResponse({ total_count: 2, variables: [
+        { name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: SOURCE_SHA },
+        { name: 'LYTHAUS_NEW_CORE_DISPATCHER_ID', value: String(DISPATCHER_ID) },
+      ] });
     }
     if (pathname.endsWith('/secrets')) {
       const secrets = [...storedSecrets].map((name) => ({ name }));
@@ -252,13 +276,7 @@ function makeFixture({
   };
 
   const environment = {
-    GITHUB_ACTIONS: 'true',
-    GITHUB_EVENT_NAME: 'push',
-    GITHUB_REPOSITORY: 'AsoraKK/Lythaus',
-    GITHUB_REPOSITORY_ID: '1010752912',
-    GITHUB_REF: `refs/heads/${NEW_CORE_PROVISIONING_BRANCH}`,
-    GITHUB_SHA: SOURCE_SHA,
-    LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA: SOURCE_SHA,
+    ...dispatchEnvironment(),
     LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN: WRITER_TOKEN,
     LYTHAUS_NEW_CORE_PROVISIONER_DATABASE_URL: PROVISIONER_URL,
     PLANETSCALE_API_TOKEN: PS_TOKEN,
@@ -290,15 +308,19 @@ test('plan mode stays local and describes exact target without applying changes'
 });
 
 test('environment plan is owner-only, exact-branch, source-pinned, and contains no reviewer identifier in its receipt', () => {
-  const plan = buildNewCoreEnvironmentPlan({ reviewerId: String(REVIEWER_ID), sourceSha: SOURCE_SHA });
+  const plan = buildNewCoreEnvironmentPlan({ reviewerId: String(REVIEWER_ID),
+    dispatcherId: String(DISPATCHER_ID), sourceSha: SOURCE_SHA });
   assert.equal(plan.environment.name, NEW_CORE_ENVIRONMENT);
   assert.deepEqual(plan.environment.reviewers, [{ type: 'User', id: REVIEWER_ID }]);
-  assert.equal(plan.environment.prevent_self_review, false);
+  assert.equal(plan.environment.prevent_self_review, true);
   assert.deepEqual(plan.branchPolicy, { type: 'branch', name: NEW_CORE_PROVISIONING_BRANCH });
   assert.deepEqual(plan.repositoryVariables[0], { name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: SOURCE_SHA });
-  const receipt = buildEnvironmentPlanReceipt({ reviewerId: String(REVIEWER_ID), sourceSha: SOURCE_SHA });
+  const receipt = buildEnvironmentPlanReceipt({ reviewerId: String(REVIEWER_ID),
+    dispatcherId: String(DISPATCHER_ID), sourceSha: SOURCE_SHA });
   assert.equal(receipt.status, 'PLAN_ONLY_NOT_APPLIED');
   assert.doesNotMatch(JSON.stringify(receipt), new RegExp(String(REVIEWER_ID)));
+  assert.throws(() => buildNewCoreEnvironmentPlan({ reviewerId: String(REVIEWER_ID),
+    dispatcherId: String(REVIEWER_ID), sourceSha: SOURCE_SHA }), /independent_dispatcher_required/);
 });
 
 test('secretless gate checks repository owner, exact reviewer, branch policy, and repo source pin only', async () => {
@@ -306,6 +328,10 @@ test('secretless gate checks repository owner, exact reviewer, branch policy, an
   const fetchImpl = async (url) => {
     calls.push(new URL(url).pathname);
     const path = new URL(url).pathname;
+    if (path === '/users/independent-operator') return jsonResponse({
+      id: DISPATCHER_ID, login: 'independent-operator', type: 'User',
+    });
+    if (path.endsWith('/collaborators/independent-operator/permission')) return jsonResponse({ permission: 'write' });
     if (path === '/repos/AsoraKK/Lythaus') return jsonResponse({
       id: 1010752912, full_name: 'AsoraKK/Lythaus', owner: { login: 'AsoraKK', type: 'User', id: REVIEWER_ID },
     });
@@ -314,7 +340,7 @@ test('secretless gate checks repository owner, exact reviewer, branch policy, an
       wait_timer: 0,
       deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
       protection_rules: [
-        { type: 'required_reviewers', prevent_self_review: false,
+        { type: 'required_reviewers', prevent_self_review: true,
           reviewers: [{ type: 'User', reviewer: { id: REVIEWER_ID } }] },
         { type: 'branch_policy' },
       ],
@@ -328,14 +354,16 @@ test('secretless gate checks repository owner, exact reviewer, branch policy, an
     token: 'read-only-github-token-0123456789',
     sourceSha: SOURCE_SHA,
     approvedSourceSha: SOURCE_SHA,
+    environment: dispatchEnvironment(),
     fetchImpl,
   });
   assert.equal(result.approvedSourceShaMatch, true);
   assert.equal(result.soleReviewerIsRepositoryOwner, true);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 5);
   await assert.rejects(verifyNewCoreEnvironmentGate({
     token: 'read-only-github-token-0123456789', sourceSha: SOURCE_SHA,
     approvedSourceSha: 'b'.repeat(40), fetchImpl,
+    environment: dispatchEnvironment(),
   }), /new_core_github_repository_source_pin_mismatch/);
 });
 
@@ -351,6 +379,67 @@ test('wrong source context blocks before provider, SQL, or secret calls', async 
   assert.equal(fixture.rolePosts.length, 0);
   assert.equal(fixture.sqlWrites.length, 0);
   assert.equal(fixture.deliveredValues.size, 0);
+});
+
+test('pushes, reruns, wrong inputs and an owner acting as dispatcher are refused locally', () => {
+  assert.doesNotThrow(() => assertNewCoreDispatchContext(dispatchEnvironment(), SOURCE_SHA));
+  for (const change of [
+    { GITHUB_EVENT_NAME: 'push' }, { GITHUB_EVENT_NAME: 'pull_request' },
+    { GITHUB_RUN_ATTEMPT: '2' }, { GITHUB_TRIGGERING_ACTOR: 'AsoraKK' },
+    { LYTHAUS_NEW_CORE_REQUESTED_SOURCE_SHA: 'b'.repeat(40) },
+    { LYTHAUS_NEW_CORE_REQUESTED_TARGET: 'lythaus/lythaus-core/main' },
+    { LYTHAUS_NEW_CORE_CONFIRM_ROLES_ONLY: 'false' },
+    { LYTHAUS_NEW_CORE_DISPATCHER_ID: '' },
+    { GITHUB_ACTOR_ID: String(REVIEWER_ID) }, { GITHUB_ACTOR: 'AsoraKK' },
+  ]) {
+    assert.throws(() => assertNewCoreDispatchContext({ ...dispatchEnvironment(), ...change }, SOURCE_SHA),
+      /context_not_approved|independent_dispatcher_required/);
+  }
+});
+
+test('weakened review protection and an ineligible dispatcher stop before provider calls', async () => {
+  for (const mutation of ['self-review', 'no-write-access', 'other-dispatcher-pin']) {
+    const fixture = makeFixture();
+    const fetchImpl = async (url, options) => {
+      const response = await fixture.fetchImpl(url, options);
+      const payload = await response.json();
+      if (mutation === 'self-review' && new URL(url).pathname.endsWith(`/${NEW_CORE_ENVIRONMENT}`)) {
+        payload.protection_rules.find((rule) => rule.type === 'required_reviewers').prevent_self_review = false;
+      }
+      if (mutation === 'no-write-access' && new URL(url).pathname.endsWith('/permission')) payload.permission = 'read';
+      if (mutation === 'other-dispatcher-pin' && new URL(url).pathname.endsWith('/variables')) {
+        payload.variables.find((row) => row.name === 'LYTHAUS_NEW_CORE_DISPATCHER_ID').value = String(REVIEWER_ID);
+      }
+      return jsonResponse(payload);
+    };
+    await assert.rejects(verifyNewCoreEnvironment({ token: WRITER_TOKEN, sourceSha: SOURCE_SHA,
+      environment: dispatchEnvironment(), fetchImpl }),
+    /protection_mismatch|write_access_unverified|dispatcher_pin_mismatch/);
+    assert.equal(fixture.psRequests.length, 0);
+  }
+});
+
+test('the default administrator profile cannot be used by the Actions helper', async () => {
+  const fixture = makeFixture();
+  const originalCreateClient = fixture.options.createClient;
+  fixture.options.createClient = (...args) => {
+    const client = originalCreateClient(...args);
+    const query = client.query.bind(client);
+    client.query = async (sql, values) => {
+      const result = await query(sql, values);
+      if (sql.includes("current_setting('server_version_num')")) {
+        Object.assign(result.rows[0], { can_create_database: true, can_replicate: true, bypasses_rls: true });
+      }
+      return result;
+    };
+    return client;
+  };
+  const result = await provisionNewCoreRoles(fixture.options);
+  assert.equal(result.status, 'ROLE_PROVISIONING_BLOCKED_BEFORE_PROVIDER_WRITE');
+  assert.equal(result.code, 'new_core_provisioner_capability_or_empty_target_mismatch');
+  assert.equal(fixture.psRequests.length, 0);
+  assert.equal(fixture.deliveredValues.size, 0);
+  assert.equal(fixture.sqlWrites.length, 0);
 });
 
 test('unexpected existing PlanetScale role state blocks before canary and credential creation', async () => {
@@ -509,12 +598,14 @@ test('target allowlist rejects an old branch and SQL executor validates role map
   assert.equal(began, false);
 });
 
-test('workflow gates environment job behind secretless existence/source checks and has no dispatch or artifact path', () => {
+test('publishing cannot start provisioning: dispatch is the sole event and independent review is required', () => {
   const workflowPath = path.resolve('.github/workflows/lythaus-new-core-role-provisioning.yml');
   const source = fs.readFileSync(workflowPath, 'utf8');
   const workflow = YAML.parse(source);
-  assert.deepEqual(workflow.on.push.branches, ['codex/new-core-provisioning']);
-  assert.equal(Object.hasOwn(workflow.on, 'workflow_dispatch'), false);
+  assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
+  assert.equal(workflow.on.workflow_dispatch.inputs.candidate_sha.required, true);
+  assert.equal(workflow.on.workflow_dispatch.inputs.confirm_roles_only.default, false);
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs.target.options, ['lythaus/lythaus-new-core/main']);
   const preflight = workflow.jobs['verify-protected-environment'];
   const protectedJob = workflow.jobs['provision-new-target-roles'];
   assert.equal(protectedJob.needs, 'verify-protected-environment');
@@ -525,7 +616,9 @@ test('workflow gates environment job behind secretless existence/source checks a
   assert.equal(workflow.permissions.contents, 'read');
   assert.match(source, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
   assert.match(source, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
-  assert.doesNotMatch(source, /upload-artifact|environment:\s*production|workflow_dispatch/);
+  assert.doesNotMatch(source, /upload-artifact|environment:\s*production|push:|pull_request:|schedule:|repository_dispatch:|workflow_call:/);
+  assert.match(source, /GITHUB_TRIGGERING_ACTOR/);
+  assert.match(source, /LYTHAUS_NEW_CORE_DISPATCHER_ID/);
   assert.equal(protectedJob.steps.some((step) => String(step.run ?? '').includes('--provision')), true);
   assert.equal(protectedJob.steps.some((step) => step.uses?.includes('actions/upload-artifact')), false);
 });

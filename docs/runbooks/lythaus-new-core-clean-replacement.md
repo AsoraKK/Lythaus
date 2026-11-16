@@ -87,6 +87,12 @@ inventory, origin fingerprint, cost ceiling, four scoped approvals, and
 branch-qualified migration/verifier URLs are present. It has no generic
 `DATABASE_URL` fallback, no production workflow path, and no deployment action.
 
+The [owner-controlled initial role setup](lythaus-new-core-owner-setup.md) is
+the preferred one-time bootstrap proposal; an existing restricted provisioner
+is unverified. The optional role-provisioning workflow is now dispatch-only,
+requires a distinct eligible dispatcher and owner approval with self-review
+prevention, and cannot start on publication. No second dispatcher is verified.
+
 The live runner re-reads PlanetScale database, branch, and role metadata and
 the exact Hyperdrive configuration before creating SQL clients. It verifies
 the branch-qualified URLs, origin fingerprint, database name, TLS mode, and

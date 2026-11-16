@@ -33,24 +33,57 @@ function sourceCommit(value) {
   return value;
 }
 
-export function buildNewCoreEnvironmentPlan({ reviewerId, sourceSha } = {}) {
+export function assertNewCoreDispatchContext(environment, sourceSha) {
+  if (environment.GITHUB_ACTIONS !== 'true'
+    || environment.GITHUB_EVENT_NAME !== 'workflow_dispatch'
+    || environment.GITHUB_RUN_ATTEMPT !== '1'
+    || environment.GITHUB_REPOSITORY !== NEW_CORE_REPOSITORY
+    || environment.GITHUB_REPOSITORY_ID !== NEW_CORE_REPOSITORY_ID
+    || environment.GITHUB_REF !== `refs/heads/${NEW_CORE_PROVISIONING_BRANCH}`
+    || !/^[a-f0-9]{40}$/.test(sourceSha ?? '')
+    || environment.GITHUB_SHA !== sourceSha
+    || environment.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA !== sourceSha
+    || environment.LYTHAUS_NEW_CORE_REQUESTED_SOURCE_SHA !== sourceSha
+    || environment.LYTHAUS_NEW_CORE_REQUESTED_TARGET !== 'lythaus/lythaus-new-core/main'
+    || environment.LYTHAUS_NEW_CORE_CONFIRM_ROLES_ONLY !== 'true') {
+    fail('new_core_candidate_context_not_approved');
+  }
+  if (!/^[1-9][0-9]{0,19}$/.test(environment.LYTHAUS_NEW_CORE_DISPATCHER_ID ?? '')
+    || environment.GITHUB_ACTOR_ID !== environment.LYTHAUS_NEW_CORE_DISPATCHER_ID
+    || !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$/.test(environment.GITHUB_ACTOR ?? '')
+    || environment.GITHUB_ACTOR.toLowerCase() === 'asorakk'
+    || environment.GITHUB_TRIGGERING_ACTOR !== environment.GITHUB_ACTOR) {
+    fail('new_core_independent_dispatcher_required');
+  }
+}
+
+export function buildNewCoreEnvironmentPlan({ reviewerId, dispatcherId, sourceSha } = {}) {
   const approvedReviewerId = reviewerIdentifier(reviewerId);
+  const approvedDispatcherId = reviewerIdentifier(dispatcherId);
+  if (approvedDispatcherId === approvedReviewerId) fail('new_core_independent_dispatcher_required');
   const approvedSourceSha = sourceCommit(sourceSha);
   return {
     environment: {
       name: NEW_CORE_ENVIRONMENT,
       wait_timer: 0,
-      prevent_self_review: false,
+      prevent_self_review: true,
       reviewers: [{ type: 'User', id: approvedReviewerId }],
       deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
     },
     branchPolicy: { type: 'branch', name: NEW_CORE_PROVISIONING_BRANCH },
-    repositoryVariables: [{ name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: approvedSourceSha }],
-    variables: [{ name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: approvedSourceSha }],
+    repositoryVariables: [
+      { name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: approvedSourceSha },
+      { name: 'LYTHAUS_NEW_CORE_DISPATCHER_ID', value: String(approvedDispatcherId) },
+    ],
+    variables: [
+      { name: 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA', value: approvedSourceSha },
+      { name: 'LYTHAUS_NEW_CORE_DISPATCHER_ID', value: String(approvedDispatcherId) },
+    ],
     bootstrapSecretNames: [...BOOTSTRAP_SECRET_NAMES],
     outputSecretNames: [...NEW_CORE_OUTPUT_SECRET_NAMES],
     existingEnvironmentsModified: false,
-    actions: ['create_exact_new_environment', 'add_exact_branch_policy', 'pin_approved_source_sha'],
+    actions: ['create_exact_new_environment', 'add_exact_branch_policy',
+      'pin_approved_source_sha', 'pin_independent_dispatcher'],
   };
 }
 
@@ -66,7 +99,7 @@ function exactEnvironmentProtection(environment, expectedReviewerId) {
     || rules.some((rule) => !['required_reviewers', 'branch_policy', 'wait_timer'].includes(rule?.type))) return false;
   const rule = reviewerRules[0];
   const reviewers = rule?.reviewers;
-  if (rule?.type !== 'required_reviewers' || rule?.prevent_self_review !== false
+  if (rule?.type !== 'required_reviewers' || rule?.prevent_self_review !== true
     || !Array.isArray(reviewers) || reviewers.length !== 1) return false;
   const reviewer = reviewers[0];
   const reviewerId = reviewer?.reviewer?.id ?? reviewer?.id;
@@ -131,16 +164,26 @@ export async function newCoreOwnerReviewerId({ token, fetchImpl = fetch } = {}) 
   return repositoryOwnerId(token, fetchImpl);
 }
 
-async function verifyGateMetadata({ token, sourceSha, fetchImpl = fetch } = {}) {
+async function verifyGateMetadata({ token, sourceSha, environment = process.env, fetchImpl = fetch } = {}) {
+  assertNewCoreDispatchContext(environment, sourceSha);
   sourceCommit(sourceSha);
   if (typeof token !== 'string' || token.length < 20 || /[\s\x00-\x1f\x7f]/.test(token)) {
     fail('new_core_environment_read_token_unavailable');
   }
   const expectedReviewerId = await repositoryOwnerId(token, fetchImpl);
+  if (environment.GITHUB_ACTOR_ID === String(expectedReviewerId)) fail('new_core_independent_dispatcher_required');
+  const actor = await ghGet(`/users/${environment.GITHUB_ACTOR}`, token, fetchImpl);
+  const permission = await ghGet(`/repos/AsoraKK/Lythaus/collaborators/${environment.GITHUB_ACTOR}/permission`, token, fetchImpl);
+  if (actor.status !== 200 || actor.value?.type !== 'User'
+    || String(actor.value?.id) !== environment.GITHUB_ACTOR_ID
+    || actor.value?.login?.toLowerCase() !== environment.GITHUB_ACTOR.toLowerCase()
+    || permission.status !== 200 || !['admin', 'maintain', 'write'].includes(permission.value?.permission)) {
+    fail('new_core_dispatcher_write_access_unverified');
+  }
   const environmentPath = `/repos/AsoraKK/Lythaus/environments/${NEW_CORE_ENVIRONMENT}`;
-  const environment = await ghGet(environmentPath, token, fetchImpl);
-  if (environment.status !== 200 || !exactEnvironmentProtection(environment.value, expectedReviewerId)) {
-    fail(environment.status === 404 ? 'new_core_github_environment_missing' : 'new_core_github_environment_protection_mismatch');
+  const environmentMetadata = await ghGet(environmentPath, token, fetchImpl);
+  if (environmentMetadata.status !== 200 || !exactEnvironmentProtection(environmentMetadata.value, expectedReviewerId)) {
+    fail(environmentMetadata.status === 404 ? 'new_core_github_environment_missing' : 'new_core_github_environment_protection_mismatch');
   }
   const branchPolicyPath = `${environmentPath}/deployment-branch-policies`;
   const branchPolicies = await ghGet(`${branchPolicyPath}?per_page=100&page=1`, token, fetchImpl);
@@ -158,20 +201,27 @@ async function verifyGateMetadata({ token, sourceSha, fetchImpl = fetch } = {}) 
     environmentProtectionMatch: true,
     exactBranchPolicy: true,
     soleReviewerIsRepositoryOwner: true,
+    preventSelfReview: true,
+    independentDispatcherVerified: true,
+    dispatcherWriteAccessVerified: true,
   };
 }
 
-async function verifyEnvironmentSourcePin({ token, sourceSha, fetchImpl = fetch } = {}) {
+async function verifyEnvironmentSourcePin({ token, sourceSha, environment, fetchImpl = fetch } = {}) {
   const variablesPath = `/repos/AsoraKK/Lythaus/environments/${NEW_CORE_ENVIRONMENT}/variables?per_page=100&page=1`;
   const variables = await ghGet(variablesPath, token, fetchImpl);
   const rows = variables.value?.variables;
   if (variables.status !== 200 || variables.hasNextLink || !Array.isArray(rows) || rows.length > 100
-    || variables.value?.total_count !== rows.length || rows.length !== 1) {
+    || variables.value?.total_count !== rows.length || rows.length !== 2) {
     fail('new_core_github_environment_source_pin_unavailable');
   }
   const approved = rows.filter((row) => row?.name === 'LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA');
   if (approved.length !== 1 || approved[0]?.value !== sourceSha) {
     fail('new_core_github_environment_source_pin_mismatch');
+  }
+  const dispatcher = rows.filter((row) => row?.name === 'LYTHAUS_NEW_CORE_DISPATCHER_ID');
+  if (dispatcher.length !== 1 || dispatcher[0]?.value !== environment.LYTHAUS_NEW_CORE_DISPATCHER_ID) {
+    fail('new_core_github_environment_dispatcher_pin_mismatch');
   }
 }
 
@@ -192,20 +242,22 @@ export async function verifyNewCoreEnvironmentGate({
   token,
   sourceSha,
   approvedSourceSha,
+  environment = process.env,
   fetchImpl = fetch,
 } = {}) {
   if (sourceCommit(approvedSourceSha) !== sourceCommit(sourceSha)) fail('new_core_github_repository_source_pin_mismatch');
-  const result = await verifyGateMetadata({ token, sourceSha, fetchImpl });
+  const result = await verifyGateMetadata({ token, sourceSha, environment, fetchImpl });
   return { ...result, approvedSourceShaMatch: true };
 }
 
 export async function verifyNewCoreEnvironment({
   token,
   sourceSha,
+  environment = process.env,
   fetchImpl = fetch,
 } = {}) {
-  await verifyGateMetadata({ token, sourceSha, fetchImpl });
-  await verifyEnvironmentSourcePin({ token, sourceSha, fetchImpl });
+  await verifyGateMetadata({ token, sourceSha, environment, fetchImpl });
+  await verifyEnvironmentSourcePin({ token, sourceSha, environment, fetchImpl });
   const secretsPath = `/repos/AsoraKK/Lythaus/environments/${NEW_CORE_ENVIRONMENT}/secrets?per_page=100&page=1`;
   const secrets = await ghGet(secretsPath, token, fetchImpl);
   if (secrets.status !== 200 || secrets.hasNextLink
@@ -232,8 +284,8 @@ export async function verifyNewCoreEnvironment({
   };
 }
 
-export function buildEnvironmentPlanReceipt({ reviewerId, sourceSha } = {}) {
-  const plan = buildNewCoreEnvironmentPlan({ reviewerId, sourceSha });
+export function buildEnvironmentPlanReceipt({ reviewerId, dispatcherId, sourceSha } = {}) {
+  const plan = buildNewCoreEnvironmentPlan({ reviewerId, dispatcherId, sourceSha });
   return {
     status: 'PLAN_ONLY_NOT_APPLIED',
     repository: NEW_CORE_REPOSITORY,
@@ -243,7 +295,10 @@ export function buildEnvironmentPlanReceipt({ reviewerId, sourceSha } = {}) {
     approvedSourceShaMatch: true,
     requiredReviewerCount: 1,
     reviewerIdentifierProvided: true,
-    preventSelfReview: false,
+    distinctDispatcherIdentifierProvided: true,
+    preventSelfReview: true,
+    distinctDispatcherRequired: true,
+    publishingTriggersProvisioning: false,
     administratorBypassControl: 'NOT_EXPOSED_BY_GITHUB_ENVIRONMENT_API',
     waitTimerSeconds: 0,
     exactBranchPolicy: true,
@@ -279,7 +334,8 @@ async function main() {
     return;
   }
   const reviewerId = await newCoreOwnerReviewerId({ token: process.env.GITHUB_TOKEN });
-  const receipt = buildEnvironmentPlanReceipt({ reviewerId, sourceSha });
+  const receipt = buildEnvironmentPlanReceipt({ reviewerId,
+    dispatcherId: process.env.LYTHAUS_NEW_CORE_DISPATCHER_ID, sourceSha });
   process.stdout.write(`${JSON.stringify(receipt)}\n`);
 }
 

@@ -2,6 +2,12 @@
 
 Status: **LOCAL PREPARATION ONLY — NOT APPROVED OR APPLIED**.
 
+The preferred one-time path is now the
+[owner-controlled provider setup](lythaus-new-core-owner-setup.md), which uses
+an owner console session and keeps administrator credentials out of GitHub.
+An existing restricted provisioner remains **UNVERIFIED**. The Actions procedure
+below is an optional automation path, not a request to locate such a credential.
+
 This proposal covers only PlanetScale organization `lythaus`, database
 `lythaus-new-core` (`87dbkhprjh30`), branch `main` (`xwkb9quljkzd`), logical
 database `postgres`, AWS Frankfurt, existing PS-5 ARM with zero replicas.
@@ -107,10 +113,21 @@ Use a new GitHub Environment named `lythaus-new-core-rehearsal` in
 `AsoraKK/Lythaus` (repository ID `1010752912`). Its exact approved source SHA
 and only execution branch `codex/new-core-provisioning` are pinned. The same
 `LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA` variable is set at repository and
-environment scope. An owner
+environment scope. The distinct operator's numeric ID is also pinned as
+`LYTHAUS_NEW_CORE_DISPATCHER_ID` at both scopes. **Prevent self-review is true**;
+`AsoraKK` is the sole required reviewer, while a different verified human with
+write access dispatches. Only the owner identity is verified today, so this
+automation remains blocked. An owner
 review is required before the job receives secrets. No existing environment
 or production workflow is repointed. The dedicated workflow is
 `.github/workflows/lythaus-new-core-role-provisioning.yml`.
+
+Its only trigger is `workflow_dispatch`, with exact source SHA, one allowed
+target and explicit roles-only confirmation. Publishing does not start it.
+It rejects reruns and changed triggering actors. GitHub requires default-branch
+workflow registration before initial dispatch; a feature-branch publication
+alone does not supply that. A later default-branch addition needs separate
+review. No publication or dispatch is authorized by this preparation.
 
 The environment is currently absent (read-only GET returned 404). Its
 creation, protection rules and dedicated branch rule are part of the proposed
@@ -131,7 +148,7 @@ chat, source files, action inputs or artifacts:
 | Input | Purpose and limit |
 | --- | --- |
 | `LYTHAUS_NEW_CORE_PROVISIONER_DATABASE_URL` | An existing authorized administrative connection to this exact new branch. No Hyperdrive-password extraction, old-database connection, default-password reset or new broad credential fallback. |
-| `LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN` | Short-lived fine-grained GitHub credential limited to this repository's Environments write permission, used only for the named environment secrets. GitHub cannot restrict that token permission to one environment; the reviewed helper fixes the destination. `GITHUB_TOKEN` with contents-read cannot perform this delivery. |
+| `LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN` | Short-lived fine-grained GitHub credential limited to this repository's Environments write and Actions read permissions, used for the named environment secrets and gate verification. GitHub cannot restrict that token permission to one environment; the reviewed helper fixes the destination. `GITHUB_TOKEN` with contents-read cannot perform this delivery. |
 | `PLANETSCALE_API_TOKEN` | Existing repository Actions secret containing the authorized service-token pair, consumed only by the protected job for exact-target metadata and three approved role creations. It is not copied into the new environment; no token rotation or permission expansion is included. |
 
 The provisioner URL is not presently available or live-verified. The executor

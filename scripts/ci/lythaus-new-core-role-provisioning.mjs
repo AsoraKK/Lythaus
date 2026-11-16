@@ -15,11 +15,10 @@ import {
 } from './lythaus-new-core-role-profile.mjs';
 import {
   NEW_CORE_ENVIRONMENT,
-  NEW_CORE_PROVISIONING_BRANCH,
   NEW_CORE_REPOSITORY,
-  NEW_CORE_REPOSITORY_ID,
   NEW_CORE_OUTPUT_SECRET_NAMES,
   verifyNewCoreEnvironment,
+  assertNewCoreDispatchContext,
 } from './lythaus-new-core-environment-plan.mjs';
 
 const { Client } = pg;
@@ -36,7 +35,6 @@ const EXPECTED_PROVIDER = Object.freeze({
   logicalDatabase: 'postgres',
   postgresMajor: 17,
 });
-const REQUIRED_GITHUB_EVENT = 'push';
 const API_BASE = 'https://api.planetscale.com/v1';
 const GH_API_BASE = 'https://api.github.com';
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -94,15 +92,8 @@ export function validateNewCoreProvisioningTarget(target) {
 }
 
 function assertExecutionContext(environment, sourceSha, actualHeadSha) {
-  if (environment.GITHUB_ACTIONS !== 'true'
-    || environment.GITHUB_EVENT_NAME !== REQUIRED_GITHUB_EVENT
-    || environment.GITHUB_REPOSITORY !== NEW_CORE_REPOSITORY
-    || environment.GITHUB_REPOSITORY_ID !== NEW_CORE_REPOSITORY_ID
-    || environment.GITHUB_REF !== `refs/heads/${NEW_CORE_PROVISIONING_BRANCH}`
-    || !/^[a-f0-9]{40}$/.test(sourceSha ?? '')
-    || environment.GITHUB_SHA !== sourceSha
-    || environment.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA !== sourceSha
-    || actualHeadSha !== sourceSha) {
+  assertNewCoreDispatchContext(environment, sourceSha);
+  if (actualHeadSha !== sourceSha) {
     fail('new_core_candidate_context_not_approved');
   }
 }
@@ -651,6 +642,7 @@ export async function provisionNewCoreRoles({
   const environmentCheck = await verifyNewCoreEnvironment({
     token: writerToken,
     sourceSha,
+    environment,
     fetchImpl,
   });
   if (!environmentCheck.verified) fail('new_core_github_environment_prerequisites_incomplete');
@@ -861,6 +853,7 @@ export function buildProvisioningPlanReceipt({ target = readTarget(), sourceSha 
       originFingerprint: originSha,
     },
     preconditions: [
+      'explicit dispatch by pinned independent operator; owner approval with self-review prevention',
       'exact protected environment and source SHA reviewed',
       'noncredential delivery canary verified before PlanetScale role POST',
       'existing new-target provisioner identity and PG17 empty catalog verified',
@@ -869,6 +862,8 @@ export function buildProvisioningPlanReceipt({ target = readTarget(), sourceSha 
       'three deferred roles created SQL NOLOGIN PASSWORD NULL',
       'plain database CREATE granted to migration only; no grant option or ownership',
     ],
+    publishingTriggersProvisioning: false,
+    ownerOnlyProviderSetupAlternative: 'docs/runbooks/lythaus-new-core-owner-setup.md',
     approvalRequiredBeforeLiveExecution: true,
   };
 }

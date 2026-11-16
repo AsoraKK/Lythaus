@@ -1,18 +1,29 @@
 name: New core role provisioning (approval gated)
 
 on:
-  push:
-    branches:
-      - codex/new-core-provisioning
-    paths:
-      - .github/workflows/lythaus-new-core-role-provisioning.yml
-      - infrastructure/planetscale/lythaus-new-core-clean-install.target.json
-      - scripts/ci/lythaus-new-core-environment-plan.mjs
-      - scripts/ci/lythaus-new-core-role-profile.mjs
-      - scripts/ci/lythaus-new-core-role-provisioning.mjs
-      - scripts/ci/planetscale-0021-target-identity.mjs
-      - scripts/planetscale/service-token-auth.mjs
-      - scripts/tests/lythaus-new-core-role-provisioning.test.mjs
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact independently reviewed candidate SHA
+        required: true
+        type: string
+      target:
+        description: Only permitted database target
+        required: true
+        type: choice
+        options:
+          - lythaus/lythaus-new-core/main
+      confirm_roles_only:
+        description: Explicitly request only the separately approved role provisioning step
+        required: true
+        default: false
+        type: boolean
+
+env:
+  LYTHAUS_NEW_CORE_REQUESTED_SOURCE_SHA: ${{ inputs.candidate_sha }}
+  LYTHAUS_NEW_CORE_REQUESTED_TARGET: ${{ inputs.target }}
+  LYTHAUS_NEW_CORE_CONFIRM_ROLES_ONLY: ${{ inputs.confirm_roles_only }}
+  LYTHAUS_NEW_CORE_DISPATCHER_ID: ${{ vars.LYTHAUS_NEW_CORE_DISPATCHER_ID }}
 
 permissions:
   contents: read
@@ -40,11 +51,20 @@ jobs:
           APPROVED_SOURCE_SHA: ${{ vars.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA }}
         run: |
           set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
+          test "$GITHUB_RUN_ATTEMPT" = '1'
+          test "$GITHUB_TRIGGERING_ACTOR" = "$GITHUB_ACTOR"
           test "$GITHUB_REPOSITORY" = 'AsoraKK/Lythaus'
           test "$GITHUB_REPOSITORY_ID" = '1010752912'
           test "$GITHUB_REF" = 'refs/heads/codex/new-core-provisioning'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$APPROVED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$LYTHAUS_NEW_CORE_REQUESTED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$LYTHAUS_NEW_CORE_REQUESTED_TARGET" = 'lythaus/lythaus-new-core/main'
+          test "$LYTHAUS_NEW_CORE_CONFIRM_ROLES_ONLY" = 'true'
+          test -n "$LYTHAUS_NEW_CORE_DISPATCHER_ID"
+          test "$GITHUB_ACTOR_ID" = "$LYTHAUS_NEW_CORE_DISPATCHER_ID"
+          test "$GITHUB_ACTOR" != 'AsoraKK'
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
@@ -82,11 +102,20 @@ jobs:
           APPROVED_SOURCE_SHA: ${{ vars.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA }}
         run: |
           set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
+          test "$GITHUB_RUN_ATTEMPT" = '1'
+          test "$GITHUB_TRIGGERING_ACTOR" = "$GITHUB_ACTOR"
           test "$GITHUB_REPOSITORY" = 'AsoraKK/Lythaus'
           test "$GITHUB_REPOSITORY_ID" = '1010752912'
           test "$GITHUB_REF" = 'refs/heads/codex/new-core-provisioning'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$APPROVED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$LYTHAUS_NEW_CORE_REQUESTED_SOURCE_SHA" = "$GITHUB_SHA"
+          test "$LYTHAUS_NEW_CORE_REQUESTED_TARGET" = 'lythaus/lythaus-new-core/main'
+          test "$LYTHAUS_NEW_CORE_CONFIRM_ROLES_ONLY" = 'true'
+          test -n "$LYTHAUS_NEW_CORE_DISPATCHER_ID"
+          test "$GITHUB_ACTOR_ID" = "$LYTHAUS_NEW_CORE_DISPATCHER_ID"
+          test "$GITHUB_ACTOR" != 'AsoraKK'
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
