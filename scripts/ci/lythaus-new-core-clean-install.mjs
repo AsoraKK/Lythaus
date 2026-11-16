@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
+import { assertNewCoreEmptyCatalog } from './lythaus-new-core-empty-catalog.mjs';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 import { branchQualifiedDatabaseTarget, adminDatabaseConnectionConfig, buildPlanetScaleTargetIdentity, assertConnectedAdminDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import { canonicalReleaseSchemaContract, runtimeSchemaFingerprint, APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
@@ -430,10 +431,9 @@ async function assertEmptyTarget(client) {
   const row = result.rows[0];
   if (!row || row.database_name !== 'postgres' || row.current_role !== 'postgres'
     || Number(row.version_num) < 170000 || Number(row.version_num) >= 180000
-    || Number(row.application_schema_count) !== 0
-    || Number(row.application_relation_count) !== 0
     || row.ledger_missing !== true
     || Number(row.application_role_count) !== 0) fail('new_core_rehearsal_database_not_empty_postgres17');
+  await assertNewCoreEmptyCatalog(client, row);
 }
 
 async function createLocalRoles(client) {
@@ -1004,7 +1004,6 @@ async function assertLiveEmptyTarget(client, roleMap, provisionerRoleSha256 = nu
   const row = result.rows[0];
   if (!row || row.database_name !== 'postgres' || row.current_role !== roleMap.lythaus_migrations
     || Number(row.version_num) < 170000 || Number(row.version_num) >= 180000
-    || Number(row.application_schema_count) !== 0 || Number(row.application_relation_count) !== 0
     || row.ledger_missing !== true || Number(row.provisioned_role_count) !== ROLE_LABELS.length) {
     fail('new_core_live_database_not_empty_postgres17');
   }
@@ -1016,10 +1015,12 @@ async function assertLiveEmptyTarget(client, roleMap, provisionerRoleSha256 = nu
     || Number(row.role_login_profile_mismatch_count) !== 0 || Number(row.restricted_database_ddl_count) !== 0) {
     fail('new_core_live_role_capability_precondition_failed');
   }
+  const catalog = await assertNewCoreEmptyCatalog(client, row);
   const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256);
   if (Number(row.role_membership_count) !== memberships.totalMemberships) fail('new_core_role_membership_boundary_failed');
   return {
     cleanSchema: true,
+    catalog,
     migrationLedgerAbsent: true,
     postgresMajor: 17,
     migrationDatabaseCreate: true,

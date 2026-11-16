@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
+import { assertNewCoreEmptyCatalog } from './lythaus-new-core-empty-catalog.mjs';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 import { branchQualifiedDatabaseTarget, buildPlanetScaleTargetIdentity, assertConnectedAdminDatabaseTarget, adminDatabaseConnectionConfig } from './planetscale-0021-target-identity.mjs';
 import {
@@ -331,10 +332,10 @@ export async function verifyProvisionerPreconditions({ client, rawUrl, targetOri
     || Number(row.role_membership_count) !== 0
     || (row.database_owner !== true && (row.can_grant_connect !== true || row.can_grant_create !== true))
     || row.public_database_create !== false
-    || Number(row.application_schema_count) !== 0 || Number(row.application_relation_count) !== 0
     || row.migration_ledger_missing !== true || Number(row.canonical_sql_role_count) !== 0) {
     fail('new_core_provisioner_capability_or_empty_target_mismatch');
   }
+  const catalog = await assertNewCoreEmptyCatalog(client, row);
   return {
     targetIdentityMatch: true,
     postgresMajor: 17,
@@ -346,6 +347,7 @@ export async function verifyProvisionerPreconditions({ client, rawUrl, targetOri
     publicDatabaseCreate: false,
     cleanApplicationSchemas: true,
     cleanApplicationRelations: true,
+    catalog,
     migrationLedgerAbsent: true,
     canonicalSqlRoleCount: 0,
     sqlRoleLabelsValidated: validateNewCoreRoleMap(roleMap, { local: true }) !== null,

@@ -47,15 +47,17 @@ not evidence of Lythaus application relations. Preserve them and the extension.
 Both transcripts include completed ROLLBACK results. This is owner-supplied
 evidence, not an independent assistant connection or complete schema fingerprint.
 
-The automated zero-count guards still reject this raw provider baseline.
-Before any future live installation, review a narrow extension-aware contract
-for these exact views and namespace, with catalog membership checks. Never
-exclude every `pscale_*` namespace or arbitrary extra relations by name, and
-never remove the extension to force an empty-target check to pass.
+Local guards now recognize only an empty catalog or the exact two-view HypoPG
+baseline. They check extension membership, namespace/extension/view ownership
+consistency and unexpected namespace dependencies. Extra schemas, relations,
+unowned functions/types or detached extension views cause rejection. The
+owner-reported query did not check all those ownership/dependency conditions;
+the stronger live guard must still pass before writes. There is no general
+`pscale_*` exclusion and no extension removal to force a pass.
 
-Console disconnection, restoration of the access toggle to off and cleanup of
-the temporary provider login have not yet been evidenced. No role/grant or
-schema writes were authorized by these diagnostics.
+The owner has confirmed console disconnection. Restoration of the access toggle
+to off and cleanup of the temporary provider login remain unverified. No
+role/grant or schema writes were authorized by these diagnostics.
 
 The temporary primary Administrator session is broad: the documented `postgres`
 role has CREATEDB, CREATEROLE, replication, BYPASSRLS and inherited data/admin
@@ -92,8 +94,8 @@ asks for the owner's password, OTP, provider session, or database password in ch
    the dashboard/provider identity with the private role map. Record only
    booleans, counts and identifier hashes. Roll back the read-only transaction.
    The prepared [catalog diagnostic](../../database/planetscale/verification/new-core-owner-setup-preflight.sql)
-   returns only booleans/counts and performs no persistent writes. It has not
-   been run against PlanetScale; it must not be appended to a migration or
+   returns only booleans/counts and performs no persistent writes. The owner
+   has supplied its results above; it must not be appended to a migration or
    used to auto-continue into role creation.
 4. **Create only three managed logins, after separate approval.** In the new
    branch's Settings → Roles, create `lythaus_migrations`, `lythaus_admin` and
@@ -117,6 +119,25 @@ asks for the owner's password, OTP, provider session, or database password in ch
 The exact SQL shape for stage 5 is below. It is a review template, **not a
 ready-to-run script**: generated identifiers and the live preflight evidence
 must be resolved and reviewed first.
+
+The guarded implementation is `scripts/ci/lythaus-new-core-owner-grants.mjs`.
+It only generates SQL; it has no SQL execution or provider API capability.
+With a private six-label role map outside the repo, the owner can later use:
+
+```sh
+node scripts/ci/lythaus-new-core-owner-grants.mjs --write-private-sql /private/path/roles.json /private/path/owner-grants.sql
+```
+
+The map must be a regular file with mode 0600. Both paths must resolve outside
+the repo; the output is new mode-0600 SQL and is never overwritten. This is
+not an execution command and is not needed before the three managed roles
+exist. No password goes into this map or script. A guarded DO block checks the
+catalog and managed roles before CREATE/GRANT, rechecks all six roles and the
+durable grantor before COMMIT, and refuses a repeat. Any exception aborts the
+transaction; run ROLLBACK and stop. It has been exercised on disposable PG17.11
+with a synthetic extension-membership fixture, including six catalog mutations,
+failed guards, preserved provider views and a non-superuser stable grantor.
+This is local SQL evidence, not a live PlanetScale execution claim.
 
 ```sql
 BEGIN;
@@ -257,12 +278,21 @@ separate decision and cannot be restricted by GitHub to just one environment.
 
 ## Exact next decision
 
-Choose **owner-console setup as the preferred route**, beginning with only
-stage 1's dashboard availability check. That check authorizes no Connect,
-temporary role, setting change or SQL. If the console is disabled, the next
-decision is specifically temporary console enablement on this new database
-versus the 30-minute owner-local role; it is not a request to find an unknown
-provisioner or approve the full setup. The current turn executes neither path.
+The owner-console route and read-only diagnostics have been completed through
+owner-reported results and disconnection. **The next approval is only stage 4:
+create three managed LOGIN roles on `lythaus-new-core/main`**, with the exact
+empty-inheritance/no-replication/no-expiry profile, keeping their three unique
+passwords in the owner's private password manager. First inspect the exact
+branch's Roles list; any existing matching label causes a stop for reconciliation,
+not a duplicate or reset. Leave the original broad role unchanged.
+
+This credential-creation approval would authorize no SQL, role grants, GitHub
+secret storage, publication, schema, Hyperdrive, Access, Worker, import or spend.
+After creation, resolve and privately verify only the three generated base
+SQL identifiers, then generate/review the guarded SQL and seek a separate
+initial-grants approval. No password, connection string or provider session
+needs to be pasted into chat. Keep console access off until that SQL session
+is explicitly authorized. No unknown provisioner credential must be located.
 
 Role setup is not owner acceptance. Later acceptance still requires the
 privately specified owner to sign in freshly to the isolated test build, open
