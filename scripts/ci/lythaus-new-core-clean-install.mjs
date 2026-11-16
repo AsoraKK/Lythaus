@@ -375,8 +375,8 @@ export function buildSchemaInstallationPlan() {
     migrations: migrations.migrations.map(({ name, checksum }) => ({ name, checksum })),
     contractFiles: files.map((file) => ({ file, sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, file))).digest('hex') })),
     objectGrantPayloads: files.slice(0, 2).map((file, index) => ({ file,
-      sha256: crypto.createHash('sha256').update(schemaOnlyObjectGrantSql(fs.readFileSync(path.join(ROOT, file), 'utf8'),
-        { verifier: index === 1 })).digest('hex'), databaseAclStatementsExcluded: index === 1 ? 1 : 2 })),
+      sha256: crypto.createHash('sha256').update(substituteRoleNames(schemaOnlyObjectGrantSql(fs.readFileSync(path.join(ROOT, file), 'utf8'),
+        { verifier: index === 1 }), roleMap)).digest('hex'), databaseAclStatementsExcluded: index === 1 ? 1 : 2 })),
     approvalEnvironment: { name: 'LYTHAUS_NEW_CORE_SCHEMA_INSTALL_APPROVAL', value: candidateApprovalValue(
       'APPROVE_NEW_CORE_SCHEMA_ONLY', sourceSha, migrations.checksum, target.provider.sqlOriginFingerprint, roleMapSha) },
     liveCommandAfterApprovalOnly: 'node scripts/ci/lythaus-new-core-clean-install.mjs --apply-live-schema-only',
