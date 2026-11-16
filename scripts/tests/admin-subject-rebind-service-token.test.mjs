@@ -114,6 +114,71 @@ test('denied authority is reported once per source without raw response or error
   redacted(await auditRebindServiceTokens(f.options));
 });
 
+test('404 failures retain the exact fixed operation and only previously verified checkpoints without retries', async () => {
+  const operations = ['database_metadata_read', 'main_branch_metadata_read', 'service_token_metadata_read', 'service_token_grants_read'];
+  const names = ['databaseVerified', 'productionBranchVerified', 'selfMetadataVerified', 'tokenExpiryKnown', 'grantPaginationComplete'];
+  const requestId = '01900000-0000-7000-8000-000000000001';
+  for (let failed = 0; failed < operations.length; failed++) {
+    const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
+    let count = 0, bodyReads = 0, cancelled = 0;
+    f.options.fetchImpl = async (url, request) => {
+      if (count++ === failed) return { status: 404, url, redirected: false, headers: new Headers({ 'x-request-id': requestId }),
+        body: { cancel: async () => { cancelled++; }, [Symbol.asyncIterator]: () => { bodyReads++; throw new Error(canary); } } };
+      return f.fetchImpl(url, request);
+    };
+    const report = await auditRebindServiceTokens(f.options), failure = report.sources[1];
+    assert.equal(report.status, 'BLOCKED_NO_QUALIFIED_EXISTING_SOURCE'); assert.equal(report.recommendedSource, null);
+    assert.equal(failure.operationClass, operations[failed]); assert.equal(failure.httpStatus, 404);
+    assert.equal(failure.requestId, requestId); assert.equal(failure.requestPage, failed === 3 ? 1 : null);
+    assert.match(failure.tokenFingerprint, /^[a-f0-9]{64}$/); assert.equal(count, failed + 1); assert.equal(bodyReads, 0); assert.equal(cancelled, 1);
+    const verified = failed === 3 ? 4 : failed;
+    assert.deepEqual(failure.completedChecks, Object.fromEntries(names.map((name, index) => [name, index < verified])));
+    assert.equal(JSON.stringify(report).includes('https://'), false); redacted(report);
+  }
+});
+
+test('partial grants remain unqualified and identify the failed page without exposing rows or provider text', async () => {
+  const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
+  f.grants.next_page = 2; f.grants.total_count = 2;
+  let failedRequests = 0;
+  f.options.fetchImpl = async (url, request) => {
+    if (url.includes('/grants?page=2&')) { failedRequests++; return new Response(canary, { status: 403 }); }
+    return f.fetchImpl(url, request);
+  };
+  const report = await auditRebindServiceTokens(f.options), row = report.sources[1];
+  assert.equal(row.operationClass, 'service_token_grants_read'); assert.equal(row.requestPage, 2); assert.equal(failedRequests, 1);
+  assert.equal(row.completedChecks.tokenExpiryKnown, true); assert.equal(row.completedChecks.grantPaginationComplete, false);
+  assert.equal(report.recommendedSource, null); assert.equal(row.status, 'BLOCKED_AUTHORITY_UNVERIFIED'); redacted(report);
+});
+
+test('request-ID headers are a strict consistent UUID whitelist; error bodies are never read', async () => {
+  const id = '01900000-0000-7000-8000-000000000001', other = '01900000-0000-7000-8000-000000000002';
+  for (const [headers, expected] of [[{}, null], [{ 'x-request-id': canary }, null],
+    [{ 'x-request-id': id, 'x-pscale-request-id': other }, null], [{ 'x-planetscale-request-id': id }, id],
+    [{ 'x-request-id': id, 'x-pscale-request-id': id }, id]]) {
+    const f = fixture(); f.options.fetchImpl = async () => new Response(canary, { status: 404, headers });
+    const report = await auditRebindServiceTokens(f.options);
+    assert.ok(report.sources.every(row => row.requestId === expected)); redacted(report);
+  }
+});
+
+test('transport or malformed success failures keep the safe operation without manufacturing verified progress', async () => {
+  for (const malformed of [false, true]) {
+    const f = fixture(); delete f.env.PLANETSCALE_SERVICE_TOKEN; delete f.env.PLANETSCALE_SERVICE_TOKEN_ID;
+    f.options.fetchImpl = async (url, request) => {
+      if (url.includes('/service-tokens/')) {
+        if (malformed) return new Response(canary);
+        throw new Error(canary);
+      }
+      return f.fetchImpl(url, request);
+    };
+    const report = await auditRebindServiceTokens(f.options), row = report.sources[1];
+    assert.equal(row.operationClass, 'service_token_metadata_read'); assert.equal(row.httpStatus, null); assert.equal(row.requestId, null);
+    assert.equal(row.completedChecks.productionBranchVerified, true); assert.equal(row.completedChecks.selfMetadataVerified, false);
+    assert.equal(report.recommendedSource, null); redacted(report);
+  }
+});
+
 test('successful database metadata alone never establishes token grant authority', async () => {
   for (const permission of REQUIRED_ROLE_PERMISSIONS) {
     const f = fixture(); f.grants.data[0].accesses = f.grants.data[0].accesses.filter(row => row.access !== permission);

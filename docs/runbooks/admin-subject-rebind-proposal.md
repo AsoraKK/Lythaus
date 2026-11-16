@@ -84,6 +84,25 @@ Declared create/delete production-password permissions are not issuance or SQL
 qualification proof. No qualified existing source means BLOCKED; do not create a
 token, extend privileges or substitute credentials to overcome that result.
 
+For a provider failure, the receipt names only a fixed operation class, failed
+grants page if applicable, a validated UUID request ID and previously verified
+checkpoint booleans. It retains no raw URL, token ID, response body or arbitrary
+error text. Partial checkpoints never qualify a source; failed or incomplete
+grant pagination cannot authorize issuance. Token fingerprints identify the
+configured source without disclosing credential material.
+
+Run 43775096758 on source 1813b0da returned a missing migration-token pair and
+HTTP404 for the existing API-token source. That older receipt omitted the
+operation class; its logs cannot recover which endpoint failed. Do not infer
+expired credentials, missing permissions or a missing database from that alone,
+or rerun the unchanged job. Token metadata/grants endpoints additionally require
+organization read_service_tokens permission according to the provider's
+[API reference](https://planetscale.com/docs/api/reference/get_service_token).
+This is a documented requirement, not proof that it caused that run's404.
+Any later read-only reconciliation must use the reviewed contextual receipt,
+current protected main/checks and normal production review. Keep the working
+connection and secrets unchanged; credential/grant changes need exact approval.
+
 The next separately reviewed implementation and exact approval must bind one
 selected audited source, one POST and the one-hour qualification-only profile
 (ttl=3600, inherited_roles=[postgres], with_replication=false). Reserve a named
