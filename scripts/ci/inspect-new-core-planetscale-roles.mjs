@@ -43,6 +43,8 @@ const REPORTABLE_PG_ROLES = new Set([
   'pg_write_all_data',
   'pg_write_server_files',
 ]);
+const RECOGNIZED_DATABASE_KINDS = new Set(['postgresql', 'postgres', 'mysql', 'vitess']);
+const RECOGNIZED_RESOURCE_STATES = new Set(['ready', 'creating', 'sleeping', 'starting', 'deleting', 'deleted']);
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -56,6 +58,97 @@ function blocked(sourceSha, code, httpStatus = null) {
     code,
     databaseId: DATABASE_ID,
     branchId: BRANCH_ID,
+  };
+}
+
+function valueType(object, key) {
+  if (!Object.hasOwn(object ?? {}, key)) return 'missing';
+  const value = object[key];
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function recognizedValue(value, known) {
+  if (typeof value !== 'string') return value === undefined ? 'missing' : 'nonstring';
+  const normalized = value.toLowerCase();
+  return known.has(normalized) ? normalized : 'other';
+}
+
+function databaseFieldEvidence(database) {
+  const region = database.region;
+  const regionObject = !!region && typeof region === 'object' && !Array.isArray(region);
+  const deletedAtPresent = Object.hasOwn(database, 'deleted_at');
+  const deletedAtNull = deletedAtPresent ? database.deleted_at === null : null;
+  const kindClass = recognizedValue(database.kind, RECOGNIZED_DATABASE_KINDS);
+  const stateClass = recognizedValue(database.state, RECOGNIZED_RESOURCE_STATES);
+  return {
+    idPresent: Object.hasOwn(database, 'id'),
+    idType: valueType(database, 'id'),
+    idMatch: database.id === DATABASE_ID,
+    namePresent: Object.hasOwn(database, 'name'),
+    nameType: valueType(database, 'name'),
+    nameMatch: database.name === DATABASE,
+    kindPresent: Object.hasOwn(database, 'kind'),
+    kindType: valueType(database, 'kind'),
+    kindClass,
+    kindMatch: database.kind === 'postgresql',
+    readyPresent: Object.hasOwn(database, 'ready'),
+    readyType: valueType(database, 'ready'),
+    readyMatch: database.ready === true,
+    statePresent: Object.hasOwn(database, 'state'),
+    stateType: valueType(database, 'state'),
+    stateClass,
+    stateMatch: database.state === 'ready',
+    deletedAtPresent,
+    deletedAtType: valueType(database, 'deleted_at'),
+    deletedAtNull,
+    deletedAtAllowed: !deletedAtPresent || database.deleted_at === null,
+    regionPresent: Object.hasOwn(database, 'region'),
+    regionType: valueType(database, 'region'),
+    regionObject: regionObject,
+    regionProviderMatch: regionObject && region.provider === REGION.provider,
+    regionDisplayNameMatch: regionObject && region.display_name === REGION.display_name,
+    regionLocationMatch: regionObject && region.location === REGION.location,
+    regionSlugMatch: regionObject && region.slug === REGION.slug,
+  };
+}
+
+function branchFieldEvidence(branch) {
+  const kindClass = recognizedValue(branch.kind, RECOGNIZED_DATABASE_KINDS);
+  const stateClass = recognizedValue(branch.state, RECOGNIZED_RESOURCE_STATES);
+  const clusterClass = branch.cluster === 'PS_5_AWS_ARM' ? 'PS_5_AWS_ARM'
+    : typeof branch.cluster === 'string' ? 'other' : branch.cluster === undefined ? 'missing' : 'nonstring';
+  return {
+    idPresent: Object.hasOwn(branch, 'id'),
+    idType: valueType(branch, 'id'),
+    idMatch: branch.id === BRANCH_ID,
+    namePresent: Object.hasOwn(branch, 'name'),
+    nameType: valueType(branch, 'name'),
+    nameMatch: branch.name === BRANCH,
+    kindPresent: Object.hasOwn(branch, 'kind'),
+    kindType: valueType(branch, 'kind'),
+    kindClass,
+    kindMatch: branch.kind === 'postgresql',
+    readyPresent: Object.hasOwn(branch, 'ready'),
+    readyType: valueType(branch, 'ready'),
+    readyMatch: branch.ready === true,
+    statePresent: Object.hasOwn(branch, 'state'),
+    stateType: valueType(branch, 'state'),
+    stateClass,
+    stateMatch: branch.state === 'ready',
+    deletedAtPresent: Object.hasOwn(branch, 'deleted_at'),
+    deletedAtType: valueType(branch, 'deleted_at'),
+    deletedAtNull: branch.deleted_at === null,
+    clusterPresent: Object.hasOwn(branch, 'cluster'),
+    clusterType: valueType(branch, 'cluster'),
+    clusterClass,
+    clusterMatch: branch.cluster === 'PS_5_AWS_ARM',
+    replicasPresent: Object.hasOwn(branch, 'replicas'),
+    replicasType: valueType(branch, 'replicas'),
+    replicasZero: branch.replicas === 0,
+    databaseIdPresent: Object.hasOwn(branch, 'database_id'),
+    databaseIdMatch: !Object.hasOwn(branch, 'database_id') || branch.database_id === DATABASE_ID,
   };
 }
 
@@ -124,19 +217,34 @@ export async function inspectNewCorePlanetScaleRoles({
   if (databaseResponse.error) return blocked(validSourceSha, databaseResponse.error, databaseResponse.httpStatus);
   const database = databaseResponse.value;
   const region = database.region;
-  const regionMatches = !!region && typeof region === 'object' && !Array.isArray(region)
-    && Object.keys(REGION).every((key) => region[key] === REGION[key]);
+  const databaseFields = databaseFieldEvidence(database);
+  const regionMatches = databaseFields.regionObject && databaseFields.regionProviderMatch
+    && databaseFields.regionDisplayNameMatch && databaseFields.regionLocationMatch && databaseFields.regionSlugMatch;
   const databaseMatches = database.id === DATABASE_ID && database.name === DATABASE
-    && database.deleted_at === null && regionMatches
-    && (!Object.hasOwn(database, 'kind') || database.kind === 'postgresql');
-  if (!databaseMatches) return blocked(validSourceSha, 'new_core_database_identity_mismatch', databaseResponse.httpStatus);
+    && database.kind === 'postgresql' && database.ready === true && database.state === 'ready'
+    && databaseFields.deletedAtAllowed && regionMatches;
+  if (!databaseMatches) {
+    return {
+      ...blocked(validSourceSha, 'new_core_database_identity_mismatch', databaseResponse.httpStatus),
+      databaseFields,
+    };
+  }
 
   const branchResponse = await request(base);
   if (branchResponse.error) return blocked(validSourceSha, branchResponse.error, branchResponse.httpStatus);
   const branch = branchResponse.value;
+  const branchFields = branchFieldEvidence(branch);
   const branchMatches = branch.id === BRANCH_ID && branch.name === BRANCH && branch.kind === 'postgresql'
-    && branch.deleted_at === null && (!Object.hasOwn(branch, 'database_id') || branch.database_id === DATABASE_ID);
-  if (!branchMatches) return blocked(validSourceSha, 'new_core_branch_identity_mismatch', branchResponse.httpStatus);
+    && branch.deleted_at === null && branch.ready === true && branch.state === 'ready'
+    && branch.cluster === 'PS_5_AWS_ARM' && branch.replicas === 0
+    && (!Object.hasOwn(branch, 'database_id') || branch.database_id === DATABASE_ID);
+  if (!branchMatches) {
+    return {
+      ...blocked(validSourceSha, 'new_core_branch_identity_mismatch', branchResponse.httpStatus),
+      branchFields,
+      databaseFields,
+    };
+  }
 
   const rows = [];
   const ids = new Set();
@@ -251,9 +359,11 @@ export async function inspectNewCorePlanetScaleRoles({
     databaseId: DATABASE_ID,
     region: regionMetadata,
     databaseMatch: databaseMatches,
+    databaseFields,
     branch: BRANCH,
     branchId: BRANCH_ID,
     branchMatch: true,
+    branchFields,
     logicalDatabase: LOGICAL_DATABASE,
     roleCount: rows.length,
     expectedRoleCount: ROLE_LABELS.length,

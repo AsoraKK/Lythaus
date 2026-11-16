@@ -12,9 +12,24 @@ const MAX_RESPONSE_BYTES = 64 * 1024;
 const TLS_MODES = new Set(['verify-full', 'verify-ca', 'require', 'prefer', 'disable']);
 const PLANETSCALE_HOST_PATTERN = /^(?:[a-z0-9-]+\.)+psdb\.cloud$/;
 const PLANETSCALE_USERNAME_PATTERN = /^pscale_api_[a-z0-9]{1,64}\.([a-z0-9]{12})$/;
+const RECOGNIZED_SCHEMES = new Set(['postgres', 'postgresql', 'mysql', 'mariadb', 'sqlite']);
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function safeValueType(object, key) {
+  if (!object || typeof object !== 'object' || !Object.hasOwn(object, key)) return 'missing';
+  const value = object[key];
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function safeRecognizedString(value, allowed) {
+  if (typeof value !== 'string') return value === undefined ? 'missing' : 'nonstring';
+  const normalized = value.trim().toLowerCase();
+  return allowed.has(normalized) ? normalized : 'other';
 }
 
 function blocked(sourceSha, code, httpStatus = null) {
@@ -99,6 +114,12 @@ export async function inspectNewCoreHyperdrive({
 
   const config = payload.result;
   const origin = config.origin;
+  const originObjectPresent = !!origin && typeof origin === 'object' && !Array.isArray(origin);
+  const mtls = config.mtls;
+  const mtlsObjectPresent = !!mtls && typeof mtls === 'object' && !Array.isArray(mtls);
+  const caching = config.caching;
+  const cachingObjectPresent = !!caching && typeof caching === 'object' && !Array.isArray(caching);
+  const originUserKey = Object.hasOwn(origin ?? {}, 'user') ? 'user' : 'username';
   const host = typeof origin?.host === 'string' ? origin.host.trim().toLowerCase() : '';
   const port = Number(origin?.port);
   const rawDatabase = typeof origin?.database === 'string' ? origin.database.trim() : '';
@@ -141,14 +162,37 @@ export async function inspectNewCoreHyperdrive({
     logicalDatabase: databaseMatches ? LOGICAL_DATABASE : null,
     logicalDatabaseMatch: databaseMatches,
     hyperdriveIdMatch: hyperdriveMatches,
+    originObjectPresent,
+    originSchemePresent: !!originObjectPresent && Object.hasOwn(origin, 'scheme'),
+    originSchemeType: safeValueType(origin, 'scheme'),
+    originSchemeClass: safeRecognizedString(origin?.scheme, RECOGNIZED_SCHEMES),
     schemeValid,
+    originHostPresent: !!originObjectPresent && Object.hasOwn(origin, 'host'),
+    originHostType: safeValueType(origin, 'host'),
     hostValid,
+    originPortPresent: !!originObjectPresent && Object.hasOwn(origin, 'port'),
+    originPortType: safeValueType(origin, 'port'),
     portValid,
+    originDatabasePresent: !!originObjectPresent && Object.hasOwn(origin, 'database'),
+    originDatabaseType: safeValueType(origin, 'database'),
+    originUserPresent: !!originObjectPresent && (Object.hasOwn(origin, 'user') || Object.hasOwn(origin, 'username')),
+    originUserType: safeValueType(origin, originUserKey),
+    originUserGeneratedRolePatternMatch: username !== null,
     originHostSha256: hostSha256,
     originUsernameSha256: usernameSha256,
     normalizedOriginFingerprint: originFingerprint,
+    cachingObjectPresent,
+    cachingObjectType: safeValueType(config, 'caching'),
+    cachingDisabledFieldPresent: !!cachingObjectPresent && Object.hasOwn(caching, 'disabled'),
+    cachingDisabledFieldType: safeValueType(caching, 'disabled'),
     cacheDisabled,
+    mtlsObjectPresent,
+    mtlsObjectType: safeValueType(config, 'mtls'),
+    mtlsSslmodePresent: !!mtlsObjectPresent && Object.hasOwn(mtls, 'sslmode'),
+    mtlsSslmodeType: safeValueType(mtls, 'sslmode'),
     tlsMode,
+    caCertificateIdPresent: !!mtlsObjectPresent && Object.hasOwn(mtls, 'ca_certificate_id'),
+    caCertificateIdType: safeValueType(mtls, 'ca_certificate_id'),
     caPresent,
     tlsVerified,
     roleClass: 'unknown_pending_provider_role_inventory',

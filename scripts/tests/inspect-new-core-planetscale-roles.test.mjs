@@ -31,7 +31,13 @@ function roleRows({ inherited_roles = [] } = {}) {
   });
 }
 
-function fetchFixture(rows, { branchId = 'xwkb9quljkzd', databaseId = '87dbkhprjh30', status = 200 } = {}) {
+function fetchFixture(rows, {
+  branchId = 'xwkb9quljkzd',
+  databaseId = '87dbkhprjh30',
+  databaseDeletedAt,
+  databaseRegion = { provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'eu-central' },
+  status = 200,
+} = {}) {
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url, init });
@@ -41,12 +47,15 @@ function fetchFixture(rows, { branchId = 'xwkb9quljkzd', databaseId = '87dbkhprj
         id: databaseId,
         name: 'lythaus-new-core',
         kind: 'postgresql',
-        deleted_at: null,
-        region: { provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'eu-central' },
+        ready: true,
+        state: 'ready',
+        ...(databaseDeletedAt === undefined ? {} : { deleted_at: databaseDeletedAt }),
+        region: databaseRegion,
       });
     }
     if (url.endsWith('/branches/main')) {
-      return Response.json({ id: branchId, name: 'main', kind: 'postgresql', deleted_at: null });
+      return Response.json({ id: branchId, name: 'main', kind: 'postgresql', deleted_at: null,
+        ready: true, state: 'ready', cluster: 'PS_5_AWS_ARM', replicas: 0 });
     }
     const urlObject = new URL(url);
     const page = Number(urlObject.searchParams.get('page'));
@@ -69,6 +78,12 @@ test('reads only the pinned new database branch and paginated role inventory', a
   assert.equal(result.branchMatch, true);
   assert.equal(result.databaseId, '87dbkhprjh30');
   assert.equal(result.databaseMatch, true);
+  assert.equal(result.databaseFields.deletedAtPresent, false);
+  assert.equal(result.databaseFields.deletedAtAllowed, true);
+  assert.equal(result.databaseFields.regionProviderMatch, true);
+  assert.equal(result.databaseFields.regionSlugMatch, true);
+  assert.equal(result.branchFields.clusterMatch, true);
+  assert.equal(result.branchFields.replicasZero, true);
   assert.equal(result.logicalDatabase, 'postgres');
   assert.equal(result.roleCount, 6);
   assert.equal(result.activeCanonicalRoleCount, 6);
@@ -118,8 +133,24 @@ test('blocks branch mismatch, failed provider reads, and malformed pagination wi
   assert.equal((await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl: mismatch.fetchImpl })).code,
     'new_core_branch_identity_mismatch');
   const wrongDatabase = fetchFixture(roleRows(), { databaseId: 'old-database' });
-  assert.equal((await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl: wrongDatabase.fetchImpl })).code,
-    'new_core_database_identity_mismatch');
+  const wrongDatabaseResult = await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl: wrongDatabase.fetchImpl });
+  assert.equal(wrongDatabaseResult.code, 'new_core_database_identity_mismatch');
+  assert.equal(wrongDatabaseResult.databaseFields.idMatch, false);
+  assert.equal(wrongDatabaseResult.databaseFields.nameMatch, true);
+  const deletedDatabase = fetchFixture(roleRows(), { databaseDeletedAt: 'private-deletion-marker' });
+  const deletedDatabaseResult = await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl: deletedDatabase.fetchImpl });
+  assert.equal(deletedDatabaseResult.code, 'new_core_database_identity_mismatch');
+  assert.equal(deletedDatabaseResult.databaseFields.deletedAtPresent, true);
+  assert.equal(deletedDatabaseResult.databaseFields.deletedAtNull, false);
+  assert.equal(deletedDatabaseResult.databaseFields.deletedAtAllowed, false);
+  assert.equal(JSON.stringify(deletedDatabaseResult).includes('private-deletion-marker'), false);
+  const wrongRegion = fetchFixture(roleRows(), { databaseRegion: {
+    provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'us-west',
+  } });
+  const wrongRegionResult = await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl: wrongRegion.fetchImpl });
+  assert.equal(wrongRegionResult.databaseFields.regionProviderMatch, true);
+  assert.equal(wrongRegionResult.databaseFields.regionSlugMatch, false);
+  assert.equal(JSON.stringify(wrongRegionResult).includes('us-west'), false);
   const unauthorized = fetchFixture([], { status: 403 });
   const denied = await inspectNewCorePlanetScaleRoles({ token, sourceSha, fetchImpl: unauthorized.fetchImpl });
   assert.equal(denied.httpStatus, 403);
@@ -129,9 +160,11 @@ test('blocks branch mismatch, failed provider reads, and malformed pagination wi
     sourceSha,
     fetchImpl: async (url) => url.endsWith('/databases/lythaus-new-core')
       ? Response.json({ id: '87dbkhprjh30', name: 'lythaus-new-core', deleted_at: null,
+        kind: 'postgresql', ready: true, state: 'ready',
         region: { provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'eu-central' } })
       : url.endsWith('/branches/main')
-        ? Response.json({ id: 'xwkb9quljkzd', name: 'main', kind: 'postgresql', deleted_at: null })
+        ? Response.json({ id: 'xwkb9quljkzd', name: 'main', kind: 'postgresql', deleted_at: null,
+          ready: true, state: 'ready', cluster: 'PS_5_AWS_ARM', replicas: 0 })
         : Response.json({ total_count: 1, data: [], next_page: null }),
   });
   assert.equal(malformed.code, 'role_pagination_invalid');

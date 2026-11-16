@@ -58,8 +58,15 @@ test('reads only the pinned Hyperdrive GET and emits sanitized exact-target evid
   assert.equal(result.hostValid, true);
   assert.equal(result.portValid, true);
   assert.equal(result.cacheDisabled, true);
+  assert.equal(result.cachingObjectPresent, true);
+  assert.equal(result.cachingDisabledFieldPresent, true);
   assert.equal(result.tlsMode, 'verify-full');
   assert.equal(result.caPresent, true);
+  assert.equal(result.mtlsObjectPresent, true);
+  assert.equal(result.mtlsSslmodePresent, true);
+  assert.equal(result.caCertificateIdPresent, true);
+  assert.equal(result.originUserPresent, true);
+  assert.equal(result.originUserGeneratedRolePatternMatch, true);
   assert.equal(result.normalizedOriginFingerprint, crypto.createHash('sha256')
     .update(JSON.stringify({ scheme: 'postgres', host: secretsInFixture.host, port: 5432, database: 'postgres' })).digest('hex'));
   assert.equal(result.roleClass, 'unknown_pending_provider_role_inventory');
@@ -102,6 +109,17 @@ test('reports an exact branch, database, cache, or TLS mismatch as blocked', asy
     fetchImpl: async () => Response.json(validPayload({ caching: {} })) });
   assert.equal(missingCache.cacheDisabled, null);
   assert.equal(missingCache.status, 'READ_ONLY_PREFLIGHT_BLOCKED');
+  const missingMtlsPayload = validPayload();
+  delete missingMtlsPayload.result.mtls;
+  const missingMtls = await inspectNewCoreHyperdrive({ token, sourceSha,
+    fetchImpl: async () => Response.json(missingMtlsPayload) });
+  assert.equal(missingMtls.status, 'READ_ONLY_PREFLIGHT_BLOCKED');
+  assert.equal(missingMtls.mtlsObjectPresent, false);
+  assert.equal(missingMtls.mtlsObjectType, 'missing');
+  assert.equal(missingMtls.mtlsSslmodePresent, false);
+  assert.equal(missingMtls.mtlsSslmodeType, 'missing');
+  assert.equal(missingMtls.caCertificateIdPresent, false);
+  assert.equal(missingMtls.caCertificateIdType, 'missing');
 });
 
 test('keeps HTTP failures and oversized or malformed responses sanitized', async () => {
