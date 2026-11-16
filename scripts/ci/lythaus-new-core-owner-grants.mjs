@@ -14,18 +14,39 @@ function outsideRepository(file) {
   return relative !== '' && (relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative));
 }
 
-export function buildNewCoreOwnerGrantSql(roleMap) {
-  validateNewCoreRoleMap(roleMap);
+export function buildNewCoreOwnerGrantSql(roleMap, { sqlConsole = false } = {}) {
+  validateNewCoreRoleMap(roleMap, { local: sqlConsole });
   const identifier = (label) => `"${roleMap[label]}"`;
   const managed = NEW_CORE_LOGIN_ROLE_LABELS.map((label) => roleMap[label]);
   const deferred = NEW_CORE_DEFERRED_ROLE_LABELS.map((label) => roleMap[label]);
+  const creatorManaged = sqlConsole ? NEW_CORE_ROLE_LABELS.map((label) => roleMap[label]) : deferred;
+  const preexistingMembershipCheck = sqlConsole ? `
+  SELECT count(*) INTO observed_count FROM pg_auth_members membership
+    JOIN pg_roles group_role ON group_role.oid = membership.roleid
+    JOIN pg_roles member_role ON member_role.oid = membership.member
+    WHERE group_role.rolname = ANY(managed_roles) AND member_role.rolname = 'postgres'
+      AND membership.admin_option AND NOT membership.inherit_option AND NOT membership.set_option;
+  IF observed_count <> 3 OR EXISTS (
+    SELECT 1 FROM pg_auth_members membership
+    JOIN pg_roles group_role ON group_role.oid = membership.roleid
+    JOIN pg_roles member_role ON member_role.oid = membership.member
+    WHERE (group_role.rolname = ANY(managed_roles) OR member_role.rolname = ANY(managed_roles))
+      AND NOT (group_role.rolname = ANY(managed_roles) AND member_role.rolname = 'postgres'
+        AND membership.admin_option AND NOT membership.inherit_option AND NOT membership.set_option)) THEN
+    RAISE EXCEPTION 'new_core_owner_existing_login_management_boundary_failed';
+  END IF;` : `
+  IF EXISTS (SELECT 1 FROM pg_auth_members membership
+    JOIN pg_roles role_entry ON role_entry.oid IN (membership.roleid, membership.member)
+    WHERE role_entry.rolname = ANY(managed_roles)) THEN
+    RAISE EXCEPTION 'new_core_owner_managed_role_membership_present';
+  END IF;`;
   const baselineSql = NEW_CORE_PROVIDER_BASELINE_SQL
     .replaceAll('$1', literal(NEW_CORE_PROVIDER_BASELINE.schema))
     .replaceAll('$2', literal(NEW_CORE_PROVIDER_BASELINE.extension))
     .replaceAll('$3', array([...NEW_CORE_PROVIDER_BASELINE.views]));
   const statements = NEW_CORE_DEFERRED_ROLE_LABELS.map((label) =>
     `  CREATE ROLE ${identifier(label)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD NULL;`);
-  return `-- PRIVATE generated identifiers; no passwords. Review before execution.
+  return `-- ${sqlConsole ? 'SQL-CONSOLE role map; no passwords' : 'PRIVATE generated identifiers; no passwords'}. Review before execution.
 -- ONLY lythaus / lythaus-new-core (87dbkhprjh30) / main (xwkb9quljkzd).
 -- Confirm dashboard/provider identity and managed-role mapping before BEGIN.
 -- This SQL cannot independently establish the PlanetScale branch ID.
@@ -37,6 +58,7 @@ DECLARE
   scoped_roles CONSTANT text[] := ${array(NEW_CORE_ROLE_LABELS.map((label) => roleMap[label]))};
   managed_roles CONSTANT text[] := ${array(managed)};
   deferred_roles CONSTANT text[] := ${array(deferred)};
+  creator_managed_roles CONSTANT text[] := ${array(creatorManaged)};
   migration_role CONSTANT text := ${literal(roleMap.lythaus_migrations)};
   schema_count integer;
   relation_count integer;
@@ -72,11 +94,7 @@ BEGIN
   SELECT count(*) INTO observed_count FROM pg_roles WHERE rolname = ANY(managed_roles)
     AND rolcanlogin AND NOT (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls);
   IF observed_count <> 3 THEN RAISE EXCEPTION 'new_core_owner_managed_role_profile_mismatch'; END IF;
-  IF EXISTS (SELECT 1 FROM pg_auth_members membership
-    JOIN pg_roles role_entry ON role_entry.oid IN (membership.roleid, membership.member)
-    WHERE role_entry.rolname = ANY(managed_roles)) THEN
-    RAISE EXCEPTION 'new_core_owner_managed_role_membership_present';
-  END IF;
+${preexistingMembershipCheck}
   IF EXISTS (SELECT 1 FROM unnest(managed_roles) role_name
     WHERE has_database_privilege(role_name, 'postgres', 'CREATE')
       OR has_database_privilege(role_name, 'postgres', 'CONNECT WITH GRANT OPTION')) THEN
@@ -103,14 +121,14 @@ ${statements.join('\n')}
   SELECT count(*) INTO observed_count FROM pg_auth_members membership
     JOIN pg_roles group_role ON group_role.oid = membership.roleid
     JOIN pg_roles member_role ON member_role.oid = membership.member
-    WHERE group_role.rolname = ANY(deferred_roles) AND member_role.rolname = 'postgres'
+    WHERE group_role.rolname = ANY(creator_managed_roles) AND member_role.rolname = 'postgres'
       AND membership.admin_option AND NOT membership.inherit_option AND NOT membership.set_option;
-  IF observed_count <> 3 OR EXISTS (
+  IF observed_count <> ${creatorManaged.length} OR EXISTS (
     SELECT 1 FROM pg_auth_members membership
     JOIN pg_roles group_role ON group_role.oid = membership.roleid
     JOIN pg_roles member_role ON member_role.oid = membership.member
     WHERE (group_role.rolname = ANY(scoped_roles) OR member_role.rolname = ANY(scoped_roles))
-      AND NOT (group_role.rolname = ANY(deferred_roles) AND member_role.rolname = 'postgres'
+      AND NOT (group_role.rolname = ANY(creator_managed_roles) AND member_role.rolname = 'postgres'
         AND membership.admin_option AND NOT membership.inherit_option AND NOT membership.set_option)) THEN
     RAISE EXCEPTION 'new_core_owner_management_membership_boundary_failed';
   END IF;
@@ -131,7 +149,16 @@ COMMIT;
 `;
 }
 
+export function buildNewCoreSqlConsoleGrantsSql() {
+  return buildNewCoreOwnerGrantSql(Object.fromEntries(NEW_CORE_ROLE_LABELS.map((label) => [label, label])),
+    { sqlConsole: true });
+}
+
 function main() {
+  if (process.argv[2] === '--console-sql' && process.argv.length === 3) {
+    process.stdout.write(buildNewCoreSqlConsoleGrantsSql());
+    return;
+  }
   if (process.argv[2] !== '--write-private-sql') {
     if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--plan')) throw new Error('new_core_owner_grant_mode_invalid');
     process.stdout.write(`${JSON.stringify({ status: 'PLAN_ONLY_NOT_APPLIED', target: 'lythaus/lythaus-new-core/main',

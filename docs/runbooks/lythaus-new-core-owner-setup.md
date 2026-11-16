@@ -11,6 +11,30 @@ The owner explicitly selected the PlanetScale SQL web console. Use
 for the already-approved three-login creation scope. The terminal/CLI-managed
 route below is retained as an alternative, not a prerequisite.
 
+The owner has now supplied a transcript whose final complete attempt matches
+the reviewed login SQL after removal of comments/whitespace. It includes DO
+completion, three correctly labeled credential rows with distinct generated
+passwords and branch-qualified usernames, and COMMIT. An earlier incomplete
+paste caused an unterminated-dollar-quote error; it is not the final outcome.
+Record **OWNER_REPORTED_THREE_SQL_LOGINS_COMMITTED** and do not rerun or reset
+the roles. Password values were omitted from assistant output and receipts.
+The owner must save them privately. Cleanup after this new console session
+has not yet been confirmed.
+
+The next separately approved transaction is
+[new-core-console-initial-grants.sql](../../database/planetscale/provisioning/new-core-console-initial-grants.sql).
+It accepts the three existing SQL logins and their three ADMIN-only creator
+memberships, creates runtime/jobs/privacy as NOLOGIN PASSWORD NULL, grants
+CONNECT to the three logins and plain database CREATE to migrations only.
+It then requires six safe roles and exactly six ADMIN-only, INHERIT-false,
+SET-false creator memberships to durable `postgres` before COMMIT. All SQL
+identifiers are fixed canonical names; it needs no private map or passwords.
+It runs no migrations, installs no application schema and alters no Lythaus
+admin state. This privilege-changing transaction has not been approved or
+executed live. It passed a disposable PG17 rehearsal with the three preexisting
+SQL-created logins, a synthetic extension catalog, rollback after a deliberately
+failed final postcondition, a successful run and refusal of a repeat.
+
 The SQL block creates `lythaus_migrations`, `lythaus_admin`, and
 `lythaus_verifier` directly as PostgreSQL LOGIN roles. PlanetScale supports
 SQL-created roles and routes their connections using `.xwkb9quljkzd` usernames,
