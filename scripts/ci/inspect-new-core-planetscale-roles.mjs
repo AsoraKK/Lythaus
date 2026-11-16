@@ -330,7 +330,7 @@ export async function inspectNewCorePlanetScaleRoles({
     reportableInheritedPgRoleCount += reportablePgRoles.length;
     unlistedInheritedRoleCount += inherited.length - reportablePgRoles.length;
     for (const role of reportablePgRoles) inheritedPgRoleNames.add(role);
-    if (NEW_CORE_LOGIN_ROLE_LABELS.includes(label) && !duplicateLabel && branchMatch && ready && !deleted && databaseMatch && notExpired) {
+    if (NEW_CORE_LOGIN_ROLE_LABELS.includes(label) && !duplicateLabel && branchMatch && ready && !deleted && databaseMatch && expiresAt === null) {
       activeCanonicalRoleCount += 1;
     }
     const baseUsernameSha256 = sha256(row.base_username);

@@ -1,0 +1,105 @@
+name: New core role provisioning (approval gated)
+
+on:
+  push:
+    branches:
+      - codex/new-core-provisioning
+    paths:
+      - .github/workflows/lythaus-new-core-role-provisioning.yml
+      - infrastructure/planetscale/lythaus-new-core-clean-install.target.json
+      - scripts/ci/lythaus-new-core-environment-plan.mjs
+      - scripts/ci/lythaus-new-core-role-profile.mjs
+      - scripts/ci/lythaus-new-core-role-provisioning.mjs
+      - scripts/ci/planetscale-0021-target-identity.mjs
+      - scripts/planetscale/service-token-auth.mjs
+      - scripts/tests/lythaus-new-core-role-provisioning.test.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-new-core-role-provisioning
+  cancel-in-progress: false
+
+jobs:
+  verify-protected-environment:
+    name: Verify environment gate without provider secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require the exact reviewed source and repository
+        shell: bash
+        env:
+          APPROVED_SOURCE_SHA: ${{ vars.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'AsoraKK/Lythaus'
+          test "$GITHUB_REPOSITORY_ID" = '1010752912'
+          test "$GITHUB_REF" = 'refs/heads/codex/new-core-provisioning'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$APPROVED_SOURCE_SHA" = "$GITHUB_SHA"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install pinned repository dependencies without scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run local-only provisioning safety tests
+        run: node --test scripts/tests/lythaus-new-core-role-provisioning.test.mjs
+      - name: Verify environment exists and requires the repository owner
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.sha }}
+          LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA: ${{ vars.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA }}
+          NODE_OPTIONS: ''
+          NODE_DEBUG: ''
+        run: node scripts/ci/lythaus-new-core-environment-plan.mjs --verify-gate
+
+  provision-new-target-roles:
+    name: Provision only the new-core rehearsal roles
+    needs: verify-protected-environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: lythaus-new-core-rehearsal
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require the exact approved source again
+        shell: bash
+        env:
+          APPROVED_SOURCE_SHA: ${{ vars.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'AsoraKK/Lythaus'
+          test "$GITHUB_REPOSITORY_ID" = '1010752912'
+          test "$GITHUB_REF" = 'refs/heads/codex/new-core-provisioning'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$APPROVED_SOURCE_SHA" = "$GITHUB_SHA"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install pinned repository dependencies without scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Provision exact-target roles and encrypted environment secrets
+        shell: bash
+        env:
+          LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN: ${{ secrets.LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN }}
+          LYTHAUS_NEW_CORE_PROVISIONER_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_PROVISIONER_DATABASE_URL }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA: ${{ vars.LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA }}
+          LYTHAUS_NEW_CORE_PROVISIONING_RECEIPT_PATH: ${{ runner.temp }}/lythaus-new-core-role-provisioning.json
+          NODE_OPTIONS: ''
+          NODE_DEBUG: ''
+        run: node scripts/ci/lythaus-new-core-role-provisioning.mjs --provision

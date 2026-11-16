@@ -92,7 +92,12 @@ the exact Hyperdrive configuration before creating SQL clients. It verifies
 the branch-qualified URLs, origin fingerprint, database name, TLS mode, and
 connected database/user. It checks the new target is empty, all six roles are
 present and distinct, roles have no superuser/database/role-creation/BYPASSRLS
-attributes, and no role memberships exist **before the first migration**.
+attributes, and no runtime role memberships exist **before the first migration**.
+The only allowed membership exception is the three PostgreSQL-created
+`ADMIN TRUE, INHERIT FALSE, SET FALSE` grants for deferred NOLOGIN roles to the
+provisioner whose identifier hash is explicitly pinned in the approved target
+manifest. That hash must come from the separate provisioning receipt; without
+it the installer rejects the memberships.
 The migration login must arrive with plain `CREATE` on database `postgres`,
 **without grant option**, provisioned by an explicitly authorized administrator
 of this exact new branch. That administrator supplies the required `CONNECT`

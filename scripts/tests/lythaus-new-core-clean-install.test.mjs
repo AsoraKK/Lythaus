@@ -113,6 +113,7 @@ test('provider inventory binds three logins and preserves three passwordless SQL
   assert.throws(() => validateRoleMap({ ...roleMap, lythaus_jobs: 'pscale_api_unusedcredential' }));
   assert.throws(() => verifyProviderRoles([...rows, { name: 'lythaus_jobs' }], roleMap), /deferred_role_credential_present/);
   assert.throws(() => verifyProviderRoles(rows.map((row) => ({ ...row, inherited_roles: ['pg_read_all_data'] })), roleMap));
+  assert.throws(() => verifyProviderRoles(rows.map((row) => ({ ...row, expires_at: '2099-01-01T00:00:00Z' })), roleMap));
   assert.doesNotThrow(() => verifyProviderRoles([...rows, { name: 'existing_provider_role' }], roleMap));
 });
 

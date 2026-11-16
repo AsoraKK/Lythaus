@@ -52,6 +52,21 @@ GRANT CONNECT ON DATABASE postgres TO
 GRANT CREATE ON DATABASE postgres TO "<migration_sql_role>";
 ```
 
+PostgreSQL 17 automatically gives a non-superuser `CREATEROLE` provisioner
+`ADMIN TRUE, INHERIT FALSE, SET FALSE` membership in each of the three SQL-created
+NOLOGIN roles. Those three role-management grants are included in this approval
+scope. They allow management of those roles; they do not directly confer their
+runtime privileges or permission to `SET ROLE`. A disposable PostgreSQL test
+confirmed that the creating provisioner cannot revoke these bootstrap-grantor
+memberships itself. No ineffective cleanup command is proposed.
+
+The transaction verifies exactly these three management memberships to its
+connected provisioner, with no other membership involving a scoped role. Its
+receipt includes only a hash of that provisioner's SQL identifier. The later
+schema approval must pin that hash as `provisioningManagementRoleSha256` in the
+target manifest; until then the schema installer rejects these memberships.
+The current manifest deliberately has no unverified provisioner hash.
+
 No application table, function, sequence, schema, seed, membership, bootstrap
 latch or audit row is created in this step. The full canonical object grants
 in `database/planetscale/grants/roles.sql` and the aggregate verifier grants
@@ -90,7 +105,9 @@ Credential rotation/retirement is a distinct later action, never role deletion.
 
 Use a new GitHub Environment named `lythaus-new-core-rehearsal` in
 `AsoraKK/Lythaus` (repository ID `1010752912`). Its exact approved source SHA
-and only execution branch `codex/new-core-provisioning` are pinned. An owner
+and only execution branch `codex/new-core-provisioning` are pinned. The same
+`LYTHAUS_NEW_CORE_APPROVED_SOURCE_SHA` variable is set at repository and
+environment scope. An owner
 review is required before the job receives secrets. No existing environment
 or production workflow is repointed. The dedicated workflow is
 `.github/workflows/lythaus-new-core-role-provisioning.yml`.
@@ -99,14 +116,23 @@ The environment is currently absent (read-only GET returned 404). Its
 creation, protection rules and dedicated branch rule are part of the proposed
 first-step approval; nothing creates it during local preparation.
 
+A preflight job without an environment or provider secrets verifies that the
+environment already exists, its owner reviewer and exact branch policy, and
+the repository source pin. This avoids GitHub implicitly creating a missing
+environment. Environment variables cannot reliably be read through the
+workflow's `GITHUB_TOKEN`, so the protected job rechecks the environment source
+pin with the dedicated writer token after owner review. Disable administrator
+bypass in the GitHub UI where supported; the documented REST environment schema
+does not expose this setting, so API checks alone cannot attest it.
+
 Private prerequisites must be entered through trusted secret settings, never
 chat, source files, action inputs or artifacts:
 
 | Input | Purpose and limit |
 | --- | --- |
 | `LYTHAUS_NEW_CORE_PROVISIONER_DATABASE_URL` | An existing authorized administrative connection to this exact new branch. No Hyperdrive-password extraction, old-database connection, default-password reset or new broad credential fallback. |
-| `LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN` | Short-lived fine-grained GitHub credential limited to this repository's Environments write permission, used only for the named environment secrets. `GITHUB_TOKEN` with contents-read cannot perform this delivery. |
-| `PLANETSCALE_API_TOKEN` | Existing authorized service-token pair, consumed inside Actions for exact-target metadata and the three approved role creations. No token rotation or permission expansion is included. |
+| `LYTHAUS_NEW_CORE_ENVIRONMENT_WRITER_TOKEN` | Short-lived fine-grained GitHub credential limited to this repository's Environments write permission, used only for the named environment secrets. GitHub cannot restrict that token permission to one environment; the reviewed helper fixes the destination. `GITHUB_TOKEN` with contents-read cannot perform this delivery. |
+| `PLANETSCALE_API_TOKEN` | Existing repository Actions secret containing the authorized service-token pair, consumed only by the protected job for exact-target metadata and three approved role creations. It is not copied into the new environment; no token rotation or permission expansion is included. |
 
 The provisioner URL is not presently available or live-verified. The executor
 must verify its branch-qualified username, approved origin fingerprint,
@@ -114,6 +140,14 @@ must verify its branch-qualified username, approved origin fingerprint,
 empty application target and sufficient existing administrative authority
 before creating any managed role. Missing authority stops the operation;
 local tests do not establish live SQL authority.
+
+The provisioner profile requires existing `CREATEROLE`, database ownership or
+existing `CONNECT`/`CREATE` grant options, and no superuser, CREATEDB, replication,
+BYPASSRLS or role memberships. PlanetScale's documented default administrator
+has broader attributes and does not satisfy this profile. An already-existing
+qualified provisioner has not been established. If none exists, stop and
+prepare a separate minimal administrative bootstrap proposal; this approval
+does not create or broaden a provisioner role.
 
 Only these five destination secrets are written to that environment:
 
@@ -130,6 +164,10 @@ group prevents overlapping runs of this workflow. There is no log/artifact
 intermediary, password output, API response dump or generic database fallback.
 Runtime/jobs/privacy passwords, an HMAC key and the owner identity are not
 issued or stored in this first step. No Cloudflare secret is changed.
+Choose the shortest practical expiry for the writer token. Do not copy the
+provisioner connection into a Worker or Hyperdrive. Removing its stored secret
+or retiring any credential is a separately reviewed cleanup action; no secret,
+role or existing resource is automatically deleted by this workflow.
 
 ## Verification and partial completion
 
@@ -146,8 +184,9 @@ overwritten automatically.
 Managed-role creation and GitHub delivery occur sequentially. There is no
 cross-provider transaction. The three SQL NOLOGIN creations and initial grants
 are performed together in a database transaction. Verify six distinct scoped
-roles, exactly three LOGIN/three NOLOGIN roles, no inherited roles or unsafe
-attributes, no scoped role as database owner, migration-only plain `CREATE`,
+roles, exactly three LOGIN/three NOLOGIN roles, only the three pinned ADMIN-only
+provisioner memberships and no unsafe scoped-role attributes, no scoped role
+as database owner, migration-only plain `CREATE`,
 and required `CONNECT`. Re-read provider metadata to prove the original broad
 role was retained. Record only sanitized labels, counts, hashes and statuses.
 

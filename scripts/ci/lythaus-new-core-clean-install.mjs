@@ -10,7 +10,7 @@ import { canonicalReleaseSchemaContract, runtimeSchemaFingerprint, APPLICATION_S
 import { EXPECTED_MIGRATION_SET_SHA256, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
 import { NEW_CORE_ROLE_LABELS, NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS,
-  newCoreRoleCanLogin, validateNewCoreRoleMap } from './lythaus-new-core-role-profile.mjs';
+  newCoreRoleCanLogin, validateNewCoreRoleMap, verifyNewCoreRoleMemberships } from './lythaus-new-core-role-profile.mjs';
 
 const { Client } = pg;
 const ROOT = process.cwd();
@@ -561,7 +561,7 @@ export function verifyProviderRoles(rows, roleMap, now = Date.now()) {
       || row.ready !== true || row.deleted_at !== null
       || row.database_name !== 'postgres' || row.branch?.id !== REQUIRED_BRANCH_ID
       || row.branch?.name !== 'main' || row.branch?.deleted_at !== null
-      || (row.expires_at !== null && (!Number.isFinite(Date.parse(row.expires_at)) || Date.parse(row.expires_at) <= now))) {
+      || row.expires_at !== null) {
       fail('new_core_provider_role_inventory_mismatch');
     }
     byLabel.set(label, row.id);
@@ -752,7 +752,7 @@ export async function readBootstrapStateAsVerifier(client, { asLogin = false, ex
   }
 }
 
-async function verifyRoleBoundary(client, roleMap) {
+async function verifyRoleBoundary(client, roleMap, provisionerRoleSha256 = null) {
   validateRoleMap(roleMap, { local: ROLE_LABELS.every((label) => roleMap[label] === label) });
   const result = await client.query(`SELECT
     has_schema_privilege($1, 'identity', 'CREATE') AS migration_identity_ddl,
@@ -826,12 +826,14 @@ async function verifyRoleBoundary(client, roleMap) {
     || !row.verifier_database_connect || row.verifier_database_create
     || !row.migration_database_create || row.migration_database_owner
     || row.migration_database_create_grant_option !== false
-    || Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0
+    || Number(row.unsafe_role_count) !== 0
     || Number(row.role_login_profile_mismatch_count) !== 0
     || Number(row.non_migration_owned_object_count) !== 0
     || Number(row.restricted_schema_ddl_count) !== 0
     || Number(row.migration_schema_ddl_count) !== APPLICATION_SCHEMAS.length
     || Number(row.restricted_database_ddl_count) !== 0) fail('new_core_role_boundary_failed');
+  const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256);
+  if (Number(row.role_membership_count) !== memberships.totalMemberships) fail('new_core_role_membership_boundary_failed');
   return {
     migrationDdlOnly: true,
     sixDistinctRoles: true,
@@ -851,7 +853,9 @@ async function verifyRoleBoundary(client, roleMap) {
     migrationSchemaDdlSchemas: APPLICATION_SCHEMAS.length,
     restrictedDatabaseDdlGrants: 0,
     unsafeRoleAttributes: 0,
-    roleMemberships: 0,
+    roleMemberships: memberships.totalMemberships,
+    provisionerManagementGrants: memberships.provisionerManagementGrants,
+    runtimeRoleMemberships: memberships.runtimeRoleMemberships,
     nonMigrationOwnedApplicationObjects: 0,
   };
 }
@@ -966,7 +970,7 @@ function plannedLiveDatabaseTarget(originSha) {
   });
 }
 
-async function assertLiveEmptyTarget(client, roleMap) {
+async function assertLiveEmptyTarget(client, roleMap, provisionerRoleSha256 = null) {
   const result = await client.query(`SELECT
     current_database() AS database_name,
     current_user AS current_role,
@@ -1008,10 +1012,12 @@ async function assertLiveEmptyTarget(client, roleMap) {
     || row.migration_database_create_grant_option !== false) {
     fail('new_core_live_migration_database_create_profile_invalid');
   }
-  if (Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0
+  if (Number(row.unsafe_role_count) !== 0
     || Number(row.role_login_profile_mismatch_count) !== 0 || Number(row.restricted_database_ddl_count) !== 0) {
     fail('new_core_live_role_capability_precondition_failed');
   }
+  const memberships = await verifyNewCoreRoleMemberships(client, roleMap, provisionerRoleSha256);
+  if (Number(row.role_membership_count) !== memberships.totalMemberships) fail('new_core_role_membership_boundary_failed');
   return {
     cleanSchema: true,
     migrationLedgerAbsent: true,
@@ -1023,7 +1029,9 @@ async function assertLiveEmptyTarget(client, roleMap) {
     deferredNoLoginRoleCount: NEW_CORE_DEFERRED_ROLE_LABELS.length,
     provisionedRoleCount: ROLE_LABELS.length,
     unsafeRoleAttributes: 0,
-    roleMemberships: 0,
+    roleMemberships: memberships.totalMemberships,
+    provisionerManagementGrants: memberships.provisionerManagementGrants,
+    runtimeRoleMemberships: memberships.runtimeRoleMemberships,
   };
 }
 
@@ -1077,7 +1085,7 @@ export async function installLiveCleanSchema({
       fail('new_core_migration_connection_failed');
     }
     await assertLiveConnection(migrationClient, migrationRaw, 'lythaus_migrations', roleMap, target);
-    const cleanTarget = await assertLiveEmptyTarget(migrationClient, roleMap);
+    const cleanTarget = await assertLiveEmptyTarget(migrationClient, roleMap, target.provisioningManagementRoleSha256 ?? null);
     try {
       await verifierClient.connect();
     } catch {
@@ -1129,7 +1137,7 @@ export async function installLiveCleanSchema({
     const tableCount = Number(counts.rows[0]?.table_count ?? -1);
     const relationCount = Number(counts.rows[0]?.relation_count ?? -1);
     if (tableCount !== 102 || relationCount !== 103) fail('new_core_schema_counts_mismatch');
-    const roleBoundary = await verifyRoleBoundary(migrationClient, roleMap);
+    const roleBoundary = await verifyRoleBoundary(migrationClient, roleMap, target.provisioningManagementRoleSha256 ?? null);
     const schemaFingerprint = await verifyCanonicalSchemaFingerprint(migrationClient, migrations);
     const bootstrapState = await readBootstrapStateAsVerifier(verifierClient, { asLogin: true });
     const version = await migrationClient.query("SELECT current_setting('server_version_num')::integer AS version_num");

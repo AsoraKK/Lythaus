@@ -88,6 +88,10 @@ test('reads only the pinned new database branch and paginated role inventory', a
     .update('pscale_api_synthetic0.xwkb9quljkzd').digest('hex');
   const result = await inspectNewCorePlanetScaleRoles({ token, sourceSha, expectedOriginUsernameSha256, fetchImpl });
   assert.equal(result.status, 'READ_ONLY_ROLE_INVENTORY_SQL_CHECK_PENDING');
+  const expiring = roleRows();
+  expiring[0].expires_at = '2099-01-01T00:00:00Z';
+  assert.equal((await inspectNewCorePlanetScaleRoles({ token, sourceSha,
+    fetchImpl: fetchFixture(expiring).fetchImpl })).inventoryMatches, false);
   assert.equal(result.branchMatch, true);
   assert.equal(result.databaseId, '87dbkhprjh30');
   assert.equal(result.databaseMatch, true);
