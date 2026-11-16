@@ -161,6 +161,7 @@ grantor remains a separate cleanup approval; no admin fallback is used.
 No production import, bootstrap execution, Hyperdrive/Access/binding change,
 deployment, new provider resource/spend or cutover is included. The original
 database and bindings remain untouched. Later acceptance still requires a
-fresh owner sign-in opening the normal protected read-only page on the exact
-isolated test site and refusal of a second bootstrap. Production cutover and
+fresh owner sign-in opening the normal protected read-only `/flags` page on
+the exact isolated build at `admin-new-core-test.lythaus.co`, and refusal of a
+second bootstrap. Production cutover and
 fresh sign-in at the live admin hostname remain separate gates.
