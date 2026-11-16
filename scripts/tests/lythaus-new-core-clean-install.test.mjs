@@ -21,7 +21,7 @@ import {
 
 test('preparation plan pins the new database, branch, Hyperdrive and approved migration set', () => {
   const plan = buildPreparationPlan();
-  assert.equal(plan.status, 'PREPARATION_PROVIDER_ACCESS_BLOCKED');
+  assert.equal(plan.status, 'LIVE_CONFIGURATION_BLOCKED');
   assert.deepEqual(plan.destination, {
     organization: 'lythaus',
     database: 'lythaus-new-core',
@@ -225,10 +225,11 @@ function fakeTargetAndProvider() {
   const region = { provider: 'AWS', display_name: 'AWS eu-central-1', location: 'Frankfurt', slug: 'eu-central' };
   const metadata = new Map([
     ['https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-new-core', {
-      id: '87dbkhprjh30', name: 'lythaus-new-core', kind: 'postgresql', region,
+      id: '87dbkhprjh30', name: 'lythaus-new-core', kind: 'postgresql', ready: true, state: 'ready', region,
     }],
     ['https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-new-core/branches/main', {
-      id: 'xwkb9quljkzd', name: 'main', kind: 'postgresql', deleted_at: null, ready: true, region,
+      id: 'xwkb9quljkzd', name: 'main', kind: 'postgresql', deleted_at: null, ready: true, state: 'ready',
+      cluster_name: 'PS_5_AWS_ARM', replicas: 0, region,
     }],
     ['https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-new-core/branches/main/roles?page=1&per_page=100', {
       current_page: 1, total_count: labels.length, next_page: null,
@@ -268,7 +269,7 @@ function fakeTargetAndProvider() {
     LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL: `postgresql://${roleMap.lythaus_verifier}.xwkb9quljkzd:synthetic-verifier-password@new-core.psdb.cloud/postgres?sslmode=verify-full&sslrootcert=system`,
   };
   return { target, migrations, sourceSha, roleMap, roleMapSha: createHash('sha256').update(JSON.stringify(roleMap)).digest('hex'),
-    originSha, contract, environment, fetchImpl, calls };
+    originSha, contract, environment, fetchImpl, calls, metadata };
 }
 
 function bindApprovalMarkers(fixture) {
@@ -307,6 +308,22 @@ test('live installer rejects approval mismatch before creating SQL clients', asy
   assert.ok(fixture.calls.every((call) => call.method === 'GET'));
 });
 
+test('accepts the observed absent database deleted_at field but rejects a present non-null value before SQL clients', async () => {
+  const fixture = fakeTargetAndProvider();
+  const databaseUrl = 'https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-new-core';
+  assert.equal(Object.hasOwn(fixture.metadata.get(databaseUrl), 'deleted_at'), false);
+  fixture.metadata.get(databaseUrl).deleted_at = 'synthetic-deleted-state';
+  let clients = 0;
+  await assert.rejects(() => installLiveCleanSchema({
+    ...fixture,
+    worktreeHasChanges: false,
+    createClient: () => { clients += 1; throw new Error('client_must_not_be_created'); },
+  }), /new_core_provider_target_mismatch/);
+  assert.equal(clients, 0);
+  assert.equal(fixture.calls.length, 2);
+  assert.ok(fixture.calls.every((call) => call.method === 'GET'));
+});
+
 test('live installer rejects a branch-qualified URL for the old database before opening SQL clients', async () => {
   const fixture = fakeTargetAndProvider();
   Object.assign(fixture.environment, bindApprovalMarkers(fixture));
@@ -321,7 +338,7 @@ test('live installer rejects a branch-qualified URL for the old database before 
   assert.equal(fixture.migrations.checksum, EXPECTED_MIGRATION_SET_SHA256);
 });
 
-test('live installer rejects unsafe provider roles before running any DDL', async () => {
+test('live preflight rejects a replication-capable login before DDL using catalog-only reads', async () => {
   const fixture = fakeTargetAndProvider();
   Object.assign(fixture.environment, bindApprovalMarkers(fixture));
   const queries = [];
@@ -335,10 +352,14 @@ test('live installer rejects unsafe provider roles before running any DDL', asyn
       if (sql.includes('current_user AS user_name')) {
         return { rows: [{ database_name: 'postgres', user_name: fixture.roleMap.lythaus_migrations }] };
       }
+      assert.match(sql, /rolreplication/);
       return { rows: [{
         database_name: 'postgres', current_role: fixture.roleMap.lythaus_migrations,
+        migration_database_create: true, migration_database_owner: false,
+        migration_database_create_grant_option: true,
         version_num: 170011, application_schema_count: 0, application_relation_count: 0,
-        ledger_missing: true, provisioned_role_count: 6, unsafe_role_count: 1, role_membership_count: 0,
+        ledger_missing: true, provisioned_role_count: 6,
+        unsafe_role_count: sql.includes('rolreplication') ? 1 : 0, role_membership_count: 0,
       }] };
     },
   };
@@ -350,6 +371,7 @@ test('live installer rejects unsafe provider roles before running any DDL', asyn
   assert.equal(clients, 2);
   assert.equal(connects, 1);
   assert.ok(queries.every((sql) => /^\s*SELECT\b/i.test(sql)));
+  assert.ok(queries.some((sql) => /rolreplication/.test(sql)));
 });
 
 test('runner has no generic connection fallback and live mode requires separate gates', async () => {

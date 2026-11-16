@@ -2,7 +2,7 @@
 
 ## Current status
 
-**PREPARATION / PROVIDER ACCESS BLOCKED.** The proposed test URL
+**PREPARATION / LIVE CONFIGURATION BLOCKED.** The proposed test URL
 `https://admin-new-core-test.lythaus.co/flags` is **NOT DEPLOYED**. No live
 SQL connection, DDL, role or grant change, credential creation, Access change,
 Worker publication, data import, or cutover was performed for this preparation.
@@ -26,25 +26,53 @@ This session made no live changes. A separate before/after snapshot comparison
 of the existing production database/bindings was not available, so this is not
 an independent unchanged-state attestation.
 
-## Provider evidence still required
+## Current provider evidence and remaining blockers
 
-The PlanetScale connector confirms the new database and branch metadata, but
-does not expose the SQL server version, exact SQL origin, generated role
-inventory, or role grants. The configured `PLANETSCALE_API_TOKEN` is not in the
-service-token `id:token` format required for the roles endpoint. No retry,
-token rotation, or credential creation was done. Generated role identities
-remain **UNKNOWN**.
+The sanitized, read-only GitHub Actions run [43835553248](https://github.com/AsoraKK/Lythaus/actions/runs/43835553248), from inspector source
+`18c24397e8518c0eae76b650cd9862f9cbb8d4a3`, returned HTTP 200 from both
+providers. Its local sanitized receipt is
+`/workspace/scratch/lythaus-new-core-live-readonly/43835553248.json`. The
+Hyperdrive ID, new branch ID `xwkb9quljkzd`, logical database `postgres`, and
+origin fingerprint
+`30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558` match;
+caching is disabled. The raw origin and usernames are not stored here.
+The target manifest marks this as a historical read-only snapshot; every live
+apply attempt must re-read current provider metadata and match the current
+candidate's approvals.
 
-The Cloudflare read-only GET for the specified Hyperdrive ID returned HTTP 401
-(error 10000). Its actual destination, origin user, TLS mode, CA certificate,
-and effective caching setting remain **UNKNOWN**. No retry or credential
-rotation was done. Do not proceed until an authorized read-only configuration
-can verify that this exact new Hyperdrive points to the new branch's logical
-`postgres` database, uses the new Admin role, has verified TLS, and has caching
-disabled.
+Hyperdrive reports an `mtls` object, but omits both `sslmode` and
+`ca_certificate_id`. The required `verify-full` plus explicit CA verification
+therefore remains **unverified**. Cloudflare documents encrypted `require`
+mode as the default; the missing fields do not imply plaintext. PostgreSQL
+major version is not exposed by these provider metadata endpoints and remains
+**unknown**.
 
-No one-time/monthly cost estimate or ceiling is recorded. Live execution
-requires those values to be documented and separately approved.
+PlanetScale reports the exact database and branch, PostgreSQL kind, ready
+state, AWS `eu-central-1` / Frankfurt region, `PS_5_AWS_ARM` cluster, and zero
+replicas. Its role inventory contains one ready, nondeleted, unexpired role
+whose username matches the Hyperdrive origin. It has no canonical role label
+and inherits `pg_read_all_data`, `pg_write_all_data`, and one additional role.
+This identity is unsuitable for the Admin Worker and must remain unused and
+unchanged. The setup requires six separately provisioned, distinct least-
+privilege role identities. The read-only probe did not create credentials or
+make changes.
+
+Published pricing is reference only, not spending approval. PlanetScale lists
+the observed single-instance `PS-5` ARM compute at $5/month; storage and usage
+are unknown. Cloudflare documents a $5/month Workers Paid base with 10 million
+requests and 30 million CPU milliseconds included, with documented overages;
+Hyperdrive is included with unlimited queries and no separate pooling, cache,
+or egress charge. Current account plan/allowances and Access seat availability
+are unverified. The target manifest records these rates; the source details are
+in `/workspace/scratch/lythaus-new-core-live-readonly/pricing-reference.json`.
+No plan or resource changes were made, and
+one-time/monthly ceilings remain unapproved.
+
+The live read-only evidence establishes destination identity and caching, but
+not sufficient TLS, SQL version, or least-privilege role setup. Live DDL,
+grants, credentials, Worker activation, Access configuration, and deployment
+remain blocked pending their distinct approvals and the unresolved target
+preconditions.
 
 ## Prepared local path
 
@@ -62,6 +90,18 @@ the branch-qualified URLs, origin fingerprint, database name, TLS mode, and
 connected database/user. It checks the new target is empty, all six roles are
 present and distinct, roles have no superuser/database/role-creation/BYPASSRLS
 attributes, and no role memberships exist **before the first migration**.
+Because canonical `roles.sql` revokes database `CREATE` from restricted roles,
+the migration login must arrive with a scoped `CREATE` grant on database
+`postgres` **with grant option**, provisioned by an explicitly authorized
+provider/database administrator. The migration login must not own the database
+and must not have superuser, `CREATEDB`, `CREATEROLE`, replication, `BYPASSRLS`,
+or inherited role privileges. The runner verifies these properties before
+DDL, then confirms all application schemas, relations, and functions are owned
+by the migration login and restricted logins have no database/schema `CREATE`.
+The disposable rehearsal provisions only this narrow grant, runs migrations
+and canonical grants under `SET ROLE lythaus_migrations`, and verifies the
+application-object owners. Public extension objects are outside the
+application schemas.
 It applies each committed migration file in its own transaction, records the
 exact ledger checksum, and never calls the legacy `ci-*` generic URL runner or
 the production 0021 cleanup helper. A partial install stops for review; there
@@ -125,8 +165,9 @@ target, expected changes, and cost/credential boundary for user approval:
 4. The exact migration SHA, source candidate SHA, 0007/0011/0012 zero-row
    guards, role grants, false latch insertion, and the no-cleanup behavior.
 5. A reviewed cost estimate with one-time and monthly ceilings.
-6. Separate exact approval for schema DDL, grant changes, credential use or
-   provisioning, and spend. The runner binds approval values to the candidate
+6. Separate exact approval for schema DDL, role/grant provisioning (including
+   the migration login's database `CREATE WITH GRANT OPTION`), credential use
+   or provisioning, and spend. The runner binds approval values to the candidate
    SHA, migration-set SHA, new database/branch IDs, origin fingerprint, and
    role-map fingerprint.
 
@@ -177,8 +218,10 @@ credentialless control-plane, and durable-latch closure checks.
 
 Unit tests use synthetic provider metadata and URLs only. They are not live
 PlanetScale role/API or Cloudflare Access proofs. Worker dry-run reads the
-local asset bundle and makes no deployment. No source change was pushed and no
-CI/workflow was dispatched.
+local asset bundle and makes no deployment. The setup candidate remains local
+and undeployed. The only workflow run was the separate read-only inspector
+above; no production workflow was dispatched. The pricing receipt is at
+`/workspace/scratch/lythaus-new-core-live-readonly/pricing-reference.json`.
 
 ## Owner-only acceptance after all live approvals
 
@@ -246,10 +289,38 @@ revocation may be considered later under separate authorization.
 ## Proposed data plan, if separately requested
 
 No production data is read or imported in this preparation. Any future data
-move requires its own approved source, field map, dependency order, privacy
-review, and rehearsed rollback plan. Import dependencies in order and preserve
-the new administrator membership, consumed bootstrap latch, and completion
-audit row throughout. Never truncate or replace the audit table. Do not import
-old admin bindings, old subject-HMAC state, passwords, tokens, or production
-secrets. Any identity reconciliation must use a separately reviewed supported
-mapping; this clean-schema setup does not authorize it.
+move requires separate source-read, field-map, privacy, rehearsal, and cutover
+approvals. A proposed order, subject to schema/FK review before any import, is:
+
+1. Prepare an explicit old-to-new identity ID map in a separate protected
+   process. Reserve and preserve the new control-plane actor and administrator;
+   never map old administrator IDs onto them. Exclude admin membership,
+   bootstrap latch/completion event, subject-HMAC state, passwords, tokens,
+   provider credentials, and production secrets from the source import.
+2. Load approved static dictionaries and place/category reference rows. For
+   self-referencing place trees, insert parent rows first; use a reviewed
+   two-phase insert/update only where the schema allows nullable parent links.
+   Reject unresolved cycles and keep FK constraints enabled.
+3. Map consumer identities, then approved noncredential profile/preferences
+   fields. Do not import authentication material. Load media metadata and
+   ownership only after their mapped users and referenced objects exist.
+4. Load content after users and places, then comments after their posts. For
+   nullable self-parent comment links, stage the mapped rows and resolve parent
+   links in a second pass with constraints enabled; reject cycles the schema
+   cannot represent.
+5. Load social edges and reactions after their user/content endpoints. Load
+   moderation cases after subjects and content, then decisions, appeals,
+   reviewer references, and outcomes in FK order. Resolve any schema-supported
+   nullable cycles with an explicit two-phase ID mapping, never by disabling
+   constraints.
+6. Load remaining trust, provenance, and privacy dependents after their user,
+   content, and moderation references. Rebuild derived feeds/queues only under
+   a separate idempotent plan; do not import old audit/recovery/rebind state.
+7. Validate source-to-target aggregate counts, mapped-ID uniqueness, every FK
+   (zero orphans), required uniqueness constraints, and the clean replacement's
+   administrator/latch/completion-event state. Review discrepancies before a
+   separately approved cutover.
+
+Never truncate or replace the new audit table or overwrite/delete the new
+administrator, consumed latch, or bootstrap completion event. This proposed
+plan authorizes no source reads, import, or cutover.

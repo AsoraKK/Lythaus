@@ -254,6 +254,7 @@ function loadCleanInstallContract() {
     || target.provider.branchId !== 'xwkb9quljkzd'
     || target.provider.region !== 'eu-central'
     || target.provider.replicas !== 0
+    || target.provider.cluster !== 'PS-5 aarch64'
     || JSON.stringify(target.provider.regionMetadata) !== JSON.stringify({
       provider: 'AWS', displayName: 'AWS eu-central-1', location: 'Frankfurt',
     })
@@ -261,11 +262,14 @@ function loadCleanInstallContract() {
     || target.provider.requiredPostgresMajor !== 17
     || !((target.provider.sqlOriginFingerprint === null && target.provider.sqlOriginVerification === 'BLOCKED_UNVERIFIED')
       || (/^[a-f0-9]{64}$/.test(target.provider.sqlOriginFingerprint ?? '')
-        && target.provider.sqlOriginVerification === 'VERIFIED_NEW_HYPERDRIVE_DESTINATION'))) fail('new_core_target_manifest_mismatch');
+        && ['BLOCKED_ROLE_CLASS_UNVERIFIED', 'VERIFIED_NEW_HYPERDRIVE_DESTINATION'].includes(target.provider.sqlOriginVerification)))) fail('new_core_target_manifest_mismatch');
   if (target.hyperdrive.accountId !== 'e5b7ae46e04698f507b7e4b3d4ef1af0'
     || target.hyperdrive.id !== '7e39fc4a286147988ed12df7a6322616'
     || target.hyperdrive.requiredCachingDisabled !== true
-    || !['BLOCKED_CLOUDFLARE_READ_401', 'VERIFIED_NEW_HYPERDRIVE_CACHING_DISABLED'].includes(target.hyperdrive.originVerification)) fail('new_core_hyperdrive_manifest_mismatch');
+    || !['BLOCKED_CLOUDFLARE_READ_401', 'BLOCKED_VERIFY_FULL_CA_UNVERIFIED', 'VERIFIED_NEW_HYPERDRIVE_CACHING_DISABLED'].includes(target.hyperdrive.originVerification)
+    || target.readOnlyEvidence?.observationType !== 'historical_read_only_snapshot'
+    || target.readOnlyEvidence?.runId !== '43835553248'
+    || target.readOnlyEvidence?.inspectorSourceSha !== '18c24397e8518c0eae76b650cd9862f9cbb8d4a3') fail('new_core_hyperdrive_manifest_mismatch');
   if (target.migrationSetSha256 !== EXPECTED_MIGRATION_SET_SHA256) fail('new_core_migration_manifest_mismatch');
   if (worker.name !== REQUIRED_WORKER
     || worker.account_id !== REQUIRED_ACCOUNT_ID
@@ -294,7 +298,7 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
   const { target, migrations } = loadCleanInstallContract();
   const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   return {
-    status: 'PREPARATION_PROVIDER_ACCESS_BLOCKED',
+    status: 'LIVE_CONFIGURATION_BLOCKED',
     sourceSha,
     destination: {
       organization: target.provider.organization,
@@ -320,6 +324,8 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
       'Apply the exact 22 approved migration files in order and insert the exact filename/checksum ledger rows.',
       'Install canonical least-privilege role grants and the narrow read-only aggregate bootstrap verifier.',
       'Insert the canonical first-admin latch as false; no user, membership, audit completion row, or application record is created by setup.',
+      'Keep the one observed unlabelled broad role unused and unchanged; provision six separate least-privilege roles only after separate role and credential approval.',
+      'Provision the migration login with database CREATE WITH GRANT OPTION on postgres, but not database ownership; the live preflight verifies this scoped DDL prerequisite before any migration.',
       'Provisioned provider roles and scoped credentials must already exist under separate approval; this installer does not create, rotate, or delete credentials or roles.',
     ],
     guardedEmptyDataSteps: [
@@ -335,11 +341,12 @@ export function buildPreparationPlan({ root = ROOT } = {}) {
       manifestSha256: migrations.checksum,
     },
     blockers: [
-      'PlanetScale SQL server version and connection origin are not independently verified.',
-      'Hyperdrive origin and effective caching state are unreadable from the current Cloudflare credential.',
-      'Migration/runtime/admin/app/verifier role identities and scoped credentials need separate approval and verification.',
+      'PlanetScale database and branch metadata now match the approved destination, but the SQL server major is not exposed by these metadata reads.',
+      'The exact Hyperdrive origin fingerprint and caching-disabled state are verified; Cloudflare did not return mtls.sslmode or ca_certificate_id, so verify-full plus CA verification remains blocked. Cloudflare documents require-mode encryption by default; plaintext is not inferred.',
+      'The branch exposes one unlabelled role matching the Hyperdrive username, with pg_read_all_data, pg_write_all_data, and one additional unreported inherited role. It does not satisfy any of the six canonical role labels or least-privilege requirements; keep it unused and unchanged.',
+      'Provision six distinct least-privilege roles and separate credentials under explicit approval; updating the Hyperdrive to the approved Admin role and verify-full CA configuration is also a separate binding approval.',
       'The isolated Cloudflare Access app, exact audience, owner-only policy, hostname binding and worker asset build are not live-verified.',
-      'A cost estimate and explicit one-time/monthly ceilings are missing.',
+      'Published pricing reference is recorded but current account allowances, storage/usage, Access seats, and approved one-time/monthly ceilings remain unknown.',
       'Live DDL, role/grant changes, credential use, Access/binding changes, worker publication and any new spend each remain separately approval-gated.',
     ],
   };
@@ -415,6 +422,7 @@ async function assertEmptyTarget(client) {
     current_database() AS database_name,
     current_user AS current_role,
     current_setting('server_version_num')::integer AS version_num,
+    has_database_privilege(current_user, current_database(), 'CREATE') AS migration_database_create,
     (SELECT count(*)::integer FROM pg_namespace
       WHERE nspname NOT LIKE 'pg_%' AND nspname NOT IN ('information_schema', 'public')) AS application_schema_count,
     (SELECT count(*)::integer FROM pg_class relation_entry
@@ -437,6 +445,7 @@ async function createLocalRoles(client) {
   for (const role of ROLE_NAMES) {
     await client.query(`CREATE ROLE "${role}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
   }
+  await client.query('GRANT CREATE ON DATABASE postgres TO lythaus_migrations WITH GRANT OPTION');
 }
 
 export function validateRoleMap(roleMap, { local = false } = {}) {
@@ -632,11 +641,14 @@ async function verifyPlanetScaleTarget({ target, roleMap, environment = process.
     providerGet(databaseUrl, psAuthorization, 'new_core_database_metadata_unavailable', fetchImpl),
     providerGet(branchUrl, psAuthorization, 'new_core_branch_metadata_unavailable', fetchImpl),
   ]);
+  const databaseDeletedAtAllowed = !Object.hasOwn(database, 'deleted_at') || database.deleted_at === null;
   if (database.id !== REQUIRED_DATABASE_ID || database.name !== REQUIRED_DATABASE
-    || database.kind !== 'postgresql'
+    || database.kind !== 'postgresql' || database.ready !== true || database.state !== 'ready'
+    || !databaseDeletedAtAllowed
     || branch.id !== REQUIRED_BRANCH_ID || branch.name !== 'main' || branch.kind !== 'postgresql'
-    || branch.deleted_at !== null
-    || !(branch.ready === true || branch.state === 'ready' || branch.status === 'ready')) fail('new_core_provider_target_mismatch');
+    || branch.deleted_at !== null || branch.ready !== true || branch.state !== 'ready'
+    || branch.cluster_name !== 'PS_5_AWS_ARM' || branch.replicas !== 0
+    || target.provider.cluster !== 'PS-5 aarch64' || target.provider.replicas !== 0) fail('new_core_provider_target_mismatch');
   const region = assertProviderRegion(database, branch);
   const roleInventory = await readRoleInventory(psAuthorization, roleMap, fetchImpl);
   return { databaseId: database.id, branchId: branch.id, region, originFingerprint: sqlOriginSha, roleInventory };
@@ -771,8 +783,16 @@ async function verifyRoleBoundary(client, roleMap) {
     has_table_privilege($6, 'system.audit_events', 'INSERT') AS verifier_audit_insert,
     has_database_privilege($6, 'postgres', 'CONNECT') AS verifier_database_connect,
     has_database_privilege($6, 'postgres', 'CREATE') AS verifier_database_create,
+    has_database_privilege($1, 'postgres', 'CREATE') AS migration_database_create,
+    (SELECT datdba = (SELECT oid FROM pg_roles WHERE rolname = $1)
+       FROM pg_database WHERE datname = 'postgres') AS migration_database_owner,
+    EXISTS (SELECT 1 FROM pg_database database_entry,
+      LATERAL aclexplode(COALESCE(database_entry.datacl, acldefault('d', database_entry.datdba))) acl
+      WHERE database_entry.datname = 'postgres'
+        AND acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = $1)
+        AND acl.privilege_type = 'CREATE' AND acl.is_grantable) AS migration_database_create_grant_option,
     (SELECT count(*)::integer FROM pg_roles WHERE rolname = ANY($7::text[]) AND
-      (rolsuper OR rolcreatedb OR rolcreaterole OR rolbypassrls OR NOT rolcanlogin)) AS unsafe_role_count,
+      (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR NOT rolcanlogin)) AS unsafe_role_count,
     (SELECT count(*)::integer FROM pg_auth_members membership
       JOIN pg_roles role_entry ON role_entry.oid IN (membership.roleid, membership.member)
       WHERE role_entry.rolname = ANY($7::text[])) AS role_membership_count,
@@ -788,17 +808,16 @@ async function verifyRoleBoundary(client, roleMap) {
       JOIN pg_namespace namespace_entry ON namespace_entry.oid = procedure_entry.pronamespace
        WHERE namespace_entry.nspname = ANY($8::text[])
     ) object_owner JOIN pg_roles owner_role ON owner_role.oid = object_owner.owner_oid
-      WHERE owner_role.rolname = ANY($9::text[])) AS non_migration_owned_object_count,
-    (SELECT count(*)::integer FROM unnest($10::text[]) AS restricted(role_name)
-      CROSS JOIN unnest($11::text[]) AS application_schema(schema_name)
+      WHERE owner_role.rolname IS DISTINCT FROM $1) AS non_migration_owned_object_count,
+    (SELECT count(*)::integer FROM unnest($9::text[]) AS restricted(role_name)
+      CROSS JOIN unnest($10::text[]) AS application_schema(schema_name)
       WHERE has_schema_privilege(restricted.role_name, application_schema.schema_name, 'CREATE')) AS restricted_schema_ddl_count,
-    (SELECT count(*)::integer FROM unnest($11::text[]) AS application_schema(schema_name)
+    (SELECT count(*)::integer FROM unnest($10::text[]) AS application_schema(schema_name)
       WHERE has_schema_privilege($1, application_schema.schema_name, 'CREATE')) AS migration_schema_ddl_count,
-    (SELECT count(*)::integer FROM unnest($10::text[]) AS restricted(role_name)
+    (SELECT count(*)::integer FROM unnest($9::text[]) AS restricted(role_name)
       WHERE has_database_privilege(restricted.role_name, 'postgres', 'CREATE')) AS restricted_database_ddl_count`,
   [roleMap.lythaus_migrations, roleMap.lythaus_runtime, roleMap.lythaus_admin, roleMap.lythaus_jobs,
     roleMap.lythaus_privacy, roleMap.lythaus_verifier, Object.values(roleMap), APPLICATION_SCHEMAS,
-    [roleMap.lythaus_runtime, roleMap.lythaus_admin, roleMap.lythaus_jobs, roleMap.lythaus_privacy, roleMap.lythaus_verifier],
     [roleMap.lythaus_runtime, roleMap.lythaus_admin, roleMap.lythaus_jobs, roleMap.lythaus_privacy, roleMap.lythaus_verifier],
     APPLICATION_SCHEMAS]);
   const row = result.rows[0];
@@ -811,6 +830,8 @@ async function verifyRoleBoundary(client, roleMap) {
     || row.verifier_table_select || row.verifier_subject_digest_select
     || row.verifier_flag_select || row.verifier_flag_update || row.verifier_audit_select || row.verifier_audit_insert
     || !row.verifier_database_connect || row.verifier_database_create
+    || !row.migration_database_create || row.migration_database_owner
+    || !row.migration_database_create_grant_option
     || Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0
     || Number(row.non_migration_owned_object_count) !== 0
     || Number(row.restricted_schema_ddl_count) !== 0
@@ -826,6 +847,9 @@ async function verifyRoleBoundary(client, roleMap) {
     adminBootstrapFunctionOnly: true,
     verifierCannotReadSubjectDigest: true,
     verifierDatabaseConnect: true,
+    migrationDatabaseCreate: true,
+    migrationDatabaseOwnership: false,
+    migrationDatabaseCreateGrantOption: true,
     restrictedSchemaDdlGrants: 0,
     migrationSchemaDdlSchemas: APPLICATION_SCHEMAS.length,
     restrictedDatabaseDdlGrants: 0,
@@ -861,6 +885,7 @@ async function rehearseLocalPostgres17() {
   try {
     await assertEmptyTarget(client);
     await createLocalRoles(client);
+    await client.query('SET ROLE lythaus_migrations');
     const roleMap = Object.fromEntries(ROLE_LABELS.map((label) => [label, label]));
     const pendingRegistry = [];
     const emptyDataGuards = [];
@@ -883,6 +908,7 @@ async function rehearseLocalPostgres17() {
     await client.query(substituteRoleNames(fs.readFileSync(path.join(ROOT, 'database/planetscale/grants/roles.sql'), 'utf8'), roleMap));
     await client.query(substituteRoleNames(fs.readFileSync(path.join(ROOT, VERIFIER_GRANTS_PATH), 'utf8'), roleMap));
     await client.query(fs.readFileSync(path.join(ROOT, 'database/planetscale/verification/verify.sql'), 'utf8'));
+    await client.query('RESET ROLE');
 
     const extensionRows = await client.query('SELECT extname FROM pg_extension WHERE extname = ANY($1::text[]) ORDER BY extname', [REQUIRED_EXTENSIONS]);
     if (JSON.stringify(extensionRows.rows.map((row) => row.extname)) !== JSON.stringify([...REQUIRED_EXTENSIONS].sort())) fail('new_core_required_extensions_missing');
@@ -913,7 +939,7 @@ async function rehearseLocalPostgres17() {
       emptyDataGuards,
       roles: roleBoundary,
       bootstrapState,
-      liveTargetStatus: 'BLOCKED_UNVERIFIED',
+      liveTargetStatus: 'LIVE_CONFIGURATION_BLOCKED',
     };
   } finally {
     await client.end().catch(() => undefined);
@@ -948,6 +974,14 @@ async function assertLiveEmptyTarget(client, roleMap) {
     current_database() AS database_name,
     current_user AS current_role,
     current_setting('server_version_num')::integer AS version_num,
+    has_database_privilege(current_user, current_database(), 'CREATE') AS migration_database_create,
+    (SELECT datdba = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+       FROM pg_database WHERE datname = current_database()) AS migration_database_owner,
+    EXISTS (SELECT 1 FROM pg_database database_entry,
+      LATERAL aclexplode(COALESCE(database_entry.datacl, acldefault('d', database_entry.datdba))) acl
+      WHERE database_entry.datname = current_database()
+        AND acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+        AND acl.privilege_type = 'CREATE' AND acl.is_grantable) AS migration_database_create_grant_option,
     (SELECT count(*)::integer FROM pg_namespace
       WHERE nspname NOT LIKE 'pg_%' AND nspname NOT IN ('information_schema', 'public')) AS application_schema_count,
     (SELECT count(*)::integer FROM pg_class relation_entry
@@ -958,7 +992,7 @@ async function assertLiveEmptyTarget(client, roleMap) {
     to_regclass('system.schema_migrations') IS NULL AS ledger_missing,
     (SELECT count(*)::integer FROM pg_roles WHERE rolname = ANY($1::text[])) AS provisioned_role_count,
     (SELECT count(*)::integer FROM pg_roles WHERE rolname = ANY($1::text[])
-      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolbypassrls OR NOT rolcanlogin)) AS unsafe_role_count,
+      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR NOT rolcanlogin)) AS unsafe_role_count,
     (SELECT count(*)::integer FROM pg_auth_members membership
       JOIN pg_roles role_entry ON role_entry.oid IN (membership.roleid, membership.member)
       WHERE role_entry.rolname = ANY($1::text[])) AS role_membership_count`,
@@ -970,6 +1004,10 @@ async function assertLiveEmptyTarget(client, roleMap) {
     || row.ledger_missing !== true || Number(row.provisioned_role_count) !== ROLE_LABELS.length) {
     fail('new_core_live_database_not_empty_postgres17');
   }
+  if (row.migration_database_create !== true || row.migration_database_owner !== false
+    || row.migration_database_create_grant_option !== true) {
+    fail('new_core_live_migration_database_create_missing');
+  }
   if (Number(row.unsafe_role_count) !== 0 || Number(row.role_membership_count) !== 0) {
     fail('new_core_live_role_capability_precondition_failed');
   }
@@ -977,6 +1015,9 @@ async function assertLiveEmptyTarget(client, roleMap) {
     cleanSchema: true,
     migrationLedgerAbsent: true,
     postgresMajor: 17,
+    migrationDatabaseCreate: true,
+    migrationDatabaseOwnership: false,
+    migrationDatabaseCreateGrantOption: true,
     provisionedRoleCount: ROLE_LABELS.length,
     unsafeRoleAttributes: 0,
     roleMemberships: 0,

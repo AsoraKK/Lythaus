@@ -16,14 +16,90 @@
     "cluster": "PS-5 aarch64",
     "logicalDatabase": "postgres",
     "requiredPostgresMajor": 17,
-    "sqlOriginFingerprint": null,
-    "sqlOriginVerification": "BLOCKED_UNVERIFIED"
+    "sqlOriginFingerprint": "30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558",
+    "sqlOriginVerification": "BLOCKED_ROLE_CLASS_UNVERIFIED"
   },
   "hyperdrive": {
     "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
     "id": "7e39fc4a286147988ed12df7a6322616",
     "requiredCachingDisabled": true,
-    "originVerification": "BLOCKED_CLOUDFLARE_READ_401"
+    "originVerification": "BLOCKED_VERIFY_FULL_CA_UNVERIFIED"
+  },
+  "readOnlyEvidence": {
+    "observationType": "historical_read_only_snapshot",
+    "status": "LIVE_CONFIGURATION_BLOCKED",
+    "runId": "43835553248",
+    "inspectorSourceSha": "18c24397e8518c0eae76b650cd9862f9cbb8d4a3",
+    "hyperdrive": {
+      "httpStatus": 200,
+      "hyperdriveIdMatch": true,
+      "branchId": "xwkb9quljkzd",
+      "branchMatch": true,
+      "logicalDatabase": "postgres",
+      "originHostSha256": "03acb7821a7c1ef6ca5d90282e70e1168f6125ee0bd650c7f30ba8e7485abeba",
+      "originUsernameSha256": "0a63555f1de68fd83e5c4517b18acfec36c4528d5a1db76a627807d8f2cd6042",
+      "normalizedOriginFingerprint": "30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558",
+      "cacheDisabled": true,
+      "mtlsObjectPresent": true,
+      "mtlsSslmodePresent": false,
+      "caCertificateIdPresent": false,
+      "verifyFullAndCaVerified": false
+    },
+    "planetScale": {
+      "httpStatus": 200,
+      "databaseIdMatch": true,
+      "branchId": "xwkb9quljkzd",
+      "branchMatch": true,
+      "region": "AWS eu-central-1 Frankfurt",
+      "clusterName": "PS_5_AWS_ARM",
+      "replicas": 0,
+      "postgresMajorVerified": false,
+      "roleCount": 1,
+      "expectedDistinctRoleCount": 6,
+      "canonicalRoleLabelCount": 0,
+      "hyperdriveOriginRoleHashMatchCount": 1,
+      "matchedCanonicalRoleLabel": null,
+      "matchedRoleReady": true,
+      "matchedRoleDeleted": false,
+      "matchedRoleUnexpired": true,
+      "matchedRoleDatabaseAndBranchMatch": true,
+      "matchedRoleIdSha256": "53b6a1e60ecb50cb1441d8d70a23882f6080ad81dd3561861d4507543a94ebf6",
+      "matchedBaseUsernameSha256": "5ec5869063de36dc8efa6bfb10e0ed226207d4299c1f0a69c61a24adf4fc289a",
+      "matchedUsernameSha256": "0a63555f1de68fd83e5c4517b18acfec36c4528d5a1db76a627807d8f2cd6042",
+      "inheritedRoleCount": 3,
+      "reportableInheritedPgRoles": ["pg_read_all_data", "pg_write_all_data"],
+      "unlistedInheritedRoleCount": 1
+    }
+  },
+  "pricingReference": {
+    "status": "REFERENCE_ONLY_NOT_SPEND_APPROVAL",
+    "planetScale": {
+      "cluster": "PS_5_AWS_ARM",
+      "replicas": 0,
+      "publishedSingleInstanceComputeUsdPerMonth": 5,
+      "storageAndUsageVerified": false
+    },
+    "cloudflare": {
+      "workersPaidBaseUsdPerMonth": 5,
+      "includedRequestsPerMonth": 10000000,
+      "includedCpuMillisecondsPerMonth": 30000000,
+      "overageUsdPerMillionRequests": 0.3,
+      "overageUsdPerMillionCpuMilliseconds": 0.02,
+      "hyperdriveIncludedWithWorkersPaid": true,
+      "hyperdriveQueriesOnPaid": "unlimited",
+      "additionalPoolingCachingEgressCharge": false,
+      "currentAccountPlanAndAllowancesVerified": false,
+      "accessSeatAvailabilityVerified": false,
+      "sources": [
+        "https://developers.cloudflare.com/workers/platform/pricing/",
+        "https://developers.cloudflare.com/hyperdrive/platform/pricing/"
+      ]
+    },
+    "approval": {
+      "oneTimeCeilingUsd": null,
+      "monthlyCeilingUsd": null,
+      "providerResourceChangeApproved": false
+    }
   },
   "costApproval": {
     "estimateReference": null,
@@ -56,5 +132,5 @@
     { "label": "lythaus_verifier", "purpose": "read-only aggregate counts through column-scoped grants; no subject digest access" }
   ],
   "migrationSetSha256": "49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614",
-  "liveExecution": "BLOCKED_SEPARATE_APPROVAL_AND_TARGET_ATTESTATION_REQUIRED"
+  "liveExecution": "LIVE_CONFIGURATION_BLOCKED_SEPARATE_APPROVAL_AND_TARGET_ATTESTATION_REQUIRED"
 }
