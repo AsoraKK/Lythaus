@@ -1,7 +1,8 @@
 # Owner-controlled initial role setup for new-core
 
-Status: **PROPOSAL ONLY. No provider connection, credential creation, setting
-change or SQL execution is authorized by this document.** An existing restricted
+Status: **INITIAL ROLES AND GRANTS APPLIED AND LIVE-VERIFIED. Schema installation
+and deployment remain separately gated.** Authority comes from the owner's
+explicit approvals, not this document. An existing restricted
 provisioner is **UNVERIFIED**, not a prerequisite the owner must locate.
 
 ## Current selected interface: PlanetScale SQL console
@@ -30,10 +31,49 @@ It then requires six safe roles and exactly six ADMIN-only, INHERIT-false,
 SET-false creator memberships to durable `postgres` before COMMIT. All SQL
 identifiers are fixed canonical names; it needs no private map or passwords.
 It runs no migrations, installs no application schema and alters no Lythaus
-admin state. This privilege-changing transaction has not been approved or
-executed live. It passed a disposable PG17 rehearsal with the three preexisting
+admin state. The owner approved this transaction; it has now been executed and
+independently verified through primary catalog reads on the exact new branch.
+It first passed a disposable PG17 rehearsal with the three preexisting
 SQL-created logins, a synthetic extension catalog, rollback after a deliberately
 failed final postcondition, a successful run and refusal of a repeat.
+
+### Live initial-grant receipt
+
+The provider API confirmed database `87dbkhprjh30`, branch `xwkb9quljkzd`,
+Ready, PostgreSQL, PS-5 ARM and zero replicas. The connector first rejected the
+multi-command wrapper before execution. The same approved DO body was then
+packaged as one atomic prepared statement with SET LOCAL ROLE postgres inside
+the block. Every role definition, GRANT and guard remained unchanged. The
+adapter is hash-bound to the approved SQL; local PostgreSQL prepared-statement
+tests verified atomic rollback and session-role restoration before live use.
+
+The connector returned success, followed by an independent primary read:
+six scoped roles; three LOGIN, three NOLOGIN; zero unsafe role attributes;
+zero INHERIT attributes; three nonexpiring logins; exactly six ADMIN-only
+creator memberships to postgres, with INHERIT and SET false; CONNECT for all
+three logins; migration-only database CREATE; no grant options; no scoped
+database owner; four exact durable-grantor ACL entries. There are zero
+application schemas outside the provider baseline, only the two HypoPG views,
+and no migration ledger. A separate hash-bound catalog check also found the
+preserved original login with its three memberships, including read/write-all.
+No application schema, bootstrap state, data import or Cloudflare deployment
+was performed. No query addressed the old database.
+
+The approved source SQL SHA-256 is
+`671a48f6932453e100c63c95c68c02281eed79339d990991a8463a7c478c354e`;
+the connector statement SHA-256 is
+`d9185f0a9a6f35cc7fd3241abb6faf4adb2a4692a8d32e66b3a1a626f013bab8`.
+The [verification query](../../database/planetscale/verification/new-core-initial-grants-state.sql)
+returns only catalog booleans/counts. Passwords and connection strings are not
+part of the receipt. PlanetScale documents that connector query credentials
+are ephemeral and deleted immediately after execution; that lifecycle was
+not independently enumerated through an API role inventory.
+
+**Cleanup outstanding:** the latest database metadata read reported production
+web-console access enabled. The connector did not change that setting. A direct
+API read for cleanup was unavailable, and no setting update was attempted.
+Restore the new database's console-access setting to off in Settings and save;
+disconnect any owner console session. Do not change the old database's setting.
 
 The SQL block creates `lythaus_migrations`, `lythaus_admin`, and
 `lythaus_verifier` directly as PostgreSQL LOGIN roles. PlanetScale supports
