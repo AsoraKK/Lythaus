@@ -1,0 +1,88 @@
+name: New-core isolated admin read-only review
+
+on:
+  workflow_dispatch:
+    inputs:
+      control_sha:
+        description: Exact reviewed protected-main SHA after this read-only workflow is registered
+        required: true
+        type: string
+      worker_source_sha:
+        description: Prepared isolated Worker source candidate; this does not authorize deployment
+        required: true
+        default: a3da5aa99054c6bd9e284ea716701ed7adaf1801
+        type: string
+      worker_version_id:
+        description: Exact reviewed serving version if known; empty remains an explicit pinning blocker
+        required: false
+        type: string
+      confirm_read_only:
+        description: GET-only Cloudflare metadata; no SQL, deployment, bootstrap or setting changes
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  REQUESTED_CONTROL_SHA: ${{ inputs.control_sha }}
+  REQUESTED_SCHEMA_SHA: 050b1d1a3e973b367c28eae9617840e5d4816573
+  REQUESTED_TARGET: lythaus/lythaus-new-core/main
+  EXPECTED_WORKER_SOURCE_SHA: ${{ inputs.worker_source_sha }}
+  EXPECTED_WORKER_VERSION_ID: ${{ inputs.worker_version_id }}
+  CONFIRM_READ_ONLY: ${{ inputs.confirm_read_only }}
+  NODE_OPTIONS: ''
+  NODE_DEBUG: ''
+
+concurrency:
+  group: lythaus-new-core-isolation-readonly
+  cancel-in-progress: false
+
+jobs:
+  verify-gate:
+    name: Verify exact read-only source and unchanged owner gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Check source and existing review gate without Cloudflare credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/lythaus-new-core-isolation-review.mjs --gate
+
+  inspect:
+    name: Owner-reviewed GET-only isolated admin metadata
+    needs: verify-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Require the recorded owner review before credential injection
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import {verifyExistingGate} from './scripts/ci/lythaus-new-core-secret-preflight.mjs';
+          await verifyExistingGate({env:process.env,requireApproval:true});
+          JS
+      - name: Read only pinned metadata and print only sanitized results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          LYTHAUS_NEW_CORE_OWNER_EMAIL: ${{ secrets.LYTHAUS_NEW_CORE_OWNER_EMAIL }}
+        run: node scripts/ci/lythaus-new-core-isolation-review.mjs --inspect

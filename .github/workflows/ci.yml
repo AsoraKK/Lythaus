@@ -91,6 +91,8 @@ jobs:
         run: node --test scripts/tests/lythaus-new-core-secret-preflight.test.mjs
       - name: Validate schema-install control and receipt reuse without credentials
         run: node --test scripts/tests/lythaus-new-core-schema-install-control.test.mjs
+      - name: Validate the isolated admin metadata inspector without credentials
+        run: node --test scripts/tests/lythaus-new-core-isolation-review.test.mjs
 
   native_runtime:
     name: Native Workers and PlanetScale
