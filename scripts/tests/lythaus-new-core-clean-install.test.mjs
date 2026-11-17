@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import { loadApprovedMigrations, EXPECTED_MIGRATION_SET_SHA256 } from '../ci/planetscale-migration-manifest.mjs';
 import { NEW_CORE_LOGIN_ROLE_LABELS, NEW_CORE_DEFERRED_ROLE_LABELS } from '../ci/lythaus-new-core-role-profile.mjs';
@@ -17,6 +18,7 @@ import {
   rehearseScopedLocalPostgres17,
   assertSchemaOnlyBaseline,
   installLiveCleanSchema,
+  guardInstallSqlClients,
   readBootstrapStateAsVerifier,
   validateRoleMap,
   validateTestAccessEnvironment,
@@ -24,6 +26,56 @@ import {
   verifyNewCoreAccessMetadata,
   verifyProviderRoles,
 } from '../ci/lythaus-new-core-clean-install.mjs';
+
+function disconnectedClientFixture() {
+  const client = new EventEmitter();
+  client.queries = [];
+  client.query = async (sql) => { client.queries.push(sql); return { rows: [] }; };
+  return client;
+}
+
+test('an idle SQL disconnect is handled and prevents further statements on either login without reconnecting', async () => {
+  const migration = disconnectedClientFixture();
+  const verifier = disconnectedClientFixture();
+  const connections = guardInstallSqlClients({ migration, verifier });
+  await migration.query('SELECT 1');
+  assert.doesNotThrow(() => migration.emit('error', new Error('private driver message')));
+  await assert.rejects(verifier.query('SELECT 2'), /new_core_migration_connection_lost/);
+  await assert.rejects(migration.query('CREATE SCHEMA forbidden'), /new_core_migration_connection_lost/);
+  assert.deepEqual(migration.queries, ['SELECT 1']);
+  assert.deepEqual(verifier.queries, []);
+  assert.throws(connections.assertHealthy, /new_core_migration_connection_lost/);
+  assert.doesNotThrow(() => verifier.emit('error', new Error('another private driver message')));
+  assert.equal(connections.failureCode, 'new_core_migration_connection_lost');
+});
+
+test('a verifier disconnect interrupts a pending migration query without waiting or retrying', { timeout: 1000 }, async () => {
+  const migration = disconnectedClientFixture();
+  const verifier = disconnectedClientFixture();
+  let finish;
+  migration.query = () => new Promise((resolve) => { finish = resolve; });
+  guardInstallSqlClients({ migration, verifier });
+  const pending = migration.query('SELECT 1');
+  verifier.emit('error', new Error('private details'));
+  await assert.rejects(pending, /new_core_verifier_connection_lost/);
+  finish({ rows: [{ success: true }] });
+});
+
+test('a disconnect during COMMIT keeps its outcome unverified, blocks new writes and still permits rollback', async () => {
+  const migration = disconnectedClientFixture();
+  const verifier = disconnectedClientFixture();
+  const executed = [];
+  migration.query = async (sql) => {
+    executed.push(sql);
+    if (sql === 'COMMIT') migration.emit('error', new Error('lost commit acknowledgement'));
+    return { rows: [] };
+  };
+  guardInstallSqlClients({ migration, verifier });
+  await assert.rejects(migration.query('COMMIT'), /new_core_migration_connection_lost/);
+  await assert.rejects(migration.query('INSERT INTO forbidden VALUES (1)'), /new_core_migration_connection_lost/);
+  await migration.query('ROLLBACK');
+  assert.deepEqual(executed, ['COMMIT', 'ROLLBACK']);
+});
 
 test('schema-only plan pins the six SQL identities, all migration checksums and contract files without deployment authority', () => {
   const plan = buildSchemaInstallationPlan();
@@ -497,12 +549,42 @@ test('live preflight rejects a replication-capable login before DDL using catalo
   await assert.rejects(() => installLiveCleanSchema({
     ...fixture,
     worktreeHasChanges: false,
-    createClient: () => { clients += 1; return client; },
+    reportProgress: () => {},
+    createClient: () => { clients += 1; return Object.assign(new EventEmitter(), client); },
   }), /new_core_live_role_capability_precondition_failed/);
   assert.equal(clients, 2);
   assert.equal(connects, 1);
   assert.ok(queries.every((sql) => /^\s*SELECT\b/i.test(sql)));
   assert.ok(queries.some((sql) => /rolreplication/.test(sql)));
+});
+
+test('the live runner contains an asynchronous disconnect, reports no DDL and closes both clients', async () => {
+  const fixture = fakeTargetAndProvider();
+  Object.assign(fixture.environment, bindApprovalMarkers(fixture));
+  const progress = [];
+  const closed = [];
+  const migration = disconnectedClientFixture();
+  const verifier = disconnectedClientFixture();
+  migration.connect = async () => {
+    queueMicrotask(() => migration.emit('error', new Error('private connection details')));
+  };
+  verifier.connect = async () => { throw new Error('verifier_must_not_connect'); };
+  migration.end = async () => { closed.push('migration'); };
+  verifier.end = async () => { closed.push('verifier'); };
+  let created = 0;
+  await assert.rejects(installLiveCleanSchema({ ...fixture, worktreeHasChanges: false,
+    reportProgress: (entry) => progress.push(entry),
+    createClient: () => created++ === 0 ? migration : verifier,
+  }), /new_core_migration_connection_lost/);
+  assert.equal(created, 2);
+  assert.deepEqual(closed, ['verifier', 'migration']);
+  assert.deepEqual(migration.queries, []);
+  assert.deepEqual(verifier.queries, []);
+  assert.equal(progress.at(-1).status, 'SCHEMA_INSTALL_FAILURE_STATE');
+  assert.equal(progress.at(-1).databaseState, 'DDL_NOT_STARTED');
+  assert.equal(progress.at(-1).automaticRetry, false);
+  assert.deepEqual(progress.at(-1).acknowledgedCommittedMigrations, []);
+  assert.doesNotMatch(JSON.stringify(progress), /private connection details/);
 });
 
 test('runner has no generic connection fallback and live mode requires separate gates', async () => {
@@ -544,7 +626,7 @@ test('live preflight rejects grant options, runtime DDL and enabled deferred log
       },
     };
     await assert.rejects(() => installLiveCleanSchema({ ...fixture, worktreeHasChanges: false,
-      createClient: () => client }), expectedError);
+      reportProgress: () => {}, createClient: () => Object.assign(new EventEmitter(), client) }), expectedError);
     assert.ok(queries.length > 0 && queries.every((sql) => /^\s*SELECT\b/i.test(sql)));
   }
 });

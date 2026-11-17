@@ -1330,12 +1330,14 @@ async function immutableRoleState(client) {
 }
 
 async function applyAndVerifyCleanSchema({ migrationClient, verifierClient, migrations, roleMap,
-  creatorSha = null, mode = 'api-managed', schemaOnly = false }) {
+  creatorSha = null, mode = 'api-managed', schemaOnly = false, onProgress = () => {} }) {
   const initialRoleState = schemaOnly ? await immutableRoleState(migrationClient) : null;
   const pendingRegistry = [];
   const emptyDataGuards = [];
   for (const migration of migrations.migrations) {
+    onProgress({ phase: 'migration_start', migration: migration.name });
     const guard = await applyMigration(migrationClient, migration, pendingRegistry);
+    onProgress({ phase: 'migration_committed', migration: migration.name });
     if (guard) emptyDataGuards.push(guard);
   }
   if (pendingRegistry.length !== 0) fail('new_core_migration_ledger_missing');
@@ -1348,6 +1350,7 @@ async function applyAndVerifyCleanSchema({ migrationClient, verifierClient, migr
   });
   const releaseNames = migrations.migrations.filter(({ name }) => name >= '0017_').map(({ name }) => name);
   for (const state of await classifyMigrationState(migrationClient, releaseNames)) assertCompleteMigrationPostconditions(state);
+  onProgress({ phase: 'object_grants_start' });
   try {
     await migrationClient.query('BEGIN');
     const roleSql = fs.readFileSync(path.join(ROOT, 'database/planetscale/grants/roles.sql'), 'utf8');
@@ -1360,6 +1363,8 @@ async function applyAndVerifyCleanSchema({ migrationClient, verifierClient, migr
     await migrationClient.query('ROLLBACK').catch(() => undefined);
     fail('new_core_role_grant_install_failed');
   }
+  onProgress({ phase: 'object_grants_committed' });
+  onProgress({ phase: 'verification' });
   const extensionRows = await migrationClient.query('SELECT extname FROM pg_extension WHERE extname = ANY($1::text[]) ORDER BY extname', [REQUIRED_EXTENSIONS]);
   if (JSON.stringify(extensionRows.rows.map((row) => row.extname)) !== JSON.stringify([...REQUIRED_EXTENSIONS].sort())) {
     fail('new_core_required_extensions_missing');
@@ -1393,6 +1398,34 @@ async function applyAndVerifyCleanSchema({ migrationClient, verifierClient, migr
   };
 }
 
+export function guardInstallSqlClients({ migration, verifier }) {
+  let failureCode = null;
+  let signalFailure;
+  const failed = new Promise((resolve) => { signalFailure = resolve; });
+  const assertHealthy = () => { if (failureCode) fail(failureCode); };
+  for (const [role, client] of Object.entries({ migration, verifier })) {
+    client.on('error', () => {
+      failureCode ??= `new_core_${role}_connection_lost`;
+      signalFailure();
+    });
+    const query = client.query.bind(client);
+    client.query = async (...args) => {
+      const rollback = typeof args[0] === 'string' && /^ROLLBACK;?$/i.test(args[0].trim());
+      if (!rollback) assertHealthy();
+      try {
+        const result = await (rollback ? query(...args)
+          : Promise.race([query(...args), failed.then(assertHealthy)]));
+        if (!rollback) assertHealthy();
+        return result;
+      } catch (error) {
+        if (!rollback) assertHealthy();
+        throw error;
+      }
+    };
+  }
+  return { assertHealthy, get failureCode() { return failureCode; } };
+}
+
 export async function installLiveCleanSchema({
   contract = loadCleanInstallContract(),
   environment = process.env,
@@ -1402,6 +1435,7 @@ export async function installLiveCleanSchema({
   worktreeHasChanges = environmentHasUncommittedChanges(),
   schemaOnly = false,
   readMain = readProtectedMain,
+  reportProgress = (entry) => console.log(JSON.stringify(entry)),
 } = {}) {
   const { target, migrations } = contract;
   if (migrations.checksum !== EXPECTED_MIGRATION_SET_SHA256) fail('new_core_migration_manifest_mismatch');
@@ -1439,25 +1473,41 @@ export async function installLiveCleanSchema({
   const verifierConfig = liveSqlConnectionConfig(verifierRaw, 'lythaus_verifier', roleMap, target);
   const migrationClient = createClient(migrationConfig);
   const verifierClient = createClient(verifierConfig);
+  const connections = guardInstallSqlClients({ migration: migrationClient, verifier: verifierClient });
+  const committedMigrations = [];
+  let phase = 'migration_connect';
+  let currentMigration = null;
+  const progress = (entry) => {
+    phase = entry.phase;
+    currentMigration = entry.migration ?? null;
+    if (phase === 'migration_committed') committedMigrations.push(currentMigration);
+    reportProgress({ status: 'SCHEMA_INSTALL_PROGRESS', phase, migration: currentMigration,
+      acknowledgedCommittedMigrations: [...committedMigrations] });
+  };
   let writesStarted = false;
   try {
+    progress({ phase: 'migration_connect' });
     try {
       await migrationClient.connect();
     } catch {
       fail('new_core_migration_connection_failed');
     }
+    progress({ phase: 'migration_target_attestation' });
     await assertLiveConnection(migrationClient, migrationRaw, 'lythaus_migrations', roleMap, target);
     if (schemaOnly) {
       const lock = await migrationClient.query("SELECT pg_try_advisory_lock(hashtext('lythaus-schema-migrations')) AS acquired");
       if (lock.rows[0]?.acquired !== true) fail('new_core_schema_another_installer_active');
     }
+    progress({ phase: 'empty_catalog_and_role_baseline' });
     const cleanTarget = await assertLiveEmptyTarget(migrationClient, roleMap, creatorSha, { mode });
     const schemaBaseline = schemaOnly ? await assertSchemaOnlyBaseline(migrationClient) : null;
+    progress({ phase: 'verifier_connect' });
     try {
       await verifierClient.connect();
     } catch {
       fail('new_core_verifier_connection_failed');
     }
+    progress({ phase: 'verifier_target_and_read_only' });
     await assertLiveConnection(verifierClient, verifierRaw, 'lythaus_verifier', roleMap, target);
     await verifierClient.query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
     const verifierReadOnly = await verifierClient.query('SHOW transaction_read_only');
@@ -1467,9 +1517,13 @@ export async function installLiveCleanSchema({
       if (verifierLogin.rows[0]?.direct_verifier_login !== true) fail('new_core_verifier_direct_login_required');
     }
 
+    connections.assertHealthy();
+    progress({ phase: 'schema_application' });
     writesStarted = true;
     const schema = await applyAndVerifyCleanSchema({ migrationClient, verifierClient, migrations,
-      roleMap, creatorSha, mode, schemaOnly });
+      roleMap, creatorSha, mode, schemaOnly, onProgress: progress });
+    connections.assertHealthy();
+    progress({ phase: 'verified' });
     return {
       status: schemaOnly ? 'LIVE_NEW_CORE_SCHEMA_INSTALLED_OWNER_ACCEPTANCE_PENDING' : 'LIVE_NEW_CORE_SCHEMA_READY_FOR_OWNER_BOOTSTRAP',
       sourceSha,
@@ -1482,11 +1536,16 @@ export async function installLiveCleanSchema({
       cleanup: 'none; partial install stops for review; no rollback/drop/truncate/delete automation',
     };
   } catch (error) {
+    const code = connections.failureCode ?? (error instanceof Error && /^[a-z0-9_]+$/.test(error.message)
+      ? error.message : 'new_core_live_install_failed');
+    reportProgress({ status: 'SCHEMA_INSTALL_FAILURE_STATE', phase, migration: currentMigration,
+      acknowledgedCommittedMigrations: [...committedMigrations], code,
+      databaseState: writesStarted ? 'REQUIRES_READ_ONLY_INSPECTION' : 'DDL_NOT_STARTED',
+      automaticRetry: false });
     if (writesStarted) {
-      const code = error instanceof Error && /^[a-z0-9_]+$/.test(error.message) ? error.message : 'new_core_live_install_failed';
       fail(`new_core_partial_install_stopped_${code}`);
     }
-    throw error;
+    fail(code);
   } finally {
     await verifierClient.end().catch(() => undefined);
     await migrationClient.end().catch(() => undefined);
