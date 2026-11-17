@@ -7,9 +7,6 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "flutter"
 
   # Native Workers and shared packages
   - package-ecosystem: "npm"
@@ -18,9 +15,6 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "backend"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -29,9 +23,6 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "ci"
 
   # Marketing site (Astro)
   - package-ecosystem: "npm"
@@ -39,6 +30,3 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "marketing"
