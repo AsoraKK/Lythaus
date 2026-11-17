@@ -1,0 +1,635 @@
+{
+  "schemaVersion": "lythaus-wp007f-flux1-final-result-v1",
+  "calibrationFreezeSha256": "5b321d7797fdfe0b8507f0aa7bef29a17acdb3a6d9298d0075dabf01e5b9592f",
+  "inputManifest": "final-exam-inputs.json",
+  "holdoutFreezeSha256": "b1be6115a6ed3cb5d72c5ad3e90575ededbb4c969bd2bb248ec2806da32885c4",
+  "scoreBlind": false,
+  "flux1PixelAccess": true,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "detectors": [
+    {
+      "detectorId": "SPAI_C512",
+      "threshold": 1.0,
+      "flux1Recall": {
+        "count": 11,
+        "total": 40,
+        "rate": 0.275,
+        "wilson95": [
+          0.16108,
+          0.42835
+        ]
+      },
+      "finalCameraFpr": {
+        "count": 3,
+        "total": 32,
+        "rate": 0.09375,
+        "wilson95": [
+          0.032402,
+          0.242182
+        ]
+      },
+      "finalDigitalFpr": {
+        "count": 0,
+        "total": 32,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.107179
+        ]
+      },
+      "finalOverallNegativeFpr": {
+        "count": 3,
+        "total": 64,
+        "rate": 0.046875,
+        "wilson95": [
+          0.016069,
+          0.128997
+        ]
+      },
+      "flux1Score": {
+        "count": 40,
+        "median": 0.99970606,
+        "p50": 0.99970606,
+        "p95": 1.0,
+        "iqr": [
+          0.197022438,
+          1.0
+        ],
+        "min": 0.0,
+        "max": 1.0
+      },
+      "finalCameraScore": {
+        "count": 32,
+        "median": 0.000225476,
+        "p50": 0.000225476,
+        "p95": 1.0,
+        "iqr": [
+          0.0,
+          0.967090189
+        ],
+        "min": 0.0,
+        "max": 1.0
+      },
+      "finalDigitalScore": {
+        "count": 32,
+        "median": 0.0,
+        "p50": 0.0,
+        "p95": 6.869e-06,
+        "iqr": [
+          0.0,
+          0.0
+        ],
+        "min": 0.0,
+        "max": 0.000108368
+      },
+      "runtimeSeconds": {
+        "count": 104,
+        "median": 2.5145495,
+        "p50": 2.5145495,
+        "p95": 4.1743127,
+        "iqr": [
+          2.497533,
+          2.628954
+        ],
+        "min": 2.04292,
+        "max": 4.900562
+      }
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "threshold": 0.543838277,
+      "flux1Recall": {
+        "count": 1,
+        "total": 40,
+        "rate": 0.025,
+        "wilson95": [
+          0.004427,
+          0.128814
+        ]
+      },
+      "finalCameraFpr": {
+        "count": 6,
+        "total": 32,
+        "rate": 0.1875,
+        "wilson95": [
+          0.088895,
+          0.353092
+        ]
+      },
+      "finalDigitalFpr": {
+        "count": 1,
+        "total": 32,
+        "rate": 0.03125,
+        "wilson95": [
+          0.005538,
+          0.157443
+        ]
+      },
+      "finalOverallNegativeFpr": {
+        "count": 7,
+        "total": 64,
+        "rate": 0.109375,
+        "wilson95": [
+          0.054001,
+          0.208986
+        ]
+      },
+      "flux1Score": {
+        "count": 40,
+        "median": 0.000393791,
+        "p50": 0.000393791,
+        "p95": 0.029719182,
+        "iqr": [
+          0.000101271,
+          0.002419268
+        ],
+        "min": 6.305e-06,
+        "max": 0.705510557
+      },
+      "finalCameraScore": {
+        "count": 32,
+        "median": 0.108982775,
+        "p50": 0.108982775,
+        "p95": 0.834038699,
+        "iqr": [
+          0.021784127,
+          0.458914191
+        ],
+        "min": 7.1187e-05,
+        "max": 0.904577434
+      },
+      "finalDigitalScore": {
+        "count": 32,
+        "median": 0.005693296,
+        "p50": 0.005693296,
+        "p95": 0.385679621,
+        "iqr": [
+          0.001451077,
+          0.027418038
+        ],
+        "min": 2.9359e-05,
+        "max": 0.608734727
+      },
+      "runtimeSeconds": {
+        "count": 104,
+        "median": 0.989853,
+        "p50": 0.989853,
+        "p95": 2.38107925,
+        "iqr": [
+          0.906968,
+          1.639838
+        ],
+        "min": 0.747282,
+        "max": 6.904814
+      }
+    },
+    {
+      "detectorId": "RINE",
+      "threshold": 0.890092938,
+      "flux1Recall": {
+        "count": 1,
+        "total": 40,
+        "rate": 0.025,
+        "wilson95": [
+          0.004427,
+          0.128814
+        ]
+      },
+      "finalCameraFpr": {
+        "count": 0,
+        "total": 32,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.107179
+        ]
+      },
+      "finalDigitalFpr": {
+        "count": 0,
+        "total": 32,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.107179
+        ]
+      },
+      "finalOverallNegativeFpr": {
+        "count": 0,
+        "total": 64,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.056624
+        ]
+      },
+      "flux1Score": {
+        "count": 40,
+        "median": 0.419641659,
+        "p50": 0.419641659,
+        "p95": 0.815273246,
+        "iqr": [
+          0.339035749,
+          0.638287842
+        ],
+        "min": 0.011652428,
+        "max": 0.975446403
+      },
+      "finalCameraScore": {
+        "count": 32,
+        "median": 0.346730813,
+        "p50": 0.346730813,
+        "p95": 0.448039496,
+        "iqr": [
+          0.230651334,
+          0.423029065
+        ],
+        "min": 0.111177765,
+        "max": 0.455440789
+      },
+      "finalDigitalScore": {
+        "count": 32,
+        "median": 0.316799596,
+        "p50": 0.316799596,
+        "p95": 0.414386809,
+        "iqr": [
+          0.172213539,
+          0.347077727
+        ],
+        "min": 0.014780358,
+        "max": 0.438991129
+      },
+      "runtimeSeconds": {
+        "count": 104,
+        "median": 1.6680955,
+        "p50": 1.6680955,
+        "p95": 3.0469081,
+        "iqr": [
+          1.643018,
+          1.924018
+        ],
+        "min": 1.601879,
+        "max": 3.306123
+      }
+    }
+  ],
+  "fusedHighConfidenceRule": {
+    "rule": "SPAI_C512_AND_ANY_CLIP_GENERATIVE_GROUP",
+    "independentEvidenceGroups": [
+      "SPAI_SPECTRAL",
+      "CLIP_GENERATIVE"
+    ],
+    "flux1Recall": {
+      "count": 0,
+      "total": 40,
+      "rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.087622
+      ]
+    },
+    "finalCameraFpr": {
+      "count": 0,
+      "total": 32,
+      "rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.107179
+      ]
+    },
+    "finalDigitalFpr": {
+      "count": 0,
+      "total": 32,
+      "rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.107179
+      ]
+    },
+    "finalOverallNegativeFpr": {
+      "count": 0,
+      "total": 64,
+      "rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.056624
+      ]
+    },
+    "promptRegimes": {
+      "REGIME_1": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 2,
+          "total": 5,
+          "rate": 0.4,
+          "wilson95": [
+            0.117621,
+            0.769276
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_2": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 1,
+          "total": 5,
+          "rate": 0.2,
+          "wilson95": [
+            0.036224,
+            0.624465
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_3": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 2,
+          "total": 5,
+          "rate": 0.4,
+          "wilson95": [
+            0.117621,
+            0.769276
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_4": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 3,
+          "total": 5,
+          "rate": 0.6,
+          "wilson95": [
+            0.230724,
+            0.882379
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_5": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 2,
+          "total": 5,
+          "rate": 0.4,
+          "wilson95": [
+            0.117621,
+            0.769276
+          ]
+        },
+        "rineRecall": {
+          "count": 1,
+          "total": 5,
+          "rate": 0.2,
+          "wilson95": [
+            0.036224,
+            0.624465
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_6": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 1,
+          "total": 5,
+          "rate": 0.2,
+          "wilson95": [
+            0.036224,
+            0.624465
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 1,
+          "total": 5,
+          "rate": 0.2,
+          "wilson95": [
+            0.036224,
+            0.624465
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_7": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      },
+      "REGIME_8": {
+        "count": 5,
+        "spaiRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "rineRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "ufdRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        },
+        "fusedRecall": {
+          "count": 0,
+          "total": 5,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.434482
+          ]
+        }
+      }
+    }
+  },
+  "noPostUnblindTuning": true,
+  "noSecondCandidateEvaluation": true
+}

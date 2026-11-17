@@ -1,0 +1,43 @@
+{
+  "approval": "WP007F_USER_AUTHORIZED_EXPLICIT_DISPOSABLE_RESEARCH_CLEANUP",
+  "deleteOnlyExplicitEntries": true,
+  "entries": [
+    {
+      "action": "DELETE_APPROVED",
+      "bytes": 256157173,
+      "preservedScientificRecord": [
+        "research/wp007e reports",
+        "manifests",
+        "hashes",
+        "source scripts"
+      ],
+      "proof": "WP007E final record is committed; WP007F uses actual DiffusionDB, camera, digital pools, SPAI and new mature detector checkpoints.",
+      "reason": "Disposable WP007E media/weights are not required by WP007F and are regenerable from preserved manifests/source code.",
+      "rootKey": "WP007E_MEDIA"
+    },
+    {
+      "action": "DELETE_APPROVED",
+      "bytes": 718031598,
+      "preservedScientificRecord": [
+        "research/wp007e reports",
+        "manifests",
+        "hashes",
+        "source scripts"
+      ],
+      "proof": "WP007E final record is committed; WP007F uses actual DiffusionDB, camera, digital pools, SPAI and new mature detector checkpoints.",
+      "reason": "Disposable WP007E media/weights are not required by WP007F and are regenerable from preserved manifests/source code.",
+      "rootKey": "WP007E_DECODER_WEIGHTS"
+    }
+  ],
+  "preserved": [
+    "WP007E_BACKBONES",
+    "WP007E_VENV",
+    "WP007E_CONTROLLED_DIGITAL",
+    "WP007A_DDB",
+    "WP006E_CSAFE",
+    "WP007A_HOLDOUT_FLUX1",
+    "WP007A_RESERVE_FLUX2",
+    "WP007B_SPAI"
+  ],
+  "schemaVersion": "lythaus-wp007f-storage-cleanup-plan-v1"
+}

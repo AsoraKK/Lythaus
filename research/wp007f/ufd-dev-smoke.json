@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "lythaus-wp007f-pretrained-raw-score-run-v1",
+  "stage": "dev",
+  "scoreBlind": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "roleCounts": {
+    "CAMERA_DEV": 7
+  },
+  "detectors": [
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "displayName": "UniversalFakeDetect",
+      "checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "clipWeightSha256": "b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "loadSeconds": 20.571259,
+      "records": [
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_02",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_1",
+          "decodedPixelSha256": "f9bfe6c31ff8bc7ff8365107fdfd020aad0ae3e9526b52fb49c59b349a81f494",
+          "nativeWidth": 2316,
+          "nativeHeight": 3088,
+          "nativePixelCount": 7151808,
+          "inputFormat": "JPEG",
+          "inputBytes": 2901629,
+          "rawScore": 2.4363751435885206e-05,
+          "runtimeSeconds": 2.128883
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_1",
+          "decodedPixelSha256": "0363c2110c4b7191e5cd0ac081ed843866d46dab7af015fd353d7b3f9333e212",
+          "nativeWidth": 2316,
+          "nativeHeight": 3088,
+          "nativePixelCount": 7151808,
+          "inputFormat": "JPEG",
+          "inputBytes": 1643034,
+          "rawScore": 0.00043095581349916756,
+          "runtimeSeconds": 1.92269
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_06",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-06",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_1",
+          "decodedPixelSha256": "856da457d8d3124b49070f64001cf2b21822fabca91659490854c42bf216953a",
+          "nativeWidth": 3024,
+          "nativeHeight": 4032,
+          "nativePixelCount": 12192768,
+          "inputFormat": "JPEG",
+          "inputBytes": 5001727,
+          "rawScore": 0.005801175720989704,
+          "runtimeSeconds": 1.882206
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_10",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-10",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_1",
+          "decodedPixelSha256": "009d0957dd30dab0b3dfaa605f45d7109b17a8ffebc6e1bca6b1ba74f855c668",
+          "nativeWidth": 3024,
+          "nativeHeight": 4032,
+          "nativePixelCount": 12192768,
+          "inputFormat": "JPEG",
+          "inputBytes": 3925394,
+          "rawScore": 0.0006151484558358788,
+          "runtimeSeconds": 2.423896
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_11",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-11",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_1",
+          "decodedPixelSha256": "3b6ae04c1724eb10c25aabc8bbd7ba916457b5e7aa9cb2ae4dbf9a2007c9ee2f",
+          "nativeWidth": 3024,
+          "nativeHeight": 4032,
+          "nativePixelCount": 12192768,
+          "inputFormat": "JPEG",
+          "inputBytes": 4481392,
+          "rawScore": 1.8481063079889282e-07,
+          "runtimeSeconds": 1.954662
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_2_01",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_2-01",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_2",
+          "decodedPixelSha256": "44e55e78a38a622fc0690fcbe14696a0155e8292874cb5e3bf4c497773a25a4b",
+          "nativeWidth": 2316,
+          "nativeHeight": 3088,
+          "nativePixelCount": 7151808,
+          "inputFormat": "JPEG",
+          "inputBytes": 1518116,
+          "rawScore": 1.0111970368598122e-05,
+          "runtimeSeconds": 4.186132
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_2_03",
+          "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_2-03",
+          "role": "CAMERA_DEV",
+          "sourceSubtype": "CAMERA",
+          "cameraDeviceFamily": "iPhone11_2",
+          "decodedPixelSha256": "8b9d47c4c4c188604fb2ffee145e058c64cbb617f7c320b38dba9585a7cd7821",
+          "nativeWidth": 2316,
+          "nativeHeight": 3088,
+          "nativePixelCount": 7151808,
+          "inputFormat": "JPEG",
+          "inputBytes": 2825110,
+          "rawScore": 0.00011929993343073875,
+          "runtimeSeconds": 5.953103
+        }
+      ]
+    }
+  ]
+}

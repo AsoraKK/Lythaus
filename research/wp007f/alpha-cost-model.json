@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "lythaus-wp007f-alpha-cost-model-v1",
+  "status": "NOT_DEPLOYED",
+  "basis": "No paid service was invoked by WP007F qualification. Cloudflare account authentication was unavailable for a live container price probe, so deployment cost is not represented as measured fact.",
+  "detectorCalls": {
+    "spaiC512": { "provider": "local-container", "paidPerCallUsd": 0, "neuronCost": 0, "status": "research-only-checkpoint" },
+    "universalFakeDetect": { "provider": "local-container", "paidPerCallUsd": 0, "neuronCost": 0, "status": "research-only-and-CLIP-deployment-review-required" },
+    "rine": { "provider": "local-container", "paidPerCallUsd": 0, "neuronCost": 0, "status": "research-only-and-CLIP-deployment-review-required" },
+    "moderation": { "provider": "OpenAI", "status": "existing-integration-rate-not-recomputed-in-WP007F" },
+    "moondream": { "provider": "Cloudflare Workers AI", "status": "existing-adapter-bounded-call-only" },
+    "gptOss": { "provider": "Cloudflare Workers AI", "status": "existing-adapter-selective-escalation-only" }
+  },
+  "trafficScenarios": [
+    { "imagesPerMonth": 100, "containerMode": "scale-to-zero", "containerCostUsd": null, "optionalAiCalls": "selective", "totalIncrementalCostUsd": null },
+    { "imagesPerMonth": 1000, "containerMode": "scale-to-zero", "containerCostUsd": null, "optionalAiCalls": "selective", "totalIncrementalCostUsd": null },
+    { "imagesPerMonth": 10000, "containerMode": "scale-to-zero", "containerCostUsd": null, "optionalAiCalls": "selective", "totalIncrementalCostUsd": null }
+  ],
+  "budgetGuard": { "projectIncrementalCeilingUsdPerMonth": 10, "newPaidServiceAuthorized": false, "deploymentAllowedWithoutFreshPricing": false },
+  "measurementGap": ["authenticated Cloudflare account pricing and container availability", "warm and cold deployed latency", "Workers request and container active-second rates"],
+  "decision": "Keep the boundary in SHADOW/contract-ready state until rights, account access, and live pricing are independently confirmed."
+}
