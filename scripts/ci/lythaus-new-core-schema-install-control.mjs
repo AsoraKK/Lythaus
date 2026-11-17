@@ -29,7 +29,7 @@ const EXECUTION_PATHS = Object.freeze([
   'infrastructure/planetscale/lythaus-new-core-clean-install.target.json',
   'docs/runbooks/lythaus-new-core-schema-actions-handoff.md',
 ]);
-const REPOSITORY = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
+export const REPOSITORY = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
 const fail = (code) => { throw new Error(code); };
 
 export function verifyDispatch(env) {

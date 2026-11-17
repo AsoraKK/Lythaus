@@ -4,10 +4,11 @@ import { authorizeSetup, credentialAttestation, planAttestation } from '../ci/ne
 import { verifyAnonymousTestGate } from '../ci/new-core-test-access-probe.mjs';
 
 const sha = 'a'.repeat(40);
+const repository = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
 const env = {
   GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main',
-  GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REPOSITORY_ID: '1010752912',
-  GITHUB_WORKFLOW_REF: 'AsoraKK/Lythaus/.github/workflows/new-core-isolated-setup.yml@refs/heads/main',
+  GITHUB_REPOSITORY: repository, GITHUB_REPOSITORY_ID: '1010752912',
+  GITHUB_WORKFLOW_REF: repository + '/.github/workflows/new-core-isolated-setup.yml@refs/heads/main',
   GITHUB_ACTOR_ID: '211295889', GITHUB_ACTOR: 'owner', GITHUB_TRIGGERING_ACTOR: 'owner',
   GITHUB_RUN_ATTEMPT: '1', GITHUB_RUN_ID: '765', GITHUB_SHA: sha,
   REQUESTED_OPERATION: 'setup', REQUESTED_CONTROL_SHA: sha, GITHUB_REF_PROTECTED: 'true',

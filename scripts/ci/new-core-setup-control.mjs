@@ -1,8 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { PINS, verifyEnvironment, verifyOwnerReview } from './lythaus-new-core-schema-install-control.mjs';
+import { PINS, REPOSITORY as repository, verifyEnvironment, verifyOwnerReview } from './lythaus-new-core-schema-install-control.mjs';
 
-const repository = 'AsoraKK/Lythaus';
 const workflow = '.github/workflows/new-core-isolated-setup.yml';
 export const credentialAttestation = 'The current protected Admin credential has stayed private.';
 export const planAttestation = credentialAttestation + ' Existing plan covers the rehearsal and the sole live Admin Access selector is my intended identity.';
