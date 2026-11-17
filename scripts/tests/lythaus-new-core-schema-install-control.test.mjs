@@ -55,7 +55,9 @@ test('only the exact source, target, receipt and first-attempt protected-main ow
   for(const delta of [{CONFIRM_SCHEMA_ONLY:'false'},{REQUESTED_SCHEMA_SHA:'a'.repeat(40)},
     {REQUESTED_EXECUTION_SHA:'a'.repeat(40)},{GITHUB_REF:'refs/heads/another'},
     {GITHUB_EVENT_NAME:'push'},{GITHUB_RUN_ATTEMPT:'2'},{GITHUB_ACTOR_ID:'1'},
-    {PREFLIGHT_RUN_ID:'43951305902'},{RUNNER_DEBUG:'1'}]) assert.throws(()=>verifyDispatch({...context(),...delta}));
+    {PREFLIGHT_RUN_ID:'43951305901'},
+    {REQUESTED_EXECUTION_SHA:'7242a4352c68503ea016dac1a4ec0fcb57535774'},
+    {RUNNER_DEBUG:'1'}]) assert.throws(()=>verifyDispatch({...context(),...delta}));
 });
 test('the passed receipt is reusable across only reviewed install-control additions',async()=>{
   const f=fixture();const result=await verifyInstallControl({env:context(),get:f.get,readJobLog:f.readJobLog});
@@ -89,7 +91,7 @@ test('only a completely passing, fixed-schema, owner-reviewed boolean receipt is
   assert.throws(()=>parsePreflightReceipt('no report'));
 });
 test('the reviewed sanitized receipt is hash-bound and contains no credential material',()=>{
-  const record=JSON.parse(fs.readFileSync('infrastructure/planetscale/lythaus-new-core-preflight-43951305901.receipt.json','utf8'));
+  const record=JSON.parse(fs.readFileSync('infrastructure/planetscale/lythaus-new-core-preflight-44033281502.receipt.json','utf8'));
   assert.equal(verifyPinnedReceipt(record).receiptVerified,true);
   record.target='lythaus/lythaus-core/main';
   assert.throws(()=>verifyPinnedReceipt(record),/pinned_receipt_changed/);
