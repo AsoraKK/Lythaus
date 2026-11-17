@@ -89,6 +89,8 @@ jobs:
         run: node --test scripts/tests/github-controls-audit.test.mjs
       - name: Validate the owner-reviewed new-core secret preflight without credentials
         run: node --test scripts/tests/lythaus-new-core-secret-preflight.test.mjs
+      - name: Validate schema-install control and receipt reuse without credentials
+        run: node --test scripts/tests/lythaus-new-core-schema-install-control.test.mjs
 
   native_runtime:
     name: Native Workers and PlanetScale
