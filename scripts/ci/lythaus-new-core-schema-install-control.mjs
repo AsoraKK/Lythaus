@@ -98,7 +98,7 @@ export function parsePreflightReceipt(log) {
   return { receiptVerified: true, schemaSha: receipt.schema_candidate };
 }
 
-function verifyEnvironment(environment, policies) {
+export function verifyEnvironment(environment, policies) {
   const rules = environment?.protection_rules;
   const reviewers = rules?.filter((rule) => rule.type === 'required_reviewers');
   if (environment?.id !== PINS.environmentId || environment.name !== 'production'
@@ -114,7 +114,7 @@ function verifyEnvironment(environment, policies) {
   }
 }
 
-function verifyOwnerReview(history) {
+export function verifyOwnerReview(history) {
   if (!Array.isArray(history) || !history.some((review) => review.state === 'approved'
     && review.user?.id === PINS.ownerId
     && review.environments?.some((item) => item.id === PINS.environmentId))) fail('schema_owner_approval_missing');

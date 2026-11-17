@@ -1,0 +1,84 @@
+name: New-core isolated Admin setup
+run-name: ${{ inputs.operation }} admin-new-core-test.lythaus.co at ${{ inputs.control_sha }}
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Inspect inputs or apply the combined isolated setup
+        required: true
+        type: choice
+        options:
+          - inspect
+          - setup
+      control_sha:
+        description: Exact reviewed protected main commit
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: lythaus-new-core-isolated-setup
+  cancel-in-progress: false
+env:
+  REQUESTED_CONTROL_SHA: ${{ inputs.control_sha }}
+  REQUESTED_OPERATION: ${{ inputs.operation }}
+  NODE_DEBUG: ''
+  NODE_OPTIONS: ''
+
+jobs:
+  control:
+    if: github.ref == 'refs/heads/main' && github.ref_protected && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify pinned receipts, workflow and review gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/new-core-setup-control.mjs before-review
+
+  isolated:
+    name: Owner review for isolated setup
+    needs: control
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: a3da5aa99054c6bd9e284ea716701ed7adaf1801
+          path: worker-source
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.4'
+      - name: Install locked dependencies without provider credentials
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Prepare the pinned Worker and assets without provider credentials
+        if: inputs.operation == 'setup'
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          npm --prefix worker-source ci --ignore-scripts --no-audit --no-fund
+          npm --prefix worker-source/apps/control-panel ci --ignore-scripts --no-audit --no-fund
+          node scripts/ci/new-core-isolated-worker.mjs prepare worker-source "$RUNNER_TEMP/new-core-artifacts"
+          node scripts/ci/new-core-isolated-worker-rehearsal.mjs worker-source "$RUNNER_TEMP/new-core-artifacts"
+      - name: Require actual owner approval and current protected main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/new-core-setup-control.mjs after-review
+      - name: Perform only the selected operation on the isolated target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          LYTHAUS_NEW_CORE_OWNER_EMAIL: ${{ secrets.LYTHAUS_NEW_CORE_OWNER_EMAIL }}
+          LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL }}
+          LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL }}
+        run: node scripts/ci/run-new-core-setup.mjs
