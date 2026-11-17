@@ -33,7 +33,9 @@ An empty comment permits independent checks and reports unconfirmed custody.
 
 > The current protected Admin credential has stayed private. Existing plan covers the rehearsal and the sole live Admin Access selector is my intended identity.
 
-The approved incremental cost ceiling is zero. Stop on chargeable capacity,
+The incremental cost ceiling is zero. The usage check allows for 96 requests,
+including two fresh UI sessions, at the default paid Worker CPU ceiling.
+Stop on chargeable capacity,
 an additional subscription or an upgrade. Secret values, owner addresses,
 assertions, SQL connection strings and credential digests stay private.
 

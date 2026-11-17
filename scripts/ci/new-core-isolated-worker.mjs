@@ -4,6 +4,7 @@ import { cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile }
 import { tmpdir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import blake3 from 'blake3-wasm';
 
 const sourceSha = 'a3da5aa99054c6bd9e284ea716701ed7adaf1801';
 const workerSha = 'edf64d29ca3b0e6331b41f5097a16af60fbc54b3afaa7bbc1b85052b8fd6e2b0';
@@ -144,8 +145,7 @@ async function uploadAssets(assets, request, journal) {
     const extension = extname(path);
     const type = contentTypes[extension];
     requireGate(type, 'WORKER_ASSET_MIME');
-    // Cloudflare direct upload uses 32 hex characters over base64 content and extension.
-    const hash = sha256(bytes.toString('base64') + extension.slice(1)).slice(0, 32);
+    const hash = blake3.hash(bytes.toString('base64') + extension.slice(1)).toString('hex').slice(0, 32);
     manifest['/' + path] = { hash, size: bytes.length };
     blobs.set(hash, { type, bytes });
   }

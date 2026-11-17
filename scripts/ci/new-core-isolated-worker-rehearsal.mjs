@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import blake3 from 'blake3-wasm';
 import { loadArtifacts, stageWorker, verifyWorkerVersion } from './new-core-isolated-worker.mjs';
 
 const [sourceDir, artifactDir] = process.argv.slice(2);
@@ -13,7 +14,7 @@ const account = '/accounts/e5b7ae46e04698f507b7e4b3d4ef1af0/workers';
 const name = 'lythaus-admin-api-new-core-test';
 const prefix = account + '/workers/' + workerId;
 const jwt = claims => 'fixture.' + Buffer.from(JSON.stringify(claims)).toString('base64url') + '.fixture';
-const checksum = (bytes, extension) => createHash('sha256').update(bytes.toString('base64') + extension).digest('hex').slice(0, 32);
+const checksum = (bytes, extension) => blake3.hash(bytes.toString('base64') + extension).toString('hex').slice(0, 32);
 
 function fixture(mode, fault) {
   const calls = [], wanted = new Set(), uploaded = new Set();
@@ -34,6 +35,9 @@ function fixture(mode, fault) {
       assert.equal(method, 'POST');
       const expected = [...artifacts.assets].filter(([file]) => file !== '_headers' && file !== '_redirects');
       assert.deepEqual(Object.keys(body.manifest).sort(), expected.map(([key]) => '/' + key).sort());
+      const manifest = Object.keys(body.manifest).sort().map(path => [path, body.manifest[path].hash, body.manifest[path].size]);
+      assert.equal(createHash('sha256').update(JSON.stringify(manifest)).digest('hex'),
+        'b291534c78b20cbf9d9937ba80cb8ef1df5d8b2fb42fc47596dfb0c006445bff');
       for (const [file, bytes] of expected) {
         const hash = checksum(bytes, file.split('.').at(-1));
         assert.deepEqual(body.manifest['/' + file], { hash, size: bytes.length });

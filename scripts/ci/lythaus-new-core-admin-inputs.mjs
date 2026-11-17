@@ -229,8 +229,9 @@ function capacityCheck(rows, now, subscription) {
     latest[metric] = Math.max(latest[metric], end);
   }
   if (periods.size !== 1) return null;
-  // Reserve eight dynamic invocations at the default 30-second paid Worker CPU ceiling.
-  if (totals.requests + 8 > 1e7 || totals.cpu + 8*30000 > 3e7) return false;
+  // Both fresh sessions can invoke the Worker for every asset. Include the API checks and bootstrap.
+  const rehearsalRequests = 96;
+  if (totals.requests + rehearsalRequests > 1e7 || totals.cpu + rehearsalRequests*30000 > 3e7) return false;
   return Number.isFinite(period) && Object.values(latest).every(end => end > now - 2*86400000) ? true : null;
 }
 
