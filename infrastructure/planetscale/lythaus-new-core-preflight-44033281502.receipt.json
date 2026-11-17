@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "lythaus-new-core-preflight-receipt-v1",
+  "runId": "44033281502",
+  "jobId": 133870143448,
+  "workflowId": 420320684,
+  "controlSha": "88b3fc02807887ab5281512a51cda6ba675eb593",
+  "target": "lythaus/lythaus-new-core/main",
+  "report": {
+    "status": "READ_ONLY_PREFLIGHT_PASS",
+    "schema_candidate": "050b1d1a3e973b367c28eae9617840e5d4816573",
+    "inputs": {
+      "LYTHAUS_NEW_CORE_MIGRATION_DATABASE_URL": {
+        "accessible": true,
+        "format_valid": true,
+        "target_valid": true,
+        "authentication_valid": true,
+        "read_only_enforced": true,
+        "scoped_role_valid": true,
+        "baseline_valid": true
+      },
+      "LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL": {
+        "accessible": true,
+        "format_valid": true,
+        "target_valid": true,
+        "authentication_valid": true,
+        "read_only_enforced": true,
+        "scoped_role_valid": true,
+        "baseline_valid": true
+      },
+      "PLANETSCALE_API_TOKEN": {
+        "accessible": true,
+        "format_valid": true,
+        "metadata_authorized": true,
+        "target_valid": true,
+        "managed_role_inventory_valid": true
+      }
+    },
+    "owner_review_verified": true,
+    "approved_schema_main_baseline_unchanged": false,
+    "schema_write_authorized_by_preflight": false
+  }
+}

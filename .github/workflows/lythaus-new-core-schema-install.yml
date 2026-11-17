@@ -10,7 +10,7 @@ on:
       execution_sha:
         description: Reviewed execution adapter; canonical migrations and grants remain from 050b1d1a
         required: true
-        default: 7242a4352c68503ea016dac1a4ec0fcb57535774
+        default: a3da5aa99054c6bd9e284ea716701ed7adaf1801
         type: string
       schema_sha:
         description: Immutable reviewed canonical schema candidate
@@ -30,7 +30,7 @@ on:
       preflight_run_id:
         description: Passed read-only receipt, reused only while its relevant code and schema stay unchanged
         required: true
-        default: '43951305901'
+        default: '44033281502'
         type: string
       confirm_schema_only:
         description: Apply only the separately approved clean schema and canonical object grants
@@ -92,7 +92,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 7242a4352c68503ea016dac1a4ec0fcb57535774
+          ref: a3da5aa99054c6bd9e284ea716701ed7adaf1801
           path: schema-install
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020

@@ -1,167 +1,144 @@
-# New-core schema-only Actions install plan
+# New-core schema-only installation after the failed connection
 
-Status: **LOCAL REVIEW PLAN. NOTHING PUBLISHED, DISPATCHED OR APPLIED.**
+Status: **LOCAL PROPOSAL. CORRECTED SOURCES ARE NOT PUBLISHED AND NO NEW INSTALL IS DISPATCHED.**
 
-## Verified starting pins and receipt
+## Verified failure and current baseline
 
-Protected main was rechecked at
-`1dc1cae9f80456847ec1383617a0ea7c8ee6a9a5`. The published schema branch
-`codex/new-core-schema-050b1d1a` still resolves exactly to
-`050b1d1a3e973b367c28eae9617840e5d4816573`.
+[Install run 44030904350](https://github.com/AsoraKK/Lythaus/actions/runs/44030904350)
+failed on its first attempt with an unexpected PostgreSQL client disconnect.
+Node's unhandled client error prevented the normal failure receipt. The reason
+for the connection termination remains unverified. The failed job has not been
+rerun; do not use GitHub's rerun action.
 
-[Read-only preflight 43951305901](https://github.com/AsoraKK/Lythaus/actions/runs/43951305901)
-completed successfully, attempt 1, on that exact main SHA. Both jobs passed;
-owner approval is recorded for existing environment ID `18972418184`.
-Its decoded final receipt reports all three existing inputs accessible and
-valid for the new target. Both SQL logins authenticated with read-only mode,
-the expected scoped privileges and the empty schema/role baseline.
+[Owner-reviewed read-only run 44033281502](https://github.com/AsoraKK/Lythaus/actions/runs/44033281502)
+then passed on protected main
+`88b3fc02807887ab5281512a51cda6ba675eb593`, attempt 1. Both jobs passed and
+the existing owner approval is recorded for environment ID `18972418184`.
+The scoped migration and verifier logins authenticated with server-enforced
+read-only sessions. The exact initial role/grant and empty catalog baseline
+passed: six safe roles, required database ACLs, only the provider baseline,
+no application schema or migration ledger. This proves no application
+installation remains committed; it does not prove that no SQL was attempted.
 
-The reviewed sanitized receipt is stored as booleans and public source/run
-IDs only in
-[the pinned receipt](../../infrastructure/planetscale/lythaus-new-core-preflight-43951305901.receipt.json).
+The new sanitized receipt contains fixed booleans and public IDs only:
+[receipt 44033281502](../../infrastructure/planetscale/lythaus-new-core-preflight-44033281502.receipt.json).
 Its normalized SHA-256 is
-`f276cb9700c22e3d3ac9c19ebd1a82724d12cf41d8b84de638af2afd70f8ba6e`.
-No credential, URL, raw log, subject or personal identity is stored there.
-Runtime checks GitHub's successful run, workflow SHA, exact job and recorded
-approval against that sealed receipt. It does not download raw job logs.
+`6ebb92b0d970263bfc9fb71e17c9b67a9b25ccb3b3bc2bb5d4a4f8406b6981b3`.
+The earlier receipt is preserved. No raw logs, credentials, connection URLs,
+subjects or personal identity are published.
 
-## Three distinct source pins
+## Exact proposed sources
 
-| Pin | Exact source |
+| Purpose | SHA |
 | --- | --- |
-| Canonical schema/migration/grant source | `050b1d1a3e973b367c28eae9617840e5d4816573` |
-| Prepared execution adapter, currently local | `7242a4352c68503ea016dac1a4ec0fcb57535774` |
-| Current main and preflight receipt source | `1dc1cae9f80456847ec1383617a0ea7c8ee6a9a5` |
+| Unchanged canonical migrations and grants | `050b1d1a3e973b367c28eae9617840e5d4816573` |
+| Corrected execution adapter, local only | `a3da5aa99054c6bd9e284ea716701ed7adaf1801` |
+| Current protected main and new read-only receipt source | `88b3fc02807887ab5281512a51cda6ba675eb593` |
 
-The adapter changes only the explicit protected-main approval pin and use of
-the existing Actions secrets, plus corresponding tests/runbook. Its canonical
-migration and grant files are byte-identical to the approved schema source.
-Its complete code tree matches the previously prepared handoff; the new
-execution commit uses non-personal automation metadata and excludes the
-unpublished intermediate commit history.
-The original schema candidate expects the older main pin and cannot simply
-be dispatched unchanged against the newer main. No comparison is bypassed or
-spoofed: the adapter's marker binds the actual reviewed control SHA.
+The corrected adapter handles asynchronous errors on both SQL clients. A
+disconnect blocks further statements through either login, interrupts a
+pending query and permits rollback/connection cleanup. It does not reconnect
+or retry. Sanitized phase receipts record only acknowledged migration commits.
+A lost COMMIT acknowledgement requires read-only inspection; it is never
+reported as definitely committed or definitely rolled back.
 
-## Registration and receipt reuse
+The adapter adds no SQL, role, grant, target, credential or privilege change.
+All 22 migration bytes and canonical grant payloads are unchanged. All 27
+targeted runner tests passed under Node 22.23.4, including idle disconnect,
+pending-query interruption, uncertain COMMIT and both-client cleanup. The
+existing PostgreSQL 17 rehearsal remains valid for the unchanged SQL.
 
-The existing read-only workflow cannot install schema. A separate
-dispatch-only workflow must be registered on main through a normal PR before
-GitHub permits manual dispatch. Its exact proposed file is
-[lythaus-new-core-schema-install.yml](../../.github/workflows/lythaus-new-core-schema-install.yml).
-This plan does not authorize publishing, dispatching or SQL execution yet.
+The local control proposal changes exactly five paths: the existing install
+workflow, its control helper, its tests, this runbook and the new sealed
+receipt. The existing CI step and read-only preflight code stay unchanged.
+It pins the corrected execution SHA and the new successful receipt. An old
+execution SHA, old receipt, changed preflight/application/SQL file, wrong
+target, changed review gate or second run attempt is refused.
 
-The proposed registration PR changes only the new install workflow, control
-helper, tests, this runbook, the sealed receipt and one CI test step. The
-execution adapter is published separately at its exact reviewed SHA; the
-canonical schema branch remains unchanged. Required checks and normal merge
-gates must pass without settings changes or bypasses.
+## Proposed publication and next approval
 
-Registration necessarily creates a new main SHA, called **M** here. Record M
-after merge and bind both dispatch and the schema marker to that exact SHA.
-Never label the current pre-registration main as the final install control.
+A separate owner decision is required to publish the corrected execution
+source and control proposal, pass normal PR checks, merge and queue exactly
+one new schema-only run. Publishing or merging cannot trigger installation.
+The failed job remains untouched. No new write run is authorized by this
+read-only receipt or by this local preparation.
 
-Reuse run 43951305901 without repeating it only if the comparison from its
-main SHA to M contains exclusively those six reviewed registration paths.
-Any changed preflight code, application file, migration, grant or unrelated
-main change stops reuse. The execution comparison must contain exactly the
-four reviewed adapter paths and no canonical SQL change. The installer still
-performs fresh provider, login, empty-catalog and role checks before DDL;
-the historical receipt is not a substitute for these live guards.
-
-## Exact run inputs and job sequence
-
-| Input | Value |
-| --- | --- |
-| Dispatch ref | `main` |
-| `control_sha` | M, the exact reviewed main SHA after registration |
-| `execution_sha` | `7242a4352c68503ea016dac1a4ec0fcb57535774` |
-| `schema_sha` | `050b1d1a3e973b367c28eae9617840e5d4816573` |
-| `target` | `lythaus/lythaus-new-core/main` |
-| `preflight_run_id` | `43951305901` |
-| `confirm_schema_only` | `true`, after approval; default is `false` |
-| `schema_approval_marker` | Exact public marker generated for adapter SHA, M, manifest, target, origin and six-role map |
-
-Generate the marker from the prepared execution checkout without credentials
-or provider connections:
+After normal merge, record the exact resulting protected-main SHA as **M2**.
+Require its tree to match the reviewed control proposal, and compare from the
+receipt source above to M2 using only the reviewed control paths. Stop on any
+difference. Generate the exact public marker from the corrected execution
+checkout without credentials:
 
 ```sh
-node scripts/ci/lythaus-new-core-clean-install.mjs --schema-only-plan M
+node scripts/ci/lythaus-new-core-clean-install.mjs --schema-only-plan M2
 ```
 
-1. **Verify control, without provider secrets.** Require owner dispatch,
-   first attempt, protected/main identity, source/target pins, current main
-   equal to M, unchanged existing environment/reviewer/main-only policy,
-   successful pinned preflight plus owner review, sealed receipt integrity,
-   registration-only diff and unchanged canonical SQL.
-2. **Wait for normal owner review.** Use existing `production` environment
-   unchanged. Prevent self-review remains false, so the owner can approve
-   the owner's run using **Review deployments → Approve and deploy**. Do not
-   invoke the administrator bypass path. Publishing/merge cannot start SQL.
-3. **Recheck after review.** Check out control M and execution adapter at their
-   exact SHAs; install locked dependencies with scripts disabled before any
-   provider credentials are injected. Repeat the control/receipt checks and
-   require recorded approval for this install run, not just the old preflight.
-4. **Schema-only write step.** Inject only the three existing named secrets in
-   place and invoke the approved installer with the exact public marker.
-   The migration LOGIN is the sole SQL writer; the verifier has its own
-   connection. Do not use default admin, provisioner or runtime-admin secrets.
-5. **Verify and stop.** Print sanitized source/target, count/hash, ledger,
-   extension, grant and aggregate bootstrap evidence; close the connections.
+Dispatch ref `main` with `control_sha=M2`, the exact execution and schema
+SHAs above, target `lythaus/lythaus-new-core/main`,
+`preflight_run_id=44033281502`, the exact generated marker and
+`confirm_schema_only=true` (default remains false). Queue only after that
+separate publication/queue approval, and stop at normal owner review.
 
-GitHub permissions are only `contents: read` and `actions: read`. The automatic
-job token expires normally. No PAT, secret creation/copy/scope change,
-credential rotation or persistent privilege escalation is included.
+The secret-free control job checks exact main/source/target identity,
+first-attempt owner dispatch, the unchanged main-only environment and owner
+reviewer, successful diagnostic run/jobs/approval, sealed receipt digest and
+allowed source comparisons. It cannot run SQL or read provider secrets.
 
-## Exact destination, writes and stop conditions
+The install job uses the existing `production` GitHub environment unchanged.
+Prevent self-review remains false, so the owner can review the owner's run.
+Use **Review deployments → production → Approve and deploy** normally;
+never invoke administrator bypass. The job rechecks recorded approval for
+its own run before injecting credentials.
 
-Destination: organization `lythaus`, database `lythaus-new-core`
-(`87dbkhprjh30`), branch `main` (`xwkb9quljkzd`), logical database `postgres`,
-AWS Frankfurt/eu-central-1, existing PS-5 ARM with zero replicas. This is a
-single-node rehearsal target, not a production-readiness claim.
+## Credentials, destination and unchanged schema scope
 
-Before DDL, require TLS verify-full, direct migration/verifier session roles,
-PG17, exact origin fingerprint, console access off, Ready provider metadata,
-the expected HypoPG namespace/two views, no application schema or ledger,
-six existing safe roles, three LOGIN/three NOLOGIN, six ADMIN-only creator
-memberships, migration-only plain database CREATE, no grant option and no
-scoped database ownership. Stop on any difference.
+Only the three existing protected secrets are consumed in place:
+`LYTHAUS_NEW_CORE_MIGRATION_DATABASE_URL`,
+`LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL` and `PLANETSCALE_API_TOKEN`.
+The automatic GitHub token has only contents/read and actions/read.
+No default admin, provisioner, runtime-admin credential, copied value,
+scope change, credential creation or rotation is included.
 
-Apply the exact 22 files `0000_preflight.sql` through
-`0021_media_quarantine_cleanup.sql`, in manifest dependency order, total
-100,942 bytes, manifest SHA-256
-`49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614`.
-The complete per-file list/checksums are in the prepared handoff JSON.
-Retain the exact zero-row guards for 0007, 0011 and 0012. Do not use the
-production migration workflow or its origin-pinned maintenance helpers.
+The sole destination is organization `lythaus`, database
+`lythaus-new-core` (`87dbkhprjh30`), branch `main` (`xwkb9quljkzd`),
+logical database `postgres`, AWS Frankfurt/eu-central-1, existing single-node
+PS-5 ARM with zero replicas. This is a rehearsal target.
 
-Install canonical object/default grants, the one-shot bootstrap function,
-the fixed aggregate verifier and one **false** latch. Do not execute bootstrap
-or create an administrator. No database ACL, role or credential change is
-included. The reviewed grant adapter omits only the three preverified
-database-ACL statements; no migration is skipped or falsely marked applied.
+After owner review and before DDL, repeat exact provider, origin, TLS,
+direct scoped login, PG17, console-off, empty catalog, HypoPG baseline,
+six-role, membership and database-ACL checks. Stop if anything differs.
+Plain migration database CREATE remains sufficient; no grant option or
+database ownership is added.
 
-Verify all 22 exact ledger checksums, 11 application schemas, 102 tables,
-103 relations, required extensions, migration ownership and role boundaries.
+Apply only the exact 22 reviewed migrations in dependency order, 100,942
+bytes, manifest SHA-256
+`49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614`,
+plus the unchanged canonical object/default grants and aggregate verifier.
+Retain zero-row guards for 0007, 0011 and 0012. Do not skip or fabricate a
+migration ledger row. The grant adapter still excludes only the three
+preverified database-ACL statements.
+
+Verify all exact filename/checksum ledger rows, required extensions, 11
+application schemas, 102 tables, 103 relations, ownership and role boundaries.
 Require definition fingerprint
 `69769fb59964a84355d5cc24e8f6c1a23595076a3d1d5f39e45add3e58dff90e`
 and grant fingerprint
 `65ae6c5e98cacafdd1de5fd58703bd5358a65b9f73781881ee35383debbb4513`.
-Preserve HypoPG and original broad role. Require unchanged database ACL/role
-state, zero memberships, one unconsumed latch, zero completion events, and
-no application data beyond the ledger/latch. Verifier sees fixed aggregates,
-not subjects or identity rows.
+Require unchanged database ACL/role state, zero memberships, one false latch,
+zero bootstrap completion events and no other application rows.
 
-On failure, roll back the active transaction, close both connections and stop.
-Earlier committed migrations remain. Do not rerun, mark applied, reset, drop,
-truncate or clean up automatically. Inspect partial state read-only and obtain
-an exact repair decision. Revoking migration database CREATE by its original
-grantor remains a separate cleanup approval; no admin fallback is used.
+On any failure, stop and report the phase and acknowledged commits. Roll
+back the active transaction where possible and close both clients. Earlier
+committed migrations remain. Do not retry, resume, reset, drop, truncate,
+delete credentials, fabricate ledger evidence or clean up automatically.
+Inspect state read-only before any exact repair decision. Revoking migration
+database CREATE by its original grantor remains a separate cleanup approval.
 
 No production import, bootstrap execution, Hyperdrive/Access/binding change,
-deployment, new provider resource/spend or cutover is included. The original
-database and bindings remain untouched. Later acceptance still requires a
-fresh owner sign-in opening the normal protected read-only `/flags` page on
-the exact isolated build at `admin-new-core-test.lythaus.co`, and refusal of a
-second bootstrap. Production cutover and
-fresh sign-in at the live admin hostname remain separate gates.
+deployment, new provider resource/spend or traffic cutover is included.
+The original database and bindings remain untouched. Later acceptance
+requires a fresh owner sign-in opening the normal protected read-only
+`/flags` page on the exact isolated build at
+`admin-new-core-test.lythaus.co`, one admin/latch/completion event,
+non-admin rejection and refusal of a second bootstrap. Production cutover
+and fresh sign-in at `admin.lythaus.co` remain separate gates.

@@ -5,22 +5,22 @@ import { pathToFileURL } from 'node:url';
 
 export const PINS = Object.freeze({
   schemaSha: '050b1d1a3e973b367c28eae9617840e5d4816573',
-  executionSha: '7242a4352c68503ea016dac1a4ec0fcb57535774',
-  receiptMainSha: '1dc1cae9f80456847ec1383617a0ea7c8ee6a9a5',
-  receiptRunId: '43951305901',
-  receiptJobId: 133611573791,
+  executionSha: 'a3da5aa99054c6bd9e284ea716701ed7adaf1801',
+  receiptMainSha: '88b3fc02807887ab5281512a51cda6ba675eb593',
+  receiptRunId: '44033281502',
+  receiptJobId: 133870143448,
   receiptWorkflowId: 420320684,
   environmentId: 18972418184,
   ownerId: 211295889,
   target: 'lythaus/lythaus-new-core/main',
-  receiptSha256: 'f276cb9700c22e3d3ac9c19ebd1a82724d12cf41d8b84de638af2afd70f8ba6e',
+  receiptSha256: '6ebb92b0d970263bfc9fb71e17c9b67a9b25ccb3b3bc2bb5d4a4f8406b6981b3',
 });
 export const CONTROL_PATHS = Object.freeze([
   '.github/workflows/ci.yml',
   '.github/workflows/lythaus-new-core-schema-install.yml',
   'scripts/ci/lythaus-new-core-schema-install-control.mjs',
   'scripts/tests/lythaus-new-core-schema-install-control.test.mjs',
-  'infrastructure/planetscale/lythaus-new-core-preflight-43951305901.receipt.json',
+  'infrastructure/planetscale/lythaus-new-core-preflight-44033281502.receipt.json',
   'docs/runbooks/lythaus-new-core-schema-install-actions.md',
 ]);
 const EXECUTION_PATHS = Object.freeze([
@@ -130,7 +130,7 @@ export function verifyPinnedReceipt(record) {
 }
 
 function readPinnedReceipt() {
-  return JSON.parse(fs.readFileSync(new URL('../../infrastructure/planetscale/lythaus-new-core-preflight-43951305901.receipt.json', import.meta.url), 'utf8'));
+  return JSON.parse(fs.readFileSync(new URL('../../infrastructure/planetscale/lythaus-new-core-preflight-44033281502.receipt.json', import.meta.url), 'utf8'));
 }
 
 export async function verifyInstallControl({ env, get, receiptRecord = readPinnedReceipt(), requireInstallApproval = false }) {
