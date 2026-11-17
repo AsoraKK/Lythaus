@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
-import { ACCOUNT, TARGETS, UUID, prepare, execute, recover, validateRecord, fail } from '../release/jobs-session-lifecycle.mjs';
+import { ACCOUNT, TARGETS, UUID, prepare, execute, recover, validateRecord, fail, sanitizedLifecycleFailure } from '../release/jobs-session-lifecycle.mjs';
 
 export const WORKFLOW = 'jobs-session-one-shot.yml';
 export const RECOVERY_WORKFLOW = 'jobs-session-recovery.yml';
@@ -222,18 +222,14 @@ export async function main(env = process.env) {
       durable: { artifactId: env.BASELINE_ARTIFACT_ID, artifactDigest } });
     write('execution', result);
     if (!['observed', 'unavailable'].includes(result.status)) process.exitCode = 1;
-    return { status: result.status, restoration: result.restoration?.status ?? 'restoration_unverified' };
+    return { status: result.status, restoration: result.restoration?.status ?? 'restoration_unverified',
+      failure: result.failure, recoveryDiagnostics: result.restoration?.diagnostics ?? {} };
   } finally { process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort); }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try { console.log(JSON.stringify(await main())); }
   catch (error) {
-    const codes = ['shared_worker_lock_unavailable', 'protected_source_unavailable', 'protected_run_unavailable',
-      'protected_credentials_missing', 'recovery_workflow_unavailable', 'one_shot_already_requested',
-      'one_shot_history_unavailable', 'durable_recovery_unavailable', 'record_provenance_unavailable',
-      'prerequisites_unavailable', 'baseline_mismatch', 'baseline_race', 'version_capability_unavailable',
-      'binding_capability_unavailable', 'settings_capability_unavailable', 'private_target_unavailable', 'preview_exposure_unavailable'];
-    console.error(JSON.stringify({ status: 'failed', diagnosticCode: codes.includes(error?.message) ? error.message : 'executor_unavailable',
+    console.error(JSON.stringify({ status: 'failed', ...sanitizedLifecycleFailure(error),
       restoration: 'restoration_unverified' }));
     process.exitCode = 1;
   }
