@@ -10,11 +10,24 @@ test('the optional monthly Jobs path reads no flag on a clean schema', async () 
   const queries = [];
   const client = {query:async sql => {
     queries.push(sql);
+    if (queries.length === 1) {
+      assert.match(sql, /has_column_privilege/);
+      return {rows:[{readable:false}]};
+    }
     assert.match(sql, /to_regclass\('trust\.monthly_reputation_sources'\)/);
     return {rows:[{installed:false}]};
   }};
   assert.equal(await monthlyReputationShadowEnabled(client),false);
-  assert.equal(queries.length,1);
+  assert.equal(queries.length,2);
+});
+
+test('an installed monthly schema with missing flag privileges surfaces the database error', async () => {
+  const client = {query:async sql => {
+    if (sql.includes('has_column_privilege')) return {rows:[{readable:false}]};
+    if (sql.includes('to_regclass')) return {rows:[{installed:true}]};
+    throw new Error('permission denied for table feature_flags');
+  }};
+  await assert.rejects(() => monthlyReputationShadowEnabled(client), /permission denied/);
 });
 
 function fixture(destination = false) {
