@@ -29,6 +29,11 @@
     "originSha256": "30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558",
     "schemaReceipt": "44045540354",
     "isolatedAdminConnector": "7e39fc4a286147988ed12df7a6322616",
+    "ownerAccess": {
+      "applicationId": null,
+      "issuerSha256": null,
+      "audienceSha256": null
+    },
     "isolatedAdminVersions": {
       "workerId": null,
       "parentVersionId": null,

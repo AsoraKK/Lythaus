@@ -42,11 +42,15 @@ function fixture(destination = false) {
   }
   if (destination) {
     const target = plan.destination;
+    Object.assign(target.ownerAccess,{applicationId:'33333333-3333-4333-8333-333333333333',
+      issuerSha256:createHash('sha256').update('https://fixture.cloudflareaccess.com').digest('hex'),
+      audienceSha256:createHash('sha256').update('a'.repeat(64)).digest('hex')});
     Object.assign(target.isolatedAdminVersions,{workerId:'d'.repeat(32),parentVersionId:'11111111-1111-4111-8111-111111111111',
       servingVersionId:'22222222-2222-4222-8222-222222222222'});
     const admin = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
     Object.assign(admin, {name:TARGET.worker, main:'src/control-worker.ts', assets:{binding:'ASSETS',run_worker_first:true}});
     Object.assign(admin.vars, {EXPECTED_HOSTNAMES:'control.lythaus.co',CORS_ALLOWED_ORIGINS:'https://control.lythaus.co',ACCESS_REQUIRE_SIGNED_SUBJECT:'true'});
+    Object.assign(admin.vars, {CONTROL_ACCESS_ISSUER_SHA256:target.ownerAccess.issuerSha256,CONTROL_ACCESS_AUDIENCE_SHA256:target.ownerAccess.audienceSha256});
     for (const [i, role] of Object.keys(target.connectors).entries()) target.connectors[role] = String(i + 1).repeat(32);
     Object.assign(manifest, { planetScaleDatabase:target.database, planetScaleDatabaseId:target.databaseId,
       productionBranchId:target.branchId, expectedMainOriginFingerprint:target.originSha256 });
@@ -100,21 +104,27 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
 test('replacement reads the immutable Worker and both previously staged versions', async () => {
   const {plan:{destination}} = fixture(true);
   const pins = destination.isolatedAdminVersions;
-  for (const fault of ['none','wrong_service','wrong_source','extra_db','missing_key','swapped_version']) {
+  for (const fault of ['none','wrong_service','wrong_source','extra_db','missing_key','swapped_version','new_access_app','issuer_drift','isolated_audience_drift']) {
     const seen = [];
     const check = () => verifyIsolatedAdminVersions(destination,async path=>{
       seen.push(path);
+      if (path === '/access/apps/' + destination.ownerAccess.applicationId) return {
+        id:destination.ownerAccess.applicationId,type:'self_hosted',aud:(fault==='new_access_app'?'b':'a').repeat(64)};
+      if (path === '/access/organizations') return {auth_domain:fault==='issuer_drift'?'other.cloudflareaccess.com':'fixture.cloudflareaccess.com'};
       const worker = '/workers/workers/' + pins.workerId;
       if (path === worker) return {id:pins.workerId,name:fault==='wrong_service'?'other':TARGET.worker,subdomain:{enabled:false,previews_enabled:false}};
       const id = path.split('/').at(-1);
       const bindings = [{name:'DB_ADMIN_FRESH',type:'hyperdrive',id:destination.isolatedAdminConnector}];
+      bindings.push({name:'NEW_CORE_ACCESS_ISSUER',type:'plain_text',text:'https://fixture.cloudflareaccess.com'},
+        {name:'ACCESS_AUDIENCES',type:'plain_text',text:(fault==='isolated_audience_drift'?'b':'a').repeat(64)},
+        {name:'NEW_CORE_ACCESS_AUDIENCE_SHA256',type:'plain_text',text:destination.ownerAccess.audienceSha256});
       if (fault !== 'missing_key') bindings.push({name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text'});
       if (fault === 'extra_db') bindings.push({name:'DB_OTHER',type:'hyperdrive',id:'0'.repeat(32)});
       return {id,number:fault==='swapped_version'?2:id===pins.parentVersionId?1:2,
         annotations:{'workers/tag':fault==='wrong_source'?'other':pins.sourceSha},bindings};
     });
-    if (fault === 'none') { await check(); assert.equal(seen.length,3); }
-    else await assert.rejects(check,/isolated Admin/);
+    if (fault === 'none') { await check(); assert.equal(seen.length,5); }
+    else await assert.rejects(check,/isolated (Admin|owner Access)/);
   }
 });
 

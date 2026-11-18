@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET } from './lythaus-new-core-isolation-review.mjs';
 import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
 
@@ -14,6 +15,9 @@ const consumers = {
 const versionPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 function validateIsolatedVersions(destination) {
   const pins = destination.isolatedAdminVersions;
+  const access = destination.ownerAccess;
+  if (!versionPattern.test(access?.applicationId) || !/^[a-f0-9]{64}$/.test(access?.issuerSha256)
+    || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new Error('isolated owner Access receipt pins required');
   if (!pins || (!versionPattern.test(pins.workerId) && !/^[a-f0-9]{32}$/.test(pins.workerId))
     || !versionPattern.test(pins.parentVersionId) || !versionPattern.test(pins.servingVersionId)
     || pins.parentVersionId === pins.servingVersionId || !/^[a-f0-9]{40}$/.test(pins.sourceSha)) {
@@ -24,6 +28,14 @@ function validateIsolatedVersions(destination) {
 
 export async function verifyIsolatedAdminVersions(destination, read) {
   const pins = validateIsolatedVersions(destination);
+  const access = destination.ownerAccess;
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  const app = await read('/access/apps/' + access.applicationId);
+  const org = await read('/access/organizations');
+  const team = org?.auth_domain;
+  if (app?.id !== access.applicationId || app.type !== 'self_hosted' || !/^[a-f0-9]{64}$/.test(app.aud)
+    || hash(app.aud) !== access.audienceSha256 || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareaccess\.com$/.test(team)
+    || hash('https://' + team) !== access.issuerSha256) throw new Error('isolated owner Access application or issuer differs');
   const path = '/workers/workers/' + pins.workerId;
   const worker = await read(path);
   if (worker?.id !== pins.workerId || worker.name !== TARGET.worker || worker.subdomain?.enabled !== false
@@ -33,9 +45,13 @@ export async function verifyIsolatedAdminVersions(destination, read) {
     const bindings = version?.bindings;
     const databases = Array.isArray(bindings) ? databaseBindings({bindings}) : [];
     const keys = bindings?.filter(binding=>binding.name === 'ACCESS_SUBJECT_HMAC_KEY') ?? [];
+    const exactText = (name,text) => bindings?.filter(binding=>binding.name===name).length === 1
+      && bindings.some(binding=>binding.name===name && binding.type==='plain_text' && binding.text===text);
     if (version?.id !== id || version.number !== index + 1 || version.annotations?.['workers/tag'] !== pins.sourceSha
       || databases.length !== 1 || databases[0].name !== 'DB_ADMIN_FRESH' || databases[0].id !== destination.isolatedAdminConnector
-      || keys.length !== 1 || keys[0].type !== 'secret_text' || Object.keys(keys[0]).length !== 2) {
+      || keys.length !== 1 || keys[0].type !== 'secret_text' || Object.keys(keys[0]).length !== 2
+      || !exactText('NEW_CORE_ACCESS_ISSUER','https://' + team) || !exactText('ACCESS_AUDIENCES',app.aud)
+      || !exactText('NEW_CORE_ACCESS_AUDIENCE_SHA256',access.audienceSha256)) {
       throw new Error('isolated Admin version, source, subject-key binding or database differs from the reviewed receipt');
     }
   }
@@ -79,6 +95,8 @@ export function validateProductionDatabaseMap(manifest, configs, plan = transiti
     }
     if (replacement && app === 'lythaus-admin-api' && (config.main !== 'src/control-worker.ts'
       || config.vars.EXPECTED_HOSTNAMES !== 'control.lythaus.co' || config.vars.CORS_ALLOWED_ORIGINS !== 'https://control.lythaus.co'
+      || config.vars.CONTROL_ACCESS_ISSUER_SHA256 !== target.ownerAccess.issuerSha256
+      || config.vars.CONTROL_ACCESS_AUDIENCE_SHA256 !== target.ownerAccess.audienceSha256
       || config.vars.ACCESS_REQUIRE_SIGNED_SUBJECT !== 'true' || config.keep_vars !== false
       || config.workers_dev !== false || config.preview_urls !== false || config.assets?.run_worker_first !== true
       || config.assets?.binding !== 'ASSETS' || config.version_metadata?.binding !== 'WORKER_VERSION')) {
