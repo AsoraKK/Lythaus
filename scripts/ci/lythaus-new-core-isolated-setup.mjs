@@ -1,0 +1,296 @@
+import { createHash, X509Certificate } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { accessEvidence, hyperdriveEvidence, inspectIsolation, TARGET } from './lythaus-new-core-isolation-review.mjs';
+import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DRIVE, ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
+
+const BASELINE = 'ecaecf69d5fae1edfd63ed54561c12abff3ee7ac01ecac8dc034417703e2ee19';
+const USER = `lythaus_admin.${TARGET.branch}`;
+const ROUTE = `${TARGET.hostname}/*`;
+const PROD_APPS = [
+  {id:'2d440b64-6cde-48d7-b3cb-132129ee036f', name:'Lythaus Admin UI', host:'admin.lythaus.co'},
+  {id:'fa6906cc-3daf-4beb-82b5-143e708eca0d', name:'Lythaus Admin API', host:'admin-api.lythaus.co'},
+];
+const testRecord = {type:'A', name:TARGET.hostname, content:'192.0.2.1', ttl:1, proxied:true};
+const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+const sortIds = rows => [...rows].sort((a,b) => a.id.localeCompare(b.id));
+const equal = isDeepStrictEqual;
+const email = value => typeof value === 'string' && /^[^@\s]+@[^@\s]+$/.test(value);
+const dnsRecordMatches = row => Object.entries(testRecord).every(([k,v])=>row[k] === v);
+
+function appDomains(app) {
+  const modern = (app.destinations ?? []).flatMap(d => {
+    if (d.type === 'private') return [];
+    check(d.type === 'public' && typeof d.uri === 'string','access_destination_unknown');
+    return [d.uri];
+  });
+  return [...new Set([app.domain, app.destination, ...(app.domains ?? []), ...(app.self_hosted_domains ?? []), ...modern]
+    .filter(v => v != null).map(v => {
+      check(typeof v === 'string', 'access_domain_invalid');
+      return v.toLowerCase();
+    }))];
+}
+function matchesHost(value, host = TARGET.hostname) {
+  check(typeof value === 'string', 'host_pattern_invalid');
+  const domain = value.toLowerCase().replace(/^https?:\/\//,'').split('/')[0];
+  const escaped = domain.split('*').map(v => v.replace(/[^a-z0-9-]/g, c => `\\${c}`)).join('.*');
+  return new RegExp(`^${escaped}$`).test(host);
+}
+function privateOwner(policies) {
+  const allows = policies.filter(p => p.decision === 'allow');
+  const p = allows[0], selector = p?.include?.[0], entry = selector?.email;
+  const value = typeof entry === 'string' ? entry : entry?.email;
+  const blocks = policies.filter(p => ['deny','block'].includes(p.decision));
+  check(allows.length === 1 && p.enabled !== false && p.include?.length === 1
+    && Object.keys(selector ?? {}).length === 1 && (typeof entry === 'string' || Object.keys(entry ?? {}).length === 1)
+    && email(value) && !(p.exclude?.length || p.require?.length)
+    && policies.every(p=>['allow','deny','block','non_identity','service_auth'].includes(p.decision))
+    && blocks.some(d=>d.enabled !== false && d.include?.some(i=>Object.hasOwn(i,'everyone'))
+      && !(d.exclude?.length || d.require?.length) && d.precedence > p.precedence),'production_owner_policy');
+  return value.toLowerCase();
+}
+async function accessSnapshot(api) {
+  const apps = await api.list(`${ACCOUNT}/access/apps`);
+  const live = [];
+  for (const expected of PROD_APPS) {
+    const covering = apps.filter(a=>appDomains(a).some(d=>matchesHost(d,expected.host)));
+    const app = covering[0];
+    check(covering.length === 1 && app.type === 'self_hosted' && app.id === expected.id && app.name === expected.name
+      && equal(appDomains(app),[expected.host]), 'production_access_identity');
+    const policies = sortIds(await api.list(`${ACCOUNT}/access/apps/${app.id}/policies`));
+    live.push({app,policies,owner:privateOwner(policies)});
+  }
+  check(live[0].owner === live[1].owner, 'production_owner_diverged');
+  const idps = live[0].app.allowed_idps ?? [];
+  check(Array.isArray(idps) && idps.every(id=>ID.test(id)) && new Set(idps).size === idps.length, 'production_login_settings');
+  const org = await api.request(`${ACCOUNT}/access/organizations`);
+  check(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareaccess\.com$/.test(org?.auth_domain ?? ''),'team_issuer');
+  return {apps,live,owner:live[0].owner,idps:[...idps].sort(),issuer:`https://${org.auth_domain}`};
+}
+const testApps = apps => apps.filter(a=>appDomains(a).some(d=>matchesHost(d)));
+async function readTestAccess(api, context, id, owner) {
+  const apps = await api.list(`${ACCOUNT}/access/apps`);
+  const matching = testApps(apps);
+  const app = matching[0];
+  check(matching.length === 1 && app.id === id && app.type === 'self_hosted' && app.session_duration === '1h'
+    && app.http_only_cookie_attribute === true && app.path_cookie_attribute === false
+    && app.same_site_cookie_attribute?.toLowerCase() === 'lax'
+    && app.options_preflight_bypass !== true && app.allow_authenticate_via_warp !== true
+    && equal(appDomains(app),[TARGET.hostname]) && (app.destinations ?? []).every(d=>d.type === 'public' && !Object.keys(d.overrides ?? {}).length)
+    && equal([...(app.allowed_idps ?? [])].sort(),context.idps) && /^[a-f0-9]{64}$/.test(app.aud ?? '')
+    && apps.every(a=>a.id === id || a.aud !== app.aud), 'test_access_app_readback');
+  const policies = await api.list(`${ACCOUNT}/access/apps/${id}/policies`);
+  const evidence = accessEvidence([{...app,domain:TARGET.hostname}],policies,owner);
+  check(evidence.intendedOwnerVerified === true && policies.some(p=>p.decision === 'allow' && p.precedence === 1)
+    && policies.some(p=>['deny','block'].includes(p.decision) && p.precedence === 2), 'test_access_policies_readback');
+  return app;
+}
+async function networkSnapshot(api) {
+  const projects = await api.list(`${ACCOUNT}/pages/projects`);
+  check(projects.every(p=>Array.isArray(p.domains)) && projects.every(p=>!p.domains.some(d=>matchesHost(d))), 'pages_hostname_collision');
+  const pages = projects.find(p=>p.name === 'lythaus-control-panel');
+  check(pages?.id === '93ac4df5-86c3-4986-93ea-74650e9f35d4' && pages.domains.includes('admin.lythaus.co')
+    && pages.production_branch === 'main' && typeof pages.canonical_deployment?.id === 'string','production_pages_identity');
+  const domains = await api.request(`${ACCOUNT}/workers/domains?hostname=${TARGET.hostname}`);
+  check(Array.isArray(domains) && domains.length === 0, 'worker_custom_domain_collision');
+  const packs = await api.list(`${ZONE}/ssl/certificate_packs`);
+  check(packs.some(p=>p.status === 'active' && p.hosts?.some(h=>h === TARGET.hostname || h === '*.lythaus.co')), 'edge_certificate_coverage');
+  const prodDns = await api.dns('admin.lythaus.co');
+  check(prodDns.length > 0, 'production_dns_missing');
+  check((await api.dns('*.lythaus.co')).length === 0, 'wildcard_dns_collision');
+  return {pages:{id:pages.id,domains:[...pages.domains].sort(),deployment:pages.canonical_deployment.id},prodDns:sortIds(prodDns)};
+}
+async function routes(api) {
+  const rows = await api.request(`${ZONE}/workers/routes`);
+  check(Array.isArray(rows), 'route_inventory');
+  return rows.filter(r=>matchesHost(r.pattern));
+}
+async function emptyRouting(api) {
+  check((await routes(api)).length === 0 && (await api.dns(TARGET.hostname)).length === 0,'test_routing_collision');
+}
+function checkCa(ca) {
+  check(ca?.pem && /^[a-f0-9]{64}$/.test(ca.sha256),'issuer_ca_unverified');
+  const digest = pem => {
+    try {
+      check(typeof pem === 'string' && !pem.includes('PRIVATE KEY') && pem.match(/BEGIN CERTIFICATE/g)?.length === 1,'issuer_ca_invalid');
+      const cert = new X509Certificate(pem);
+      check(cert.ca, 'issuer_ca_invalid');
+      return sha(cert.raw);
+    } catch { throw new Error('setup_issuer_ca_invalid'); }
+  };
+  check(digest(ca.pem) === ca.sha256 && (ca.id === null || ID.test(ca.id)), 'issuer_ca_mismatch');
+  return digest;
+}
+async function readCa(api, ca, id) {
+  const digest = checkCa(ca);
+  check(ID.test(id ?? ''),'issuer_ca_id_missing');
+  const row = await api.request(`${ACCOUNT}/mtls_certificates/${id}`);
+  const source = row?.certificates;
+  const pattern = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g;
+  const fingerprints = typeof source === 'string' && !source.replace(pattern,'').trim()
+    ? (source.match(pattern) ?? []).map(digest).sort() : [];
+  check(row?.id === id && row.ca === true && fingerprints.includes(ca.sha256)
+    && equal(fingerprints,ca.caFingerprints ?? [ca.sha256]),'issuer_ca_readback');
+  return id;
+}
+async function verifiedCa(api, ca) {
+  if (ca.id) return readCa(api,ca,ca.id);
+  const fresh = await api.request(`${ACCOUNT}/mtls_certificates`, {method:'POST',body:{name:'lythaus-new-core-origin-issuer',ca:true,certificates:ca.pem}});
+  return readCa(api,ca,fresh?.id);
+}
+function checkOrigin(config, caId) {
+  const hd = hyperdriveEvidence(config);
+  check(hd.idMatches && hd.originMatches && hd.branchMatches && hd.logicalDatabaseMatches && hd.cacheDisabled
+    && !config.origin.access_client_id && !config.origin.access_client_secret && !config.origin.vpc_service_id
+    && !config.mtls?.mtls_certificate_id,'hyperdrive_identity');
+  if (caId) check(hd.scopedAdminLogin && hd.verifyFullAndCaConfigured && config.mtls.ca_certificate_id === caId,'scoped_hyperdrive_readback');
+}
+function checkSnapshot(report, consumers) {
+  check(report.productionSnapshot?.sha256 === BASELINE && report.checks?.servingBindingsComplete && report.checks.exclusiveHyperdrive
+    && report.nonLythausHyperdriveConsumerCount === 0 && equal(report.hyperdriveConsumers,consumers), 'live_isolation_or_production_drift');
+}
+
+function resolveOwner(env, approval, context) {
+  return env.LYTHAUS_NEW_CORE_OWNER_EMAIL || (approval.ownerSelectorConfirmedByOwner === true ? context?.owner : undefined);
+}
+export async function inspectSetupInputs({env, sourceDir, authorize}) {
+  const approval = await authorize();
+  const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
+  let context;
+  if (!env.LYTHAUS_NEW_CORE_OWNER_EMAIL && approval.ownerSelectorConfirmedByOwner && env.CLOUDFLARE_API_TOKEN) {
+    const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN,record:()=>{throw new Error('setup_inspect_read_only');}});
+    try { context=await accessSnapshot(api); } catch { /* Independent DB and entitlement checks still run. */ }
+  }
+  return collectAdminInputs({env,sourceDir,expectedOwner:resolveOwner(env,approval,context),
+    privateCredentialConfirmed:approval.privateCredentialConfirmed,
+    existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true});
+}
+export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record}) {
+  check(typeof authorize === 'function' && typeof record === 'function','reviewed_entrypoint_required');
+  const approval = await authorize();
+  const {loadArtifacts, stageWorker, verifyWorkerVersion} = await import('./new-core-isolated-worker.mjs');
+  const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
+  const fetchImpl = avoidDeniedReadRetries();
+  const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN, record, fetchImpl});
+  const blocked = [];
+  async function probe(label, operation) {
+    try { return await operation(); }
+    catch (error) {
+      const code = error?.message ?? '';
+      blocked.push(/^(?:setup_[a-z0-9_]{1,100}|isolation_[a-z0-9_]{1,100}|WORKER_[A-Z_]{1,90})$/.test(code) ? code : label);
+      return null;
+    }
+  }
+  const artifacts = await probe('setup_approved_build_unavailable',()=>loadArtifacts({sourceDir,artifactDir}));
+  const context = await probe('setup_access_snapshot_unavailable',()=>accessSnapshot(api));
+  const owner = resolveOwner(env,approval,context);
+  if (owner && context && owner.toLowerCase() !== context.owner) blocked.push('setup_private_owner_selector_mismatch');
+  const args = {env, expectedOwner:owner, existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true,
+    privateCredentialConfirmed:approval.privateCredentialConfirmed, sourceDir,fetchImpl};
+  let ca;
+  const initial = await collectAdminInputs({...args,onVerifiedCa:result=>{ca=result;}});
+  if (!initial.ready) blocked.push('setup_private_inputs_incomplete');
+  if (ca) await probe('setup_public_ca_readback',async () => {
+    checkCa(ca);
+    if (ca.id) await readCa(api,ca,ca.id);
+  });
+  const inspect = expectedVersionId => inspectIsolation({token:env.CLOUDFLARE_API_TOKEN, expectedOwner:owner, expectedVersionId,fetchImpl});
+  await probe('setup_live_isolation_unavailable', async () => {
+    const base = await inspect();
+    checkSnapshot(base,[]);
+    check(base.worker.exists === false && base.access.overlappingApplicationCount === 0,'isolated_resources_exist');
+  });
+  if (context && testApps(context.apps).length) blocked.push('setup_isolated_access_exists');
+  const network = await probe('setup_network_inventory',()=>networkSnapshot(api));
+  await probe('setup_routing_inventory',()=>emptyRouting(api));
+  const current = await probe('setup_hyperdrive_inventory',async ()=>{
+    const value = await api.request(DRIVE);
+    checkOrigin(value);
+    return value;
+  });
+  let password;
+  if (current && initial.admin.verified) await probe('setup_private_admin_url_invalid',()=>{
+    const url=new URL(env.LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL);
+    password=decodeURIComponent(url.password);
+    check(['postgres:','postgresql:'].includes(url.protocol) && decodeURIComponent(url.username) === USER
+      && url.hostname === current.origin.host && Number(url.port || 5432) === 5432 && url.pathname === '/postgres' && password, 'private_admin_target_mismatch');
+  });
+  if (blocked.length) return {status:'ISOLATED_SETUP_BLOCKED', inputChecks:initial, blocked:[...new Set(blocked)], bootstrapCalled:false};
+  check(email(owner) && ca && password, 'private_inputs_missing');
+  const second = await authorize();
+  check(second.ownerSelectorConfirmedByOwner === approval.ownerSelectorConfirmedByOwner
+    && second.privateCredentialConfirmed === approval.privateCredentialConfirmed
+    && second.existingPlanConfirmedByOwner === approval.existingPlanConfirmedByOwner, 'owner_review_changed');
+  const access = await api.request(`${ACCOUNT}/access/apps`, {method:'POST',body:{
+    name:'Lythaus New Core Admin Test',type:'self_hosted',domain:TARGET.hostname,session_duration:'1h',
+    http_only_cookie_attribute:true,path_cookie_attribute:false,same_site_cookie_attribute:'lax',
+    allowed_idps:context.idps, app_launcher_visible:false, options_preflight_bypass:false,allow_authenticate_via_warp:false,
+    policies:[
+      {name:'Allow intended owner',decision:'allow',precedence:1,include:[{email:{email:owner}}],exclude:[],require:[]},
+      {name:'Block everyone else',decision:'deny',precedence:2,include:[{everyone:{}}],exclude:[],require:[]},
+    ],
+  }});
+  check(ID.test(access?.id ?? ''),'test_access_id_missing');
+  const app = await readTestAccess(api,context,access.id,owner);
+  const caId = await verifiedCa(api,ca);
+  checkSnapshot(await inspect(),[]);
+  const old = await api.request(DRIVE);
+  checkOrigin(old);
+  check(equal(old,current),'hyperdrive_changed');
+  await api.request(DRIVE,{method:'PATCH',body:{origin:{user:USER,password},caching:{disabled:true},mtls:{sslmode:'verify-full',ca_certificate_id:caId}}});
+  const configured = await api.request(DRIVE);
+  checkOrigin(configured,caId);
+  const restart = await api.request(`${DRIVE}/restart`,{method:'POST'});
+  checkOrigin(restart,caId);
+  const drained = await api.request(DRIVE);
+  checkOrigin(drained,caId);
+  check(Number.isFinite(Date.parse(drained.restarted_on)) && drained.restarted_on === restart.restarted_on
+    && (old.restarted_on == null || Date.parse(old.restarted_on) < Date.parse(drained.restarted_on)), 'pool_restart_readback');
+  const stageArgs = {request:api.request, artifacts, issuer:context.issuer, audience:app.aud, journal:async()=>{}};
+  const staged = await stageWorker(stageArgs);
+  check(staged.tag === TARGET.candidate && ID.test(staged.workerId) && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(staged.versionId), 'staged_identity');
+  await verifyWorkerVersion({...stageArgs,...staged});
+  const subdomain = await api.request(`${SCRIPT}/subdomain`);
+  check(subdomain.enabled === false && subdomain.previews_enabled === false, 'public_fallback');
+  const deployments = await api.request(`${SCRIPT}/deployments`);
+  const list = Array.isArray(deployments) ? deployments : deployments?.deployments;
+  check(Array.isArray(list) && !list.length, 'unexpected_test_deployment');
+  await readTestAccess(api,context,access.id,owner);
+  await emptyRouting(api);
+  const deployment = await api.request(`${SCRIPT}/deployments`,{method:'POST',body:{strategy:'percentage',versions:[{version_id:staged.versionId,percentage:100}]}});
+  check(ID.test(deployment?.id ?? ''), 'deployment_id');
+  const serving = await inspect(staged.versionId);
+  checkSnapshot(serving,[TARGET.worker]);
+  check(Object.entries(serving.checks).every(([k,v])=>['dns','exactRoute'].includes(k) || v === true), 'active_worker_before_route');
+  await verifyWorkerVersion({...stageArgs,...staged});
+  await emptyRouting(api);
+  const dns = await api.request(`${ZONE}/dns_records`,{method:'POST',body:testRecord});
+  const actual = await api.dns(TARGET.hostname);
+  check(ID.test(dns?.id ?? '') && actual.length === 1 && actual[0].id === dns.id && dnsRecordMatches(actual[0]), 'test_dns_readback');
+  check((await routes(api)).length === 0, 'route_collision');
+  const route = await api.request(`${ZONE}/workers/routes`,{method:'POST',body:{pattern:ROUTE,script:TARGET.worker}});
+  const attached = await routes(api);
+  check(ID.test(route?.id ?? '') && attached.length === 1 && attached[0].id === route.id && attached[0].pattern === ROUTE
+    && attached[0].script === TARGET.worker,'exact_route_readback');
+  const final = await inspect(staged.versionId);
+  checkSnapshot(final,[TARGET.worker]);
+  check(final.readiness === 'PINNED_METADATA_CHECKS_PASS','final_isolation_readback');
+  await verifyWorkerVersion({...stageArgs,...staged});
+  const finalDns = await api.dns(TARGET.hostname);
+  check(finalDns.length === 1 && finalDns[0].id === dns.id && dnsRecordMatches(finalDns[0]), 'final_test_dns_readback');
+  const after = await accessSnapshot(api);
+  check(equal(context.live,after.live) && context.issuer === after.issuer
+    && equal(sortIds(context.apps),sortIds(after.apps.filter(a=>a.id !== app.id))), 'production_access_changed');
+  await readTestAccess(api,after,app.id,owner);
+  check(equal(network,await networkSnapshot(api)), 'production_dns_pages_changed');
+  checkOrigin(await api.request(DRIVE),caId);
+  const {verifyAnonymousTestGate} = await import('./new-core-test-access-probe.mjs');
+  await verifyAnonymousTestGate(context.issuer);
+  const verification = await collectAdminInputs({...args,previousInputs:initial});
+  check(verification.ready, 'final_schema_grants_or_clean_state');
+  return {status:'OWNER_TEST_PENDING', worker:TARGET.worker, hostname:TARGET.hostname, source:TARGET.candidate,
+    workerId:staged.workerId, subjectKeyParentVersionId:staged.parentVersionId,
+    versionId:staged.versionId, deploymentId:deployment.id, accessAppId:app.id, caId, caSha256:ca.sha256,
+    accessIssuerSha256:sha(context.issuer), accessAudienceSha256:sha(app.aud),
+    routeId:route.id,dnsRecordId:dns.id,productionSnapshotSha256:BASELINE,anonymousDenied:true,
+    ownerNonmemberTest:'PENDING',outsiderTest:'PENDING',bootstrapCalled:false};
+}

@@ -93,6 +93,8 @@ jobs:
         run: node --test scripts/tests/lythaus-new-core-schema-install-control.test.mjs
       - name: Validate the isolated admin metadata inspector without credentials
         run: node --test scripts/tests/lythaus-new-core-isolation-review.test.mjs
+      - name: Validate the combined isolated setup without credentials
+        run: node --test scripts/tests/lythaus-new-core-admin-inputs.test.mjs scripts/tests/lythaus-new-core-isolated-setup.test.mjs scripts/tests/new-core-setup-control.test.mjs
 
   native_runtime:
     name: Native Workers and PlanetScale
