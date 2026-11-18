@@ -22,6 +22,8 @@ type AssertionVerifier = (assertion: string, configuration: VerifiedAccessConfig
 async function verifyAssertion(assertion: string, configuration: VerifiedAccessConfiguration): Promise<{ sub?: string; email?: string }> {
   const jwks = createRemoteJWKSet(new URL(configuration.ACCESS_JWKS_URL));
   const verified = await jwtVerify(assertion, jwks, {
+    algorithms: ['RS256'],
+    requiredClaims: ['sub', 'exp'],
     audience: configuration.ACCESS_AUDIENCES,
     issuer: configuration.ACCESS_TEAM_DOMAIN ? `https://${configuration.ACCESS_TEAM_DOMAIN}` : undefined,
   });
@@ -59,8 +61,8 @@ export async function verifiedAccessSubject(
   } catch {
     throw new Error('access_assertion_invalid');
   }
-  const subject = payload.sub ?? payload.email;
-  if (!subject) throw new Error('access_subject_missing');
+  const subject = payload.sub;
+  if (typeof subject !== 'string' || !subject.trim()) throw new Error('access_subject_missing');
   return subject;
 }
 
