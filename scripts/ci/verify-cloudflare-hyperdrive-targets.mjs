@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { transition, validateProductionDatabaseMap, verifyRollbackPlane } from './production-database-cutover.mjs';
+import { transition, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from './production-database-cutover.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json');
@@ -154,7 +154,7 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
   async function cloudflareConfig(id, expectedConfigName) {
     const lookup = await cloudflareRequest(`/hyperdrive/configs/${id}`);
     if (lookup.response.ok && lookup.envelope?.success === true && lookup.envelope?.result) return lookup.envelope.result;
-    if (readOnlyGetOnly) throw new Error('hyperdrive_read_failed');
+    if (readOnlyGetOnly || manifest.planetScaleDatabase === transition.destination.database) throw new Error('hyperdrive_read_failed');
 
     const list = await cloudflareRequest('/hyperdrive/configs?per_page=100');
     const nameMatches = list.response.ok && list.envelope?.success === true && Array.isArray(list.envelope?.result)
@@ -175,6 +175,13 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
     throw new Error(`Cloudflare Hyperdrive lookup failed: ${JSON.stringify(diagnostic)}`);
   }
 
+  if (manifest.planetScaleDatabase === transition.destination.database) {
+    await verifyIsolatedAdminVersions(transition.destination, async path => {
+      const {response,envelope} = await cloudflareRequest(path);
+      if (!response.ok || envelope?.success !== true) throw new Error('isolated Admin version read unavailable');
+      return envelope.result;
+    });
+  }
   const results = [];
   for (const entry of selectedBindings) {
     const expectedRole = roleIdentifiers[entry.expectedRoleKey] ?? '';
@@ -219,7 +226,10 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const requireDestination = process.argv.includes('--new-core-candidate');
-  const target = validateProductionDatabaseMap(manifest, productionConfigs(), transition, requireDestination);
+  const workerArg = process.argv.indexOf('--release-admin-worker');
+  const releaseAdminWorker = workerArg < 0 ? undefined : process.argv[workerArg + 1];
+  if (workerArg >= 0 && !releaseAdminWorker) throw new Error('canonical release Admin Worker missing');
+  const target = validateProductionDatabaseMap(manifest, productionConfigs(), transition, requireDestination, releaseAdminWorker);
   if (process.argv.includes('--rollback-database')) {
     if (target === transition.destination) {
       const dir = path.join(process.env.RUNNER_TEMP, 'production-cutover');

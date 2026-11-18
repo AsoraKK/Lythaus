@@ -332,7 +332,7 @@ jobs:
             echo 'security_checks_verified=true'
           } >> "$GITHUB_OUTPUT"
       - name: Require the complete production database map before releasing any component
-        run: node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --manifest-only
+        run: node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --manifest-only --release-admin-worker lythaus-admin-api-development
       - name: Require fresh protected native recovery and public independent recovery readiness
         id: recovery
         env:

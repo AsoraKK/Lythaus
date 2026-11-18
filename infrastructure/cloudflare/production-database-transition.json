@@ -29,6 +29,12 @@
     "originSha256": "30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558",
     "schemaReceipt": "44045540354",
     "isolatedAdminConnector": "7e39fc4a286147988ed12df7a6322616",
+    "isolatedAdminVersions": {
+      "workerId": null,
+      "parentVersionId": null,
+      "servingVersionId": null,
+      "sourceSha": "276b43265584ec0dc158e67cbdb13cb58ece75db"
+    },
     "connectors": {
       "lythaus_runtime": null,
       "lythaus_admin": null,

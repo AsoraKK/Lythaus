@@ -550,7 +550,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=production Hyperdrive or database origin validation failed' >> "$GITHUB_ENV"
           set -o pipefail
           mkdir -p "$RUNNER_TEMP/production-cutover"
-          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --release-admin-worker lythaus-admin-api-development | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
       - name: Capture predeployment Worker state (INFRASTRUCTURE gate)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

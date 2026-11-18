@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { createReadOnlyClient, databaseBindings, hyperdriveEvidence } from './lythaus-new-core-isolation-review.mjs';
+import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET } from './lythaus-new-core-isolation-review.mjs';
 import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
 
 export const transition = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/production-database-transition.json', import.meta.url)));
@@ -11,7 +11,37 @@ const consumers = {
   'lythaus-auth-acceptance-coordinator': { DB_ADMIN_FRESH: 'lythaus_admin' },
 };
 
-export function validateProductionDatabaseMap(manifest, configs, plan = transition, requireDestination = false) {
+const versionPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+function validateIsolatedVersions(destination) {
+  const pins = destination.isolatedAdminVersions;
+  if (!pins || (!versionPattern.test(pins.workerId) && !/^[a-f0-9]{32}$/.test(pins.workerId))
+    || !versionPattern.test(pins.parentVersionId) || !versionPattern.test(pins.servingVersionId)
+    || pins.parentVersionId === pins.servingVersionId || !/^[a-f0-9]{40}$/.test(pins.sourceSha)) {
+    throw new Error('replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
+  }
+  return pins;
+}
+
+export async function verifyIsolatedAdminVersions(destination, read) {
+  const pins = validateIsolatedVersions(destination);
+  const path = '/workers/workers/' + pins.workerId;
+  const worker = await read(path);
+  if (worker?.id !== pins.workerId || worker.name !== TARGET.worker || worker.subdomain?.enabled !== false
+    || worker.subdomain?.previews_enabled !== false) throw new Error('isolated Admin Worker identity or exposure changed');
+  for (const [index, id] of [pins.parentVersionId,pins.servingVersionId].entries()) {
+    const version = await read(path + '/versions/' + id);
+    const bindings = version?.bindings;
+    const databases = Array.isArray(bindings) ? databaseBindings({bindings}) : [];
+    const keys = bindings?.filter(binding=>binding.name === 'ACCESS_SUBJECT_HMAC_KEY') ?? [];
+    if (version?.id !== id || version.number !== index + 1 || version.annotations?.['workers/tag'] !== pins.sourceSha
+      || databases.length !== 1 || databases[0].name !== 'DB_ADMIN_FRESH' || databases[0].id !== destination.isolatedAdminConnector
+      || keys.length !== 1 || keys[0].type !== 'secret_text' || Object.keys(keys[0]).length !== 2) {
+      throw new Error('isolated Admin version, source, subject-key binding or database differs from the reviewed receipt');
+    }
+  }
+}
+
+export function validateProductionDatabaseMap(manifest, configs, plan = transition, requireDestination = false, releaseAdminWorker) {
   const replacement = manifest.planetScaleDatabase === plan.destination.database;
   const target = replacement ? plan.destination : plan.rollback;
   if (requireDestination && !replacement) throw new Error('new-core production cutover pins are pending');
@@ -21,6 +51,7 @@ export function validateProductionDatabaseMap(manifest, configs, plan = transiti
     || manifest.expectedMainOriginFingerprint !== target.originSha256) throw new Error('production database identity differs from the reviewed target');
 
   const roles = new Set(Object.values(consumers).flatMap(Object.values));
+  if (replacement) validateIsolatedVersions(target);
   const ids = new Set();
   for (const role of roles) {
     const id = target.connectors[role];
@@ -31,11 +62,14 @@ export function validateProductionDatabaseMap(manifest, configs, plan = transiti
     ids.add(id);
   }
 
-  const expected = new Set();
+  const expected = new Map();
   for (const [app, bindings] of Object.entries(consumers)) {
     const configPath = 'apps/' + app + '/wrangler.jsonc';
     const config = configs.get(configPath);
-    const worker = app + '-development';
+    const worker = replacement && app === 'lythaus-admin-api' ? TARGET.worker : app + '-development';
+    if (app === 'lythaus-admin-api' && releaseAdminWorker !== undefined && releaseAdminWorker !== worker) {
+      throw new Error('canonical release selects a different physical Admin Worker');
+    }
     if (config?.name !== worker || config.vars?.ENVIRONMENT !== 'production'
       || config.hyperdrive?.length !== Object.keys(bindings).length) throw new Error('production Worker configuration differs for ' + app);
     if (replacement && ['lythaus-jobs', 'lythaus-public-api'].includes(app)) {
@@ -43,8 +77,15 @@ export function validateProductionDatabaseMap(manifest, configs, plan = transiti
         throw new Error('optional monthly rules require separate activation');
       }
     }
+    if (replacement && app === 'lythaus-admin-api' && (config.main !== 'src/control-worker.ts'
+      || config.vars.EXPECTED_HOSTNAMES !== 'control.lythaus.co' || config.vars.CORS_ALLOWED_ORIGINS !== 'https://control.lythaus.co'
+      || config.vars.ACCESS_REQUIRE_SIGNED_SUBJECT !== 'true' || config.keep_vars !== false
+      || config.workers_dev !== false || config.preview_urls !== false || config.assets?.run_worker_first !== true
+      || config.assets?.binding !== 'ASSETS' || config.version_metadata?.binding !== 'WORKER_VERSION')) {
+      throw new Error('replacement Admin entry point, access configuration or exposure differs');
+    }
     for (const [binding, role] of Object.entries(bindings)) {
-      expected.add(worker + '/' + binding);
+      expected.set(worker + '/' + binding, configPath);
       const entries = manifest.bindings.filter(row => row.worker === worker && row.binding === binding);
       const bound = config.hyperdrive.filter(row => row.binding === binding);
       if (entries.length !== 1 || bound.length !== 1 || entries[0].configPath !== configPath
@@ -57,7 +98,7 @@ export function validateProductionDatabaseMap(manifest, configs, plan = transiti
   if (manifest.bindings.length !== expected.size) throw new Error('unexpected production manifest binding');
   for (const [configPath, config] of configs) {
     for (const binding of config.hyperdrive ?? []) {
-      if (!expected.has(config.name + '/' + binding.binding) || configPath !== 'apps/' + config.name.replace(/-development$/, '') + '/wrangler.jsonc') {
+      if (expected.get(config.name + '/' + binding.binding) !== configPath) {
         throw new Error('unmapped database consumer in ' + configPath);
       }
     }
@@ -72,7 +113,7 @@ export async function verifyRollbackPlane({ manifest, snapshot, token, fetchImpl
   const checked = new Set();
   for (const [component, app] of Object.entries({public:'lythaus-public-api', admin:'lythaus-admin-api',
     jobs:'lythaus-jobs', coordinator:'lythaus-auth-acceptance-coordinator'})) {
-    const worker = app + '-development';
+    const worker = component === 'admin' ? TARGET.worker : app + '-development';
     const prior = snapshot(component);
     const priorVersions = parseProductionDeploymentState(prior.deployment, prior.versions).serving;
     const expected = manifest.bindings.filter(row => row.worker === worker);

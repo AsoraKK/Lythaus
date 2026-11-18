@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { verifyExistingGate } from './lythaus-new-core-secret-preflight.mjs';
+import { inspectControlRouting } from './control-host-routing.mjs';
 
 export const TARGET = Object.freeze({
   account: 'e5b7ae46e04698f507b7e4b3d4ef1af0', zone: '7bc572c8b7cd3c00be9c655176c29382',
@@ -275,7 +276,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!['--gate','--inspect','--discover-connectors'].includes(process.argv[2])) fail('isolation_mode_blocked');
     await gate(process.env);
     const result = process.argv[2] === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false }
-      : process.argv[2] === '--discover-connectors' ? await inspectProductionConnectors({token:process.env.CLOUDFLARE_API_TOKEN})
+      : process.argv[2] === '--discover-connectors' ? {
+        ...await inspectProductionConnectors({token:process.env.CLOUDFLARE_API_TOKEN}),
+        hostRouting:await inspectControlRouting({token:process.env.CLOUDFLARE_API_TOKEN})}
       : await inspectIsolation({token:process.env.CLOUDFLARE_API_TOKEN,expectedOwner:process.env.LYTHAUS_NEW_CORE_OWNER_EMAIL,
         expectedVersionId:process.env.EXPECTED_WORKER_VERSION_ID});
     console.log(JSON.stringify(result));
