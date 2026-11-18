@@ -14,6 +14,20 @@ verified that the two live Admin Access applications use the same sole human sel
 Select `main` and enter the full protected main SHA. Choose `setup` to check
 inputs and configure the isolated site in one gated run. Choose `inspect`
 to check inputs only. The environment reviewer can reject either operation.
+Inspection uses the same Pages project inventory as setup. The first GET uses
+the provider default, and later requests specify only the page number. The job
+checks page identity, stable pagination metadata, unique project IDs and the
+reported total. It stops if it cannot prove the list is complete within ten
+pages. A short page can have successors. The result reports the project count
+and whether the private owner selector matches the two pinned Access policies.
+[Cloudflare Pages API reference](https://developers.cloudflare.com/api/resources/pages/subresources/projects/methods/list/)
+
+The protected job reports whether the Admin URL was delivered, whether it
+matched the pinned branch and role, and whether a connection was attempted.
+It reports the presence and format of the owner secret separately from an
+owner-confirmed live policy selector. If a protected input is unavailable or
+its custody is unresolved, use inspection before authorizing setup.
+
 An empty or inaccessible secret binding, invalid credential, target mismatch,
 changed production baseline or unexpected existing test resource stops setup.
 

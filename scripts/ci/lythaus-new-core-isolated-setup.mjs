@@ -84,12 +84,16 @@ async function readTestAccess(api, context, id, owner) {
     && policies.some(p=>['deny','block'].includes(p.decision) && p.precedence === 2), 'test_access_policies_readback');
   return app;
 }
-async function networkSnapshot(api) {
-  const projects = await api.list(`${ACCOUNT}/pages/projects`);
+async function productionPages(api) {
+  const projects = await api.listPagesProjects();
   check(projects.every(p=>Array.isArray(p.domains)) && projects.every(p=>!p.domains.some(d=>matchesHost(d))), 'pages_hostname_collision');
   const pages = projects.find(p=>p.name === 'lythaus-control-panel');
   check(pages?.id === '93ac4df5-86c3-4986-93ea-74650e9f35d4' && pages.domains.includes('admin.lythaus.co')
     && pages.production_branch === 'main' && typeof pages.canonical_deployment?.id === 'string','production_pages_identity');
+  return {projectCount:projects.length,id:pages.id,domains:[...pages.domains].sort(),deployment:pages.canonical_deployment.id};
+}
+async function networkSnapshot(api) {
+  const pages = await productionPages(api);
   const domains = await api.request(`${ACCOUNT}/workers/domains?hostname=${TARGET.hostname}`);
   check(Array.isArray(domains) && domains.length === 0, 'worker_custom_domain_collision');
   const packs = await api.list(`${ZONE}/ssl/certificate_packs`);
@@ -97,7 +101,7 @@ async function networkSnapshot(api) {
   const prodDns = await api.dns('admin.lythaus.co');
   check(prodDns.length > 0, 'production_dns_missing');
   check((await api.dns('*.lythaus.co')).length === 0, 'wildcard_dns_collision');
-  return {pages:{id:pages.id,domains:[...pages.domains].sort(),deployment:pages.canonical_deployment.id},prodDns:sortIds(prodDns)};
+  return {pages,prodDns:sortIds(prodDns)};
 }
 async function routes(api) {
   const rows = await api.request(`${ZONE}/workers/routes`);
@@ -155,14 +159,28 @@ function resolveOwner(env, approval, context) {
 export async function inspectSetupInputs({env, sourceDir, authorize}) {
   const approval = await authorize();
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
-  let context;
-  if (!env.LYTHAUS_NEW_CORE_OWNER_EMAIL && approval.ownerSelectorConfirmedByOwner && env.CLOUDFLARE_API_TOKEN) {
-    const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN,record:()=>{throw new Error('setup_inspect_read_only');}});
-    try { context=await accessSnapshot(api); } catch { /* Independent DB and entitlement checks still run. */ }
+  const errors = [];
+  let context, pages;
+  const get = avoidDeniedReadRetries((url, init) => {
+    check(init?.method === 'GET','inspect_read_only');
+    return fetch(url, init);
+  });
+  if (env.CLOUDFLARE_API_TOKEN) {
+    const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,record:()=>check(false,'inspect_read_only')});
+    try { context = await accessSnapshot(api); } catch { errors.push('setup_owner_policy_unverified'); }
+    try { pages = await productionPages(api); } catch (error) {
+      errors.push(/^setup_(?:pages_[a-z0-9_]+|production_pages_identity)$/.test(error.message) ? error.message : 'setup_pages_unverified');
+    }
   }
-  return collectAdminInputs({env,sourceDir,expectedOwner:resolveOwner(env,approval,context),
+  const owner = resolveOwner(env,approval,context);
+  const ownerMatches = email(owner) && context ? owner.toLowerCase() === context.owner : null;
+  if (ownerMatches === false) errors.push('setup_private_owner_selector_mismatch');
+  const result = await collectAdminInputs({env,sourceDir,expectedOwner:owner,fetchImpl:get,
     privateCredentialConfirmed:approval.privateCredentialConfirmed,
     existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true});
+  return {...result,ready:result.ready && !!pages && ownerMatches === true && !errors.length,
+    ownerMatchesReviewedSelector:ownerMatches, pagesInventoryComplete:!!pages, pagesProjectsChecked:pages?.projectCount ?? null,
+    errors:[...result.errors,...errors]};
 }
 export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record}) {
   check(typeof authorize === 'function' && typeof record === 'function','reviewed_entrypoint_required');

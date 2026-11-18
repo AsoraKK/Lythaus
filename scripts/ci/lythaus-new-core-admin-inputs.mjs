@@ -63,7 +63,7 @@ const boundarySql = `SELECT current_database()='postgres' AND current_user=sessi
 
 async function inspectDatabase(raw, role, deps) {
   const isAdmin = role === 'lythaus_admin';
-  const report = { bindingAccessible:Boolean(raw), urlValid:false, targetMatches:false, roleMatches:false, authenticated:false,
+  const report = { bindingAccessible:Boolean(raw), urlValid:false, targetMatches:false, roleMatches:false, connectionAttempted:false, authenticated:false,
     verifiedTls:false, readOnly:false, restrictedRole:false, ddlDenied:false, directIdentityInsertsDenied:false,
     functionBoundaryVerified:false, ...(isAdmin ? {} : { receiptFingerprintsMatch:false, bootstrapClean:false }), verified:false };
   let client, issuers;
@@ -84,6 +84,7 @@ async function inspectDatabase(raw, role, deps) {
     const config = adminDatabaseConnectionConfig(raw);
     client = await deps.createClient({ ...config, options:'-c default_transaction_read_only=on -c search_path=pg_catalog',
       statement_timeout:12000, connectionTimeoutMillis:10000, query_timeout:15000 });
+    report.connectionAttempted = true;
     try { await client.connect(); }
     catch (error) { throw new Failure(['28P01','28000'].includes(error?.code) ? 'authentication_rejected' : 'connection_unavailable'); }
     issuers = deps.readIssuers(client.connection.stream, identity.origin.host);
@@ -242,7 +243,8 @@ export async function collectAdminInputs({ env, createClient=createPg, parseTarg
   const admin = await inspectDatabase(env.LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL, 'lythaus_admin', deps);
   const verifier = await inspectDatabase(env.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL, 'lythaus_verifier', deps);
   const errors = [admin.error && 'admin_'+admin.error, verifier.error && 'verifier_'+verifier.error].filter(Boolean);
-  const cf = { bindingAccessible:Boolean(env.CLOUDFLARE_API_TOKEN), ownerExpectationAvailable:typeof expectedOwner === 'string'
+  const cf = { bindingAccessible:Boolean(env.CLOUDFLARE_API_TOKEN), ownerBindingPresent:Boolean(env.LYTHAUS_NEW_CORE_OWNER_EMAIL),
+    ownerBindingValidForm:/^[^@\s]+@[^@\s]+$/.test(env.LYTHAUS_NEW_CORE_OWNER_EMAIL ?? ''), ownerExpectationAvailable:typeof expectedOwner === 'string'
     && /^[^@\s]+@[^@\s]+$/.test(expectedOwner), paidPlanVerified:false, includedCapacityVerified:false, seatCovered:false,
     ownerAttestationUsed:false, caInventoryVerified:false, matchingUploadedCa:false };
   if (!cf.bindingAccessible) errors.push('cloudflare_binding_inaccessible');

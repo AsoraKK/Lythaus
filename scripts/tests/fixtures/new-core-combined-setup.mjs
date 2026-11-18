@@ -83,8 +83,18 @@ globalThis.fetch = async (url,init)=>{
     if (state.fault==='overlap') result.push({id:'wildcard',type:'self_hosted',destinations:[{type:'public',uri:'admin-new-*.lythaus.co/path'}]});
   } else if (path.endsWith('/policies')) result=path.includes(accessId) ? state.testPolicies : initialPolicies;
   else if (path.endsWith('/access/organizations')) result={auth_domain:'fixture.cloudflareaccess.com'};
-  else if (path.endsWith('/pages/projects')) result=[{id:'93ac4df5-86c3-4986-93ea-74650e9f35d4',name:'lythaus-control-panel',
-    production_branch:'main',canonical_deployment:{id:'pages-fixture'},domains:['admin.lythaus.co']}];
+  else if (path.endsWith('/pages/projects')) {
+    const page = Number(u.searchParams.get('page') ?? 1);
+    assert.equal(u.search, page === 1 ? '' : '?page=2');
+    const collision = state.fault === 'later_pages_collision';
+    const project = {id:'93ac4df5-86c3-4986-93ea-74650e9f35d4',name:'lythaus-control-panel',
+      production_branch:'main',canonical_deployment:{id:'pages-fixture'},domains:['admin.lythaus.co']};
+    const other = {id:'a'.repeat(32),domains:collision ? [TARGET.hostname] : []};
+    result = [page === 1 ? other : project];
+    if (collision) result = [page === 1 ? project : other];
+    const info = {page,per_page:10,count:1,total_count:2,total_pages:2};
+    return Response.json({success:true,result,result_info:state.fault === 'missing_pages_metadata' ? {} : info});
+  }
   else if (path.endsWith('/workers/domains')) result=[];
   else if (path.endsWith('/ssl/certificate_packs')) result=[{id:'edge',status:'active',hosts:['*.lythaus.co']}];
   else if (path.endsWith('/dns_records')) {
@@ -112,22 +122,29 @@ globalThis.fetch = async (url,init)=>{
   } else assert.fail('unexpected provider path');
   return Response.json({success:true,result});
 };
-const {runIsolatedSetup} = await import('../../ci/lythaus-new-core-isolated-setup.mjs');
-for (const fault of ['none','overlap','owner_readback','cookie_readback','restart_readback']) {
+const {inspectSetupInputs,runIsolatedSetup} = await import('../../ci/lythaus-new-core-isolated-setup.mjs');
+for (const fault of ['none','overlap','later_pages_collision','missing_pages_metadata','owner_readback','cookie_readback','restart_readback']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
   const args={env:{CLOUDFLARE_API_TOKEN:token,LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL:`postgres://lythaus_admin.${TARGET.branch}:${password}@fixture.invalid/postgres`},
     authorize:async()=>({privateCredentialConfirmed:true,existingPlanConfirmedByOwner:true,ownerSelectorConfirmedByOwner:true}),record:entry=>journal.push(entry)};
   if(fault==='none'){
+    const inspection=await inspectSetupInputs(args);
+    assert.equal(inspection.ready,true);
+    assert.equal(inspection.ownerMatchesReviewedSelector,true);
+    assert.equal(inspection.pagesProjectsChecked,2);
+    assert.equal(state.testApp,undefined);
     const result=await runIsolatedSetup(args);
     assert.equal(result.status,'OWNER_TEST_PENDING'); assert.equal(result.bootstrapCalled,false);
     assert.equal(state.finalVerifier,1);assert.equal(state.challenges,2);
     assert.deepEqual(journal.map(j=>j.operation),['create_access','configure_hyperdrive','restart_hyperdrive','create_worker',
       'stage_version','stage_version','activate_version','create_test_dns','create_test_route']);
     assert.doesNotMatch(JSON.stringify([result,journal]),/owner@|private-fixture/);
-  } else if(fault==='overlap'){
+  } else if(['overlap','later_pages_collision','missing_pages_metadata'].includes(fault)){
     const result=await runIsolatedSetup(args);assert.equal(result.status,'ISOLATED_SETUP_BLOCKED');assert.deepEqual(journal,[]);
+    if(fault==='later_pages_collision') assert.ok(result.blocked.includes('setup_pages_hostname_collision'));
+    if(fault==='missing_pages_metadata') assert.ok(result.blocked.includes('setup_pages_pagination_unverified'));
   } else {
     const failures = {owner_readback:/test_access_policies_readback/,cookie_readback:/test_access_app_readback/,restart_readback:/pool_restart_readback/};
     await assert.rejects(runIsolatedSetup(args),failures[fault]);

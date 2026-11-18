@@ -133,3 +133,37 @@ test('provider denial has an operation and status without private content or ret
     {message:'setup_create_worker_http_403'});
   assert.equal(called,1);
 });
+
+test('Pages verifies provider totals before returning inventory or reporting a sanitized failure', async () => {
+  const project = n => ({id:String(n).padStart(32,'0')});
+  const page = (n, info = {}) => ({success:true,result:[project(n)],result_info:{
+    page:n,per_page:10,count:1,total_count:2,total_pages:2,...info}});
+  async function read(responses) {
+    let calls = 0;
+    const api = createSetupClient({token:fixtureToken,record:()=>assert.fail(),fetchImpl:async (url,init)=>{
+      assert.equal(init.method,'GET');
+      assert.equal(init.redirect,'error');
+      const response = responses[calls++];
+      assert.ok(response, 'unexpected request');
+      assert.equal(new URL(url).search, calls === 1 ? '' : '?page='+calls);
+      return response instanceof Response ? response : Response.json(response);
+    }});
+    return api.listPagesProjects();
+  }
+  for (const totals of [{},{total_count:undefined},{total_pages:undefined}]) {
+    assert.deepEqual(await read([page(1,totals),page(2,totals)]),[project(1),project(2)]);
+  }
+  assert.deepEqual(await read([{success:true,result:[],result_info:{page:1,per_page:10,count:0,total_count:0,total_pages:0}}]),[]);
+  for (const [responses,reason] of [
+    [[{success:true,result:[project(1)]}],'pages_pagination_unverified'],
+    [[page(1,{total_count:undefined,total_pages:undefined})],'pages_pagination_unverified'],
+    [[page(1),page(1)],'pages_pagination_unverified'],
+    [[page(1),{...page(2),result:[project(1)]}],'pages_project_identity'],
+    [[page(1),page(2,{per_page:1})],'pages_pagination_changed'],
+    [[page(1),page(2,{total_count:3})],'pages_pagination_changed'],
+    [[page(1,{total_count:1})],'pages_total_inconsistent'],
+    [[page(1),page(2,{count:2})],'pages_pagination_unverified'],
+    [[...Array.from({length:10},(_,i)=>page(i+1,{total_pages:11,total_count:11}))],'pages_inventory_incomplete'],
+    [[page(1),new Response('private response',{status:400})],'pages_inventory_http_400'],
+  ]) await assert.rejects(read(responses),{message:'setup_'+reason});
+});
