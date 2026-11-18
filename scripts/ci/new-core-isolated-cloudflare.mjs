@@ -38,7 +38,7 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
     [new RegExp(`^${ACCOUNT}/access/apps(?:/${idSegment}/policies)?${page}$`), 'access_inventory'],
     [new RegExp(`^${ACCOUNT}/access/organizations$`), 'access_organization'],
     [new RegExp(`^${ACCOUNT}/workers/domains\\?hostname=${TARGET.hostname.replaceAll('.', '\\.')}$`), 'worker_domains'],
-    [new RegExp(`^${ACCOUNT}/pages/projects${page}$`), 'pages_inventory'],
+    [new RegExp(`^${ACCOUNT}/pages/projects(?:\\?page=(?:[2-9]|10))?$`), 'pages_inventory'],
     [new RegExp(`^${ZONE}/ssl/certificate_packs${page}$`), 'edge_certificate'],
     [new RegExp(`^${ZONE}/dns_records\\?name=(?:admin\\.lythaus\\.co|admin-new-core-test\\.lythaus\\.co|%2A\\.lythaus\\.co)&per_page=100&page=1$`), 'dns_inventory'],
     [new RegExp(`^${ACCOUNT}/mtls_certificates/${idSegment}$`), 'read_public_ca'],
@@ -129,6 +129,41 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
     return payload;
   }
   const request = async (path, options) => (await call(path, options)).result;
+  async function listPagesProjects() {
+    const projects = [];
+    const ids = new Set();
+    const validTotal = value => Number.isSafeInteger(value) && value >= 0;
+    let first;
+    for (let page = 1; page <= 10; page++) {
+      const path = `${ACCOUNT}/pages/projects` + (page === 1 ? '' : `?page=${page}`);
+      const {result, result_info: info} = await call(path);
+      requireSetup(Array.isArray(result) && info?.page === page && validTotal(info.per_page) && info.per_page > 0
+        && result.length <= info.per_page && (info.count === undefined || info.count === result.length)
+        && (result.length > 0 || page === 1)
+        && (info.total_count === undefined || validTotal(info.total_count))
+        && (info.total_pages === undefined || validTotal(info.total_pages))
+        && (info.total_count !== undefined || info.total_pages !== undefined),
+      'pages_pagination_unverified');
+      first ??= info;
+      requireSetup(info.total_count === first.total_count && info.total_pages === first.total_pages
+        && info.per_page === first.per_page, 'pages_pagination_changed');
+      for (const project of result) {
+        requireSetup(ID.test(project?.id ?? '') && !ids.has(project.id), 'pages_project_identity');
+        ids.add(project.id);
+        projects.push(project);
+      }
+      const countComplete = info.total_count === undefined ? undefined : projects.length === info.total_count;
+      const lastPage = info.total_pages === undefined ? undefined : Math.max(1, info.total_pages);
+      const pagesComplete = lastPage === undefined ? undefined : page === lastPage;
+      requireSetup((info.total_count === undefined || projects.length <= info.total_count)
+        && (lastPage === undefined || page <= lastPage) && (info.total_pages !== 0 || projects.length === 0)
+        && (countComplete === undefined || pagesComplete === undefined || countComplete === pagesComplete),
+      'pages_total_inconsistent');
+      if (countComplete || pagesComplete) return projects;
+      requireSetup(result.length > 0, 'pages_no_progress');
+    }
+    requireSetup(false, 'pages_inventory_incomplete');
+  }
   async function list(path) {
     const result = [], seen = new Set();
     for (let index=1; index<=10; index++) {
@@ -150,5 +185,5 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
       && payload.result.length < 100 && payload.result.every(r=>r.name === name), 'dns_inventory_incomplete');
     return payload.result;
   }
-  return {request,list,dns};
+  return {request,list,listPagesProjects,dns};
 }

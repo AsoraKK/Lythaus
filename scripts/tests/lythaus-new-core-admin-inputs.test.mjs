@@ -67,6 +67,9 @@ test('private inputs verified by role, TLS, immutable receipt and current accoun
   const f=fixture(), report=await f.run();
   assert.deepEqual(report.errors,[]);
   assert.equal(report.ready,true);
+  assert.equal(report.admin.connectionAttempted,true);
+  assert.equal(report.cloudflare.ownerBindingPresent,true);
+  assert.equal(report.cloudflare.ownerBindingValidForm,true);
   assert.equal(report.verifier.receiptFingerprintsMatch,true);
   assert.equal(report.verifier.bootstrapClean,true);
   assert.equal(report.cloudflare.matchingUploadedCa,true);
@@ -84,6 +87,7 @@ test('inaccessible, invalid, wrong target, wrong role and rejected login are dis
   const readOnly=await unconfirmed.run({privateCredentialConfirmed:false});
   assert.equal(readOnly.admin.bindingAccessible,true);
   assert.equal(readOnly.admin.authenticated,false);
+  assert.equal(readOnly.admin.connectionAttempted,false);
   assert.ok(readOnly.errors.includes('admin_private_custody_unconfirmed'));
   assert.equal(readOnly.verifier.verified,true);
   assert.equal(unconfirmed.clients.length,1);
@@ -94,11 +98,15 @@ test('inaccessible, invalid, wrong target, wrong role and rejected login are dis
     f.env.LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL = raw;
     const report = await f.run();
     assert.ok(report.errors.includes('admin_'+code));
+    assert.equal(report.admin.connectionAttempted,false);
     assert.equal(f.clients.length,1);
     assert.equal(f.delivered.length,0);
   }
   const f=fixture({connectorError:'28P01'});
-  assert.ok((await f.run()).errors.includes('admin_authentication_rejected'));
+  const rejected=await f.run();
+  assert.ok(rejected.errors.includes('admin_authentication_rejected'));
+  assert.equal(rejected.admin.connectionAttempted,true);
+  assert.equal(rejected.admin.authenticated,false);
 });
 
 test('role drift, changed grants and consumed bootstrap state each block',async () => {
