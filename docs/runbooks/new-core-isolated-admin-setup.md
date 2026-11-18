@@ -70,6 +70,8 @@ Both the bootstrap handler and ordinary moderation reads use the signed Access `
 
 In that fresh signed-in browser, the acceptance harness can call `verifyFlagsSession(page, {hostname, versionId, sourceSha})`. It reloads the ordinary page and observes the UI's own same-origin moderation request. The receipt contains only the serving identity and pass indicators. Bind those identifiers to Cloudflare's version-specific Hyperdrive readback and the immutable PlanetScale database and branch before accepting the result.
 
+The acceptance operator can start the headed browser with `node scripts/ci/verify-new-core-flags-session.mjs HOSTNAME VERSION_ID SOURCE_SHA ISSUER`. Supply the four nonsecret fields from the reviewed deployment and Access organization readback. The browser starts with a fresh cookie store, checks the challenge against that issuer and leaves sign-in to the owner.
+
 Production uses its own approval. Fence data writers and asynchronous work
 before changing databases. Admin, Public, Jobs, Privacy and the coordinator
 must agree on the active database before traffic resumes. The existing Pages

@@ -44,8 +44,10 @@ export async function verifyFlagsSession(page, {hostname, versionId, sourceSha})
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   let browser;
   try {
-    const [hostname,versionId,sourceSha] = process.argv.slice(2);
+    const [hostname,versionId,sourceSha,issuer] = process.argv.slice(2);
     validateCandidate({hostname,versionId,sourceSha});
+    if (!/^https:\/\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareaccess\.com$/.test(issuer ?? '')
+      || process.argv.length !== 6) throw new Error('flags_reviewed_issuer_required');
     const flags = 'https://' + hostname + '/flags';
     const {chromium} = await import('playwright');
     browser = await chromium.launch({headless:false});
@@ -56,7 +58,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         || !response.request().isNavigationRequest() || response.frame() !== page.mainFrame()) return false;
       try {
         const location = new URL(await response.headerValue('location'),flags);
-        return location.origin === 'https://asorateam.cloudflareaccess.com' && location.pathname.startsWith('/cdn-cgi/access/login/');
+        return location.origin === issuer && location.pathname.startsWith('/cdn-cgi/access/login/');
       } catch { return false; }
     });
     await Promise.all([challenged,page.goto(flags,{waitUntil:'commit'})]);
