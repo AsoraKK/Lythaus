@@ -420,7 +420,8 @@ test('production database identity and budget controls are explicit', () => {
   const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0009_cost_budget_enforcement.sql'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
   const budgetProbe = fs.readFileSync(path.join(root, 'scripts/ci/probe-budget-hard-stop.mjs'), 'utf8');
-  assert.equal(manifest.bindings.length, 5);
+  assert.equal(manifest.bindings.length, 6);
+  assert.ok(manifest.bindings.some(entry => entry.worker === 'lythaus-auth-acceptance-coordinator-development' && entry.binding === 'DB_ADMIN_FRESH'));
   assert.match(manifest.expectedMainOriginFingerprint, /^[a-f0-9]{64}$/);
   assert.match(verifier, /PSCALE_BRANCH_NAME.*main/);
   assert.match(verifier, /originFingerprint/);

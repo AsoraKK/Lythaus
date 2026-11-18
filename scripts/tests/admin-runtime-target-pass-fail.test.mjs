@@ -179,6 +179,8 @@ test('real Hyperdrive verifier checks synthetic Admin runtime bindings with GET 
   const originFingerprint = crypto.createHash('sha256').update(JSON.stringify(origin)).digest('hex');
   const manifest = {
     accountId: '0123456789abcdef0123456789abcdef',
+    planetScaleDatabase: 'lythaus-core',
+    productionBranchId: 'branch123',
     productionTargetBranch: 'main',
     expectedMainOriginFingerprint: originFingerprint,
     bindings,

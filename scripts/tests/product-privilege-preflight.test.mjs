@@ -254,6 +254,7 @@ test('actual shared Hyperdrive checks prove the selected mapping and stop after 
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const manifest = JSON.parse(fs.readFileSync('infrastructure/cloudflare/native-hyperdrive-production.json', 'utf8'));
   manifest.bindings = manifest.bindings.filter(item => item.hyperdriveId === PRODUCT_PRIVILEGE_TARGET.hyperdriveId);
+  manifest.productionBranchId = target.branchId;
   manifest.expectedMainOriginFingerprint = target.originFingerprint;
   const entry = manifest.bindings[0];
   for (const [file, value] of [['infrastructure/cloudflare/native-hyperdrive-production.json', manifest],

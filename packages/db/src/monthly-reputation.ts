@@ -143,6 +143,10 @@ export async function disposablePreparationAllowed(client: Client, context?: Mon
 }
 
 export async function monthlyReputationShadowEnabled(client: Client): Promise<boolean> {
+  const schema = await client.query<{ installed: boolean }>(
+    "SELECT to_regclass('trust.monthly_reputation_sources') IS NOT NULL AS installed",
+  );
+  if (!schema.rows[0]?.installed) return false;
   const flag = await client.query<{ enabled: boolean; policy_version: string }>(
     'SELECT enabled, policy_version FROM system.feature_flags WHERE flag_key = $1',
     [MONTHLY_REPUTATION_SHADOW_FLAG],

@@ -122,8 +122,10 @@ export async function verifyRebindLiveTarget({env,policy,roles,executor,fetchImp
   }
   const verified=await verifyTargets({environment:{...env,PSCALE_BRANCH_NAME:'main',HYPERDRIVE_VERIFY_IDS:binding[0].hyperdriveId},
     fetchImpl,readOnlyGetOnly:true});
+  const adminProof=verified.bindings?.filter(item=>item.worker===worker&&item.binding==='DB_ADMIN_FRESH'
+    &&item.hyperdriveId===binding[0].hyperdriveId&&item.roleClass==='lythaus_admin');
   check(verified.status==='pass'&&verified.targetBranch==='main'&&verified.originFingerprint===policy.databaseTarget.originFingerprint
-    &&verified.bindings.length===1&&verified.bindings[0].roleMatches===true&&verified.bindings[0].runtimeRoleMatches===true,
+    &&adminProof?.length===1&&adminProof[0].roleMatches===true&&adminProof[0].runtimeRoleMatches===true,
   'admin_rebind_hyperdrive_changed');
   const completedAt=now();
   check(checkedAt>=policy.notBefore&&checkedAt*1000<=completedAt&&completedAt-checkedAt*1000<=120000

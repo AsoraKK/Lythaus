@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { transition, validateProductionDatabaseMap, verifyRollbackPlane } from './production-database-cutover.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json');
@@ -61,6 +62,24 @@ function assertManifestAndConfigs() {
   }
 }
 
+function productionConfigs() {
+  const configs = new Map();
+  for (const entry of fs.readdirSync(path.join(root, 'apps'), { withFileTypes: true })) {
+    const file = 'apps/' + entry.name + '/wrangler.jsonc';
+    if (entry.isDirectory() && fs.existsSync(path.join(root, file))) configs.set(file, parseJsonc(file));
+  }
+  return configs;
+}
+
+function validRole(role, label) {
+  if (manifest.planetScaleDatabase === transition.destination.database) {
+    return manifest.planetScaleDatabaseId === transition.destination.databaseId
+      && manifest.productionBranchId === transition.destination.branchId
+      && manifest.expectedMainOriginFingerprint === transition.destination.originSha256 && role === label;
+  }
+  return manifest.planetScaleDatabase === transition.rollback.database && /^pscale_api_[a-z0-9]+$/.test(role);
+}
+
 export async function verifyHyperdriveTargets({ environment = process.env, fetchImpl = fetch, readOnlyGetOnly = false } = {}) {
   assertManifestAndConfigs();
 
@@ -70,10 +89,16 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
   const roleIdentifiers = JSON.parse(environment.PSCALE_ROLE_IDENTIFIERS ?? '{}');
   const expectedRuntimeRole = roleIdentifiers.lythaus_runtime ?? '';
   if (!apiToken || !accountId || !databaseUrl) throw new Error('Cloudflare API credentials and the PlanetScale main metadata URL are required');
+  if (accountId !== manifest.accountId) throw new Error('Cloudflare account differs from the production manifest');
+  if ((environment.PLANETSCALE_DATABASE && environment.PLANETSCALE_DATABASE !== manifest.planetScaleDatabase)
+    || (environment.PLANETSCALE_ORGANIZATION && environment.PLANETSCALE_ORGANIZATION !== manifest.planetScaleOrganization)) {
+    throw new Error('release database coordinates differ from the production manifest');
+  }
   if ((environment.PSCALE_BRANCH_NAME ?? '') !== 'main') throw new Error('Hyperdrive target verification requires PSCALE_BRANCH_NAME=main');
-  if (!/^pscale_api_[a-z0-9]+$/.test(expectedRuntimeRole)) throw new Error('canonical runtime role identifier is required');
+  if (!validRole(expectedRuntimeRole, 'lythaus_runtime')) throw new Error('canonical runtime role identifier is required');
 
   const mainSource = sourceMetadata(databaseUrl);
+  if (mainSource.branchId !== manifest.productionBranchId) throw new Error('PlanetScale branch ID differs from the production manifest');
   const mainOrigin = mainSource.origin;
   const expectedRuntimeConnectionUser = `${expectedRuntimeRole}.${mainSource.branchId}`;
   if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
@@ -153,7 +178,7 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
   const results = [];
   for (const entry of selectedBindings) {
     const expectedRole = roleIdentifiers[entry.expectedRoleKey] ?? '';
-    if (!/^pscale_api_[a-z0-9]+$/.test(expectedRole)) {
+    if (!validRole(expectedRole, entry.expectedRoleKey)) {
       throw new Error(`canonical ${entry.expectedRoleKey} role identifier is required`);
     }
     const expectedConnectionUser = `${expectedRole}.${mainSource.branchId}`;
@@ -166,10 +191,10 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
     const schemeValid = String(origin.scheme).toLowerCase() === 'postgres';
     const hostValid = String(origin.host ?? '').toLowerCase().endsWith('.psdb.cloud');
     const fingerprintMatches = observedFingerprint === mainFingerprint;
-    const roleMatches = origin.user === expectedConnectionUser;
+    const roleMatches = origin.user === expectedConnectionUser && (origin.username === undefined || origin.username === origin.user);
     // Legacy source invariant retained for regression tests: origin.user === expectedRuntimeRole.
     const runtimeRoleMatches = entry.expectedRoleKey === 'lythaus_runtime' ? origin.user === expectedRuntimeConnectionUser : true;
-    if ((readOnlyGetOnly && config.id !== entry.hyperdriveId) || config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !roleMatches || !runtimeRoleMatches) {
+    if (config.id !== entry.hyperdriveId || config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !roleMatches || !runtimeRoleMatches) {
       throw new Error(`Hyperdrive production target check failed for ${entry.worker}/${entry.binding}`);
     }
     results.push({
@@ -193,7 +218,17 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (manifestOnly) {
+  const requireDestination = process.argv.includes('--new-core-candidate');
+  const target = validateProductionDatabaseMap(manifest, productionConfigs(), transition, requireDestination);
+  if (process.argv.includes('--rollback-database')) {
+    if (target === transition.destination) {
+      const dir = path.join(process.env.RUNNER_TEMP, 'production-cutover');
+      const read = file => JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+      await verifyRollbackPlane({manifest,token:process.env.CLOUDFLARE_API_TOKEN,snapshot:component=>({
+        deployment:read(component+'-before.json'),versions:read(component+'-before-versions.json'),
+      })});
+    }
+  } else if (manifestOnly || requireDestination) {
     assertManifestAndConfigs();
     console.log(`Verified ${manifest.bindings.length} documented production Hyperdrive bindings, IDs and role classes.`);
   } else {

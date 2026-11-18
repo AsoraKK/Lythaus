@@ -210,7 +210,8 @@ function liveFixture() {
     return {ok:true,json:async()=>({success:true,result,...(Array.isArray(result)?{result_info:{page:1,total_pages:1,total_count:result.length}}:{})})};
   };
   return {data,env:environment,policy:p,roles,executor:{...executor,originFingerprint:p.databaseTarget.originFingerprint},fetchImpl,manifest,now:()=>now,verifyTargets:async()=>({status:'pass',targetBranch:'main',
-    originFingerprint:p.databaseTarget.originFingerprint,bindings:[{roleMatches:true,runtimeRoleMatches:true}]})};
+    originFingerprint:p.databaseTarget.originFingerprint,bindings:[worker,'lythaus-auth-acceptance-coordinator-development'].map(script=>({
+      worker:script,binding:'DB_ADMIN_FRESH',roleClass:'lythaus_admin',hyperdriveId:drive,roleMatches:true,runtimeRoleMatches:true}))})};
 }
 
 test('read-only serving check binds exact Worker, UI audience, both sole human selectors, route and main Hyperdrive',async()=>{

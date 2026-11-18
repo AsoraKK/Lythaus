@@ -998,6 +998,29 @@ test('qualification target absence accepts only the provider GET 404 and uses th
   await assert.rejects(() => api(new Response(null, { status: 204 })).request(path, { absent: true }), /provider_response_invalid/);
   assert.equal((await api(Response.json({ id: 'existing', name: TEST_TARGET })).request(path, { absent: true })).name, TEST_TARGET);
 });
+test('a denied source stays denied after a read-only plan checks its dedicated token descriptor', async () => {
+  for (const [inspect, selfStatus] of [[false, 200], [true, 200], [true, 403]]) {
+    const calls = [], evidence = [];
+    const api = new TestRestoreApi('fixture-id:fixture-token', async (url, options) => {
+      assert.equal(options.method, 'GET');
+      const pathname = new URL(url).pathname;
+      calls.push(pathname);
+      if (pathname.endsWith('/databases/lythaus-core')) return new Response(null, {status:404});
+      assert.ok(pathname.endsWith('/service-tokens/fixture-id'));
+      if (selfStatus === 403) return new Response(null,{status:403});
+      return Response.json({id:'fixture-id',ignored:'fixture-token',service_token_accesses:[
+        { resource_id:RESTORE.databaseId,resource:{id:RESTORE.databaseId,name:RESTORE.database,deleted_at:null},
+          resource_type:'Database',access:'read_database' },
+      ]});
+    });
+    await assert.rejects(() => api.authority(row=>evidence.push(row),false,undefined,inspect),
+      error=>error.httpStatus===404 && error.providerDiagnostic.operationClass==='database_metadata_read');
+    assert.equal(calls.length, inspect ? 2 : 1);
+    assert.deepEqual(evidence, inspect ? [{databaseMetadataHttp:404,selfMetadataHttp:selfStatus,
+      exactDatabaseReadDescriptor:selfStatus===200?'PRESENT':'UNVERIFIED'}] : []);
+  }
+});
+
 test('provider failure diagnostics classify only the initial read endpoint and never expose the token or URL', async () => {
   const requestId = 'abcdefab-1234-4234-8234-abcdefabcdef';
   const tokenId = 'synthetic-token-id-never-output';
