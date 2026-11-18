@@ -80,7 +80,8 @@ function validRole(role, label) {
   return manifest.planetScaleDatabase === transition.rollback.database && /^pscale_api_[a-z0-9]+$/.test(role);
 }
 
-export async function verifyHyperdriveTargets({ environment = process.env, fetchImpl = fetch, readOnlyGetOnly = false } = {}) {
+export async function verifyHyperdriveTargets({ environment = process.env, fetchImpl = fetch, readOnlyGetOnly: exactReadsRequested = false } = {}) {
+  const readOnlyGetOnly = exactReadsRequested || manifest.planetScaleDatabase === transition.destination.database;
   assertManifestAndConfigs();
 
   const apiToken = environment.CLOUDFLARE_API_TOKEN ?? '';
@@ -154,7 +155,7 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
   async function cloudflareConfig(id, expectedConfigName) {
     const lookup = await cloudflareRequest(`/hyperdrive/configs/${id}`);
     if (lookup.response.ok && lookup.envelope?.success === true && lookup.envelope?.result) return lookup.envelope.result;
-    if (readOnlyGetOnly || manifest.planetScaleDatabase === transition.destination.database) throw new Error('hyperdrive_read_failed');
+    if (readOnlyGetOnly) throw new Error('hyperdrive_read_failed');
 
     const list = await cloudflareRequest('/hyperdrive/configs?per_page=100');
     const nameMatches = list.response.ok && list.envelope?.success === true && Array.isArray(list.envelope?.result)
