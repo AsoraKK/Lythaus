@@ -9,6 +9,7 @@ const owner='owner@fixture.invalid', token='private-fixture-token', password='pr
 const source = new X509Certificate(rootCertificates[0]);
 const ca = {id:'a'.repeat(32),pem:source.toString(),sha256:source.fingerprint256.replaceAll(':','').toLowerCase()};
 const workerId = 'c'.repeat(32), versionId = '11111111-2222-4333-8444-555555555555';
+const parentVersionId = 'aaaaaaaa-2222-4333-8444-555555555555';
 const accessId = 'b'.repeat(32), dnsId = 'd'.repeat(32), routeId = 'e'.repeat(32);
 const uiId = '2d440b64-6cde-48d7-b3cb-132129ee036f', apiId='fa6906cc-3daf-4beb-82b5-143e708eca0d';
 const initialPolicies = [
@@ -45,8 +46,10 @@ mock.module('../../ci/new-core-isolated-worker.mjs',{namedExports:{
     assert.ok(state.drive.restarted_on);
     const path = `/accounts/${TARGET.account}/workers/workers`;
     await request(path,{method:'POST',body:{name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false}}});
-    await request(`${path}/${workerId}/versions?deploy=false`,{method:'POST',body:{fixture:true}});
-    return {workerId,versionId,tag:TARGET.candidate};
+    const stage = binding => request(`${path}/${workerId}/versions?deploy=false`, {method:'POST',body:{bindings:[binding]}});
+    await stage({name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text',text:Buffer.alloc(32).toString('base64')});
+    await stage({name:'ACCESS_SUBJECT_HMAC_KEY',type:'inherit',version_id:parentVersionId});
+    return {workerId,parentVersionId,versionId,tag:TARGET.candidate};
   },
   async verifyWorkerVersion(){state.stagedReads++;},
 }});
@@ -97,7 +100,7 @@ globalThis.fetch = async (url,init)=>{
     if(state.fault!=='restart_readback')state.drive.restarted_on='2026-11-17T00:00:00Z';
     result=state.drive;
   } else if(path.endsWith('/workers/workers')) result={id:workerId,name:TARGET.worker};
-  else if(path.endsWith('/versions')) result={id:versionId};
+  else if(path.endsWith('/versions')) result={id:body.bindings[0].type==='inherit' ? versionId : parentVersionId};
   else if(path.endsWith('/subdomain')) result={enabled:false,previews_enabled:false};
   else if(path.endsWith('/deployments')) {
     if(method==='POST'){assert.equal(body.versions[0].version_id,versionId);assert.equal(state.stagedReads,1);
@@ -118,7 +121,7 @@ for (const fault of ['none','overlap','owner_readback','restart_readback']) {
     assert.equal(result.status,'OWNER_TEST_PENDING'); assert.equal(result.bootstrapCalled,false);
     assert.equal(state.finalVerifier,1);assert.equal(state.challenges,2);
     assert.deepEqual(journal.map(j=>j.operation),['create_access','configure_hyperdrive','restart_hyperdrive','create_worker',
-      'stage_version','activate_version','create_test_dns','create_test_route']);
+      'stage_version','stage_version','activate_version','create_test_dns','create_test_route']);
     assert.doesNotMatch(JSON.stringify([result,journal]),/owner@|private-fixture/);
   } else if(fault==='overlap'){
     const result=await runIsolatedSetup(args);assert.equal(result.status,'ISOLATED_SETUP_BLOCKED');assert.deepEqual(journal,[]);

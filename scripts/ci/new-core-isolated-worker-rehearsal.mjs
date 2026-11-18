@@ -10,6 +10,7 @@ const issuer = 'https://fixture.cloudflareaccess.com';
 const audience = 'a'.repeat(64);
 const workerId = 'd'.repeat(32);
 const versionId = '22222222-2222-4222-b222-222222222222';
+const inheritedId = '33333333-3333-4333-b333-333333333333';
 const account = '/accounts/e5b7ae46e04698f507b7e4b3d4ef1af0/workers';
 const name = 'lythaus-admin-api-new-core-test';
 const prefix = account + '/workers/' + workerId;
@@ -46,6 +47,7 @@ function fixture(mode, fault) {
       const hashes = [...wanted];
       if (fault === 'unknown_hash') hashes.push('f'.repeat(32));
       const buckets = mode === 'cached' ? [] : [hashes.slice(0, 3), hashes.slice(3)];
+      if (version) return { jwt: completionToken, buckets: [] };
       return { jwt: mode === 'cached' ? completionToken : sessionToken, buckets };
     }
     if (path.startsWith(account + '/assets/upload')) {
@@ -73,17 +75,25 @@ function fixture(mode, fault) {
       assert(mode === 'cached' || uploaded.size === wanted.size);
       const bindings = structuredClone(body.bindings);
       const secret = bindings.find(row => row.name === 'ACCESS_SUBJECT_HMAC_KEY');
-      assert.equal(Buffer.from(secret.text, 'base64').length, 32);
-      delete secret.text;
+      const parent = version;
+      if (parent) {
+        assert.deepEqual(secret, { name:'ACCESS_SUBJECT_HMAC_KEY', type:'inherit', version_id:parent.id });
+        if (fault !== 'inheritance_missing') secret.type = 'secret_text';
+        delete secret.version_id;
+      } else {
+        assert.equal(secret.type, 'secret_text');
+        assert.equal(Buffer.from(secret.text, 'base64').length, 32);
+        delete secret.text;
+      }
       const { assets, modules, ...fields } = body;
       version = { ...fields, modules: structuredClone(modules), bindings, assets: { config: assets.config },
-        urls: [], number: 1, id: versionId };
+        urls: [], number: parent ? 2 : 1, id: parent && fault !== 'same_version' ? inheritedId : versionId };
       if (fault === 'tampered_module') version.modules[0].content_base64 = 'dGFtcGVyZWQ=';
       if (fault === 'extra_binding') version.bindings.push({ type: 'plain_text', name: 'EXTRA', text: 'fixture' });
       if (fault === 'active') worker.deployed_on = '2026-01-01T00:00:00Z';
-      return { id: versionId };
+      return { id: version.id };
     }
-    if (method === 'GET' && path === prefix + '/versions/' + versionId + '?include=modules') return version;
+    if (method === 'GET' && version && path === prefix + '/versions/' + version.id + '?include=modules') return version;
     throw new Error('Unexpected fixture endpoint');
   }
   return { request, calls };
@@ -96,6 +106,8 @@ async function rehearse(mode, fault) {
   };
   const staged = await stageWorker({ artifacts, request, audience, issuer, journal });
   const readback = await verifyWorkerVersion({ ...staged, request, audience, issuer });
+  assert.equal(staged.parentVersionId, versionId);
+  assert.equal(readback.versionId, inheritedId);
   assert(readback.hmacBindingPresent && calls.length >= 8);
 }
 
@@ -105,9 +117,10 @@ for (const [fault, code] of Object.entries({
   unknown_hash: 'WORKER_ASSET_UNKNOWN_HASH', incomplete: 'WORKER_ASSET_COMPLETION_TOKEN_MISSING',
   tampered_module: 'WORKER_VERSION_MODULES', extra_binding: 'WORKER_VERSION_BINDINGS',
   active: 'WORKER_PREMATURE_DEPLOYMENT',
+  inheritance_missing: 'WORKER_VERSION_BINDINGS', same_version: 'WORKER_INHERITANCE_VERSION',
 })) await assert.rejects(() => rehearse('bulk', fault), { message: code });
 const altered = { ...artifacts, assets: new Map(artifacts.assets) };
 altered.assets.set('_headers', Buffer.alloc(artifacts.assets.get('_headers').length));
 await assert.rejects(() => stageWorker({ artifacts: altered, request: assert.fail, audience, issuer, journal: assert.fail }),
   { message: 'UI_ASSET_MANIFEST_PIN' });
-console.log('Worker protocol fixture passed 3 upload modes and 8 rejection cases. No provider calls.');
+console.log('Worker version inheritance and asset upload fixtures passed. No provider calls.');

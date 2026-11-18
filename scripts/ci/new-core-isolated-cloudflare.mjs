@@ -31,7 +31,7 @@ const writes = new Map([
 ]);
 
 export function createSetupClient({token, fetchImpl = fetch, record}) {
-  const owned = { workerId:null, versionId:null };
+  const owned = { workerId:null, parentVersionId:null, versionId:null };
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
   const reads = [
@@ -68,6 +68,14 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
       'hyperdrive_update_scope');
     if (stage === 'upload_public_ca') requireSetup(body?.ca === true && typeof body.certificates === 'string'
       && !body.certificates.includes('PRIVATE KEY') && !Object.hasOwn(body,'private_key'), 'ca_upload_scope');
+    if (stage === 'stage_version') {
+      const keys = body?.bindings?.filter(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY') ?? [];
+      const key = keys[0];
+      requireSetup(!owned.versionId && keys.length === 1 && (owned.parentVersionId
+        ? key.type === 'inherit' && key.version_id === owned.parentVersionId && Object.keys(key).length === 3
+        : key.type === 'secret_text' && typeof key.text === 'string' && /^[A-Za-z0-9+/]{43}=$/.test(key.text)
+          && Object.keys(key).length === 3), 'subject_key_lineage');
+    }
     if (stage === 'activate_version') requireSetup(owned.versionId && body?.strategy === 'percentage' && body.versions?.length === 1
       && body.versions[0].version_id === owned.versionId && body.versions[0].percentage === 100,'deployment_target');
     if (stage === 'create_test_dns') requireSetup(body?.name === TARGET.hostname && body.type === 'A' && body.content === '192.0.2.1'
@@ -113,7 +121,9 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
       }
       if (stage === 'stage_version') {
         requireSetup(ID.test(id ?? ''),'new_version_identity');
-        owned.versionId = id;
+        requireSetup(id !== owned.parentVersionId,'inherited_version_identity');
+        if (!owned.parentVersionId) owned.parentVersionId = id;
+        else owned.versionId = id;
       }
     }
     return payload;

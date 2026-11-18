@@ -2,7 +2,7 @@
 
 This manually dispatched workflow configures the test site on the existing
 new-core database. The setup uses the application from
-`a3da5aa99054c6bd9e284ea716701ed7adaf1801` and the schema installed by
+`276b43265584ec0dc158e67cbdb13cb58ece75db` and the schema installed by
 [run 44045540354](https://github.com/AsoraKK/Lythaus/actions/runs/44045540354).
 The [isolated inspection](https://github.com/AsoraKK/Lythaus/actions/runs/44114706197)
 recorded the origin, disabled query caching, zero observed consumers and the
@@ -64,10 +64,16 @@ Require outsider denial, exactly one admin membership, one consumed latch,
 one completion audit event and `409 bootstrap_closed` on a second attempt.
 Retain aggregate results and build identifiers only.
 
+Setup generates the subject key once in an unrouted parent version. Before routing, it stages a second version on the same immutable Worker ID with the provider's `inherit` binding pinned to the parent version ID. Only the verified child version can receive test traffic. Record the Worker ID and both version IDs. Before consuming the latch, require the final release path to stage its full Admin handler on this same replacement Worker, inheriting the secret from the attested test version. Refuse a different Worker ID or replacement key. Production serving versions keep their own rollback bindings. Real recognition across the intended Access application, issuer and subject still needs the owner's fresh session.
+
+Both the bootstrap handler and ordinary moderation reads use the signed Access `sub`. The isolated source rejects missing or blank subjects even when the assertion contains an email and requires RS256. Compared with schema-runner source `a3da5aa99054c6bd9e284ea716701ed7adaf1801`, only the verifier and its regression test changed. The Worker SHA-256 is `6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3`. The 30-file control-panel manifest retains SHA-256 `5c3969463149d5611e50b73fc030e1ae46e84aa08b27222c3122f9a17a9565c0`. The setup workflow runs the repository's dependency audit on the separately checked-out root and control-panel inputs before staging.
+
+In that fresh signed-in browser, the acceptance harness can call `verifyFlagsSession(page, {hostname, versionId, sourceSha})`. It reloads the ordinary page and observes the UI's own same-origin moderation request. The receipt contains only the serving identity and pass indicators. Bind those identifiers to Cloudflare's version-specific Hyperdrive readback and the immutable PlanetScale database and branch before accepting the result.
+
 Production uses its own approval. Fence data writers and asynchronous work
 before changing databases. Admin, Public, Jobs, Privacy and the coordinator
 must agree on the active database before traffic resumes. The existing Pages
 UI, Workers, routes, bindings and retained source records provide the rollback
 baseline. If writes have reached the new database, preserve those writes
 before restoring traffic. Completion requires a fresh owner sign-in on
-`https://admin.lythaus.co/flags` and its normal protected API.
+`https://control.lythaus.co/flags` and its normal protected API, after hostname ownership and public-path coexistence have been verified.

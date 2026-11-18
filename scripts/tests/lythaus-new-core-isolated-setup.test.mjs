@@ -5,6 +5,31 @@ import { fileURLToPath } from 'node:url';
 import { createSetupClient, ACCOUNT, DRIVE, SCRIPT, ZONE } from '../ci/new-core-isolated-cloudflare.mjs';
 import { inspectSetupInputs, runIsolatedSetup } from '../ci/lythaus-new-core-isolated-setup.mjs';
 import { TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
+import { verifyFlagsSession } from '../ci/verify-new-core-flags-session.mjs';
+
+test('flags acceptance requires the normal page and exact same-origin versioned cases JSON', async () => {
+  const candidate = {hostname:TARGET.hostname, versionId:'11111111-1111-4111-8111-111111111111', sourceSha:TARGET.candidate};
+  const frame = {};
+  const pageUrl = 'https://' + candidate.hostname + '/flags';
+  const response = (url, type) => ({
+    url:()=>url, status:()=>200, fromServiceWorker:()=>false, frame:()=>frame,
+    request:()=>({frame:()=>frame, method:()=>'GET', redirectedFrom:()=>null}),
+    headerValue:async key => ({'content-type':type, 'x-lythaus-worker-version':candidate.versionId,
+      'x-lythaus-source-sha':candidate.sourceSha})[key], json:async()=>({items:[]}),
+  });
+  const doc = response(pageUrl,'text/html');
+  const api = response('https://' + candidate.hostname + '/api/admin/moderation/cases','application/json');
+  const page = {url:()=>pageUrl, mainFrame:()=>frame, reload:async()=>doc,
+    waitForResponse:async pred=>{assert.ok(pred(api)); return api;},
+    getByRole:()=>({waitFor:async()=>{}}), locator:()=>({count:async()=>0})};
+  assert.equal((await verifyFlagsSession(page,candidate)).sameOriginCasesJson,true);
+  for (const bad of [{status:()=>403}, {fromServiceWorker:()=>true}, {json:async()=>({healthy:true})},
+    {url:()=>'https://admin.lythaus.co/api/admin/moderation/cases'},
+    {headerValue:async key => key === 'content-type' ? 'text/html' : api.headerValue(key)},
+    {headerValue:async key => key === 'x-lythaus-worker-version' ? null : api.headerValue(key)}]) {
+    await assert.rejects(verifyFlagsSession({...page, waitForResponse:async()=>({...api,...bad})},candidate));
+  }
+});
 
 const fixtureToken = 'private-fixture-token';
 const workerId = 'a'.repeat(32);
@@ -72,22 +97,29 @@ test('mutations target only the isolated route, DNS, scoped login and newly stag
 
 test('version activation is pinned to the version returned for the newly created Worker', async()=>{
   const journal=[], calls=[];
+  const parent = 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
+  const key = {name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text',text:Buffer.alloc(32).toString('base64')};
+  const stage = binding => ({method:'POST',body:{bindings:[binding]}});
   const api = createSetupClient({token:fixtureToken, record:entry=>journal.push(entry),fetchImpl:async(url,init)=>{
     const path = new URL(url).pathname;
     assert.equal(init.headers.get('authorization'),'Bearer '+fixtureToken);
     assert.equal(init.redirect,'error');
     calls.push(path);
     if (path.endsWith('/workers/workers')) return Response.json({success:true,result:{id:workerId,name:TARGET.worker}});
-    if (path.endsWith('/versions')) return Response.json({success:true,result:{id:versionId,providerPrivate:'private-output'}});
+    if (path.endsWith('/versions')) return Response.json({success:true,result:{id:JSON.parse(init.body).bindings[0].type === 'inherit' ? versionId : parent,providerPrivate:'private-output'}});
     return Response.json({success:true,result:{id:'b'.repeat(32)}});
   }});
   await api.request(`${ACCOUNT}/workers/workers`,{method:'POST',body:workerCreate});
-  await api.request(stagePath,{method:'POST',body:{fixture:true}});
+  await api.request(stagePath,stage(key));
+  await assert.rejects(api.request(`${SCRIPT}/deployments`,activate(parent)),/deployment_target/);
+  await assert.rejects(api.request(stagePath,stage(key)),/subject_key_lineage/);
+  await assert.rejects(api.request(stagePath,stage({name:key.name,type:'inherit',version_id:versionId})),/subject_key_lineage/);
+  await api.request(stagePath,stage({name:key.name,type:'inherit',version_id:parent}));
   await assert.rejects(api.request(`${SCRIPT}/deployments`,activate('b'.repeat(32))),/deployment_target/);
   await api.request(`${SCRIPT}/deployments`,activate(versionId));
-  assert.equal(calls.length,3);
-  assert.deepEqual(journal.map(r=>r.operation),['create_worker','stage_version','activate_version']);
-  assert.deepEqual(journal[1],{operation:'stage_version',id:versionId});
+  assert.equal(calls.length,4);
+  assert.deepEqual(journal.map(r=>r.operation),['create_worker','stage_version','stage_version','activate_version']);
+  assert.deepEqual(journal[1],{operation:'stage_version',id:parent});
   assert.doesNotMatch(JSON.stringify(journal),/private-output|private-fixture-token/);
 });
 

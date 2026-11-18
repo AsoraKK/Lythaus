@@ -6,8 +6,8 @@ import { basename, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import blake3 from 'blake3-wasm';
 
-const sourceSha = 'a3da5aa99054c6bd9e284ea716701ed7adaf1801';
-const workerSha = 'edf64d29ca3b0e6331b41f5097a16af60fbc54b3afaa7bbc1b85052b8fd6e2b0';
+const sourceSha = '276b43265584ec0dc158e67cbdb13cb58ece75db';
+const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
 const assetsSha = '5c3969463149d5611e50b73fc030e1ae46e84aa08b27222c3122f9a17a9565c0';
 const configSha = '0056b85f1b4b2ab10c01db76ea7a587744ef6224ff274afdfc835d5fa3c4a6ac';
 const moduleName = 'new-core-test-worker.js';
@@ -51,7 +51,7 @@ async function readAssets(dir, prefix = '') {
 }
 
 function checkArtifactBytes({ worker, assets }) {
-  requireGate(Buffer.isBuffer(worker) && worker.length === 649528 && sha256(worker) === workerSha, 'WORKER_JS_PIN');
+  requireGate(Buffer.isBuffer(worker) && worker.length === 649612 && sha256(worker) === workerSha, 'WORKER_JS_PIN');
   requireGate(assets instanceof Map && assets.size === 30, 'UI_ASSET_COUNT');
   const files = [...assets].sort(([a], [b]) => a.localeCompare(b, 'en-US'))
     .map(([path, bytes]) => ({ path, bytes: bytes.length, sha256: sha256(bytes) }));
@@ -204,12 +204,10 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
   requireGate(worker.deployed_on == null, 'WORKER_ALREADY_DEPLOYED');
   const versions = await request(workerPath + '/versions', { method: 'GET' });
   requireGate(Array.isArray(versions) && versions.length === 0, 'WORKER_HAS_EXISTING_VERSION');
-  const jwt = await uploadAssets(artifacts.assets, request, journal);
   const modules = [asModule(moduleName, artifacts.worker, 'application/javascript+module'),
     ...Object.keys(controlHashes).map(key => asModule(key, artifacts.assets.get(key), 'text/plain'))];
-  const key = randomBytes(32);
-  try {
-    bindings.at(-1).text = key.toString('base64');
+  async function stage(bindings) {
+    const jwt = await uploadAssets(artifacts.assets, request, journal);
     const version = await request(workerPath + '/versions?deploy=false', { method: 'POST', body: {
       annotations: { 'workers/tag': sourceSha }, main_module: moduleName, modules, bindings,
       compatibility_date: '2026-07-27', compatibility_flags: ['nodejs_compat'],
@@ -221,19 +219,31 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
     const stagedWorker = await request(workerPath, { method: 'GET' });
     checkWorker(stagedWorker, workerId);
     requireGate(stagedWorker.deployed_on === null, 'WORKER_PREMATURE_DEPLOYMENT');
-    return { workerId, versionId, tag: sourceSha };
+    return versionId;
+  }
+  const key = randomBytes(32);
+  let parentVersionId;
+  try {
+    bindings.at(-1).text = key.toString('base64');
+    parentVersionId = await stage(bindings);
   } finally {
     delete bindings.at(-1).text;
     key.fill(0);
   }
+  await verifyWorkerVersion({ request, workerId, versionId:parentVersionId, audience, issuer, versionNumber:1 });
+  const inherited = bindings.map(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY'
+    ? { name:binding.name, type:'inherit', version_id:parentVersionId } : binding);
+  const versionId = await stage(inherited);
+  requireGate(versionId !== parentVersionId, 'WORKER_INHERITANCE_VERSION');
+  return { workerId, parentVersionId, versionId, tag:sourceSha };
 }
 
-export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer }) {
+export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer, versionNumber = 2 }) {
   requireGate(workerIdPattern.test(workerId) && uuid.test(versionId), 'WORKER_READBACK_IDS');
   const path = account + '/workers/' + workerId;
   checkWorker(await request(path, { method: 'GET' }), workerId);
   const version = await request(path + '/versions/' + versionId + '?include=modules', { method: 'GET' });
-  requireGate(version?.id === versionId && version.number === 1 && version.annotations?.['workers/tag'] === sourceSha &&
+  requireGate(version?.id === versionId && version.number === versionNumber && version.annotations?.['workers/tag'] === sourceSha &&
     version.main_module === moduleName && version.compatibility_date === '2026-07-27' &&
     JSON.stringify(version.compatibility_flags) === '["nodejs_compat"]' &&
     Array.isArray(version.urls) && version.urls.length === 0 &&

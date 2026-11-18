@@ -285,6 +285,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   const verification = await collectAdminInputs({...args,previousInputs:initial});
   check(verification.ready, 'final_schema_grants_or_clean_state');
   return {status:'OWNER_TEST_PENDING', worker:TARGET.worker, hostname:TARGET.hostname, source:TARGET.candidate,
+    workerId:staged.workerId, subjectKeyParentVersionId:staged.parentVersionId,
     versionId:staged.versionId, deploymentId:deployment.id, accessAppId:app.id, caId, caSha256:ca.sha256,
     routeId:route.id,dnsRecordId:dns.id,productionSnapshotSha256:BASELINE,anonymousDenied:true,
     ownerNonmemberTest:'PENDING',outsiderTest:'PENDING',bootstrapCalled:false};

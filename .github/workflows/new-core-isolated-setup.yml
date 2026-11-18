@@ -53,7 +53,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: a3da5aa99054c6bd9e284ea716701ed7adaf1801
+          ref: 276b43265584ec0dc158e67cbdb13cb58ece75db
           path: worker-source
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -68,6 +68,9 @@ jobs:
         run: |
           npm --prefix worker-source ci --ignore-scripts --no-audit --no-fund
           npm --prefix worker-source/apps/control-panel ci --ignore-scripts --no-audit --no-fund
+          node scripts/check-npm-audit.js worker-source
+          node scripts/check-npm-audit.js worker-source/apps/control-panel
+          (cd worker-source && node --experimental-strip-types --test apps/lythaus-admin-api/tests/admin-access-runtime-policy.test.mjs apps/lythaus-admin-api/tests/new-core-test-worker.test.mjs apps/lythaus-admin-api/tests/first-admin-bootstrap.test.mjs)
           node scripts/ci/new-core-isolated-worker.mjs prepare worker-source "$RUNNER_TEMP/new-core-artifacts"
           node scripts/ci/new-core-isolated-worker-rehearsal.mjs worker-source "$RUNNER_TEMP/new-core-artifacts"
       - name: Require actual owner approval and current protected main
