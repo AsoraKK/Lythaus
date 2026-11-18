@@ -72,6 +72,8 @@ async function readTestAccess(api, context, id, owner) {
   const matching = testApps(apps);
   const app = matching[0];
   check(matching.length === 1 && app.id === id && app.type === 'self_hosted' && app.session_duration === '1h'
+    && app.http_only_cookie_attribute === true && app.path_cookie_attribute === false
+    && app.same_site_cookie_attribute?.toLowerCase() === 'lax'
     && app.options_preflight_bypass !== true && app.allow_authenticate_via_warp !== true
     && equal(appDomains(app),[TARGET.hostname]) && (app.destinations ?? []).every(d=>d.type === 'public' && !Object.keys(d.overrides ?? {}).length)
     && equal([...(app.allowed_idps ?? [])].sort(),context.idps) && /^[a-f0-9]{64}$/.test(app.aud ?? '')
@@ -220,6 +222,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
     && second.existingPlanConfirmedByOwner === approval.existingPlanConfirmedByOwner, 'owner_review_changed');
   const access = await api.request(`${ACCOUNT}/access/apps`, {method:'POST',body:{
     name:'Lythaus New Core Admin Test',type:'self_hosted',domain:TARGET.hostname,session_duration:'1h',
+    http_only_cookie_attribute:true,path_cookie_attribute:false,same_site_cookie_attribute:'lax',
     allowed_idps:context.idps, app_launcher_visible:false, options_preflight_bypass:false,allow_authenticate_via_warp:false,
     policies:[
       {name:'Allow intended owner',decision:'allow',precedence:1,include:[{email:{email:owner}}],exclude:[],require:[]},
@@ -287,6 +290,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   return {status:'OWNER_TEST_PENDING', worker:TARGET.worker, hostname:TARGET.hostname, source:TARGET.candidate,
     workerId:staged.workerId, subjectKeyParentVersionId:staged.parentVersionId,
     versionId:staged.versionId, deploymentId:deployment.id, accessAppId:app.id, caId, caSha256:ca.sha256,
+    accessIssuerSha256:sha(context.issuer), accessAudienceSha256:sha(app.aud),
     routeId:route.id,dnsRecordId:dns.id,productionSnapshotSha256:BASELINE,anonymousDenied:true,
     ownerNonmemberTest:'PENDING',outsiderTest:'PENDING',bootstrapCalled:false};
 }

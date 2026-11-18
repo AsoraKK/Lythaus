@@ -69,9 +69,12 @@ globalThis.fetch = async (url,init)=>{
   let result;
   if (method === 'POST' && path.endsWith('/access/apps')) {
     assert.equal(body.domain,TARGET.hostname); assert.equal(body.policies.length,2);
+    assert.equal(body.http_only_cookie_attribute,true);assert.equal(body.path_cookie_attribute,false);
+    assert.equal(body.same_site_cookie_attribute,'lax');
     state.testPolicies = body.policies.map((p,i)=>({...p,id:String(i)}));
     if (state.fault==='owner_readback') state.testPolicies[0].include=[{everyone:{}}];
     state.testApp={...body,id:accessId,aud:'a'.repeat(64)}; delete state.testApp.policies;
+    if (state.fault==='cookie_readback') state.testApp.http_only_cookie_attribute=false;
     result=state.testApp;
   } else if (path.endsWith('/access/apps')) {
     result=[{id:uiId,name:'Lythaus Admin UI',domain:'admin.lythaus.co',type:'self_hosted'},
@@ -110,7 +113,7 @@ globalThis.fetch = async (url,init)=>{
   return Response.json({success:true,result});
 };
 const {runIsolatedSetup} = await import('../../ci/lythaus-new-core-isolated-setup.mjs');
-for (const fault of ['none','overlap','owner_readback','restart_readback']) {
+for (const fault of ['none','overlap','owner_readback','cookie_readback','restart_readback']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
@@ -126,8 +129,9 @@ for (const fault of ['none','overlap','owner_readback','restart_readback']) {
   } else if(fault==='overlap'){
     const result=await runIsolatedSetup(args);assert.equal(result.status,'ISOLATED_SETUP_BLOCKED');assert.deepEqual(journal,[]);
   } else {
-    await assert.rejects(runIsolatedSetup(args),fault==='owner_readback'?/test_access_policies_readback/:/pool_restart_readback/);
-    assert.deepEqual(journal.map(j=>j.operation),fault==='owner_readback'?['create_access']:['create_access','configure_hyperdrive','restart_hyperdrive']);
+    const failures = {owner_readback:/test_access_policies_readback/,cookie_readback:/test_access_app_readback/,restart_readback:/pool_restart_readback/};
+    await assert.rejects(runIsolatedSetup(args),failures[fault]);
+    assert.deepEqual(journal.map(j=>j.operation),fault==='restart_readback'?['create_access','configure_hyperdrive','restart_hyperdrive']:['create_access']);
     assert.equal(state.deployed,false);assert.equal(state.dns,undefined);assert.equal(state.route,undefined);
   }
 }

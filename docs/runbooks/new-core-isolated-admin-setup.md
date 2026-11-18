@@ -72,6 +72,8 @@ In that fresh signed-in browser, the acceptance harness can call `verifyFlagsSes
 
 The acceptance operator can start the headed browser with `node scripts/ci/verify-new-core-flags-session.mjs HOSTNAME VERSION_ID SOURCE_SHA ISSUER`. Supply the four nonsecret fields from the reviewed deployment and Access organization readback. The browser starts with a fresh cookie store, checks the challenge against that issuer and leaves sign-in to the owner.
 
+The isolated Access application has one exact hostname, a one-hour session, HttpOnly, SameSite=Lax and the provider's hostname cookie scope. Both UI and API use that hostname. The setup reads those attributes back before configuring Hyperdrive or staging a Worker. On a shared final hostname, first prove the approved routing and cookie scope keep public requests separate. A fresh session at the final URL remains mandatory.
+
 Production uses its own approval. Fence data writers and asynchronous work
 before changing databases. Admin, Public, Jobs, Privacy and the coordinator
 must agree on the active database before traffic resumes. The existing Pages
