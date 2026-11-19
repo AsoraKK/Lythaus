@@ -67,43 +67,63 @@ quiet protected consumer window. It never connects to PostgreSQL, starts an
 installation, creates a credential, changes a secret or deploys.
 
 The job examines the existing migration service-token pair and existing combined
-API token separately, in place. It sends only GET requests to the fixed Lythaus
-database, main branch, each token's self metadata and completely paginated grants.
-Unknown/denied metadata, ambiguous pagination, another resource, wildcard or
-unrecognized permissions do not establish authority. Native token expiry must
-cover a two-hour window plus five minutes. A permanent existing token may pass
-this lifetime check; the future database credential must still have native expiry.
+API token separately, in place. It sends only three GET requests per configured
+source: the fixed Lythaus database, main branch and the token's own metadata.
+The documented [token metadata response](https://planetscale.com/docs/api/reference/get_service_token)
+can contain `service_token_accesses`. Require a nonnull bounded array, unique
+access IDs/bindings, every required field, coherent flat/nested resource identity
+and an undeleted exact database target. All four named permissions must be
+explicitly present for that target. Null/missing/malformed/conflicting evidence,
+another resource, wildcards and OAuth scopes cannot supply that proof.
+Native token expiry must cover a two-hour window plus five minutes. A permanent
+existing token may pass this check; the future database credential must still
+have native expiry.
 
-The sanitized rebind-service-token-audit-SHA-RUN_ID artifact records source labels,
-token-ID fingerprints, exact token expiry, permission booleans and pagination
-counts. It never records token material, provider bodies, connection strings or
-database rows. Verify original artifact bytes, SHA-256, run/attempt/job/source
-provenance and freshness before using its evidence in any later approval.
+The sanitized rebind-service-token-audit-SHA-RUN_ID artifact uses schema
+`lythaus-admin-rebind-service-token-audit-v2` and evidence mode
+`self-metadata-explicit-service-token-accesses-v1`. It records source labels,
+token-ID fingerprints, exact token expiry, explicit permission booleans and
+observed access-row counts. `missingExplicitPermissions` means not proved by
+this evidence; it does not assert that the provider denies the permission.
+The embedded array establishes positive permission presence only.
+`grantInventoryComplete` and `grantPaginationPerformed` remain false; there is
+no claim that all grants were inventoried. No `/grants` or `/access` request or
+fallback is available. A v1 consumer must reject this new proof until its exact
+v2 evidence mode is separately reviewed and integrated. The earlier unpublished
+qualification helper's v1/pagination contract is not compatible with this report.
+No native-restore pagination or provenance gate changes here.
+
+Reports never contain token material, provider bodies, connection strings or
+database rows. Verify original ZIP bytes, SHA-256, run/attempt/job/source
+provenance and freshness before any later approval.
 
 Declared create/delete production-password permissions are not issuance or SQL
 qualification proof. No qualified existing source means BLOCKED; do not create a
 token, extend privileges or substitute credentials to overcome that result.
 
-For a provider failure, the receipt names only a fixed operation class, failed
-grants page if applicable, a validated UUID request ID and previously verified
-checkpoint booleans. It retains no raw URL, token ID, response body or arbitrary
-error text. Partial checkpoints never qualify a source; failed or incomplete
-grant pagination cannot authorize issuance. Token fingerprints identify the
-configured source without disclosing credential material.
+For a provider failure, the receipt names only a fixed operation class, a
+validated UUID request ID and previously verified checkpoint booleans. It retains
+no raw URL, token ID, response body or arbitrary error text. Partial checkpoints
+never qualify a source. Token fingerprints identify the configured source
+without disclosing credential material.
 
 Run 43775096758 on source 1813b0da returned a missing migration-token pair and
-HTTP404 for the existing API-token source. That older receipt omitted the
-operation class; its logs cannot recover which endpoint failed. Do not infer
-expired credentials, missing permissions or a missing database from that alone,
-or rerun the unchanged job. The token metadata endpoint requires organization
-read_service_tokens permission according to the provider's
-[API reference](https://planetscale.com/docs/api/reference/get_service_token).
-That reference does not establish the grants endpoint's minimum scope. The
-[immutable CLI fixture](https://github.com/planetscale/cli/blob/d4dd5a80ef64eb48ee8148d571fe10e4ffb1efd1/internal/planetscale/service_tokens_test.go#L137-L168)
-corroborates its response shape. Neither is proof of that run's404 cause.
-Any later read-only reconciliation must use the reviewed contextual receipt,
-current protected main/checks and normal production review. Keep the working
-connection and secrets unchanged; credential/grant changes need exact approval.
+HTTP404 for the existing API-token source, without retaining its failed operation.
+Run 43810241379 on source ba10cfb1 proved the existing token read the database,
+main branch, its own metadata and a valid expiry field, then failed at grants
+GET page 1. It did not retain the embedded permission rows or establish a full
+lifetime/issuance qualification. Neither run proves expired credentials or
+missing target permissions.
+
+The earlier grants route came from a CLI implementation whose
+[parent command rejects service-token authentication](https://github.com/planetscale/cli/blob/47df16608c8e1ae38eda4c8bbf386152d822a277/internal/cmd/token/token.go#L14-L34).
+The public metadata API is the supported contract for this audit's explicit
+permission evidence. This corrects an unsupported audit-contract assumption;
+it does not assert why PlanetScale returned 404. Do not retry the old grants
+request, substitute credentials or add privileges to overcome it.
+Any later v2 audit still requires reviewed source, current protected main/checks,
+a quiet consumer window and normal production review. Keep the working connection
+and secrets unchanged; credential/grant changes need exact approval.
 
 The next separately reviewed implementation and exact approval must bind one
 selected audited source, one POST and the one-hour qualification-only profile
