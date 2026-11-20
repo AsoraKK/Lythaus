@@ -454,7 +454,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     return branch;
   };
   const verifyAuthority = () => api.authority(async evidence => { report.authorityDiagnostic = evidence; await save(); }, false,
-    execute ? Date.parse(report.cleanupDeadlineAt) : undefined);
+    execute ? Date.parse(report.cleanupDeadlineAt) : undefined, !execute);
   try {
     requireThat(['true', 'false', undefined].includes(environment.RESTORE_CHECK_EXECUTE), 'execution_mode_invalid');
     schemaMode = restoreSchemaMode(environment.RESTORE_CHECK_SCHEMA_MODE);

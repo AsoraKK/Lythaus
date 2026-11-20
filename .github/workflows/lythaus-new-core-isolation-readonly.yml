@@ -21,6 +21,11 @@ on:
         required: true
         default: false
         type: boolean
+      production_connector_discovery_only:
+        description: Inspect connector metadata, monthly settings and control/admin hostname ownership
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -81,8 +86,15 @@ jobs:
           await verifyExistingGate({env:process.env,requireApproval:true});
           JS
       - name: Read only pinned metadata and print only sanitized results
+        if: ${{ !inputs.production_connector_discovery_only }}
         env:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           LYTHAUS_NEW_CORE_OWNER_EMAIL: ${{ secrets.LYTHAUS_NEW_CORE_OWNER_EMAIL }}
         run: node scripts/ci/lythaus-new-core-isolation-review.mjs --inspect
+      - name: Discover new-core production connector candidates under the recorded owner review
+        if: ${{ inputs.production_connector_discovery_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/ci/lythaus-new-core-isolation-review.mjs --discover-connectors

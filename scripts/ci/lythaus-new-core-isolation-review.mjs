@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { verifyExistingGate } from './lythaus-new-core-secret-preflight.mjs';
+import { inspectControlRouting } from './control-host-routing.mjs';
 
 export const TARGET = Object.freeze({
   account: 'e5b7ae46e04698f507b7e4b3d4ef1af0', zone: '7bc572c8b7cd3c00be9c655176c29382',
@@ -49,16 +50,16 @@ export function accessEvidence(apps, policies, expectedOwner) {
     humanAllowCount: allow.length, denyCount: deny.length,
     bypassOrServicePolicyCount: policies.filter(p => ['bypass','service_auth'].includes(p.decision ?? p.action)).length };
 }
-export function hyperdriveEvidence(config) {
+export function hyperdriveEvidence(config, target = TARGET) {
   const o = config?.origin ?? {}, user = o.user ?? o.username ?? '';
-  const branchMatch = typeof user === 'string' && user.endsWith(`.${TARGET.branch}`);
+  const branchMatch = typeof user === 'string' && user.endsWith(`.${target.branch}`);
   const canonical = ['lythaus_migrations','lythaus_admin','lythaus_runtime','lythaus_jobs','lythaus_privacy','lythaus_verifier'];
   const ambiguousUser = o.user !== undefined && o.username !== undefined && o.user !== o.username;
-  const role = ambiguousUser ? null : canonical.find(r => user === `${r}.${TARGET.branch}`) ?? null;
+  const role = ambiguousUser ? null : canonical.find(r => user === `${r}.${target.branch}`) ?? null;
   const fingerprint = typeof o.host === 'string' && Number(o.port) === 5432 && o.scheme === 'postgres' && o.database === 'postgres'
     ? hash(JSON.stringify({ scheme:'postgres', host:o.host.toLowerCase(), port:5432, database:'postgres' })) : null;
-  return { exists:Boolean(config), idMatches:config?.id === TARGET.hyperdrive, branchMatches:branchMatch,
-    originMatches:fingerprint === TARGET.origin, logicalDatabaseMatches:o.database === 'postgres', scopedRole:role,
+  return { exists:Boolean(config), idMatches:config?.id === target.hyperdrive, branchMatches:branchMatch,
+    originMatches:fingerprint === target.origin, logicalDatabaseMatches:o.database === 'postgres', scopedRole:role,
     scopedAdminLogin:role === 'lythaus_admin', cacheDisabled:config?.caching?.disabled === true,
     verifyFullAndCaConfigured:config?.mtls?.sslmode === 'verify-full' && typeof config.mtls.ca_certificate_id === 'string' && config.mtls.ca_certificate_id.length > 0 };
 }
@@ -74,10 +75,12 @@ function allowedPath(path) {
   if (new RegExp(`^${ACCOUNT}/workers/scripts/[a-zA-Z0-9_-]+/(?:settings|deployments|subdomain|versions/[a-f0-9-]+)$`).test(path)) return true;
   return path === `${ZONE}/dns_records?name=${TARGET.hostname}&per_page=100&page=1`;
 }
-export function createReadOnlyClient(token, fetchImpl = fetch) {
+export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscovery = false) {
   const reads = [];
   const get = async (path, optional = false) => {
-    if (!token || !allowedPath(path) || reads.length >= 160) fail('isolation_read_scope_blocked');
+    const connectorPath = connectorDiscovery && (new RegExp('^' + ACCOUNT + '/hyperdrive/configs/[a-f0-9]{32}$').test(path)
+      || new RegExp('^' + ACCOUNT + '/hyperdrive/configs\\?per_page=100&page=[1-9][0-9]?$').test(path));
+    if (!token || !(allowedPath(path) || connectorPath) || reads.length >= 160) fail('isolation_read_scope_blocked');
     reads.push(path);
     const stage = path.includes('/hyperdrive/') ? 'hyperdrive' : path.includes('/policies?') ? 'access_policies'
       : path.includes('/access/apps?') ? 'access_apps' : path.endsWith('/access/organizations') ? 'access_organization'
@@ -112,6 +115,56 @@ export function createReadOnlyClient(token, fetchImpl = fetch) {
     fail('isolation_inventory_incomplete');
   };
   return { get, list, reads };
+}
+
+export async function inspectProductionConnectors({ token, fetchImpl = fetch }) {
+  const api = createReadOnlyClient(token, fetchImpl, true);
+  const ids = new Set();
+  let inventoryComplete = false;
+  let total;
+  for (let page = 1; page <= 10; page++) {
+    const payload = await api.get(ACCOUNT + '/hyperdrive/configs?per_page=100&page=' + page);
+    if (!Array.isArray(payload.result)) fail('connector_inventory_invalid');
+    for (const item of payload.result) {
+      if (!/^[a-f0-9]{32}$/.test(item?.id ?? '') || ids.has(item.id)) fail('connector_inventory_ambiguous');
+      ids.add(item.id);
+    }
+    const info = payload.result_info;
+    if (!info || !Number.isInteger(info.total_count)) break;
+    if (info.page !== page || info.total_count < 0 || (total !== undefined && info.total_count !== total)
+      || info.count !== undefined && info.count !== payload.result.length) fail('connector_inventory_pagination_changed');
+    total = info.total_count;
+    if (ids.size === total) { inventoryComplete = true; break; }
+    if (ids.size > total || !payload.result.length) fail('connector_inventory_count_mismatch');
+  }
+  const matches = [];
+  for (const id of ids) {
+    const config = (await api.get(ACCOUNT + '/hyperdrive/configs/' + id)).result;
+    if (config?.id !== id) fail('connector_detail_id_changed');
+    const evidence = hyperdriveEvidence(config);
+    if (!(evidence.originMatches || evidence.branchMatches || id === TARGET.hyperdrive)) continue;
+    matches.push({ id, reservedForIsolation:id === TARGET.hyperdrive, exactOrigin:evidence.originMatches,
+      exactBranch:evidence.branchMatches, role:evidence.scopedRole, cacheOff:evidence.cacheDisabled,
+      verifyFullWithCa:evidence.verifyFullAndCaConfigured });
+  }
+  const monthlySettings = [];
+  for (const worker of ['lythaus-public-api-development','lythaus-jobs-development']) {
+    const base = ACCOUNT + '/workers/scripts/' + worker;
+    const deployments = (await api.get(base + '/deployments')).result;
+    const rows = Array.isArray(deployments) ? deployments : deployments?.deployments;
+    if (!Array.isArray(rows) || rows.length < 1 || rows.some(row => !Number.isFinite(Date.parse(row.created_on)))) fail('connector_deployments_invalid');
+    const ordered = [...rows].sort((a,b) => Date.parse(b.created_on) - Date.parse(a.created_on));
+    if (ordered.length > 1 && Date.parse(ordered[0].created_on) === Date.parse(ordered[1].created_on)) fail('connector_deployments_ambiguous');
+    const versions = ordered[0].versions;
+    if (!Array.isArray(versions) || versions.length !== 1 || versions[0].percentage !== 100
+      || !UUID.test(versions[0].version_id)) fail('connector_serving_version_ambiguous');
+    const id = versions[0].version_id;
+    const detail = (await api.get(base + '/versions/' + id)).result;
+    if (detail?.id !== id || !Array.isArray(detail.resources?.bindings)) fail('connector_version_bindings_missing');
+    const selectors = detail.resources.bindings.filter(binding => /^MONTHLY_REPUTATION_.*RULES$/.test(binding.name));
+    monthlySettings.push({worker, versionId:id, monthlyRuleBindingCount:selectors.length});
+  }
+  return {status:'READ_ONLY_DISCOVERY', inventoryComplete, matches, monthlySettings, mutationCount:0};
 }
 export async function inspectIsolation({ token, expectedOwner, expectedVersionId = '', fetchImpl = fetch }) {
   const api = createReadOnlyClient(token, fetchImpl);
@@ -220,9 +273,12 @@ async function gate(env) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    if (!['--gate','--inspect'].includes(process.argv[2])) fail('isolation_mode_blocked');
+    if (!['--gate','--inspect','--discover-connectors'].includes(process.argv[2])) fail('isolation_mode_blocked');
     await gate(process.env);
     const result = process.argv[2] === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false }
+      : process.argv[2] === '--discover-connectors' ? {
+        ...await inspectProductionConnectors({token:process.env.CLOUDFLARE_API_TOKEN}),
+        hostRouting:await inspectControlRouting({token:process.env.CLOUDFLARE_API_TOKEN})}
       : await inspectIsolation({token:process.env.CLOUDFLARE_API_TOKEN,expectedOwner:process.env.LYTHAUS_NEW_CORE_OWNER_EMAIL,
         expectedVersionId:process.env.EXPECTED_WORKER_VERSION_ID});
     console.log(JSON.stringify(result));

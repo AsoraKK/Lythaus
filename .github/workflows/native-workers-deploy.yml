@@ -544,6 +544,7 @@ jobs:
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_ORGANIZATION: lythaus
           PLANETSCALE_DATABASE: lythaus-core
+          HYPERDRIVE_VERIFY_IDS: ''
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -555,7 +556,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=production Hyperdrive or database origin validation failed' >> "$GITHUB_ENV"
           set -o pipefail
           mkdir -p "$RUNNER_TEMP/production-cutover"
-          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --release-admin-worker lythaus-admin-api-development | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
       - name: Capture predeployment Worker state (INFRASTRUCTURE gate)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -1675,6 +1676,7 @@ jobs:
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/production-cutover/activation-approval-boundary"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database
           mkdir -p "$work"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin.json"
@@ -2063,6 +2065,11 @@ jobs:
             echo 'HUMAN_ACCEPTANCE_REQUIRED: preserving exact candidate Jobs/coordinator state for resume.'
             echo 'ROLLBACK_STATE=PRESERVED_FOR_ACCEPTANCE' >> "$GITHUB_ENV"
             exit 0
+          fi
+          if ! node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database; then
+            echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
+            exit 1
           fi
           if [[ "${OWNER_TESTING_SUBJECT_DIAGNOSTIC:-false}" == "true" ]]; then
             drift_dir="$RUNNER_TEMP/production-cutover/rollback-drift-check"

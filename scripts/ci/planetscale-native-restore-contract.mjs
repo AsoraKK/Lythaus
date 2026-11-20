@@ -610,8 +610,29 @@ export class RestoreApi {
     }
     throw new RestoreFailure('token_grants_inventory_incomplete');
   }
-  async authority(onEvidence = () => {}, includeGrantDiagnostic = false, requiredThrough) {
-    const database = await this.request('');
+  async authority(onEvidence = () => {}, includeGrantDiagnostic = false, requiredThrough, diagnosePlan404 = false) {
+    let database;
+    try {
+      database = await this.request('');
+    } catch (sourceError) {
+      if (!this.#cleanupOnly && diagnosePlan404 && sourceError.httpStatus === 404) {
+        const evidence = { databaseMetadataHttp: 404, selfMetadataHttp: null, exactDatabaseReadDescriptor: 'UNVERIFIED' };
+        try {
+          const self = await this.request('/../service-tokens/self');
+          evidence.selfMetadataHttp = 200;
+          if (self?.id === this.tokenId && Array.isArray(self.service_token_accesses)) {
+            const found = self.service_token_accesses.some(row => row?.resource_id === RESTORE.databaseId
+              && row.resource?.id === RESTORE.databaseId && row.resource.name === RESTORE.database
+              && row.resource.deleted_at === null && row.resource_type?.toLowerCase() === 'database' && row.access === 'read_database');
+            evidence.exactDatabaseReadDescriptor = found ? 'PRESENT' : 'NOT_SHOWN';
+          }
+        } catch (selfError) {
+          evidence.selfMetadataHttp = selfError.httpStatus ?? null;
+        }
+        await onEvidence(evidence);
+      }
+      throw sourceError;
+    }
     requireThat(database.id === RESTORE.databaseId && database.name === RESTORE.database && database.kind === 'postgresql', 'database_identity_changed');
     const token = await this.request('/../service-tokens/self');
     requireThat(token.id === this.tokenId && Array.isArray(token.service_token_accesses), 'existing_token_authority_unverifiable');

@@ -26,7 +26,11 @@ test('publication cannot run the inspector and existing owner review precedes Cl
   assert.deepEqual(Object.keys(workflow.on),['workflow_dispatch']);assert.equal(workflow.on.workflow_dispatch.inputs.confirm_read_only.default,false);
   assert.deepEqual(workflow.permissions,{contents:'read',actions:'read'});assert.equal(workflow.jobs.inspect.needs,'verify-gate');assert.equal(workflow.jobs.inspect.environment,'production');
   const first=JSON.stringify(workflow.jobs['verify-gate']);assert.doesNotMatch(first,/CLOUDFLARE_API_TOKEN|secrets\./);
-  const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL']);
+  const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL','CLOUDFLARE_API_TOKEN']);
+  const discovery=workflow.jobs.inspect.steps.at(-1);
+  assert.equal(discovery.if,'${{ inputs.production_connector_discovery_only }}');
+  assert.deepEqual(Object.keys(discovery.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
+  assert.match(discovery.run,/--discover-connectors$/);
   assert.doesNotMatch(text,/DATABASE_URL|PLANETSCALE_API_TOKEN|wrangler|--apply|secrets: inherit/);
 });
 test('HTTP reads have a fixed scope, never follow redirects and do not leak provider response bodies',async()=>{

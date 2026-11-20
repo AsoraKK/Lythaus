@@ -331,6 +331,8 @@ jobs:
             echo 'historical_branches_reconciled=true'
             echo 'security_checks_verified=true'
           } >> "$GITHUB_OUTPUT"
+      - name: Require the complete production database map before releasing any component
+        run: node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --manifest-only --release-admin-worker lythaus-admin-api-development
       - name: Require fresh protected native recovery and public independent recovery readiness
         id: recovery
         env:
@@ -976,6 +978,12 @@ jobs:
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
+          if component_changed public || component_changed admin || component_changed jobs || component_changed coordinator; then
+            if ! node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database; then
+              echo 'ROLLBACK_FAILED=1' >> "$GITHUB_ENV"
+              exit 1
+            fi
+          fi
           restore_worker() {
             local component="$1"
             local prefix="$2"
