@@ -116,10 +116,10 @@ or turn the historical `pa4t6j6s07b7` partial receipt into complete evidence.
 Canonical public-release readiness continues to require verified independent
 recovery after 0021; extra R2 export and a separate encryption key remain deferred.
 
-The jobs Worker `BackupValidationWorkflow` performs the database capability and
-schema-object checks, then calls the configured provider-independent backup
-health endpoint. It fails closed when the endpoint is absent, a required
-extension is unavailable, or the restored schema is incomplete.
+The Jobs Worker `BackupValidationWorkflow` checks three extensions and the
+schema-object count on its bound database. On success it records
+`backup.schema_validation.completed` in that database. An actual restore and
+validation of the approved independent destination require separate evidence.
 
 If the independent destination is unavailable, the strict recovery gate remains
 blocked; only the bound owner-testing exception above can defer that item. Do

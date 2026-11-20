@@ -239,6 +239,15 @@ recognized correlation headers, and an allowlisted error code from at most
 8 KiB of response JSON. Messages, arbitrary codes, headers and response bodies
 are redacted; unavailable correlation fields remain null. No mutation is retried.
 
+If the opening source database GET returns HTTP 401, 403 or 404, the read-only
+plan makes one GET for the configured restore token's own metadata. The
+`sourceAccessAfterDenial` entry records whether the returned token matches
+the configured credential and whether its visible access rows explicitly grant
+`read_database` on the pinned source database. A null field means the runner
+could not verify it. A false grant observation describes only the returned rows.
+The original source denial remains the failure. The check stops before branch,
+backup or SQL access. Execution and cleanup retain their existing gates.
+
 Read-only plans preserve an `authorityDiagnostic` checkpoint before rejecting
 missing database-specific permissions. Version 3 projects every access row up
 to an explicit output bound, including unknown/unrelated representations,

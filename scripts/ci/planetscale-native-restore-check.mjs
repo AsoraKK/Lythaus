@@ -634,6 +634,11 @@ export async function runNativeRestore({ environment = process.env, api, now = D
   } catch (error) {
     report.blockers.push(failureCode(error));
     if (error instanceof RestoreFailure && object(error.providerDiagnostic)) report.providerFailure = error.providerDiagnostic;
+    if (!execute && api instanceof RestoreApi && report.providerMutations.length === 0
+      && report.providerFailure?.operationClass === 'database_metadata_read' && report.providerFailure.method === 'GET'
+      && [401, 403, 404].includes(report.providerFailure.httpStatus)) {
+      report.sourceAccessAfterDenial = await api.inspectDeniedSourceRead();
+    }
     if (error instanceof RestoreFailure && object(error.safeDiagnostic)) report.roleMetadataDiagnostic = error.safeDiagnostic;
     report.status = error instanceof RestoreFailure ? error.outcome : error?.extensionOutcomeUnknown ? 'UNKNOWN_MUTATION_OUTCOME' : 'FAILED';
     report.qualificationOutcome = report.status.includes('UNKNOWN') ? 'UNKNOWN' : 'FAILED';

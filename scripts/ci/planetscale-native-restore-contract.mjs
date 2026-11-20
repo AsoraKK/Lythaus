@@ -460,6 +460,11 @@ function authorityDiagnostic(token) {
     grants: { status: 'NOT_REQUESTED' },
   };
 }
+function isSourceDatabaseGrant(row) {
+  return row.resource_id === RESTORE.databaseId && row.resource?.id === RESTORE.databaseId
+    && row.resource.name === RESTORE.database && row.resource.deleted_at === null
+    && row.resource_type?.toLowerCase() === 'database';
+}
 function grantsDiagnostic(rows, pages) {
   const projected = rows.slice(0, diagnosticLimit).map(value => {
     const row = object(value) ? value : {}, accesses = Array.isArray(row.accesses) ? row.accesses : [];
@@ -610,6 +615,26 @@ export class RestoreApi {
     }
     throw new RestoreFailure('token_grants_inventory_incomplete');
   }
+  async inspectDeniedSourceRead() {
+    const evidence = { selfRead: 'UNVERIFIED', selfReadFailureHttpStatus: null,
+      configuredTokenMatches: null, explicitSourceReadGrantInResponse: null };
+    try {
+      const token = await this.request('/../service-tokens/self');
+      if (!safeId(token.id)) return evidence;
+      evidence.selfRead = 'READ';
+      evidence.configuredTokenMatches = token.id === this.tokenId;
+      const rows = token.service_token_accesses;
+      if (evidence.configuredTokenMatches && Array.isArray(rows) && rows.every(object)) {
+        const matching = rows.filter(row => row.access === 'read_database');
+        if (matching.every(row => typeof row.resource_type === 'string')) {
+          evidence.explicitSourceReadGrantInResponse = matching.some(isSourceDatabaseGrant);
+        }
+      }
+    } catch (error) {
+      if (error instanceof RestoreFailure && Number.isInteger(error.httpStatus)) evidence.selfReadFailureHttpStatus = error.httpStatus;
+    }
+    return evidence;
+  }
   async authority(onEvidence = () => {}, includeGrantDiagnostic = false, requiredThrough) {
     const database = await this.request('');
     requireThat(database.id === RESTORE.databaseId && database.name === RESTORE.database && database.kind === 'postgresql', 'database_identity_changed');
@@ -639,9 +664,7 @@ export class RestoreApi {
       if (evidence.rowsTruncated && !grantDiagnosticFailure) grantDiagnosticFailure = new RestoreFailure('token_authority_diagnostic_truncated');
       await onEvidence(structuredClone(evidence));
     }
-    const accesses = new Set(token.service_token_accesses.filter(row => row.resource_id === RESTORE.databaseId
-      && row.resource?.id === RESTORE.databaseId && row.resource.name === RESTORE.database && row.resource.deleted_at === null
-      && row.resource_type?.toLowerCase() === 'database').map(row => row.access));
+    const accesses = new Set(token.service_token_accesses.filter(isSourceDatabaseGrant).map(row => row.access));
     const required = ['read_database', 'read_branch', 'delete_branch', 'delete_production_branch', 'read_backups'];
     if (!this.#cleanupOnly) required.push('create_branch', 'connect_branch', 'connect_production_branch');
     for (const access of required) {
