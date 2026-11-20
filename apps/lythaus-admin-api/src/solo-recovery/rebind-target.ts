@@ -1,4 +1,4 @@
-import { hyperdriveTarget, isPlatformHyperdriveUrl } from './subject-diagnostic.ts';
+import { hyperdriveTarget, isPlatformHyperdriveUrl, type AdminRecoverySessionRow } from './subject-diagnostic.ts';
 import type { RebindPolicy } from './rebind-protocol.ts';
 
 function fail(): never { throw new Error('admin_subject_rebind_target_unverified'); }
@@ -17,17 +17,17 @@ export async function rebindRuntimeTarget(connectionString: string, policy: Rebi
     || policy.bindingProof.checkedAt * 1000 > Date.now() || Date.now() >= policy.bindingProof.expiresAt * 1000) fail();
   // The proxy URL cannot reveal its physical origin. Only the protected
   // function-owned, version-bound control-plane proof supplies that origin.
-  // The actual database session must still match the pinned Admin role below.
+  // The database session must independently match the primary branch and role.
   return { kind: 'platform-local' as const };
 }
 
-export async function rebindSessionMatches(row: { database_name?: unknown; current_role?: unknown; session_role?: unknown },
+export async function rebindSessionMatches(row: AdminRecoverySessionRow,
   policy: RebindPolicy, target: Awaited<ReturnType<typeof rebindRuntimeTarget>>): Promise<boolean> {
-  if (row.database_name !== policy.databaseTarget.databaseName || typeof row.current_role !== 'string'
-    || row.current_role !== row.session_role) return false;
-  if (target.kind === 'physical' && ![target.role, target.username].includes(row.current_role)) return false;
+  if (row.branch_primary !== true || row.database_name !== policy.databaseTarget.databaseName
+    || typeof row.current_user !== 'string' || row.current_user !== row.session_user) return false;
+  if (target.kind === 'physical' && ![target.role, target.username].includes(row.current_user)) return false;
   const suffix = '.' + policy.databaseTarget.branchId;
-  const role = row.current_role.endsWith(suffix) ? row.current_role.slice(0, -suffix.length) : row.current_role;
+  const role = row.current_user.endsWith(suffix) ? row.current_user.slice(0, -suffix.length) : row.current_user;
   if (!/^[A-Za-z_][A-Za-z0-9_$]*$/.test(role)) return false;
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`lythaus-admin-diagnostic-role:v1:${role}`));
   const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');

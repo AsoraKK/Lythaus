@@ -28,12 +28,12 @@ test('platform-local Hyperdrive uses the protected origin proof and actual datab
   const proxy='postgresql://opaque:synthetic@fixture.hyperdrive.local:5432/postgres?sslmode=disable';
   const runtime=await rebindRuntimeTarget(proxy,value);
   assert.deepEqual(runtime,{kind:'platform-local'});
-  const row={database_name:'postgres',current_role:'lythaus_admin.vqa2g2xc9wsl',session_role:'lythaus_admin.vqa2g2xc9wsl'};
+  const row={branch_primary:true,transaction_read_only:'on',database_name:'postgres',current_user:'lythaus_admin.vqa2g2xc9wsl',session_user:'lythaus_admin.vqa2g2xc9wsl'};
   assert.equal(await rebindSessionMatches(row,value,runtime),true);
-  assert.equal(await rebindSessionMatches({...row,current_role:'lythaus_admin',session_role:'lythaus_admin'},value,runtime),true);
-  for(const patch of [{database_name:'other'},{current_role:'lythaus_admin'},
-    {current_role:'lythaus_runtime',session_role:'lythaus_runtime'},
-    {current_role:'lythaus_admin.other',session_role:'lythaus_admin.other'}]){
+  assert.equal(await rebindSessionMatches({...row,current_user:'lythaus_admin',session_user:'lythaus_admin'},value,runtime),true);
+  for(const patch of [{branch_primary:false},{branch_primary:null},{branch_primary:undefined},{database_name:'other'},{current_user:'lythaus_admin'},
+    {current_user:'lythaus_runtime',session_user:'lythaus_runtime'},
+    {current_user:'lythaus_admin.other',session_user:'lythaus_admin.other'}]){
     assert.equal(await rebindSessionMatches({...row,...patch},value,runtime),false);
   }
   for(const url of [proxy.replace('postgresql:','https:'),proxy.replace('/postgres?','/other?'),

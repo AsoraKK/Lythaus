@@ -55,7 +55,8 @@ const {default:adminWorker}=await import('../src/bootstrap-wrapper.ts');
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '';
 const target = new URL(connectionString);
 assert.ok(['127.0.0.1', 'localhost', '::1'].includes(target.hostname), 'proposal validation is local only');
-assert.equal(process.env.LYTHAUS_LOCAL_REBIND_PROPOSAL_TEST, 'synthetic');
+const fixture = process.env.LYTHAUS_LOCAL_REBIND_PROPOSAL_TEST;
+assert.ok(['synthetic', 'synthetic-other-primary'].includes(fixture));
 const signature = 'identity.rebind_control_plane_administrator(bytea,text,uuid,text,bytea,bigint,uuid,text)';
 const statement = 'SELECT identity.rebind_control_plane_administrator($1::bytea,$2::text,$3::uuid,$4::text,$5::bytea,$6::bigint,$7::uuid,$8::text) AS changed';
 const sql = fs.readFileSync(new URL('../../../database/planetscale/grants/admin-subject-rebind.sql', import.meta.url), 'utf8');
@@ -140,6 +141,21 @@ test('local PG17 proposal preserves authorization while permitting only an exact
     assert.ok(version >= 170000 && version < 180000);
     await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${REBIND_METADATA_VERIFIER_ROLE}') THEN CREATE ROLE ${REBIND_METADATA_VERIFIER_ROLE} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
     await owner.query(`GRANT USAGE ON SCHEMA identity TO ${REBIND_METADATA_VERIFIER_ROLE}`);
+    const branch = await owner.query(SUBJECT_DIAGNOSTIC_SESSION_SQL, ['vqa2g2xc9wsl']);
+    assert.equal(branch.rows[0].branch_primary, fixture === 'synthetic');
+    if (fixture === 'synthetic-other-primary') {
+      await t.test('an approved recovery on another primary preserves the membership, policy and audit', async () => {
+        await seed(owner);
+        const approved = await policy();
+        await approve(owner, approved);
+        assert.equal(await call(approved), false);
+        await unchanged(owner);
+        const control = await owner.query('SELECT policy_text, revision FROM admin_recovery.subject_rebind_control');
+        assert.deepEqual(JSON.parse(control.rows[0].policy_text), approved);
+        assert.equal(Number(control.rows[0].revision), approved.controlRevision);
+      });
+      return;
+    }
     await t.test('the reviewed Admin role can inspect the original principal using constant membership SQL', async () => {
       await seed(owner);
       const client = await connect();
