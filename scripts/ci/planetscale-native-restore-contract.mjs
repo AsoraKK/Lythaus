@@ -460,7 +460,7 @@ function authorityDiagnostic(token) {
     grants: { status: 'NOT_REQUESTED' },
   };
 }
-function isSourceDatabaseGrant(row) {
+export function isSourceDatabaseGrant(row) {
   return row.resource_id === RESTORE.databaseId && row.resource?.id === RESTORE.databaseId
     && row.resource.name === RESTORE.database && row.resource.deleted_at === null
     && row.resource_type?.toLowerCase() === 'database';
