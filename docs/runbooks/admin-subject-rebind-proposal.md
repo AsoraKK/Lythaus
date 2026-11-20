@@ -13,6 +13,10 @@ experiment or change the selectors as part of this procedure.
 
 ## Prove where the current human request fails
 
+The ordinary production health response includes its opaque correlation reference on a denial. To trace that response before considering a deployment, dispatch **Admin runtime target check (pass/fail only)** on protected main. Supply `health_denial_correlation` and `health_observed_before_utc` and leave `inspect_subject_recovery` off. Choose a UTC end time just after the observed request. This mode checks the preceding hour against the serving deployment attested by [canonical release 40576668956](https://github.com/AsoraKK/Lythaus/actions/runs/40576668956) and [Cloudflare inspection 44719053793](https://github.com/AsoraKK/Lythaus/actions/runs/44719053793).
+
+Following production environment approval, the job uses the existing Cloudflare token to read Worker deployment metadata and the Workers Logs column catalog. It asks Cloudflare Analytics for an aggregate count matching the fixed script, health route and reference. Only a boolean is reported. The protected job takes no database connection and does not read raw log events. `no_sampled_match` means the retained dataset had no matching event in the checked representation. The serving Worker samples logs. A matched log corroborates the request path and serving version and does not identify the human, establish key continuity or authorize a recovery write. [Cloudflare read-only SQL API](https://developers.cloudflare.com/analytics/sql-api/get-started/)
+
 Run the protected, read-only **Admin runtime target check** on the reviewed
 merged SHA. Select `inspect_subject_recovery` to compare the production
 environment's existing approved human selector with both Access applications.
