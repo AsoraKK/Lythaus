@@ -281,6 +281,7 @@ jobs:
           scripts/tests/prepare-subject-diagnostic-policy.test.mjs
           scripts/tests/subject-diagnostic-release-contract.test.mjs
           scripts/tests/admin-runtime-target-pass-fail.test.mjs
+          scripts/tests/admin-health-request-receipt.test.mjs
       - name: Verify disabled admin identity rebind on isolated PG17
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres

@@ -7,6 +7,12 @@ on:
         description: Also verify the protected intended human and production diagnostic prerequisites
         type: boolean
         default: false
+      health_denial_correlation:
+        description: Optional opaque reference from the ordinary production Admin health response
+        type: string
+      health_observed_before_utc:
+        description: For that reference only, end of the one-hour observation window (YYYY-MM-DDTHH:MM:SSZ)
+        type: string
 
 permissions:
   contents: read
@@ -40,6 +46,7 @@ jobs:
           test "$REF_PROTECTED" = true
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Run ephemeral read-only comparison
+        if: inputs.health_denial_correlation == '' && inputs.health_observed_before_utc == ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
@@ -64,7 +71,7 @@ jobs:
           set -euo pipefail
           node scripts/ci/admin-runtime-target-pass-fail.mjs
       - name: Verify the diagnostic inputs in place without staging a candidate
-        if: inputs.inspect_subject_recovery == true
+        if: inputs.inspect_subject_recovery == true && inputs.health_denial_correlation == '' && inputs.health_observed_before_utc == ''
         env:
           EXPECTED_DIAGNOSTIC_HUMAN_EMAIL: ${{ secrets.LYTHAUS_NEW_CORE_OWNER_EMAIL }}
           RELEASE_SHA: ${{ github.sha }}
@@ -77,3 +84,8 @@ jobs:
           PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN: ${{ vars.PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN }}
           EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT: cee241b59a461d2c0199404312504688a92949276b74b1a2364464bf8554810c
         run: node --experimental-strip-types scripts/ci/prepare-subject-diagnostic-policy.mjs --inspect
+      - name: Trace one ordinary Admin health response using aggregate metadata
+        if: inputs.health_denial_correlation != '' || inputs.health_observed_before_utc != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/ci/admin-health-request-receipt.mjs
