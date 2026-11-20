@@ -94,12 +94,13 @@ export async function nativePostgresProfileFixture(connectionString, bindings, o
           return Response.json({ transactionId });
         }
         if (input.action === 'query') {
-          if (options.onQuery) {
+          if (options.onQuery && (options.shouldTraceQueries?.() ?? true)) {
             const identity = (await client.query(`SELECT current_user AS role, rolsuper, rolcreaterole, rolcreatedb
               FROM pg_roles WHERE rolname=current_user`)).rows[0];
-            options.onQuery({ ...identity, text: input.text, values: input.values });
+            options.onQuery({ ...identity, backendPid: client.processID, text: input.text, values: input.values });
           }
           const result = await client.query(input.text, input.values);
+          await options.afterQuery?.(input, result);
           return Response.json({ rows: result.rows, rowCount: result.rowCount });
         }
         assert.ok(['commit', 'rollback'].includes(input.action));

@@ -122,13 +122,6 @@ class _FeedCardState extends State<FeedCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (media != null && media.isNotEmpty) ...[
-                    _MediaPreview(
-                      imageUrl: media,
-                      isVideo: item.videoThumbnailUrl != null,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
                   if (item.title.trim().isNotEmpty) ...[
                     Semantics(
                       header: true,
@@ -179,6 +172,13 @@ class _FeedCardState extends State<FeedCard> {
                         );
                       },
                     ),
+                  if (media != null && media.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _MediaPreview(
+                      imageUrl: media,
+                      isVideo: item.videoThumbnailUrl != null,
+                    ),
+                  ],
                 ],
               ),
             ),

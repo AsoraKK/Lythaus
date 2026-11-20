@@ -24,6 +24,7 @@ import 'package:lythaus_api_client/src/api/moderation_api.dart';
 import 'package:lythaus_api_client/src/api/notifications_api.dart';
 import 'package:lythaus_api_client/src/api/posts_api.dart';
 import 'package:lythaus_api_client/src/api/privacy_api.dart';
+import 'package:lythaus_api_client/src/api/reactions_api.dart';
 import 'package:lythaus_api_client/src/api/reputation_api.dart';
 import 'package:lythaus_api_client/src/api/rewards_api.dart';
 import 'package:lythaus_api_client/src/api/social_api.dart';
@@ -174,6 +175,12 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   PrivacyApi getPrivacyApi() {
     return PrivacyApi(dio, serializers);
+  }
+
+  /// Get ReactionsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ReactionsApi getReactionsApi() {
+    return ReactionsApi(dio, serializers);
   }
 
   /// Get ReputationApi instance, base route and serializer can be overridden by a given but be careful,

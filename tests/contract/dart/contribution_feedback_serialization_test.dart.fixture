@@ -1,0 +1,78 @@
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('generated requests preserve explicit null when clearing a channel', () {
+    for (final wire in <Map<String, Object?>>[
+      {'value': null},
+      {'value': 'like'},
+    ]) {
+      final decoded = standardSerializers.deserializeWith(
+        QualityFeedbackRequest.serializer,
+        wire,
+      )!;
+      expect(
+        standardSerializers.serializeWith(
+          QualityFeedbackRequest.serializer,
+          decoded,
+        ),
+        wire,
+      );
+    }
+    for (final wire in <Map<String, Object?>>[
+      {'value': null},
+      {'value': 'sad'},
+    ]) {
+      final decoded = standardSerializers.deserializeWith(
+        EmotionFeedbackRequest.serializer,
+        wire,
+      )!;
+      expect(
+        standardSerializers.serializeWith(
+          EmotionFeedbackRequest.serializer,
+          decoded,
+        ),
+        wire,
+      );
+    }
+  });
+
+  test(
+    'generated summary keeps independent quality and emotional selections',
+    () {
+      final wire = <String, Object?>{
+        'target': {
+          'type': 'comment',
+          'id': '018f0000-0000-7000-8000-000000000001',
+        },
+        'quality': {
+          'counts': {'like': 2, 'dislike': 1},
+          'myValue': 'like',
+        },
+        'emotion': {
+          'counts': {
+            'amused': 0,
+            'sad': 3,
+            'angry': 0,
+            'surprised': 0,
+            'appreciative': 0,
+          },
+          'myValue': 'sad',
+        },
+      };
+      final decoded = standardSerializers.deserializeWith(
+        ContributionFeedbackSummary.serializer,
+        wire,
+      )!;
+      expect(decoded.quality.counts.like, 2);
+      expect(decoded.emotion.counts.sad, 3);
+      expect(
+        standardSerializers.serializeWith(
+          ContributionFeedbackSummary.serializer,
+          decoded,
+        ),
+        wire,
+      );
+    },
+  );
+}
