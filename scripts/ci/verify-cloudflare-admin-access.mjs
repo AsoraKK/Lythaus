@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { requireAdminApiAudienceSnapshot } from './cloudflare-admin-api-audience.mjs';
+import { listAdminInventory } from './cloudflare-admin-inventory.mjs';
 
 const expectedApplications = [
   { name: 'Lythaus Admin UI', destination: 'admin.lythaus.co' },
@@ -24,7 +25,7 @@ function emailSelector(selector) {
   return typeof value === 'string' && value.includes('@') ? value.toLowerCase() : null;
 }
 
-export async function verifyCloudflareAdminAccess({ environment = process.env, fetchImpl = fetch } = {}) {
+export async function verifyCloudflareAdminAccess({ environment = process.env, fetchImpl = fetch, verifyHuman } = {}) {
   const accountId = environment.CLOUDFLARE_ACCOUNT_ID ?? '';
   const token = environment.CLOUDFLARE_API_TOKEN ?? '';
   const expectedAdminApiAudience = environment.EXPECTED_ADMIN_API_AUDIENCE_SNAPSHOT;
@@ -36,6 +37,7 @@ export async function verifyCloudflareAdminAccess({ environment = process.env, f
     const response = await fetchImpl(`${accountBase}${path}`, {
       method: 'GET',
       redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
       headers: {
         authorization: `Bearer ${token}`,
         accept: 'application/json',
@@ -45,10 +47,11 @@ export async function verifyCloudflareAdminAccess({ environment = process.env, f
     if (!response.ok || payload?.success !== true) {
       throw new Error(`Cloudflare Access request failed with HTTP ${response.status}`);
     }
-    return payload.result;
+    return payload;
   }
 
-  const applications = await request('/access/apps?per_page=1000');
+  const applications = verifyHuman ? await listAdminInventory(request, '/access/apps')
+    : (await request('/access/apps?per_page=1000')).result;
   if (!Array.isArray(applications)) throw new Error('Cloudflare Access application inventory is not an array');
 
   const verified = [];
@@ -61,7 +64,8 @@ export async function verifyCloudflareAdminAccess({ environment = process.env, f
     if (expected.name === 'Lythaus Admin API' && expectedAdminApiAudience !== undefined) {
       requireAdminApiAudienceSnapshot(application, expectedAdminApiAudience);
     }
-    const policies = await request(`/access/apps/${application.id}/policies?per_page=100`);
+    const path = `/access/apps/${application.id}/policies`;
+    const policies = verifyHuman ? await listAdminInventory(request, path) : (await request(path + '?per_page=100')).result;
     if (!Array.isArray(policies)) throw new Error(`${expected.name} Access policies are not an array`);
 
     const allows = policies.filter((policy) => policyDecision(policy) === 'allow');
@@ -72,7 +76,13 @@ export async function verifyCloudflareAdminAccess({ environment = process.env, f
     if (include.length !== 1 || emails.length !== 1 || (allow.exclude?.length ?? 0) !== 0 || (allow.require?.length ?? 0) !== 0) {
       throw new Error(`${expected.name} human allow policy must include exactly one email and no other selectors`);
     }
+    if (verifyHuman && !verifyHuman(emails[0])) throw new Error('subject_diagnostic_human_selector_mismatch');
     const blocks = policies.filter((policy) => ['deny', 'block'].includes(policyDecision(policy)));
+    if (verifyHuman && (Object.keys(include[0] ?? {}).join(',') !== 'email'
+      || !blocks.some(policy => policy.include?.some(selector => Object.hasOwn(selector, 'everyone'))
+        && (policy.exclude?.length ?? 0) === 0 && (policy.require?.length ?? 0) === 0))) {
+      throw new Error('subject_diagnostic_access_selectors_unverified');
+    }
     if (blocks.length < 1) throw new Error(`${expected.name} must retain a deny-all Access policy`);
     if (policies.some((policy) => policyDecision(policy) === 'bypass')) {
       throw new Error(`${expected.name} must not have a human bypass policy`);

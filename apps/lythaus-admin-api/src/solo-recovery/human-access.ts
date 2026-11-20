@@ -5,6 +5,7 @@ interface AccessConfiguration {
   ACCESS_AUDIENCES?: string;
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_RECOVERY_AUDIENCE?: string;
+  freshSince: number;
 }
 
 interface VerifiedAccessConfiguration {
@@ -18,6 +19,7 @@ interface HumanAccessClaims {
   iss?: unknown;
   aud?: unknown;
   exp?: unknown;
+  iat?: unknown;
   sub?: unknown;
   email?: unknown;
   type?: unknown;
@@ -46,7 +48,7 @@ export async function verifyHumanAccessAssertionWithKeySet(
     algorithms: ['RS256'],
     audience: configuration.ACCESS_AUDIENCES,
     issuer: configuration.ACCESS_TEAM_DOMAIN ? `https://${configuration.ACCESS_TEAM_DOMAIN}` : undefined,
-    requiredClaims: ['exp', 'iss', 'aud', 'sub', 'type', 'email'],
+    requiredClaims: ['exp', 'iat', 'iss', 'aud', 'sub', 'type', 'email'],
   });
   return verified.payload as HumanAccessClaims;
 }
@@ -104,6 +106,8 @@ export async function verifiedHumanAccessIdentity(
   const actualAudiences = Array.isArray(identity.aud) ? identity.aud : [identity.aud];
   if (identity.iss !== `https://${configuration.ACCESS_TEAM_DOMAIN}`
     || actualAudiences.length !== 1 || actualAudiences[0] !== expectedAudience
+    || !Number.isSafeInteger(configuration.freshSince) || typeof identity.iat !== 'number'
+    || !Number.isSafeInteger(identity.iat) || identity.iat < configuration.freshSince || identity.iat > Date.now() / 1000
     || typeof identity.exp !== 'number' || !Number.isFinite(identity.exp)
     || identity.exp <= Date.now() / 1000) throw new Error('access_assertion_invalid');
   if (identity.type !== 'app' || identity.common_name !== undefined) throw new Error('access_token_type_invalid');

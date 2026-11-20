@@ -81,7 +81,7 @@ async function readDeployment(workerName, runWrangler, environment) {
   ], environment));
 }
 
-async function discoverServingVersion(workerName, { runWrangler, isMainAncestor, environment }) {
+async function discoverServingVersion(workerName, { runWrangler, isMainAncestor, environment, bindings }) {
   const deployment = await readDeployment(workerName, runWrangler, environment);
   const serving = activeVersion(deployment);
   const listedVersions = parseJson(await runWrangler([
@@ -90,6 +90,13 @@ async function discoverServingVersion(workerName, { runWrangler, isMainAncestor,
   const exactVersion = parseJson(await runWrangler([
     'versions', 'view', serving.versionId, '--name', workerName, '--json',
   ], environment));
+  const actual = exactVersion?.resources?.bindings;
+  if (exactVersion?.id !== serving.versionId || !Array.isArray(actual)
+    || !bindings.filter(binding => binding.worker === workerName).every(binding => {
+      const sameName = actual.filter(item => item.name === binding.binding);
+      return /^[a-f0-9]{32}$/.test(binding.hyperdriveId) && sameName.length === 1
+        && sameName[0].type === 'hyperdrive' && sameName[0].id === binding.hyperdriveId;
+    })) throw new Error('serving Hyperdrive binding mismatch');
   const metadata = mergeWorkerVersionMetadata(listedVersions, exactVersion);
   const state = parseProductionDeploymentState(deployment, metadata);
   if (state.serving.length !== 1 || state.serving[0].percentage !== 100
@@ -225,7 +232,7 @@ export async function performAdminRuntimePreflight({
 
     const servingVersions = {};
     for (const spec of workerSpecs) {
-      servingVersions[spec.key] = await discoverServingVersion(spec.name, { runWrangler, isMainAncestor, environment });
+      servingVersions[spec.key] = await discoverServingVersion(spec.name, { runWrangler, isMainAncestor, environment, bindings: targetProof.bindings });
     }
     const beforeProbe = Object.fromEntries(workerSpecs.map(({ key }) => [key, servingVersions[key]]));
 

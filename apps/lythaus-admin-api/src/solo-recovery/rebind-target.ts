@@ -1,4 +1,4 @@
-import { hyperdriveTarget } from './subject-diagnostic.ts';
+import { hyperdriveTarget, isPlatformHyperdriveUrl } from './subject-diagnostic.ts';
 import type { RebindPolicy } from './rebind-protocol.ts';
 
 function fail(): never { throw new Error('admin_subject_rebind_target_unverified'); }
@@ -12,9 +12,7 @@ export async function rebindRuntimeTarget(connectionString: string, policy: Rebi
       || target.originFingerprint !== policy.databaseTarget.originFingerprint || target.roleFingerprint !== policy.databaseTarget.roleFingerprint) fail();
     return { kind: 'physical' as const, role: target.role, username: target.username };
   }
-  if (!['postgres:', 'postgresql:'].includes(url.protocol) || url.hash || !url.username
-    || decodeURIComponent(url.pathname) !== '/postgres' || (url.port && url.port !== '5432')
-    || url.searchParams.size !== 1 || url.searchParams.get('sslmode') !== 'disable'
+  if (!isPlatformHyperdriveUrl(url)
     || policy.bindingProof.hyperdriveId !== '6bfbb0eab42642e8ad294dbf59294ed3'
     || policy.bindingProof.checkedAt * 1000 > Date.now() || Date.now() >= policy.bindingProof.expiresAt * 1000) fail();
   // The proxy URL cannot reveal its physical origin. Only the protected
