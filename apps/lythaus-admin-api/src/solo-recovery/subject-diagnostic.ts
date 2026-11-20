@@ -46,7 +46,7 @@ interface DatabaseRow {
   principal_deleted: unknown;
 }
 
-interface DatabaseIdentityRow {
+export interface AdminRecoverySessionRow {
   database_name: unknown;
   current_user: unknown;
   session_user: unknown;
@@ -192,7 +192,7 @@ export async function handleSubjectDiagnostic(request: Request, env: Env, deps: 
       char => char.charCodeAt(0)));
     const membership = await (deps.run ?? transaction)(env.DB_ADMIN_FRESH, async client => {
       await client.query('SET TRANSACTION READ ONLY');
-      const session = await client.query<DatabaseIdentityRow>(SUBJECT_DIAGNOSTIC_SESSION_SQL, [policy.databaseTarget.branchId]);
+      const session = await client.query<AdminRecoverySessionRow>(SUBJECT_DIAGNOSTIC_SESSION_SQL, [policy.databaseTarget.branchId]);
       if (session.rowCount !== 1) throw new Error('subject_diagnostic_database_identity_invalid');
       const sessionRow = session.rows[0];
       const username = sessionRow.current_user;

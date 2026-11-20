@@ -420,6 +420,12 @@ exact Hyperdrive origin, role, TLS and cache settings. The proof must remain
 no more than two minutes old through the policy transaction. No routing or
 database rebinding outside this lane is allowed during the window.
 
+Preview and execute verify the primary branch identifier from PostgreSQL's
+startup setting in the same transaction as the membership check. The rebind
+function independently checks that identifier and refuses a standby before
+taking locks. A restored copy with the same database and role names cannot
+use the production approval.
+
 All write paths coordinate schema/bootstrap locks before policy/membership
 locks. Operator transitions lock the three exact canonical function catalog rows
 in deterministic order using fixed ALTER FUNCTION ... COST 100 normalization,

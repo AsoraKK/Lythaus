@@ -106,6 +106,7 @@ jobs:
           POSTGRES_USER: fixture_root
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: lythaus_auth_test_post_control
+          POSTGRES_INITDB_ARGS: '--set=cluster_name=fixture-vqa2g2xc9wsl'
         ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U fixture_root -d lythaus_auth_test_post_control"
