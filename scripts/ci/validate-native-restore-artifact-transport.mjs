@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { setTimeout as wait } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { requireThat, failureCode } from './planetscale-native-restore-contract.mjs';
 import { decimal, githubRead, sha256 } from './planetscale-native-restore-evidence.mjs';
@@ -22,15 +23,37 @@ export function artifactTransportFixture(env) {
   return { name, bytes };
 }
 
-export async function verifyArtifactTransportFixture(env, fetchImpl = fetch) {
+export async function verifyArtifactTransportFixture(env, fetchImpl = fetch, pause = wait) {
   const expected = artifactTransportFixture(env);
   requireThat(decimal(env.REHEARSAL_ARTIFACT_ID) && /^[a-f0-9]{64}$/.test(env.REHEARSAL_ARTIFACT_DIGEST ?? ''),
     'artifact_rehearsal_upload_unproven');
-  const metadata = await githubRead(env, `/actions/artifacts/${env.REHEARSAL_ARTIFACT_ID}`, fetchImpl);
-  requireThat(metadata.name === expected.name && metadata.digest === `sha256:${env.REHEARSAL_ARTIFACT_DIGEST}`,
-    'artifact_rehearsal_upload_binding_invalid');
-  const archive = await githubArtifactDownloader(env, fetchImpl)({ artifactId: env.REHEARSAL_ARTIFACT_ID,
-    runId: env.GITHUB_RUN_ID });
+  const metadataPath = `/actions/artifacts/${env.REHEARSAL_ARTIFACT_ID}`;
+  const metadataUrl = `https://api.github.com/repos/${env.GITHUB_REPOSITORY}${metadataPath}`;
+  const visibilityDelays = [1000, 2500, 5000];
+  let retryCount = 0, metadataHttpStatus;
+  async function readFixture(url, options) {
+    if (url !== metadataUrl || options.method !== 'GET') return fetchImpl(url, options);
+    for (;;) {
+      const response = await fetchImpl(url, options);
+      if (response.redirected || (response.url && response.url !== url)) return response;
+      metadataHttpStatus = response.status;
+      if (response.status !== 404 || retryCount === visibilityDelays.length) return response;
+      await response.body?.cancel();
+      await pause(visibilityDelays[retryCount++]);
+    }
+  }
+  let archive;
+  try {
+    const metadata = await githubRead(env, metadataPath, readFixture);
+    requireThat(metadata.name === expected.name && metadata.digest === `sha256:${env.REHEARSAL_ARTIFACT_DIGEST}`,
+      'artifact_rehearsal_upload_binding_invalid');
+    archive = await githubArtifactDownloader(env, readFixture)({ artifactId: env.REHEARSAL_ARTIFACT_ID,
+      runId: env.GITHUB_RUN_ID });
+  } catch (error) {
+    if (error?.code === 'github_evidence_read_failed_http_4xx' && Number.isInteger(metadataHttpStatus)
+      && metadataHttpStatus >= 400 && metadataHttpStatus < 500) error.fixtureMetadataHttpStatus = metadataHttpStatus;
+    throw error;
+  }
   requireThat(sha256(archive) === env.REHEARSAL_ARTIFACT_DIGEST, 'artifact_rehearsal_archive_digest_mismatch');
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-artifact-transport-'));
   try {
@@ -75,6 +98,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try { await main(); }
   catch (error) {
     process.stdout.write(JSON.stringify({ state: 'ARTIFACT_TRANSPORT_UNPROVEN', blockers: [failureCode(error)],
+      ...(error?.fixtureMetadataHttpStatus ? { fixtureMetadataHttpStatus: error.fixtureMetadataHttpStatus } : {}),
       providerMutations: false, recoveryCertified: false }) + '\n');
     process.exitCode = 1;
   }

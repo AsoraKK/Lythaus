@@ -73,6 +73,31 @@ test('ordinary CI rehearsal refuses provider credentials without issuing request
   assert.equal(f.calls.length, 0);
 });
 
+test('the uploaded synthetic fixture can become visible before all existing archive and payload checks', async t => {
+  const f = fixture(t), delays = [];
+  let metadataCalls = 0;
+  const fetchImpl = (url, options) => {
+    if (url.endsWith('/actions/artifacts/51') && ++metadataCalls === 1) return new Response(null, { status: 404 });
+    return f.fetchImpl(url, options);
+  };
+  const receipt = await verifyArtifactTransportFixture(f.env, fetchImpl, async milliseconds => { delays.push(milliseconds); });
+  assert.deepEqual(delays, [1000]); assert.equal(metadataCalls, 3);
+  assert.equal(receipt.state, 'ARTIFACT_TRANSPORT_VERIFIED'); assert.equal(receipt.recoveryCertified, false);
+});
+
+test('a persistent missing fixture or a permission denial blocks without reading the archive', async t => {
+  for (const [status, expectedCalls] of [[404, 4], [401, 1], [403, 1], [429, 1]]) {
+    const f = fixture(t); let calls = 0, pauses = 0;
+    const fetchImpl = async (url, options) => {
+      assert.ok(url.endsWith('/actions/artifacts/51')); assert.equal(options.method, 'GET'); calls++;
+      return new Response('private-response-fixture', { status });
+    };
+    await assert.rejects(() => verifyArtifactTransportFixture(f.env, fetchImpl, async () => { pauses++; }),
+      { code: 'github_evidence_read_failed_http_4xx', fixtureMetadataHttpStatus: status });
+    assert.equal(calls, expectedCalls); assert.equal(pauses, expectedCalls - 1);
+  }
+});
+
 test('GitHub evidence read failures expose only sanitized categories', async t => {
   const env = { GITHUB_REPOSITORY: 'SyntheticOwner/Lythaus', GH_TOKEN: 'synthetic-github-token-do-not-log' };
   const expectedUrl = 'https://api.github.com/repos/SyntheticOwner/Lythaus/actions/artifacts/51';

@@ -101,6 +101,38 @@ test('qualified combined token is a distinct explicit recommendation when the de
   assert.equal(report.recommendedSource, 'existing_api_token'); assert.equal(f.calls.length, 4); redacted(report);
 });
 
+test('shared token self observations survive a denied grants list without qualifying the source', async () => {
+  const f = fixture();
+  const db = { resource_type: 'Database', resource_id: f.database.id,
+    resource: { id: f.database.id, name: f.database.name, deleted_at: null } };
+  const org = { resource_type: 'Organization', resource_id: 'im68in7j2miy', resource: { id: 'im68in7j2miy', name: 'lythaus' } };
+  f.token.service_token_accesses = [ { ...db, access: 'read_database' }, { ...db, access: 'read_database' },
+    { ...db, access: 'restore_production_branch_backups' }, { ...db, access: canary },
+    { ...db, resource_id: 'otherdb', access: 'delete_production_branch' },
+    { ...org, access: 'read_service_tokens' }, { ...org, access: 'write_service_tokens' },
+    { ...org, resource: { id: 'otherorg', name: 'lythaus' }, access: 'delete_service_tokens' } ];
+  f.options.fetchImpl = (url, options) => url.includes('/grants?') ? new Response(canary, { status: 404 }) : f.fetchImpl(url, options);
+  const report = await auditRebindServiceTokens(f.options);
+  assert.equal(report.recommendedSource, null);
+  assert.equal(report.sources[0].sharedSelfRecord, undefined);
+  assert.equal(report.sources[1].operationClass, 'service_token_grants_read');
+  assert.equal(report.sources[1].completedChecks.grantPaginationComplete, false);
+  assert.deepEqual(report.sources[1].sharedSelfRecord, { lifetimeCoversWindow: true,
+    oldCoreActionsObserved: ['read_database', 'restore_production_branch_backups'],
+    organizationActionsObserved: ['read_service_tokens', 'write_service_tokens'], otherOrUnclassifiedAccessObserved: true });
+  redacted(report);
+});
+
+test('absent or malformed inline access rows remain unknown, with no invented permissions', async () => {
+  for (const rows of [undefined, [null], [{ resource_type: 123, access: 'write_service_tokens' }]]) {
+    const f = fixture(); f.token.service_token_accesses = rows;
+    const report = await auditRebindServiceTokens(f.options);
+    assert.deepEqual(report.sources[1].sharedSelfRecord, { lifetimeCoversWindow: true,
+      oldCoreActionsObserved: null, organizationActionsObserved: null, otherOrUnclassifiedAccessObserved: null });
+    redacted(report);
+  }
+});
+
 test('denied authority is reported once per source without raw response or error leakage', async () => {
   for (const status of [401, 403, 404, 500]) {
     const f = fixture(); let calls = 0;
@@ -130,6 +162,7 @@ test('404 failures retain the exact fixed operation and only previously verified
     assert.equal(report.status, 'BLOCKED_NO_QUALIFIED_EXISTING_SOURCE'); assert.equal(report.recommendedSource, null);
     assert.equal(failure.operationClass, operations[failed]); assert.equal(failure.httpStatus, 404);
     assert.equal(failure.requestId, requestId); assert.equal(failure.requestPage, failed === 3 ? 1 : null);
+    assert.equal(Object.hasOwn(failure, 'sharedSelfRecord'), failed === 3);
     assert.match(failure.tokenFingerprint, /^[a-f0-9]{64}$/); assert.equal(count, failed + 1); assert.equal(bodyReads, 0); assert.equal(cancelled, 1);
     const verified = failed === 3 ? 4 : failed;
     assert.deepEqual(failure.completedChecks, Object.fromEntries(names.map((name, index) => [name, index < verified])));

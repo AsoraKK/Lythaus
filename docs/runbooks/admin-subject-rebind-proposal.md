@@ -130,6 +130,8 @@ counts. It never records token material, provider bodies, connection strings or
 database rows. Verify original artifact bytes, SHA-256, run/attempt/job/source
 provenance and freshness before using its evidence in any later approval.
 
+For `existing_api_token`, `sharedSelfRecord` records the restore actions explicitly visible on the pinned old-core database and the token-management actions visible on the pinned Lythaus organization. The audit retains this observation after verifying the branch, token identity and expiry, even if the following grants-list request fails. Null action lists mean the inline representation was missing or malformed. Empty lists mean there were no recognized matching rows in that representation. Other resources and unrecognized actions are reported together as a boolean. The existing grants-list and qualification checks still apply. Inspect the two sources independently. A restore continues to require the dedicated `PLANETSCALE_RESTORE_API_TOKEN`, and issuance and private storage require separate approval.
+
 Declared create/delete production-password permissions are not issuance or SQL
 qualification proof. No qualified existing source means BLOCKED; do not create a
 token, extend privileges or substitute credentials to overcome that result.
