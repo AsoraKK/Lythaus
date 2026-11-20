@@ -7,6 +7,7 @@ export const SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS = 3 * 60 * 60;
 
 export interface SubjectDiagnosticPolicy {
   origin: string;
+  sourceSha: string;
   accessIssuer: string;
   accessAudience: string;
   notBefore: number;
@@ -25,7 +26,8 @@ export { COMPILED_SUBJECT_DIAGNOSTIC_POLICY } from './diagnostic-policy.generate
 export function validateSubjectDiagnosticPolicy(value: unknown): SubjectDiagnosticPolicy {
   const policy = value as SubjectDiagnosticPolicy;
   if (!policy || typeof policy !== 'object'
-    || Object.keys(policy).sort().join(',') !== 'accessAudience,accessIssuer,databaseTarget,expiresAt,notBefore,origin'
+    || Object.keys(policy).sort().join(',') !== 'accessAudience,accessIssuer,databaseTarget,expiresAt,notBefore,origin,sourceSha'
+    || !/^[a-f0-9]{40}$/.test(policy.sourceSha)
     || typeof policy.databaseTarget !== 'object' || policy.databaseTarget === null
     || Object.keys(policy.databaseTarget).sort().join(',') !== 'branchId,databaseName,originFingerprint,roleFingerprint'
     || !/^[A-Za-z0-9_-]{1,128}$/.test(policy.accessAudience)

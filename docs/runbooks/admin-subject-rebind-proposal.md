@@ -11,6 +11,52 @@ stored identity or key history. Both Access selectors were restored to the
 current Lythaus address and the old session logged out. Do not repeat that
 experiment or change the selectors as part of this procedure.
 
+## Prove where the current human request fails
+
+Run the protected, read-only **Admin runtime target check** on the reviewed
+merged SHA. Select `inspect_subject_recovery` to compare the production
+environment's existing approved human selector with both Access applications.
+The selector comes from `LYTHAUS_NEW_CORE_OWNER_EMAIL`. Only the human selector
+is reused. All database, Worker, issuer and route checks target the original
+production environment. Record the runner SHA and the distinct serving SHA,
+Worker version and origin. Keep the selectors and credentials private.
+
+The candidate requires the **canonical auth-critical diagnostic release**,
+exact build acceptance, independent and native recovery evidence and a
+separate production approval. Include the Admin-only temporary secret
+`ADMIN_SUBJECT_DIAGNOSTIC_HUMAN_PIN` and its closure in that approval. Its
+release-specific value stays in protected runner files and the Admin Worker
+secret store. Candidate upload and publication alone do not establish that
+the diagnostic version serves the route. Verify the live version on
+`admin.lythaus.co/api/admin/*` and its `DB_ADMIN_FRESH` binding before sign-in.
+
+Once the exact version serves and the approved window is open, the intended
+human opens `https://admin.lythaus.co/api/admin/recovery/subject-diagnostic`
+in a fresh private browser session and completes ordinary Access sign-in.
+Record the opaque correlation reference and sanitized outcome. The Worker
+validates the app token signature, issuer, UI audience, issue time and identity.
+Its read-only transaction checks the production primary's startup branch
+identifier, database, session role and original bootstrap link. The only
+SQL input to this diagnostic is the branch ID. Keep authentication material,
+membership checksums, request headers and raw database results out of receipts.
+
+A missing binding match with one original active administrator establishes
+that the current derived binding differs. Check the authenticated provisioning
+and release history of the lookup key before attributing that difference to
+the subject. Secret names by themselves cannot establish key continuity.
+If the binding matches, trace the failing ordinary route using its correlation
+reference. A successful diagnostic response alone does not establish access
+to health, the normal flags page or the moderation API.
+
+Close the diagnostic by returning to an approved version with the diagnostic
+disabled. Verify the live version, an unavailable diagnostic, and removal of
+the temporary binding from the serving configuration. Retained immutable
+versions can still contain an encrypted historical binding. Their compiled
+window expires after at most three hours. Preserve the existing lookup key.
+Before a later membership mutation, independently confirm that the effective
+Admin session and provider logging, Insights and tracing protect bound
+parameters. Stop if their confidentiality or the key history is unverified.
+
 ## Preserved identity and permission boundary
 
 Only the lookup binding of the unique original active control-plane

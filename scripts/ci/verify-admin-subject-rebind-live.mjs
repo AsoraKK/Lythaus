@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {listAdminInventory} from './cloudflare-admin-inventory.mjs';
 import fs from 'node:fs';
 import {verifyHyperdriveTargets} from './verify-cloudflare-hyperdrive-targets.mjs';
 import {branchQualifiedDatabaseTarget} from './planetscale-0021-target-identity.mjs';
@@ -36,46 +37,10 @@ export async function verifyRebindLiveTarget({env,policy,roles,executor,fetchImp
     check(response.ok&&payload?.success===true&&payload.result!==undefined,'admin_rebind_provider_read_failed');
     return payload;
   };
-  const list=async(path,{allowUnpaginated=false}={})=>{
-    const items=[],ids=new Set();let expectedInventory=null;
-    for(let page=1;page<=10;page++){
-      const data=await cf(`${path}?per_page=100&page=${page}`);
-      check(Array.isArray(data.result)&&data.result.length<=100,'admin_rebind_provider_inventory_invalid');
-      const hasInfo=Object.hasOwn(data,'result_info'),info=data.result_info;let totalPages=null;
-      if(!hasInfo){
-        // Workers routes alone has a documented unpaginated array response.
-        // Partial or absent Access pagination metadata never proves completeness.
-        check(allowUnpaginated&&page===1&&expectedInventory===null,'admin_rebind_provider_pagination_missing');
-      }else{
-        check(info&&typeof info==='object'&&!Array.isArray(info),'admin_rebind_provider_pagination_invalid');
-        const total=info.total_count,hasPages=Object.hasOwn(info,'total_pages');
-        const perPage=info.per_page??(hasPages?100:undefined),derivedPages=Math.ceil(total/perPage);
-        const pages=hasPages?info.total_pages:derivedPages;
-        totalPages=pages;
-        check(Number.isInteger(pages)&&pages>=0&&pages<=10&&info.page===page
-          &&Number.isInteger(total)&&total>=0&&total<=1000
-          &&Number.isInteger(perPage)&&perPage>0&&perPage<=100
-          &&(pages===derivedPages||(total===0&&pages===1))
-          &&(page<=pages||(page===1&&pages===0&&total===0))
-          &&data.result.length===Math.min(perPage,Math.max(0,total-(page-1)*perPage))
-          &&(info.count===undefined||info.count===data.result.length),
-        'admin_rebind_provider_pagination_invalid');
-        const inventory=JSON.stringify({pages,total,perPage});
-        check(expectedInventory===null||expectedInventory===inventory,'admin_rebind_provider_pagination_changed');
-        expectedInventory=inventory;
-      }
-      for(const item of data.result){
-        check(typeof item?.id==='string'&&item.id.length>0&&!ids.has(item.id),'admin_rebind_provider_pagination_conflict');
-        ids.add(item.id);items.push(item);
-      }
-      if(!hasInfo)return items;
-      check(items.length<=info.total_count,'admin_rebind_provider_pagination_incomplete');
-      if(page===totalPages||totalPages===0){
-        check(items.length===info.total_count,'admin_rebind_provider_pagination_incomplete');return items;
-      }
-    }
-    throw new Error('admin_rebind_provider_pagination_limit');
-  };
+  const list=(path,options)=>listAdminInventory(cf,path,options);
+  const organization=(await cf(`/accounts/${accountId}/access/organizations`)).result;
+  check(typeof organization?.auth_domain==='string'&&/^[a-z0-9-]+\.cloudflareaccess\.com$/.test(organization.auth_domain)
+    &&policy.accessIssuer===`https://${organization.auth_domain}`,'admin_rebind_access_issuer_changed');
   const base=`/accounts/${accountId}/workers/scripts/${worker}`;
   const deployments=(await cf(`${base}/deployments`)).result?.deployments;
   check(Array.isArray(deployments)&&deployments.length>0,'admin_rebind_deployment_missing');
@@ -112,7 +77,8 @@ export async function verifyRebindLiveTarget({env,policy,roles,executor,fetchImp
     const decision=item=>String(item.decision??item.action??'').toLowerCase();
     const allowed=policies.filter(item=>decision(item)==='allow');
     const human=allowed[0];
-    check(allowed.length===1&&human.include?.length===1&&(human.require?.length??0)===0&&(human.exclude?.length??0)===0
+    check(allowed.length===1&&human.include?.length===1&&Object.keys(human.include[0]??{}).join(',')==='email'
+      &&(human.require?.length??0)===0&&(human.exclude?.length??0)===0
       &&!policies.some(item=>decision(item)==='bypass')
       &&policies.some(item=>['deny','block'].includes(decision(item))&&item.include?.some(selector=>selector.everyone)),
     'admin_rebind_access_policy_changed');

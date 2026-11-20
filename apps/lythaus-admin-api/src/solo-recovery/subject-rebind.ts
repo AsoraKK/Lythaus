@@ -115,7 +115,7 @@ export async function handleSubjectRebind(request: Request, env: Env, deps: Depe
         || policy.accessIssuer !== `https://${env.ACCESS_TEAM_DOMAIN}`
         || policy.bindingProof.checkedAt * 1000 > Date.now()) fail();
       const target = await rebindRuntimeTarget(env.DB_ADMIN_FRESH.connectionString, policy);
-      const identity = await verifiedHumanAccessIdentity(request, { ...env, ACCESS_RECOVERY_AUDIENCE: policy.accessAudience });
+      const identity = await verifiedHumanAccessIdentity(request, { ...env, ACCESS_RECOVERY_AUDIENCE: policy.accessAudience, freshSince: policy.notBefore });
       const emailSha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity.email.toLowerCase()))));
       if (emailSha256 !== policy.emailSha256) fail();
       const session = await client.query<{ database_name: unknown; current_role: unknown; session_role: unknown; read_only: unknown }>(

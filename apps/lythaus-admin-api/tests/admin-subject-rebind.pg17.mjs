@@ -49,6 +49,7 @@ mock.module('jose',{cache:true,namedExports:{...jose,createRemoteJWKSet:url=>{
 const {handleSubjectRebind,SUBJECT_REBIND_PATH,SUBJECT_REBIND_CONFIRMATION,REBIND_MEMBERSHIP_SQL}=await import('../src/solo-recovery/subject-rebind.ts');
 const {hmacLookup}=await import('../../../packages/security/src/index.ts');
 const {verifiedAccessSubject,requireActiveAdminMembership}=await import('../src/admin-access-runtime-policy.ts');
+const {SUBJECT_DIAGNOSTIC_SQL,SUBJECT_DIAGNOSTIC_SESSION_SQL}=await import('../src/solo-recovery/subject-diagnostic.ts');
 const {default:adminWorker}=await import('../src/bootstrap-wrapper.ts');
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '';
@@ -139,6 +140,23 @@ test('local PG17 proposal preserves authorization while permitting only an exact
     assert.ok(version >= 170000 && version < 180000);
     await owner.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${REBIND_METADATA_VERIFIER_ROLE}') THEN CREATE ROLE ${REBIND_METADATA_VERIFIER_ROLE} LOGIN NOSUPERUSER NOINHERIT; END IF; END $$;`);
     await owner.query(`GRANT USAGE ON SCHEMA identity TO ${REBIND_METADATA_VERIFIER_ROLE}`);
+    await t.test('the reviewed Admin role can inspect the original principal using constant membership SQL', async () => {
+      await seed(owner);
+      const client = await connect();
+      try {
+        await client.query('BEGIN READ ONLY');
+        await client.query('SET LOCAL ROLE lythaus_admin');
+        const snapshot = await client.query(SUBJECT_DIAGNOSTIC_SQL);
+        assert.equal(snapshot.rowCount, 1);
+        assert.equal(snapshot.rows[0].binding_checksum, createHash('sha256').update(previousDigest).digest('hex'));
+        assert.equal(snapshot.rows[0].bootstrap_principal, true);
+        assert.equal(snapshot.rows[0].revoked, false);
+        assert.equal(snapshot.rows[0].principal_status, 'locked');
+        const wrong = await client.query(SUBJECT_DIAGNOSTIC_SESSION_SQL, ['unrelatedfixturebranch']);
+        assert.equal(wrong.rows[0].branch_primary, false);
+        assert.equal(wrong.rows[0].transaction_read_only, 'on');
+      } finally { await client.end(); }
+    });
     await t.test('disabled function ignores a caller-created approval GUC', async () => {
       await seed(owner); const p = await policy();
       assert.equal(await call(p, {}, 'lythaus_admin', client => client.query(
@@ -274,7 +292,7 @@ test('local PG17 proposal preserves authorization while permitting only an exact
         originFingerprint:sha(JSON.stringify({scheme:'postgres',host:dbUrl.hostname.toLowerCase(),port:Number(dbUrl.port||5432),database:'postgres'})),
         roleFingerprint:sha('lythaus-admin-diagnostic-role:v1:lythaus_admin')};
       const sign=async(patch={},privateKey=keys.privateKey)=>new jose.SignJWT({
-        iss:'https://fixture.cloudflareaccess.com',aud:['synthetic-api'],sub:subject,email,type:'app',
+        iss:'https://fixture.cloudflareaccess.com',aud:['synthetic-api'],sub:subject,email,type:'app',iat:Math.floor(Date.now()/1000),
         exp:Math.floor(Date.now()/1000)+3600,...patch}).setProtectedHeader({alg:'RS256',kid:'fixture'}).sign(privateKey);
       const request=async({method='GET',claims={},privateKey=keys.privateKey,origin='https://admin.lythaus.co',body={confirmation:SUBJECT_REBIND_CONFIRMATION},accept='application/json'}={})=>new Request('https://admin.lythaus.co'+SUBJECT_REBIND_PATH,{
         method,headers:{'cf-access-jwt-assertion':await sign(claims,privateKey),accept,
