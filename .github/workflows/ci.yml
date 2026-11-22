@@ -84,7 +84,7 @@ jobs:
       - name: Validate read-only Cloudflare audit contract
         run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs scripts/tests/admin-identity-audit.test.mjs
       - name: Validate read-only Pages alias observation
-        run: node --test scripts/tests/pages-alias-evidence.test.mjs scripts/tests/pages-alias-collector.test.mjs
+        run: node --test scripts/tests/pages-alias-evidence.test.mjs scripts/tests/pages-alias-collector.test.mjs scripts/tests/production-pages-rollback.test.mjs
       - name: Validate read-only GitHub controls audit contract
         run: node --test scripts/tests/github-controls-audit.test.mjs
       - name: Validate the owner-reviewed new-core secret preflight without credentials
