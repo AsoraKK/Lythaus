@@ -3,10 +3,11 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import YAML from 'yaml';
 import { RESTORE, ROLE_NAMES, ACTIONS, RestoreApi, RestoreCleanupApi, RestoreFailure, createTargetBody, apiBase } from '../ci/planetscale-native-restore-contract.mjs';
 import { runNativeRestore } from '../ci/planetscale-native-restore-check.mjs';
+import { inspectDelivery } from '../ci/check-native-restore-token-delivery.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 import { REQUIRED_0021_RESTORE_SCOPE, hash0021RestoreEvidenceRecord } from '../ci/planetscale-0021-only-contract.mjs';
 import { QUALIFICATION_WORKFLOW, CLEANUP_WORKFLOW, recordPath, artifactPath, sha256, readTrackedEvidence,
@@ -643,6 +644,13 @@ test('workflow phase boundary uploads pending evidence before DELETE and never e
   assert.match(cleanup, /persist-credentials: false/); assert.doesNotMatch(cleanup, /contents: write|actions: write/);
   assert.notEqual(qualificationSha, evidenceSha); assert.equal(cleanupSha, evidenceSha);
 });
+const nativeRunnerCommand = [
+  'if [[ "$RESTORE_CHECK_DELIVERY_ONLY" == true ]]; then',
+  '  exec node scripts/ci/check-native-restore-token-delivery.mjs',
+  'fi',
+  'exec node scripts/ci/planetscale-native-restore-check.mjs',
+].join('\n') + '\n';
+
 test('only gated restore provider steps receive the dedicated secret; unrelated workflows keep shared access', () => {
   const directory = new URL('../../.github/workflows/', import.meta.url);
   const qualificationName = 'planetscale-native-restore-check.yml', cleanupName = 'planetscale-native-restore-cleanup.yml';
@@ -650,7 +658,7 @@ test('only gated restore provider steps receive the dedicated secret; unrelated 
   const cleanup = YAML.parse(fs.readFileSync(new URL(cleanupName, directory), 'utf8'));
   const key = 'PLANETSCALE_RESTORE_API_TOKEN', value = '${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}';
   for (const [workflow, job, commands] of [
-    [qualification, qualification.jobs.qualify, ['node scripts/ci/planetscale-native-restore-check.mjs']],
+    [qualification, qualification.jobs.qualify, [nativeRunnerCommand]],
     [cleanup, cleanup.jobs.cleanup, ['node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs delete',
       'node scripts/ci/planetscale-native-restore-reviewed-cleanup.mjs reconcile']],
   ]) {
@@ -678,6 +686,67 @@ test('only gated restore provider steps receive the dedicated secret; unrelated 
       /PLANETSCALE_API_TOKEN:\s*\$\{\{ secrets\.PLANETSCALE_API_TOKEN \}\}/, filename);
   }
   assert.ok(sharedConsumers.every(filename => fs.existsSync(new URL(filename, directory))));
+});
+
+test('private delivery uses the approved job with no saved checkout token, SQL access, or qualification artifact', () => {
+  const workflow = YAML.parse(fs.readFileSync(new URL('../../.github/workflows/planetscale-native-restore-check.yml', import.meta.url), 'utf8'));
+  const { inputs } = workflow.on.workflow_dispatch;
+  assert.equal(inputs.credential_delivery_only.default, false);
+  assert.equal(inputs.plan_pins_json.required, true);
+  assert.equal(inputs.execute.default, false);
+  const { steps } = workflow.jobs.qualify;
+  const guard = steps.find(step => step.name === 'Require exact protected main before loading dependencies or credentials');
+  const runner = steps.find(step => step.run === nativeRunnerCommand);
+  assert.ok(steps.indexOf(guard) < steps.indexOf(runner));
+  assert.match(guard.run, /select\(\.protected == true\) \| \.commit.sha/);
+  assert.match(guard.run, /check-native-restore-token-delivery\.mjs --validate-inputs/);
+  const ordinaryOnly = '${{ !inputs.credential_delivery_only }}';
+  assert.equal(steps[0].with['persist-credentials'], ordinaryOnly);
+  assert.equal(steps.find(step => step.run?.startsWith('npm ci')).if, ordinaryOnly);
+  assert.equal(runner.env.GH_TOKEN, "${{ !inputs.credential_delivery_only && github.token || '' }}");
+  assert.equal(runner.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL, "${{ !inputs.credential_delivery_only && secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL || '' }}");
+  for (const step of steps.slice(steps.indexOf(runner) + 1)) assert.equal(step.if, 'always()');
+  const finalizer = steps.find(step => step.name === 'Finalize immutable qualification evidence without provider access');
+  assert.match(finalizer.run, /\[\[ -e "\$EVIDENCE_DIR\/checkpoint.json" \|\| -e "\$EVIDENCE_DIR\/qualification.json" \]\]; then[\s\S]*?exit 1/);
+  const upload = steps.find(step => step.id === 'qualification_artifact');
+  assert.equal(upload.with['if-no-files-found'], "${{ inputs.credential_delivery_only && !inputs.execute && 'ignore' || 'error' }}");
+});
+
+test('delivery validation refuses execution or unrelated pins before reading the dedicated pair', () => {
+  const request = { RESTORE_CHECK_EXECUTE: 'false', RESTORE_CHECK_DELIVERY_ONLY: 'true',
+    RESTORE_CHECK_PLAN_PINS_JSON: '{"expectedTokenId":"demo123"}' };
+  const inaccessible = { get() { throw new Error('dedicated input accessed prematurely'); } };
+  const check = (overrides, validateOnly) => inspectDelivery(Object.defineProperty(
+    { ...request, ...overrides }, 'PLANETSCALE_RESTORE_API_TOKEN', inaccessible), validateOnly);
+  assert.equal(check({}, true), 'delivery_inputs_valid');
+  for (const overrides of [{ RESTORE_CHECK_EXECUTE: 'true' }, { RESTORE_CHECK_DELIVERY_ONLY: 'false' },
+    { RESTORE_CHECK_APPROVAL_JSON: '{}' }, { RESTORE_CHECK_PLAN_PINS_JSON: 'unparseable' },
+    { RESTORE_CHECK_PLAN_PINS_JSON: '{"expectedTokenId":"a:b"}' }, { RESTORE_CHECK_PLAN_PINS_JSON: '[]' },
+    { RESTORE_CHECK_PLAN_PINS_JSON: '{"expectedTokenId":"demo123","target":"unrelated"}' }]) {
+    assert.equal(check(overrides, false), 'delivery_request_invalid');
+  }
+  for (const key of ['GH_TOKEN', 'PLANETSCALE_SCHEMA_READ_DATABASE_URL']) {
+    assert.equal(check({ [key]: 'unexpected' }, false), 'delivery_context_invalid');
+  }
+});
+
+test('the delivery command emits only its fixed outcome and never produces a restore receipt', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-delivery-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const cli = new URL('../ci/check-native-restore-token-delivery.mjs', import.meta.url);
+  const env = { RESTORE_CHECK_DELIVERY_ONLY: 'true', RESTORE_CHECK_EXECUTE: 'false',
+    RESTORE_CHECK_PLAN_PINS_JSON: '{"expectedTokenId":"demo123"}', EVIDENCE_DIR: directory,
+    PLANETSCALE_API_TOKEN: 'demo123:synthetic-shared-value' };
+  for (const [pair, status] of [['', 'delivery_input_missing'], ['demo123:', 'delivery_pair_malformed'],
+    ['demo123:invalid:pair', 'delivery_pair_malformed'], ['bad id:value', 'delivery_pair_malformed'],
+    ['other123:synthetic-value', 'delivery_id_mismatch'], ['demo123:synthetic-value', 'delivery_id_matched']]) {
+    const result = spawnSync(process.execPath, [cli.pathname], {
+      env: { ...env, PLANETSCALE_RESTORE_API_TOKEN: pair }, cwd: directory, encoding: 'utf8' });
+    assert.equal(result.status, status === 'delivery_id_matched' ? 0 : 1);
+    assert.equal(result.stderr, '');
+    assert.deepEqual(JSON.parse(result.stdout), { operation: 'credential_delivery_only', status, providerAuthenticationAttempted: false });
+  }
+  assert.deepEqual(fs.readdirSync(directory), []);
 });
 test('qualification work and finalization have independent budgets before escalation; phase locks cannot block each other', () => {
   const qualification = YAML.parse(fs.readFileSync(new URL('../../.github/workflows/planetscale-native-restore-check.yml', import.meta.url), 'utf8'));
