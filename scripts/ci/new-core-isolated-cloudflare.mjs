@@ -1,5 +1,4 @@
 import { TARGET } from './lythaus-new-core-isolation-review.mjs';
-import { isDeepStrictEqual } from 'node:util';
 
 export const ACCOUNT = `/accounts/${TARGET.account}`;
 export const ZONE = `/zones/${TARGET.zone}`;
@@ -7,8 +6,6 @@ export const SCRIPT = `${ACCOUNT}/workers/scripts/${TARGET.worker}`;
 export const DRIVE = `${ACCOUNT}/hyperdrive/configs/${TARGET.hyperdrive}`;
 export const RECORDED_WORKER_ID = '89391a349e454b3994bd43299c6386ed';
 export const RECORDED_WORKER = `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`;
-export const DISABLE_INVOCATION_LOGS = Object.freeze({observability:Object.freeze({enabled:false,
-  logs:Object.freeze({enabled:false,invocation_logs:false}),traces:Object.freeze({enabled:false})})});
 export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/;
 const API = 'https://api.cloudflare.com/client/v4';
 export const requireSetup = (condition, code) => { if (!condition) throw new Error(`setup_${code}`); };
@@ -37,7 +34,7 @@ const writes = new Map([
 
 export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false}) {
   const owned = { workerId:null, parentVersionId:null, versionId:null };
-  let scriptPatchAttempted = false;
+  let sawRecordedUndeployedWorker = false;
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
   const reads = [
@@ -61,7 +58,6 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
       if (fixedReads.has(path)) return fixedReads.get(path);
       if (owned.workerId && new RegExp(`^${ACCOUNT}/workers/workers/${owned.workerId}(?:/versions(?:/${idSegment}\\?include=modules)?)?$`).test(path)) return 'read_test_worker';
     }
-    if (resumeWorker && method === 'PATCH' && path === `${SCRIPT}/script-settings` && !scriptPatchAttempted) return 'disable_script_invocation_logs';
     if (writes.has(`${method} ${path}`)) {
       const stage = writes.get(`${method} ${path}`);
       requireSetup(!resumeWorker || !['create_access','upload_public_ca','configure_hyperdrive','restart_hyperdrive','create_worker'].includes(stage),
@@ -74,7 +70,6 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   }
   async function call(path, {method='GET',body,headers={}} = {}) {
     const stage = operation(method,path);
-    if (stage === 'disable_script_invocation_logs') requireSetup(isDeepStrictEqual(body,DISABLE_INVOCATION_LOGS),'worker_invocation_logs_patch_scope');
     if (stage === 'create_worker') requireSetup(body?.name === TARGET.worker && body.subdomain?.enabled === false
       && body.subdomain.previews_enabled === false, 'worker_create_target');
     if (stage === 'create_access') requireSetup(body?.type === 'self_hosted' && body.domain === TARGET.hostname
@@ -114,7 +109,6 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
     h.set('accept', 'application/json');
     let response, payload;
     try {
-      if (stage === 'disable_script_invocation_logs') scriptPatchAttempted = true;
       response = await fetchImpl(API + path,{method,body,headers:h,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(45000)});
       requireSetup(response.ok && !response.redirected && (!response.url || response.url === API + path), `${stage}_http_${Number(response.status)}`);
       const parts = []; let size = 0;
@@ -130,14 +124,15 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
       throw new Error(`setup_${stage}_response_unavailable`);
     }
     requireSetup(payload?.success === true && Object.hasOwn(payload,'result'), `${stage}_provider_failure`);
+    if (stage === 'recorded_worker_details') sawRecordedUndeployedWorker =
+      payload.result?.id === RECORDED_WORKER_ID && payload.result.name === TARGET.worker && payload.result.deployed_on === null;
     if (method !== 'GET') {
-      const id = stage === 'disable_script_invocation_logs' ? RECORDED_WORKER_ID : payload.result?.id;
+      const id = payload.result?.id;
       await record({operation:stage,...(ID.test(id ?? '') ? {id} : {})});
       if (stage === 'create_worker') {
         requireSetup(ID.test(id ?? '') && payload.result.name === TARGET.worker, 'new_worker_identity');
         owned.workerId = id;
       }
-      if (stage === 'disable_script_invocation_logs') owned.workerId = RECORDED_WORKER_ID;
       if (stage === 'stage_version') {
         requireSetup(ID.test(id ?? ''),'new_version_identity');
         requireSetup(id !== owned.parentVersionId,'inherited_version_identity');
@@ -204,5 +199,9 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
       && payload.result.length < 100 && payload.result.every(r=>r.name === name), 'dns_inventory_incomplete');
     return payload.result;
   }
-  return {request,list,listPagesProjects,dns};
+  function selectRecordedWorker() {
+    requireSetup(resumeWorker && !owned.workerId && sawRecordedUndeployedWorker,'recorded_worker_not_verified');
+    owned.workerId = RECORDED_WORKER_ID;
+  }
+  return {request,list,listPagesProjects,dns,selectRecordedWorker};
 }

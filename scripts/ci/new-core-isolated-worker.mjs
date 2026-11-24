@@ -119,10 +119,12 @@ function expectedBindings(audience, issuer) {
   ];
 }
 
-function checkWorker(worker, id) {
+async function checkWorker(request, worker, id) {
   const evidence = workerBoundaryEvidence(worker,id,name);
-  requireGate(Object.values(evidence.checks).every(Boolean) &&
-    (id !== RECORDED_WORKER_ID || evidence.fieldShapes.invocationLogs === 'false'), 'WORKER_EXPOSURE_OR_LOGGING');
+  requireGate(Object.values(evidence.checks).every(Boolean), 'WORKER_EXPOSURE_OR_LOGGING');
+  if (id === RECORDED_WORKER_ID) requireGate(
+    scriptLoggingEvidence(await request(`${SCRIPT}/script-settings`, { method:'GET' }),evidence).disabled,
+    'WORKER_SCRIPT_LOGGING_READBACK');
 }
 
 const contentTypes = {
@@ -200,7 +202,7 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
   if (!existingWorkerId) await journal('worker_created', { workerId });
   const workerPath = workers + '/' + workerId;
   const worker = await request(workerPath, { method: 'GET' });
-  checkWorker(worker, workerId);
+  await checkWorker(request, worker, workerId);
   requireGate(worker.deployed_on == null, 'WORKER_ALREADY_DEPLOYED');
   const versions = await request(workerPath + '/versions', { method: 'GET' });
   requireGate(Array.isArray(versions) && versions.length === 0, 'WORKER_HAS_EXISTING_VERSION');
@@ -217,7 +219,7 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
     requireGate(typeof versionId === 'string' && uuid.test(versionId), 'WORKER_VERSION_ID');
     await journal('worker_version_staged', { workerId, versionId });
     const stagedWorker = await request(workerPath, { method: 'GET' });
-    checkWorker(stagedWorker, workerId);
+    await checkWorker(request, stagedWorker, workerId);
     requireGate(stagedWorker.deployed_on === null, 'WORKER_PREMATURE_DEPLOYMENT');
     return versionId;
   }
@@ -241,9 +243,7 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
 export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer, versionNumber = 2 }) {
   requireGate(workerIdPattern.test(workerId) && uuid.test(versionId), 'WORKER_READBACK_IDS');
   const path = account + '/workers/' + workerId;
-  checkWorker(await request(path, { method: 'GET' }), workerId);
-  if (workerId === RECORDED_WORKER_ID) requireGate(
-    scriptLoggingEvidence(await request(`${SCRIPT}/script-settings`, { method:'GET' })).disabled, 'WORKER_SCRIPT_LOGGING_READBACK');
+  await checkWorker(request, await request(path, { method: 'GET' }), workerId);
   const version = await request(path + '/versions/' + versionId + '?include=modules', { method: 'GET' });
   requireGate(version?.id === versionId && version.number === versionNumber && version.annotations?.['workers/tag'] === sourceSha &&
     version.main_module === moduleName && version.compatibility_date === '2026-07-27' &&

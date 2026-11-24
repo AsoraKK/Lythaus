@@ -1,7 +1,7 @@
 import { createHash, X509Certificate } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { accessEvidence, hyperdriveEvidence, inspectIsolation, TARGET } from './lythaus-new-core-isolation-review.mjs';
-import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DISABLE_INVOCATION_LOGS, DRIVE, ID, RECORDED_WORKER, RECORDED_WORKER_ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
+import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DRIVE, ID, RECORDED_WORKER, RECORDED_WORKER_ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
 import { scriptLoggingEvidence, workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 
 const BASELINE = 'ecaecf69d5fae1edfd63ed54561c12abff3ee7ac01ecac8dc034417703e2ee19';
@@ -244,9 +244,7 @@ async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca})
     }),
     read('setup_recorded_worker_script_settings_unverified',async ()=>{
       const row = await api.request(`${SCRIPT}/script-settings`);
-      const {workersDev:_workersDev,previews:_previews,customDomains:_customDomains,deployedOn:_deployedOn,...shapes} =
-        workerBoundaryEvidence(row).fieldShapes;
-      return shapes;
+      return scriptLoggingEvidence(row,evidence);
     }),
     read('setup_recorded_worker_routing_unverified',async ()=>{ await emptyRouting(api); return true; }),
     read('setup_recorded_worker_custom_domain_unverified',async ()=>{
@@ -393,25 +391,17 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   check(equal(old,current),'hyperdrive_changed');
   if (resumeWorker) {
     const receipt = await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl,ca});
-    check(receipt.worker && Object.entries(receipt.worker.checks).every(([key,value])=>value === (key !== 'invocationLogsNotEnabled'))
-      && receipt.worker.fieldShapes.invocationLogs === 'true' && receipt.worker.fieldShapes.deployedOn === 'null'
+    check(receipt.worker && checksPass(receipt.worker.checks)
+      && receipt.worker.fieldShapes.deployedOn === 'null'
       && ['logs','traces'].every(key=>receipt.worker.fieldShapes[key] === 'false')
       && ['agents','issues'].every(key=>receipt.worker.fieldShapes[key] === 'omitted')
       && receipt.subdomain?.workersDev === 'false' && receipt.subdomain.previews === 'false'
-      && receipt.logging?.logpush === 'false' && receipt.logging.tailConsumers === 'null'
-      && ['observability','logs','invocationLogs','traces','agents','issues'].every(key=>receipt.logging[key] === 'omitted')
+      && receipt.logging?.disabled
       && receipt.versionsEmpty && receipt.deploymentsEmpty && receipt.routingEmpty && receipt.customDomainEmpty
       && receipt.productionBaselineMatches && receipt.hyperdrive && checksPass(receipt.hyperdrive)
       && !receipt.errors.length, 'recorded_worker_checkpoint_changed');
-    await api.request(`${SCRIPT}/script-settings`,{method:'PATCH',body:DISABLE_INVOCATION_LOGS});
-    const repaired = workerBoundaryEvidence(await api.request(RECORDED_WORKER),RECORDED_WORKER_ID,TARGET.worker);
-    const script = scriptLoggingEvidence(await api.request(`${SCRIPT}/script-settings`));
-    const workerDisabled = checksPass(repaired.checks) && repaired.fieldShapes.invocationLogs === 'false'
-      && Object.entries(receipt.worker.fieldShapes).every(([key,value])=>key === 'invocationLogs' || repaired.fieldShapes[key] === value);
-    if (!workerDisabled || !script.disabled) return {status:'ISOLATED_SETUP_BLOCKED',
-      blocked:[...(!workerDisabled?['setup_recorded_worker_patch_readback']:[]),...(!script.disabled?['setup_recorded_script_settings_readback']:[])],
-      workerSettingsReadback:{worker:repaired,script},bootstrapCalled:false};
     await emptyRouting(api);
+    api.selectRecordedWorker();
   } else {
     await api.request(DRIVE,{method:'PATCH',body:{origin:{user:USER,password},caching:{disabled:true},mtls:{sslmode:'verify-full',ca_certificate_id:caId}}});
     const configured = await api.request(DRIVE);

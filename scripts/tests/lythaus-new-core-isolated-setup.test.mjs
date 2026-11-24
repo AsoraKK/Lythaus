@@ -43,18 +43,36 @@ test('combined setup serves the pinned UUID and retains only acknowledged partia
     fileURLToPath(new URL('./fixtures/new-core-combined-setup.mjs',import.meta.url))],{stdio:'pipe',timeout:15000});
 });
 
-test('version verification blocks a repaired Worker if script invocation evidence later disappears', async ()=>{
+test('version verification accepts dormant invocation flags only with fresh explicit disabled parents', async ()=>{
   const {verifyWorkerVersion} = await import('../ci/new-core-isolated-worker.mjs');
   const reads=[];
   const worker={id:RECORDED_WORKER_ID,name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false},
-    logpush:false,observability:{enabled:false,logs:{enabled:false,invocation_logs:false},traces:{enabled:false}},
+    logpush:false,observability:{enabled:false,logs:{enabled:false,invocation_logs:true},traces:{enabled:false}},
     references:{domains:[]},tail_consumers:[]};
   await assert.rejects(verifyWorkerVersion({request:async (path,opts)=>{
     assert.equal(opts.method,'GET');
     reads.push(path);
     return path.endsWith('/script-settings') ? {logpush:false} : worker;
-  },workerId:RECORDED_WORKER_ID,versionId}),/WORKER_SCRIPT_LOGGING_READBACK/);
-  assert.deepEqual(reads,[`${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`,`${SCRIPT}/script-settings`]);
+  },workerId:RECORDED_WORKER_ID,versionId}),/WORKER_VERSION_CONFIGURATION/);
+  assert.deepEqual(reads,[`${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`,`${SCRIPT}/script-settings`,
+    `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}/versions/${versionId}?include=modules`]);
+  for (const badScript of [
+    {logpush:false,observability:{enabled:false,logs:{enabled:true}}},
+    {logpush:false,observability:{enabled:false,logs:{invocation_logs:true}}},
+    {logpush:false,observability:{enabled:false,agents:{enabled:'false'}}},
+    {logpush:false,observability:{enabled:false,issues:{enabled:true}}},
+    {logpush:false,observability:{enabled:false,traces:{destinations:['export']}}},
+    {logpush:false,observability:null}, {logpush:false,observability:{logs:null}},
+    {logpush:false,tail_consumers:[{}]},
+  ]) await assert.rejects(verifyWorkerVersion({request:async path=>path.endsWith('/script-settings') ? badScript : worker,
+    workerId:RECORDED_WORKER_ID,versionId}),/WORKER_SCRIPT_LOGGING_READBACK/);
+  for (const value of [undefined,true,'false',null]) {
+    const contradictory=structuredClone(worker);
+    if (value === undefined) delete contradictory.observability.logs.enabled;
+    else contradictory.observability.logs.enabled=value;
+    await assert.rejects(verifyWorkerVersion({request:async path=>path.endsWith('/script-settings') ? {logpush:false} : contradictory,
+      workerId:RECORDED_WORKER_ID,versionId}),/WORKER_EXPOSURE_OR_LOGGING/);
+  }
 });
 
 test('read-only and setup modes separately report missing protected inputs before writing', async t=>{
@@ -107,6 +125,9 @@ test('mutations target only the isolated route, DNS, scoped login and newly stag
   ];
   for (const [path,options] of cases) await assert.rejects(api.request(path,options),/^Error: setup_/);
   assert.equal(calls,0);
+  const resume = createSetupClient({token:fixtureToken,resumeWorker:true,fetchImpl:async()=>assert.fail(),record:()=>assert.fail()});
+  assert.throws(resume.selectRecordedWorker,/recorded_worker_not_verified/);
+  await assert.rejects(resume.request(`${SCRIPT}/script-settings`,{method:'PATCH',body:{}}),/provider_scope_blocked/);
 });
 
 test('version activation is pinned to the version returned for the newly created Worker', async()=>{
