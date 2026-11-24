@@ -72,3 +72,10 @@ test('a missing review, actor mismatch, rerun, or stale main stops setup', async
   map['branches/main'].commit.sha = 'b'.repeat(40);
   await assert.rejects(authorizeSetup({ env, get: path => map[path] }));
 });
+test('resume is a fresh protected dispatch and requires the normal owner review', async () => {
+  const resume = { ...env, REQUESTED_OPERATION:'resume-access' };
+  const get = path => sources([approval])[path];
+  assert.equal((await authorizeSetup({ env:resume, get })).ownerSelectorConfirmedByOwner,true);
+  await assert.rejects(authorizeSetup({env:resume,get:path=>sources([])[path]}));
+  await assert.rejects(authorizeSetup({env:{...resume,GITHUB_RUN_ATTEMPT:'2'},get}));
+});

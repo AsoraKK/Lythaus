@@ -28,7 +28,7 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     || env.GITHUB_ACTOR_ID !== String(PINS.ownerId) || env.GITHUB_ACTOR !== env.GITHUB_TRIGGERING_ACTOR
     || env.GITHUB_RUN_ATTEMPT !== '1' || !/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID ?? '')
     || env.REQUESTED_CONTROL_SHA !== env.GITHUB_SHA || !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? '')
-    || !['inspect', 'setup'].includes(env.REQUESTED_OPERATION)
+    || !['inspect', 'setup', 'resume-access'].includes(env.REQUESTED_OPERATION)
     || env.NODE_OPTIONS || env.NODE_DEBUG || env.RUNNER_DEBUG === '1') throw new Error('setup_dispatch_changed');
   const main = await get('branches/main');
   if (!main.protected || main.commit.sha !== env.GITHUB_SHA) throw new Error('setup_main_changed');
