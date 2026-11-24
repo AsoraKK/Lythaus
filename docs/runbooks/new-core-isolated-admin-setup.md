@@ -70,6 +70,14 @@ the only acknowledged mutation was creating Access application
 per-check listing, application details and policy results. The account listing
 must prove unique coverage of the test hostname and a unique audience; the
 application details must match that audience and pass every configuration check.
+The cookie-path field is reported as a redacted shape on both responses.
+For this recorded app only, omission is accepted when the app has only the
+exact pathless public hostname and no destination overrides. This relies on
+[Cloudflare's Cookie Path behavior](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/#cookie-path-attribute):
+the switch adds the application's configured URL path, and here no application
+path exists. It is not a general inference that omitted settings are false.
+An explicit enabled, null, or malformed value blocks reuse; newly created apps
+still require a literal false value in the detail readback.
 Only if all detail and policy checks pass, choose `resume-access` under the
 same normal owner review. It will not create, update or delete an Access app.
 It stops if the exact recorded app cannot be verified, or if the existing

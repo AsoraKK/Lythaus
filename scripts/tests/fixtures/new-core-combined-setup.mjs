@@ -78,6 +78,7 @@ globalThis.fetch = async (url,init)=>{
     if (state.fault==='owner_readback') state.testPolicies[0].include=[{everyone:{}}];
     state.testApp={...body,id:accessId,aud:'a'.repeat(64)}; delete state.testApp.policies;
     if (state.fault==='cookie_readback') state.testApp.http_only_cookie_attribute=false;
+    if (state.fault==='fresh_path_cookie_omitted') delete state.testApp.path_cookie_attribute;
     result=state.testApp;
   } else if (path.endsWith('/access/apps')) {
     result=[{id:uiId,name:'Lythaus Admin UI',domain:'admin.lythaus.co',type:'self_hosted'},
@@ -131,8 +132,11 @@ globalThis.fetch = async (url,init)=>{
   return Response.json({success:true,result});
 };
 const {inspectSetupInputs,runIsolatedSetup} = await import('../../ci/lythaus-new-core-isolated-setup.mjs');
+const rejectedCookieShapes = {resume_cookie_enabled:true,resume_cookie_null:null,resume_cookie_malformed:'false'};
 for (const fault of ['none','overlap','later_pages_collision','missing_pages_metadata','owner_readback','cookie_readback','restart_readback',
-  'resume_sparse_list','resume_wrong_id','resume_missing','resume_bad_cookie','resume_audience_drift','resume_duplicate_audience',
+  'fresh_path_cookie_omitted','resume_sparse_list','resume_cookie_omitted','resume_wrong_id','resume_missing',
+  ...Object.keys(rejectedCookieShapes),'resume_cookie_path_destination','resume_cookie_private_destination',
+  'resume_cookie_destination_override','resume_cookie_duplicate_destination','resume_audience_drift','resume_duplicate_audience',
   'resume_wrong_owner','resume_list_conflict']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
@@ -144,15 +148,24 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
       state.testApp={...accessApp};
       state.testPolicies=structuredClone(initialPolicies);
       if (fault==='resume_wrong_id') state.testApp.id='b'.repeat(32);
-      if (fault==='resume_bad_cookie') delete state.testApp.path_cookie_attribute;
+      if (Object.hasOwn(rejectedCookieShapes,fault)) state.testApp.path_cookie_attribute=rejectedCookieShapes[fault];
+      if (fault.startsWith('resume_cookie_') && !Object.hasOwn(rejectedCookieShapes,fault)) delete state.testApp.path_cookie_attribute;
+      if (fault==='resume_cookie_path_destination') state.testApp.destinations=[{type:'public',uri:TARGET.hostname+'/flags'}];
+      if (fault==='resume_cookie_private_destination') state.testApp.destinations=[{type:'private',hostname:TARGET.hostname}];
+      if (fault==='resume_cookie_destination_override') state.testApp.destinations=[{type:'public',uri:TARGET.hostname,
+        overrides:[{path_pattern:'/flags',behavior:'public'}]}];
+      if (fault==='resume_cookie_duplicate_destination') state.testApp.destinations=Array.from({length:2},()=>({type:'public',uri:TARGET.hostname}));
+      if (fault==='resume_wrong_id') delete state.testApp.path_cookie_attribute;
       if (fault==='resume_wrong_owner') state.testPolicies[0].include=[{email:{email:'other@fixture.invalid'}}];
     }
     const inspection=await inspectSetupInputs(args);
     assert.deepEqual(journal,[]);
-    if (fault==='resume_sparse_list') {
+    if (fault==='resume_sparse_list' || fault==='resume_cookie_omitted') {
       assert.equal(inspection.ready,true);
-      assert.equal(inspection.existingTestAccess.listing.pathCookie,false);
+      assert.equal(inspection.existingTestAccess.listing.pathCookie,true);
       assert.equal(inspection.existingTestAccess.details.pathCookie,true);
+      assert.deepEqual(inspection.existingTestAccess.cookiePathReadback,{listing:'omitted',
+        details:fault==='resume_sparse_list'?'disabled':'omitted'});
       assert.equal(inspection.existingTestAccess.policies.ownerOnly,true);
       assert.equal((await runIsolatedSetup(args)).status,'ISOLATED_SETUP_BLOCKED');
       assert.deepEqual(journal,[]);
@@ -164,7 +177,10 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
       assert.equal(journal.some(j=>j.operation==='create_access'),false);
     } else {
       if (fault!=='resume_missing') assert.equal(inspection.ready,false);
-      if (fault==='resume_bad_cookie') assert.equal(inspection.existingTestAccess.details.pathCookie,false);
+      if (Object.hasOwn(rejectedCookieShapes,fault)) {
+        assert.equal(inspection.existingTestAccess.details.pathCookie,false);
+        assert.equal(inspection.existingTestAccess.cookiePathReadback.details,fault.slice('resume_cookie_'.length));
+      }
       if (fault==='resume_list_conflict') {
         assert.equal(inspection.existingTestAccess.listing.settingsConsistent,false);
         assert.equal(inspection.existingTestAccess.details.pathCookie,true);
@@ -194,7 +210,8 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
     if(fault==='later_pages_collision') assert.ok(result.blocked.includes('setup_pages_hostname_collision'));
     if(fault==='missing_pages_metadata') assert.ok(result.blocked.includes('setup_pages_pagination_unverified'));
   } else {
-    const failures = {owner_readback:/test_access_policies_readback/,cookie_readback:/test_access_app_readback/,restart_readback:/pool_restart_readback/};
+    const failures = {owner_readback:/test_access_policies_readback/,cookie_readback:/test_access_app_readback/,
+      fresh_path_cookie_omitted:/test_access_app_readback/,restart_readback:/pool_restart_readback/};
     await assert.rejects(runIsolatedSetup(args),failures[fault]);
     assert.deepEqual(journal.map(j=>j.operation),fault==='restart_readback'?['create_access','configure_hyperdrive','restart_hyperdrive']:['create_access']);
     assert.equal(state.deployed,false);assert.equal(state.dns,undefined);assert.equal(state.route,undefined);
