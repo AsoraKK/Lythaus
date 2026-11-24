@@ -106,16 +106,20 @@ and [Worker script settings](https://developers.cloudflare.com/api/resources/wor
 schemas before proposing a separately reviewed continuation. Do not change
 existing settings just to make a readback pass.
 
-The [protected inspection](https://github.com/AsoraKK/Lythaus/actions/runs/45427448320)
-verified that only invocation logging remained enabled on the exact recorded
-Worker. Choose `resume-worker` after reviewing the new protected main SHA.
+The [previous metadata edit](https://github.com/AsoraKK/Lythaus/actions/runs/45452252216)
+was acknowledged but did not change the invocation logging readback. Do not
+retry that operation. The [protected inspection](https://github.com/AsoraKK/Lythaus/actions/runs/45460021762)
+verified the exact Worker is still empty and unexposed. Choose
+`resume-worker-script-settings` after reviewing the new protected main SHA.
 This operation rechecks the exact Access app, existing dedicated Hyperdrive
 and CA, Worker settings, and lack of versions, deployments or routes. It
 requires the pinned inspection to remain valid and performs one
-[Worker metadata PATCH](https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/methods/edit/)
+[Worker Versions script-level settings PATCH](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/settings/methods/edit/)
 for the invocation logging correction, with its already-disabled settings
-kept disabled. Do not retry a failed or uncertain PATCH. Only after strict
-readback passes does it stage the pinned build and attach the isolated site
+kept disabled. Do not retry a failed or uncertain PATCH. Both the exact Worker
+GET and script-settings GET must read back explicit logging disablement; the
+run reports redacted setting shapes if they disagree or omit required data.
+Only after both pass does it stage the pinned build and attach the isolated site
 under the existing checks. It does not recreate the Worker or Access app,
 reconfigure or restart Hyperdrive, or bootstrap any user.
 

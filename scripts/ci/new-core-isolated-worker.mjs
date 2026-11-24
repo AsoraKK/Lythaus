@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import blake3 from 'blake3-wasm';
-import { workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
-import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
+import { scriptLoggingEvidence,workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
+import { RECORDED_WORKER_ID,SCRIPT } from './new-core-isolated-cloudflare.mjs';
 
 const sourceSha = '276b43265584ec0dc158e67cbdb13cb58ece75db';
 const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
@@ -242,6 +242,8 @@ export async function verifyWorkerVersion({ request, workerId, versionId, audien
   requireGate(workerIdPattern.test(workerId) && uuid.test(versionId), 'WORKER_READBACK_IDS');
   const path = account + '/workers/' + workerId;
   checkWorker(await request(path, { method: 'GET' }), workerId);
+  if (workerId === RECORDED_WORKER_ID) requireGate(
+    scriptLoggingEvidence(await request(`${SCRIPT}/script-settings`, { method:'GET' })).disabled, 'WORKER_SCRIPT_LOGGING_READBACK');
   const version = await request(path + '/versions/' + versionId + '?include=modules', { method: 'GET' });
   requireGate(version?.id === versionId && version.number === versionNumber && version.annotations?.['workers/tag'] === sourceSha &&
     version.main_module === moduleName && version.compatibility_date === '2026-07-27' &&

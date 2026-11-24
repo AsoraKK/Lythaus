@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createSetupClient, ACCOUNT, DRIVE, SCRIPT, ZONE } from '../ci/new-core-isolated-cloudflare.mjs';
+import { createSetupClient, ACCOUNT, DRIVE, RECORDED_WORKER_ID, SCRIPT, ZONE } from '../ci/new-core-isolated-cloudflare.mjs';
 import { inspectSetupInputs, runIsolatedSetup } from '../ci/lythaus-new-core-isolated-setup.mjs';
 import { TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
 import { verifyFlagsSession } from '../ci/verify-new-core-flags-session.mjs';
@@ -41,6 +41,20 @@ const activate = id => ({method:'POST',body:{strategy:'percentage',versions:[{ve
 test('combined setup serves the pinned UUID and retains only acknowledged partial changes on failure',()=>{
   execFileSync(process.execPath,['--experimental-test-module-mocks',
     fileURLToPath(new URL('./fixtures/new-core-combined-setup.mjs',import.meta.url))],{stdio:'pipe',timeout:15000});
+});
+
+test('version verification blocks a repaired Worker if script invocation evidence later disappears', async ()=>{
+  const {verifyWorkerVersion} = await import('../ci/new-core-isolated-worker.mjs');
+  const reads=[];
+  const worker={id:RECORDED_WORKER_ID,name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false},
+    logpush:false,observability:{enabled:false,logs:{enabled:false,invocation_logs:false},traces:{enabled:false}},
+    references:{domains:[]},tail_consumers:[]};
+  await assert.rejects(verifyWorkerVersion({request:async (path,opts)=>{
+    assert.equal(opts.method,'GET');
+    reads.push(path);
+    return path.endsWith('/script-settings') ? {logpush:false} : worker;
+  },workerId:RECORDED_WORKER_ID,versionId}),/WORKER_SCRIPT_LOGGING_READBACK/);
+  assert.deepEqual(reads,[`${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`,`${SCRIPT}/script-settings`]);
 });
 
 test('read-only and setup modes separately report missing protected inputs before writing', async t=>{

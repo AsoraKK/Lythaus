@@ -36,3 +36,11 @@ export function workerBoundaryEvidence(worker, id, name) {
     },
   };
 }
+
+export function scriptLoggingEvidence(row) {
+  const {logpush,observability,logs,invocationLogs,traces,agents,issues,tailConsumers} = workerBoundaryEvidence(row).fieldShapes;
+  const shapes = {logpush,observability,logs,invocationLogs,traces,agents,issues,tailConsumers};
+  return {shapes,disabled:[logpush,observability,logs,invocationLogs,traces].every(value=>value==='false')
+    && [agents,issues].every(value=>value==='omitted' || value==='false')
+    && ['omitted','null','empty_array'].includes(tailConsumers)};
+}
