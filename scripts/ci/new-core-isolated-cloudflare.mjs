@@ -4,6 +4,8 @@ export const ACCOUNT = `/accounts/${TARGET.account}`;
 export const ZONE = `/zones/${TARGET.zone}`;
 export const SCRIPT = `${ACCOUNT}/workers/scripts/${TARGET.worker}`;
 export const DRIVE = `${ACCOUNT}/hyperdrive/configs/${TARGET.hyperdrive}`;
+export const RECORDED_WORKER_ID = '89391a349e454b3994bd43299c6386ed';
+export const RECORDED_WORKER = `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`;
 export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/;
 const API = 'https://api.cloudflare.com/client/v4';
 export const requireSetup = (condition, code) => { if (!condition) throw new Error(`setup_${code}`); };
@@ -35,6 +37,7 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
   const reads = [
+    [new RegExp(`^${RECORDED_WORKER}/versions\\?per_page=100&page=(?:[1-9]|10)$`), 'recorded_worker_versions'],
     [new RegExp(`^${ACCOUNT}/access/apps(?:/${idSegment}/policies)?${page}$`), 'access_inventory'],
     [new RegExp(`^${ACCOUNT}/access/apps/${idSegment}$`), 'access_app_details'],
     [new RegExp(`^${ACCOUNT}/access/organizations$`), 'access_organization'],
@@ -45,6 +48,8 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
     [new RegExp(`^${ACCOUNT}/mtls_certificates/${idSegment}$`), 'read_public_ca'],
   ];
   const fixedReads = new Map([[DRIVE,'hyperdrive'],[`${ZONE}/workers/routes`,'zone_routes'],
+    [RECORDED_WORKER,'recorded_worker_details'],
+    [`${SCRIPT}/script-settings`,'recorded_worker_script_settings'],
     [`${SCRIPT}/deployments`,'deployments'],[`${SCRIPT}/subdomain`,'worker_subdomain']]);
   function operation(method, path) {
     if (method === 'GET') {

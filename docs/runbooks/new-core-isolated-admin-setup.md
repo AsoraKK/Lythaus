@@ -83,6 +83,29 @@ same normal owner review. It will not create, update or delete an Access app.
 It stops if the exact recorded app cannot be verified, or if the existing
 Worker, routing, Hyperdrive or production guards do not pass. It is not a
 generic retry or permission to reuse any other application.
+
+[Run 45411243223](https://github.com/AsoraKK/Lythaus/actions/runs/45411243223)
+acknowledged the dedicated Hyperdrive configuration/restart and the creation
+of Worker `89391a349e454b3994bd43299c6386ed`. It stopped at
+`WORKER_EXPOSURE_OR_LOGGING`, before staging or routing. Do not repeat
+`setup` or `resume-access`. Those operations now explicitly check for the
+recorded Worker and stop before any repeat changes if it exists, even if the
+Workers script list does not show an undeployed Worker.
+
+Use `inspect` for the `recordedWorker` receipt. This is read-only and uses
+the existing review gate and provider token scope; it does not
+authorize staging or further setup. Compare named Worker checks with the
+redacted field shapes and the separately read script subdomain and settings.
+`omitted` and `null` are not evidence that an exposure flag is false.
+The receipt also checks version/deployment inventory, test routing and domain
+collisions, the production baseline/no Hyperdrive consumers, and the scoped
+Hyperdrive, verified CA and restart timestamp. An unavailable diagnostic is
+reported as a sanitized error; it cannot establish readiness. Review the
+[Worker details](https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/methods/get/)
+and [Worker script settings](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/settings/methods/get/)
+schemas before proposing a separately reviewed continuation. Do not change
+existing settings just to make a readback pass.
+
 Keep the owner policy in place, the subject-mapping secret in its Worker, and
 the previous production resources available. Reusing the same secret and
 immutable Worker version matters once an owner membership is created.
