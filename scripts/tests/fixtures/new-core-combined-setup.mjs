@@ -125,13 +125,7 @@ globalThis.fetch = async (url,init)=>{
     result={id:recordedWorkerId,name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false},
       logpush:false,observability:{enabled:false},references:{domains:[]},tail_consumers:[],deployed_on:null};
     if (state.fault.startsWith('recorded_worker_resume_')) {
-      if (method==='PATCH') {
-        assert.deepEqual(body,{observability:{enabled:false,logs:{enabled:false,invocation_logs:false},traces:{enabled:false}}});
-        state.patches = (state.patches ?? 0) + 1;
-        assert.equal(state.patches,1);
-        if (state.fault==='recorded_worker_resume_uncertain') return new Response('provider-private-patch',{status:502});
-        state.invocationOff=state.fault!=='recorded_worker_resume_readback';
-      } else assert.equal(method,'GET');
+      assert.equal(method,'GET');
       result.observability={enabled:false,logs:{enabled:false,invocation_logs:!state.invocationOff},traces:{enabled:false}};
       if (state.fault==='recorded_worker_resume_drift') result.tail_consumers=[{name:'provider-private-tail'}];
     }
@@ -145,8 +139,22 @@ globalThis.fetch = async (url,init)=>{
     assert.equal(u.search,'?per_page=100&page=1');
     result=[];
   } else if (path.endsWith('/script-settings')) {
-    assert.equal(method,'GET');
     result={logpush:false,observability:{enabled:false},tail_consumers:[]};
+    if (state.fault.startsWith('recorded_worker_resume_')) {
+      assert.ok(path.endsWith('/'+TARGET.worker+'/script-settings'));
+      result={logpush:false,tail_consumers:null};
+      if (method==='PATCH') {
+        assert.deepEqual(body,{observability:{enabled:false,logs:{enabled:false,invocation_logs:false},traces:{enabled:false}}});
+        state.patches=(state.patches ?? 0)+1;
+        assert.equal(state.patches,1);
+        if (state.fault==='recorded_worker_resume_uncertain') return new Response('provider-private-patch',{status:502});
+        state.invocationOff=state.fault!=='recorded_worker_resume_readback';
+      } else assert.equal(method,'GET');
+      if (state.patches && state.fault!=='recorded_worker_resume_script_omitted') {
+        result.observability={enabled:false,logs:{enabled:false,invocation_logs:state.fault==='recorded_worker_resume_script_enabled'},
+          traces:{enabled:false}};
+      }
+    }
   } else if(path.endsWith('/restart')) {
     if(state.fault!=='restart_readback')state.drive.restarted_on='2026-11-17T00:00:00Z';
     result=state.drive;
@@ -167,7 +175,8 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
   ...Object.keys(rejectedCookieShapes),'resume_cookie_path_destination','resume_cookie_private_destination',
   'resume_cookie_destination_override','resume_cookie_duplicate_destination','resume_audience_drift','resume_duplicate_audience',
   'resume_wrong_owner','resume_list_conflict','recorded_worker_partial','recorded_worker_strict_pass',
-  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_uncertain','recorded_worker_resume_readback']) {
+  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_uncertain','recorded_worker_resume_readback',
+  'recorded_worker_resume_script_omitted','recorded_worker_resume_script_enabled']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
@@ -185,14 +194,23 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
         const outcome=await runIsolatedSetup(resume);
         assert.equal(outcome.status,'OWNER_TEST_PENDING');
         assert.equal(outcome.workerId,recordedWorkerId);
-        assert.deepEqual(journal.map(j=>j.operation),['disable_worker_invocation_logs','stage_version','stage_version',
+        assert.deepEqual(journal.map(j=>j.operation),['disable_script_invocation_logs','stage_version','stage_version',
           'activate_version','create_test_dns','create_test_route']);
+      } else if (/_(readback|script_omitted|script_enabled)$/.test(fault)) {
+        const outcome=await runIsolatedSetup(resume);
+        assert.equal(outcome.status,'ISOLATED_SETUP_BLOCKED');
+        assert.deepEqual(outcome.blocked,[fault.endsWith('_readback')
+          ? 'setup_recorded_worker_patch_readback' : 'setup_recorded_script_settings_readback']);
+        assert.equal(outcome.workerSettingsReadback.script.shapes.invocationLogs,
+          fault.endsWith('_script_omitted')?'omitted':fault.endsWith('_script_enabled')?'true':'false');
+        assert.deepEqual(journal.map(j=>j.operation),['disable_script_invocation_logs']);
+        assert.equal(state.patches,1);
+        assert.equal(state.deployed,false);
       } else {
         const failures={recorded_worker_resume_drift:/recorded_worker_checkpoint_changed/,
-          recorded_worker_resume_uncertain:/disable_worker_invocation_logs_http_502/,
-          recorded_worker_resume_readback:/recorded_worker_patch_readback/};
+          recorded_worker_resume_uncertain:/disable_script_invocation_logs_http_502/};
         await assert.rejects(runIsolatedSetup(resume),failures[fault]);
-        assert.deepEqual(journal.map(j=>j.operation),fault==='recorded_worker_resume_readback'?['disable_worker_invocation_logs']:[]);
+        assert.deepEqual(journal,[]);
         assert.equal(state.patches ?? 0,fault==='recorded_worker_resume_drift'?0:1);
         assert.equal(state.deployed,false);
       }
