@@ -6,6 +6,7 @@ import { basename, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import blake3 from 'blake3-wasm';
 import { workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
+import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
 
 const sourceSha = '276b43265584ec0dc158e67cbdb13cb58ece75db';
 const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
@@ -119,7 +120,9 @@ function expectedBindings(audience, issuer) {
 }
 
 function checkWorker(worker, id) {
-  requireGate(Object.values(workerBoundaryEvidence(worker,id,name).checks).every(Boolean), 'WORKER_EXPOSURE_OR_LOGGING');
+  const evidence = workerBoundaryEvidence(worker,id,name);
+  requireGate(Object.values(evidence.checks).every(Boolean) &&
+    (id !== RECORDED_WORKER_ID || evidence.fieldShapes.invocationLogs === 'false'), 'WORKER_EXPOSURE_OR_LOGGING');
 }
 
 const contentTypes = {
@@ -183,17 +186,18 @@ function asModule(name, bytes, content_type) {
   return { name, content_type, content_base64: bytes.toString('base64') };
 }
 
-export async function stageWorker({ artifacts, request, audience, issuer, journal }) {
+export async function stageWorker({ artifacts, request, audience, issuer, journal, existingWorkerId }) {
   checkArtifactBytes(artifacts);
   const bindings = expectedBindings(audience, issuer);
   const workers = account + '/workers';
-  const created = await request(workers, { method: 'POST', body: {
+  requireGate(existingWorkerId === undefined || existingWorkerId === RECORDED_WORKER_ID,'WORKER_RESUME_ID');
+  const created = existingWorkerId ? {id:existingWorkerId} : await request(workers, { method: 'POST', body: {
     name, subdomain: { enabled: false, previews_enabled: false }, logpush: false, tail_consumers: [],
     observability: { enabled: false, logs: { enabled: false, invocation_logs: false }, traces: { enabled: false } },
   } });
   const workerId = created?.id;
   requireGate(typeof workerId === 'string' && workerIdPattern.test(workerId), 'WORKER_CREATE_ID');
-  await journal('worker_created', { workerId });
+  if (!existingWorkerId) await journal('worker_created', { workerId });
   const workerPath = workers + '/' + workerId;
   const worker = await request(workerPath, { method: 'GET' });
   checkWorker(worker, workerId);

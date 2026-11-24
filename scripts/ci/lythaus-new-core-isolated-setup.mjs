@@ -1,7 +1,7 @@
 import { createHash, X509Certificate } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { accessEvidence, hyperdriveEvidence, inspectIsolation, TARGET } from './lythaus-new-core-isolation-review.mjs';
-import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DRIVE, ID, RECORDED_WORKER, RECORDED_WORKER_ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
+import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DISABLE_INVOCATION_LOGS, DRIVE, ID, RECORDED_WORKER, RECORDED_WORKER_ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
 import { workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 
 const BASELINE = 'ecaecf69d5fae1edfd63ed54561c12abff3ee7ac01ecac8dc034417703e2ee19';
@@ -309,13 +309,14 @@ export async function inspectSetupInputs({env, sourceDir, authorize}) {
     existingTestAccess,recordedWorker,
     errors:[...result.errors,...errors]};
 }
-export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record, resumeAccess=false}) {
+export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record, resumeAccess=false, resumeWorker=false}) {
+  resumeAccess ||= resumeWorker;
   check(typeof authorize === 'function' && typeof record === 'function','reviewed_entrypoint_required');
   const approval = await authorize();
   const {loadArtifacts, stageWorker, verifyWorkerVersion} = await import('./new-core-isolated-worker.mjs');
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
   const fetchImpl = avoidDeniedReadRetries();
-  const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN, record, fetchImpl});
+  const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN, record, fetchImpl,resumeWorker});
   const blocked = [];
   async function probe(label, operation) {
     try { return await operation(); }
@@ -341,9 +342,9 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   await probe('setup_live_isolation_unavailable', async () => {
     const base = await inspect();
     checkSnapshot(base,[]);
-    check(base.worker.exists === false && base.access.overlappingApplicationCount === (resumeAccess ? 1 : 0),'isolated_resources_exist');
+    check((resumeWorker || base.worker.exists === false) && base.access.overlappingApplicationCount === (resumeAccess ? 1 : 0),'isolated_resources_exist');
   });
-  await probe('setup_recorded_worker_inventory_unverified',async ()=>{
+  if (!resumeWorker) await probe('setup_recorded_worker_inventory_unverified',async ()=>{
     try { await api.request(RECORDED_WORKER); }
     catch (error) {
       if (error.message === 'setup_recorded_worker_details_http_404') return;
@@ -384,22 +385,44 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   }});
   check(ID.test(access?.id ?? ''),'test_access_id_missing');
   const app = await readTestAccess(api,context,access.id,owner,resumeAccess);
+  if (resumeWorker) check(ca.id,'recorded_worker_existing_ca_required');
   const caId = await verifiedCa(api,ca);
   checkSnapshot(await inspect(),[]);
   const old = await api.request(DRIVE);
-  checkOrigin(old);
+  checkOrigin(old,resumeWorker ? caId : undefined);
   check(equal(old,current),'hyperdrive_changed');
-  await api.request(DRIVE,{method:'PATCH',body:{origin:{user:USER,password},caching:{disabled:true},mtls:{sslmode:'verify-full',ca_certificate_id:caId}}});
-  const configured = await api.request(DRIVE);
-  checkOrigin(configured,caId);
-  const restart = await api.request(`${DRIVE}/restart`,{method:'POST'});
-  checkOrigin(restart,caId);
-  const drained = await api.request(DRIVE);
-  checkOrigin(drained,caId);
-  check(Number.isFinite(Date.parse(drained.restarted_on)) && drained.restarted_on === restart.restarted_on
-    && (old.restarted_on == null || Date.parse(old.restarted_on) < Date.parse(drained.restarted_on)), 'pool_restart_readback');
-  const stageArgs = {request:api.request, artifacts, issuer:context.issuer, audience:app.aud, journal:async()=>{}};
+  if (resumeWorker) {
+    const receipt = await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl,ca});
+    check(receipt.worker && Object.entries(receipt.worker.checks).every(([key,value])=>value === (key !== 'invocationLogsNotEnabled'))
+      && receipt.worker.fieldShapes.invocationLogs === 'true' && receipt.worker.fieldShapes.deployedOn === 'null'
+      && ['logs','traces'].every(key=>receipt.worker.fieldShapes[key] === 'false')
+      && ['agents','issues'].every(key=>receipt.worker.fieldShapes[key] === 'omitted')
+      && receipt.subdomain?.workersDev === 'false' && receipt.subdomain.previews === 'false'
+      && receipt.logging && ['logpush','observability','logs','invocationLogs','traces','agents','issues'].every(key=>['omitted','false'].includes(receipt.logging[key]))
+      && ['omitted','null','empty_array'].includes(receipt.logging.tailConsumers)
+      && receipt.versionsEmpty && receipt.deploymentsEmpty && receipt.routingEmpty && receipt.customDomainEmpty
+      && receipt.productionBaselineMatches && receipt.hyperdrive && checksPass(receipt.hyperdrive)
+      && !receipt.errors.length, 'recorded_worker_checkpoint_changed');
+    await api.request(RECORDED_WORKER,{method:'PATCH',body:DISABLE_INVOCATION_LOGS});
+    const repaired = workerBoundaryEvidence(await api.request(RECORDED_WORKER),RECORDED_WORKER_ID,TARGET.worker);
+    check(checksPass(repaired.checks) && repaired.fieldShapes.invocationLogs === 'false'
+      && Object.entries(receipt.worker.fieldShapes).every(([key,value])=>key === 'invocationLogs' || repaired.fieldShapes[key] === value),
+    'recorded_worker_patch_readback');
+  } else {
+    await api.request(DRIVE,{method:'PATCH',body:{origin:{user:USER,password},caching:{disabled:true},mtls:{sslmode:'verify-full',ca_certificate_id:caId}}});
+    const configured = await api.request(DRIVE);
+    checkOrigin(configured,caId);
+    const restart = await api.request(`${DRIVE}/restart`,{method:'POST'});
+    checkOrigin(restart,caId);
+    const drained = await api.request(DRIVE);
+    checkOrigin(drained,caId);
+    check(Number.isFinite(Date.parse(drained.restarted_on)) && drained.restarted_on === restart.restarted_on
+      && (old.restarted_on == null || Date.parse(old.restarted_on) < Date.parse(drained.restarted_on)), 'pool_restart_readback');
+  }
+  const stageArgs = {request:api.request, artifacts, issuer:context.issuer, audience:app.aud, journal:async()=>{},
+    ...(resumeWorker ? {existingWorkerId:RECORDED_WORKER_ID} : {})};
   const staged = await stageWorker(stageArgs);
+  if (resumeWorker) check(staged.workerId === RECORDED_WORKER_ID,'recorded_worker_stage_identity');
   check(staged.tag === TARGET.candidate && ID.test(staged.workerId) && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(staged.versionId), 'staged_identity');
   await verifyWorkerVersion({...stageArgs,...staged});
   const subdomain = await api.request(`${SCRIPT}/subdomain`);

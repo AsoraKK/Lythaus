@@ -46,14 +46,15 @@ mock.module('../../ci/lythaus-new-core-admin-inputs.mjs',{namedExports:{
 }});
 mock.module('../../ci/new-core-isolated-worker.mjs',{namedExports:{
   async loadArtifacts(){return {};},
-  async stageWorker({request}) {
+  async stageWorker({request,existingWorkerId}) {
     assert.ok(state.drive.restarted_on);
     const path = `/accounts/${TARGET.account}/workers/workers`;
-    await request(path,{method:'POST',body:{name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false}}});
-    const stage = binding => request(`${path}/${workerId}/versions?deploy=false`, {method:'POST',body:{bindings:[binding]}});
+    if (!existingWorkerId) await request(path,{method:'POST',body:{name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false}}});
+    else assert.equal(existingWorkerId,recordedWorkerId);
+    const stage = binding => request(`${path}/${existingWorkerId ?? workerId}/versions?deploy=false`, {method:'POST',body:{bindings:[binding]}});
     await stage({name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text',text:Buffer.alloc(32).toString('base64')});
     await stage({name:'ACCESS_SUBJECT_HMAC_KEY',type:'inherit',version_id:parentVersionId});
-    return {workerId,parentVersionId,versionId,tag:TARGET.candidate};
+    return {workerId:existingWorkerId ?? workerId,parentVersionId,versionId,tag:TARGET.candidate};
   },
   async verifyWorkerVersion(){state.stagedReads++;},
 }});
@@ -120,16 +121,26 @@ globalThis.fetch = async (url,init)=>{
       assert.equal(body.mtls.sslmode,'verify-full'); Object.assign(state.drive.origin,{user:body.origin.user}); state.drive.mtls=body.mtls;}
     result=state.drive;
   } else if (path.endsWith('/workers/workers/'+recordedWorkerId)) {
-    assert.equal(method,'GET');
     if (!state.fault.startsWith('recorded_worker_')) return new Response('provider-private-not-found',{status:404});
     result={id:recordedWorkerId,name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false},
       logpush:false,observability:{enabled:false},references:{domains:[]},tail_consumers:[],deployed_on:null};
+    if (state.fault.startsWith('recorded_worker_resume_')) {
+      if (method==='PATCH') {
+        assert.deepEqual(body,{observability:{enabled:false,logs:{enabled:false,invocation_logs:false},traces:{enabled:false}}});
+        state.patches = (state.patches ?? 0) + 1;
+        assert.equal(state.patches,1);
+        if (state.fault==='recorded_worker_resume_uncertain') return new Response('provider-private-patch',{status:502});
+        state.invocationOff=state.fault!=='recorded_worker_resume_readback';
+      } else assert.equal(method,'GET');
+      result.observability={enabled:false,logs:{enabled:false,invocation_logs:!state.invocationOff},traces:{enabled:false}};
+      if (state.fault==='recorded_worker_resume_drift') result.tail_consumers=[{name:'provider-private-tail'}];
+    }
     if (state.fault==='recorded_worker_partial') {
       delete result.subdomain.previews_enabled;
       result.observability.enabled=true;
       result.tail_consumers=[{name:'provider-private-tail'}];
     }
-  } else if (path.endsWith('/workers/workers/'+recordedWorkerId+'/versions')) {
+  } else if (path.endsWith('/workers/workers/'+recordedWorkerId+'/versions') && method==='GET') {
     assert.equal(method,'GET');
     assert.equal(u.search,'?per_page=100&page=1');
     result=[];
@@ -155,7 +166,8 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
   'fresh_path_cookie_omitted','resume_sparse_list','resume_cookie_omitted','resume_wrong_id','resume_missing',
   ...Object.keys(rejectedCookieShapes),'resume_cookie_path_destination','resume_cookie_private_destination',
   'resume_cookie_destination_override','resume_cookie_duplicate_destination','resume_audience_drift','resume_duplicate_audience',
-  'resume_wrong_owner','resume_list_conflict','recorded_worker_partial','recorded_worker_strict_pass']) {
+  'resume_wrong_owner','resume_list_conflict','recorded_worker_partial','recorded_worker_strict_pass',
+  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_uncertain','recorded_worker_resume_readback']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
@@ -167,6 +179,25 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
     state.drive.origin.user='lythaus_admin.'+TARGET.branch;
     state.drive.mtls={sslmode:'verify-full',ca_certificate_id:ca.id};
     state.drive.restarted_on='2026-11-24T00:00:00Z';
+    if (fault.startsWith('recorded_worker_resume_')) {
+      const resume={...args,resumeWorker:true};
+      if (fault==='recorded_worker_resume_success') {
+        const outcome=await runIsolatedSetup(resume);
+        assert.equal(outcome.status,'OWNER_TEST_PENDING');
+        assert.equal(outcome.workerId,recordedWorkerId);
+        assert.deepEqual(journal.map(j=>j.operation),['disable_worker_invocation_logs','stage_version','stage_version',
+          'activate_version','create_test_dns','create_test_route']);
+      } else {
+        const failures={recorded_worker_resume_drift:/recorded_worker_checkpoint_changed/,
+          recorded_worker_resume_uncertain:/disable_worker_invocation_logs_http_502/,
+          recorded_worker_resume_readback:/recorded_worker_patch_readback/};
+        await assert.rejects(runIsolatedSetup(resume),failures[fault]);
+        assert.deepEqual(journal.map(j=>j.operation),fault==='recorded_worker_resume_readback'?['disable_worker_invocation_logs']:[]);
+        assert.equal(state.patches ?? 0,fault==='recorded_worker_resume_drift'?0:1);
+        assert.equal(state.deployed,false);
+      }
+      continue;
+    }
     const inspection=await inspectSetupInputs(args);
     const report=inspection.recordedWorker;
     assert.equal(report.worker.checks.identity,true);

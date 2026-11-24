@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Inspect inputs, apply fresh setup, or resume the recorded Access-only partial setup
+        description: Inspect inputs, apply fresh setup, or continue a recorded isolated setup
         required: true
         type: choice
         options:
           - inspect
           - setup
           - resume-access
+          - resume-worker
       control_sha:
         description: Exact reviewed protected main commit
         required: true
@@ -63,7 +64,7 @@ jobs:
       - name: Install locked dependencies without provider credentials
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Prepare the pinned Worker and assets without provider credentials
-        if: inputs.operation == 'setup' || inputs.operation == 'resume-access'
+        if: inputs.operation == 'setup' || inputs.operation == 'resume-access' || inputs.operation == 'resume-worker'
         env:
           WRANGLER_SEND_METRICS: 'false'
         run: |
