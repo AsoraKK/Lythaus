@@ -1,3 +1,5 @@
+import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
+
 const own = (object, key) => !!object && Object.hasOwn(object,key);
 const shape = (object, key) => {
   if (!own(object,key)) return 'omitted';
@@ -11,8 +13,35 @@ const shape = (object, key) => {
   return 'other';
 };
 
+const absentOrFalse = value => ['omitted','false'].includes(value);
+const absentOrObject = value => ['omitted','object'].includes(value);
+const noDestinations = value => ['omitted','empty_array'].includes(value);
+
+function loggingShapes(row) {
+  const obs = row?.observability;
+  return {logpush:shape(row,'logpush'), observabilityObject:shape(row,'observability'),
+    observability:shape(obs,'enabled'), logsObject:shape(obs,'logs'), logs:shape(obs?.logs,'enabled'),
+    invocationLogs:shape(obs?.logs,'invocation_logs'), tracesObject:shape(obs,'traces'), traces:shape(obs?.traces,'enabled'),
+    agentsObject:shape(obs,'agents'), agents:shape(obs?.agents,'enabled'),
+    issuesObject:shape(obs,'issues'), issues:shape(obs?.issues,'enabled'),
+    logsDestinations:shape(obs?.logs,'destinations'), tracesDestinations:shape(obs?.traces,'destinations'),
+    agentsDestinations:shape(obs?.agents,'destinations'), issuesDestinations:shape(obs?.issues,'destinations'),
+    tailConsumers:shape(row,'tail_consumers')};
+}
+
+function secondaryLoggingNotEnabled(s) {
+  return [s.observabilityObject,s.logsObject,s.tracesObject,s.agentsObject,s.issuesObject].every(absentOrObject)
+    && [s.traces,s.agents,s.issues].every(absentOrFalse)
+    && [s.logsDestinations,s.tracesDestinations,s.agentsDestinations,s.issuesDestinations].every(noDestinations);
+}
+
 export function workerBoundaryEvidence(worker, id, name) {
   const sub = worker?.subdomain, obs = worker?.observability;
+  const logging = loggingShapes(worker);
+  // Wrangler's regression test verifies a stored invocation_logs:true has no
+  // effect with logs.enabled:false (cloudflare/workers-sdk#17044).
+  const recordedParentsDisabled = id === RECORDED_WORKER_ID && worker?.id === id
+    && worker?.name === name && logging.observability === 'false' && logging.logs === 'false';
   return {
     checks: {
       identity: worker?.name === name && worker?.id === id,
@@ -20,27 +49,28 @@ export function workerBoundaryEvidence(worker, id, name) {
       previewsDisabled: sub?.previews_enabled === false,
       logpushDisabled: worker?.logpush === false,
       observabilityDisabled: obs?.enabled === false,
-      logsNotEnabled: obs?.logs?.enabled !== true,
-      invocationLogsNotEnabled: obs?.logs?.invocation_logs !== true,
-      tracesNotEnabled: obs?.traces?.enabled !== true,
+      logsNotEnabled: id === RECORDED_WORKER_ID ? recordedParentsDisabled : absentOrFalse(logging.logs),
+      invocationLogsNotEnabled: absentOrFalse(logging.invocationLogs) ||
+        (recordedParentsDisabled && logging.invocationLogs === 'true'),
+      tracesNotEnabled: absentOrFalse(logging.traces),
+      secondaryLoggingNotEnabled:secondaryLoggingNotEnabled(logging),
       tailConsumersEmpty: Array.isArray(worker?.tail_consumers) && worker.tail_consumers.length === 0,
       customDomainsEmpty: Array.isArray(worker?.references?.domains) && worker.references.domains.length === 0,
     },
     fieldShapes: {
       workersDev:shape(sub,'enabled'), previews:shape(sub,'previews_enabled'),
-      logpush:shape(worker,'logpush'), observability:shape(obs,'enabled'), logs:shape(obs?.logs,'enabled'),
-      invocationLogs:shape(obs?.logs,'invocation_logs'), traces:shape(obs?.traces,'enabled'),
-      agents:shape(obs?.agents,'enabled'), issues:shape(obs?.issues,'enabled'),
-      tailConsumers:shape(worker,'tail_consumers'), customDomains:shape(worker?.references,'domains'),
+      ...logging, customDomains:shape(worker?.references,'domains'),
       deployedOn:shape(worker,'deployed_on'),
     },
   };
 }
 
-export function scriptLoggingEvidence(row) {
-  const {logpush,observability,logs,invocationLogs,traces,agents,issues,tailConsumers} = workerBoundaryEvidence(row).fieldShapes;
-  const shapes = {logpush,observability,logs,invocationLogs,traces,agents,issues,tailConsumers};
-  return {shapes,disabled:[logpush,observability,logs,invocationLogs,traces].every(value=>value==='false')
-    && [agents,issues].every(value=>value==='omitted' || value==='false')
-    && ['omitted','null','empty_array'].includes(tailConsumers)};
+export function scriptLoggingEvidence(row, worker) {
+  const shapes = loggingShapes(row);
+  return {shapes,disabled:!!row && typeof row === 'object' && !Array.isArray(row)
+    && !!worker && Object.values(worker.checks).every(Boolean)
+    && worker.fieldShapes.observability === 'false' && worker.fieldShapes.logs === 'false'
+    && shapes.logpush === 'false' && [shapes.observability,shapes.logs,shapes.invocationLogs].every(absentOrFalse)
+    && secondaryLoggingNotEnabled(shapes)
+    && ['omitted','null','empty_array'].includes(shapes.tailConsumers)};
 }
