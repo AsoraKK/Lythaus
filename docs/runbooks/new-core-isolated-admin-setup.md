@@ -106,6 +106,19 @@ and [Worker script settings](https://developers.cloudflare.com/api/resources/wor
 schemas before proposing a separately reviewed continuation. Do not change
 existing settings just to make a readback pass.
 
+The [protected inspection](https://github.com/AsoraKK/Lythaus/actions/runs/45427448320)
+verified that only invocation logging remained enabled on the exact recorded
+Worker. Choose `resume-worker` after reviewing the new protected main SHA.
+This operation rechecks the exact Access app, existing dedicated Hyperdrive
+and CA, Worker settings, and lack of versions, deployments or routes. It
+requires the pinned inspection to remain valid and performs one
+[Worker metadata PATCH](https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/methods/edit/)
+for the invocation logging correction, with its already-disabled settings
+kept disabled. Do not retry a failed or uncertain PATCH. Only after strict
+readback passes does it stage the pinned build and attach the isolated site
+under the existing checks. It does not recreate the Worker or Access app,
+reconfigure or restart Hyperdrive, or bootstrap any user.
+
 Keep the owner policy in place, the subject-mapping secret in its Worker, and
 the previous production resources available. Reusing the same secret and
 immutable Worker version matters once an owner membership is created.

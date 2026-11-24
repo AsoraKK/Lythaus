@@ -79,3 +79,19 @@ test('resume is a fresh protected dispatch and requires the normal owner review'
   await assert.rejects(authorizeSetup({env:resume,get:path=>sources([])[path]}));
   await assert.rejects(authorizeSetup({env:{...resume,GITHUB_RUN_ATTEMPT:'2'},get}));
 });
+test('Worker resume requires the exact prior read-only receipt and owner review', async () => {
+  const id=45427448320, head_sha='8543b83718af2e92285ef18be9775cb9c94f3ce7';
+  const resume={...env,REQUESTED_OPERATION:'resume-worker'};
+  const receipt={id,head_sha,repository:{id:1010752912},head_branch:'main',run_attempt:1,
+    path:'.github/workflows/new-core-isolated-setup.yml',event:'workflow_dispatch',status:'completed',conclusion:'success',
+    display_title:'inspect admin-new-core-test.lythaus.co at '+head_sha};
+  const map=sources([approval]);
+  const get=path=>path==='actions/runs/'+id ? receipt : map[path];
+  assert.equal((await authorizeSetup({env:resume,get})).ownerSelectorConfirmedByOwner,true);
+  for (const change of [{conclusion:'failure'},{display_title:'setup'},{head_sha:sha},{run_attempt:2}]) {
+    await assert.rejects(authorizeSetup({env:resume,get:path=>path==='actions/runs/'+id ? {...receipt,...change} : map[path]}),
+      /setup_prior_receipt_changed/);
+  }
+  map['actions/runs/765/approvals']=[];
+  await assert.rejects(authorizeSetup({env:resume,get}));
+});

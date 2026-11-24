@@ -10,6 +10,7 @@ const receipts = [
   ['44114706197', '633eb910a5710be186bce319d75eb3bf620f04f5', 'lythaus-new-core-isolation-readonly.yml'],
   ['44177194818', '633eb910a5710be186bce319d75eb3bf620f04f5', 'cloudflare-admin-access-readonly.yml'],
 ];
+const workerReceipt = ['45427448320','8543b83718af2e92285ef18be9775cb9c94f3ce7','new-core-isolated-setup.yml'];
 
 function githubGet(path) {
   // Pass only the job's GitHub token to gh. All request paths are fixed here.
@@ -28,18 +29,19 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     || env.GITHUB_ACTOR_ID !== String(PINS.ownerId) || env.GITHUB_ACTOR !== env.GITHUB_TRIGGERING_ACTOR
     || env.GITHUB_RUN_ATTEMPT !== '1' || !/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID ?? '')
     || env.REQUESTED_CONTROL_SHA !== env.GITHUB_SHA || !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? '')
-    || !['inspect', 'setup', 'resume-access'].includes(env.REQUESTED_OPERATION)
+    || !['inspect', 'setup', 'resume-access', 'resume-worker'].includes(env.REQUESTED_OPERATION)
     || env.NODE_OPTIONS || env.NODE_DEBUG || env.RUNNER_DEBUG === '1') throw new Error('setup_dispatch_changed');
   const main = await get('branches/main');
   if (!main.protected || main.commit.sha !== env.GITHUB_SHA) throw new Error('setup_main_changed');
   verifyEnvironment(await get('environments/production'),
     await get('environments/production/deployment-branch-policies?per_page=100'));
-  for (const [id, sha, filename] of receipts) {
+  for (const [id, sha, filename] of env.REQUESTED_OPERATION === 'resume-worker' ? [...receipts,workerReceipt] : receipts) {
     const run = await get('actions/runs/' + id);
     if (run.repository?.id !== 1010752912 || String(run.id) !== id || run.head_sha !== sha
       || run.path !== '.github/workflows/' + filename || run.head_branch !== 'main'
       || run.run_attempt !== 1 || run.status !== 'completed' || run.conclusion !== 'success'
-      || run.event !== 'workflow_dispatch') throw new Error('setup_prior_receipt_changed');
+      || run.event !== 'workflow_dispatch'
+      || (id === workerReceipt[0] && run.display_title !== 'inspect admin-new-core-test.lythaus.co at ' + sha)) throw new Error('setup_prior_receipt_changed');
   }
   let attested = false;
   let privateCredentialConfirmed = false;

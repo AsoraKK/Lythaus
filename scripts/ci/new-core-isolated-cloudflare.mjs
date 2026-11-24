@@ -1,4 +1,5 @@
 import { TARGET } from './lythaus-new-core-isolation-review.mjs';
+import { isDeepStrictEqual } from 'node:util';
 
 export const ACCOUNT = `/accounts/${TARGET.account}`;
 export const ZONE = `/zones/${TARGET.zone}`;
@@ -6,6 +7,8 @@ export const SCRIPT = `${ACCOUNT}/workers/scripts/${TARGET.worker}`;
 export const DRIVE = `${ACCOUNT}/hyperdrive/configs/${TARGET.hyperdrive}`;
 export const RECORDED_WORKER_ID = '89391a349e454b3994bd43299c6386ed';
 export const RECORDED_WORKER = `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`;
+export const DISABLE_INVOCATION_LOGS = Object.freeze({observability:Object.freeze({enabled:false,
+  logs:Object.freeze({enabled:false,invocation_logs:false}),traces:Object.freeze({enabled:false})})});
 export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/;
 const API = 'https://api.cloudflare.com/client/v4';
 export const requireSetup = (condition, code) => { if (!condition) throw new Error(`setup_${code}`); };
@@ -32,7 +35,7 @@ const writes = new Map([
   [`POST ${ZONE}/workers/routes`, 'create_test_route'],
 ]);
 
-export function createSetupClient({token, fetchImpl = fetch, record}) {
+export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false}) {
   const owned = { workerId:null, parentVersionId:null, versionId:null };
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
@@ -57,13 +60,20 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
       if (fixedReads.has(path)) return fixedReads.get(path);
       if (owned.workerId && new RegExp(`^${ACCOUNT}/workers/workers/${owned.workerId}(?:/versions(?:/${idSegment}\\?include=modules)?)?$`).test(path)) return 'read_test_worker';
     }
-    if (writes.has(`${method} ${path}`)) return writes.get(`${method} ${path}`);
+    if (resumeWorker && method === 'PATCH' && path === RECORDED_WORKER && !owned.workerId) return 'disable_worker_invocation_logs';
+    if (writes.has(`${method} ${path}`)) {
+      const stage = writes.get(`${method} ${path}`);
+      requireSetup(!resumeWorker || !['create_access','upload_public_ca','configure_hyperdrive','restart_hyperdrive','create_worker'].includes(stage),
+        'provider_scope_blocked');
+      return stage;
+    }
     if (method === 'POST' && new RegExp(`^${ACCOUNT}/workers/assets/upload/[a-f0-9]{32}$`).test(path)) return 'upload_assets';
     if (method === 'POST' && owned.workerId && path === `${ACCOUNT}/workers/workers/${owned.workerId}/versions?deploy=false`) return 'stage_version';
     requireSetup(false, 'provider_scope_blocked');
   }
   async function call(path, {method='GET',body,headers={}} = {}) {
     const stage = operation(method,path);
+    if (stage === 'disable_worker_invocation_logs') requireSetup(isDeepStrictEqual(body,DISABLE_INVOCATION_LOGS),'worker_invocation_logs_patch_scope');
     if (stage === 'create_worker') requireSetup(body?.name === TARGET.worker && body.subdomain?.enabled === false
       && body.subdomain.previews_enabled === false, 'worker_create_target');
     if (stage === 'create_access') requireSetup(body?.type === 'self_hosted' && body.domain === TARGET.hostname
@@ -123,6 +133,10 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
       await record({operation:stage,...(ID.test(id ?? '') ? {id} : {})});
       if (stage === 'create_worker') {
         requireSetup(ID.test(id ?? '') && payload.result.name === TARGET.worker, 'new_worker_identity');
+        owned.workerId = id;
+      }
+      if (stage === 'disable_worker_invocation_logs') {
+        requireSetup(id === RECORDED_WORKER_ID && payload.result.name === TARGET.worker,'recorded_worker_patch_identity');
         owned.workerId = id;
       }
       if (stage === 'stage_version') {

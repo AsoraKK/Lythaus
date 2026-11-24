@@ -33,6 +33,7 @@ try {
     const result = await runIsolatedSetup({
       env, sourceDir, artifactDir: join(env.RUNNER_TEMP, 'new-core-artifacts'), authorize, record,
       resumeAccess: env.REQUESTED_OPERATION === 'resume-access',
+      resumeWorker: env.REQUESTED_OPERATION === 'resume-worker',
     });
     console.log(JSON.stringify(result));
     if (result.status === 'ISOLATED_SETUP_BLOCKED') process.exitCode = 1;
