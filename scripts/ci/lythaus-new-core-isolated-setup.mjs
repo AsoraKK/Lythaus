@@ -69,19 +69,32 @@ async function accessSnapshot(api) {
   return {apps,live,owner:live[0].owner,idps:[...idps].sort(),issuer:`https://${org.auth_domain}`};
 }
 const testApps = apps => apps.filter(a=>appDomains(a).some(d=>matchesHost(d)));
-function testAccessChecks(app, apps, context, id) {
+function cookiePathShape(app) {
+  if (!app) return 'app_missing';
+  if (!Object.hasOwn(app,'path_cookie_attribute')) return 'omitted';
+  if (app.path_cookie_attribute === false) return 'disabled';
+  if (app.path_cookie_attribute === true) return 'enabled';
+  if (app.path_cookie_attribute === null) return 'null';
+  return 'malformed';
+}
+function testAccessChecks(app, apps, context, id, resumeAccess) {
+  const exactHostname = !!app && equal(appDomains(app),[TARGET.hostname]);
+  const publicDestinationsNoOverrides = !!app && (app.destinations ?? []).every(d=>d.type === 'public' && !Object.keys(d.overrides ?? {}).length);
+  const omittedOnRecordedPathlessApp = resumeAccess && cookiePathShape(app) === 'omitted' && id === RESUME_ACCESS_ID && app?.id === id
+    && app.type === 'self_hosted' && exactHostname && publicDestinationsNoOverrides
+    && [app.destinations,app.domains,app.self_hosted_domains].every(values=>values == null || (Array.isArray(values) && values.length <= 1));
   return {
     id: app?.id === id,
     name: app?.name === TEST_ACCESS_NAME,
     type: app?.type === 'self_hosted',
     sessionDuration: app?.session_duration === '1h',
     httpOnlyCookie: app?.http_only_cookie_attribute === true,
-    pathCookie: app?.path_cookie_attribute === false,
+    pathCookie: app?.path_cookie_attribute === false || omittedOnRecordedPathlessApp,
     sameSiteCookie: typeof app?.same_site_cookie_attribute === 'string' && app.same_site_cookie_attribute.toLowerCase() === 'lax',
     noPreflightBypass: app?.options_preflight_bypass !== true,
     noWarpBypass: app?.allow_authenticate_via_warp !== true,
-    exactHostname: !!app && equal(appDomains(app),[TARGET.hostname]),
-    publicDestinationsNoOverrides: !!app && (app.destinations ?? []).every(d=>d.type === 'public' && !Object.keys(d.overrides ?? {}).length),
+    exactHostname,
+    publicDestinationsNoOverrides,
     allowedIdentityProviders: !!app && Array.isArray(app.allowed_idps ?? []) && equal([...(app.allowed_idps ?? [])].sort(),context.idps),
     validAudience: typeof app?.aud === 'string' && /^[a-f0-9]{64}$/.test(app.aud),
     uniqueAudience: !!app && apps.every(a=>a.id === id || a.aud !== app.aud),
@@ -90,11 +103,11 @@ function testAccessChecks(app, apps, context, id) {
 const checksPass = checks => Object.values(checks).every(v=>v === true);
 const safeSetupCode = (error, otherwise) => /^(?:setup_[a-z0-9_]{1,100}|isolation_[a-z0-9_]{1,100}|WORKER_[A-Z_]{1,90})$/.test(error?.message ?? '')
   ? error.message : otherwise;
-async function testAccessReadback(api, context, id, owner, {diagnostic=false} = {}) {
+async function testAccessReadback(api, context, id, owner, {diagnostic=false,resumeAccess=false} = {}) {
   const apps = diagnostic ? context.apps : await api.list(`${ACCOUNT}/access/apps`);
   const matching = testApps(apps);
   const listed = matching[0];
-  const listing = {soleCoveringApp:matching.length === 1,...testAccessChecks(listed,apps,context,id)};
+  const listing = {soleCoveringApp:matching.length === 1,...testAccessChecks(listed,apps,context,id,resumeAccess)};
   const listingIdentity = listing.soleCoveringApp && listing.id && listing.type && listing.exactHostname
     && listing.validAudience && listing.uniqueAudience;
   const severityKeys = {
@@ -103,12 +116,14 @@ async function testAccessReadback(api, context, id, owner, {diagnostic=false} = 
   };
   const listingSettingsConsistent = !!listed && listing.publicDestinationsNoOverrides && listing.noPreflightBypass && listing.noWarpBypass
     && Object.entries(severityKeys).every(([key,field])=>!Object.hasOwn(listed,field) || listing[key]);
-  const report = {listing:{...listing,settingsConsistent:listingSettingsConsistent}, details:null, policies:null, errors:[]};
+  const report = {listing:{...listing,settingsConsistent:listingSettingsConsistent}, details:null, policies:null, errors:[],
+    cookiePathReadback:{listing:cookiePathShape(listed),details:'not_read'}};
   if (!listingIdentity) return {report, app:null};
   let app;
   try {
     app = await api.request(`${ACCOUNT}/access/apps/${id}`);
-    report.details = {...testAccessChecks(app,apps,context,id),audienceMatchesListing:app?.aud === listed.aud};
+    report.cookiePathReadback.details = cookiePathShape(app);
+    report.details = {...testAccessChecks(app,apps,context,id,resumeAccess),audienceMatchesListing:app?.aud === listed.aud};
   } catch (error) {
     report.errors.push(safeSetupCode(error,'setup_test_access_details_unverified'));
   }
@@ -125,8 +140,8 @@ async function testAccessReadback(api, context, id, owner, {diagnostic=false} = 
   }
   return {report,app};
 }
-async function readTestAccess(api, context, id, owner) {
-  const {report,app} = await testAccessReadback(api,context,id,owner);
+async function readTestAccess(api, context, id, owner, resumeAccess) {
+  const {report,app} = await testAccessReadback(api,context,id,owner,{resumeAccess});
   check(report.listing.settingsConsistent && report.details && checksPass(report.details), 'test_access_app_readback');
   check(report.policies && checksPass(report.policies), 'test_access_policies_readback');
   return app;
@@ -225,7 +240,7 @@ export async function inspectSetupInputs({env, sourceDir, authorize}) {
   let existingTestAccess = null;
   if (context) try {
     if (testApps(context.apps).length || context.apps.some(a=>a.id === RESUME_ACCESS_ID)) {
-      const {report} = await testAccessReadback(api,context,RESUME_ACCESS_ID,owner,{diagnostic:true});
+      const {report} = await testAccessReadback(api,context,RESUME_ACCESS_ID,owner,{diagnostic:true,resumeAccess:true});
       existingTestAccess = report;
       if (!report.listing.settingsConsistent || !report.details || !checksPass(report.details)) errors.push('setup_test_access_app_readback');
       if (!report.policies || !checksPass(report.policies)) errors.push('setup_test_access_policies_readback');
@@ -274,7 +289,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
     check(base.worker.exists === false && base.access.overlappingApplicationCount === (resumeAccess ? 1 : 0),'isolated_resources_exist');
   });
   if (context && !resumeAccess && testApps(context.apps).length) blocked.push('setup_isolated_access_exists');
-  if (context && resumeAccess) await probe('setup_test_access_resume_unverified',()=>readTestAccess(api,context,RESUME_ACCESS_ID,owner));
+  if (context && resumeAccess) await probe('setup_test_access_resume_unverified',()=>readTestAccess(api,context,RESUME_ACCESS_ID,owner,true));
   const network = await probe('setup_network_inventory',()=>networkSnapshot(api));
   await probe('setup_routing_inventory',()=>emptyRouting(api));
   const current = await probe('setup_hyperdrive_inventory',async ()=>{
@@ -305,7 +320,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
     ],
   }});
   check(ID.test(access?.id ?? ''),'test_access_id_missing');
-  const app = await readTestAccess(api,context,access.id,owner);
+  const app = await readTestAccess(api,context,access.id,owner,resumeAccess);
   const caId = await verifiedCa(api,ca);
   checkSnapshot(await inspect(),[]);
   const old = await api.request(DRIVE);
@@ -329,7 +344,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   const deployments = await api.request(`${SCRIPT}/deployments`);
   const list = Array.isArray(deployments) ? deployments : deployments?.deployments;
   check(Array.isArray(list) && !list.length, 'unexpected_test_deployment');
-  await readTestAccess(api,context,access.id,owner);
+  await readTestAccess(api,context,access.id,owner,resumeAccess);
   await emptyRouting(api);
   const deployment = await api.request(`${SCRIPT}/deployments`,{method:'POST',body:{strategy:'percentage',versions:[{version_id:staged.versionId,percentage:100}]}});
   check(ID.test(deployment?.id ?? ''), 'deployment_id');
@@ -355,7 +370,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   const after = await accessSnapshot(api);
   check(equal(context.live,after.live) && context.issuer === after.issuer
     && equal(sortIds(context.apps.filter(a=>a.id !== app.id)),sortIds(after.apps.filter(a=>a.id !== app.id))), 'production_access_changed');
-  await readTestAccess(api,after,app.id,owner);
+  await readTestAccess(api,after,app.id,owner,resumeAccess);
   check(equal(network,await networkSnapshot(api)), 'production_dns_pages_changed');
   checkOrigin(await api.request(DRIVE),caId);
   const {verifyAnonymousTestGate} = await import('./new-core-test-access-probe.mjs');
