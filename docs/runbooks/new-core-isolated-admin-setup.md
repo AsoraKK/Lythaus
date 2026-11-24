@@ -64,6 +64,17 @@ assertions, SQL connection strings and credential digests stay private.
 
 A partial setup can leave private resources behind. Read the last acknowledged
 operation and reconcile the actual state before a separately reviewed repair.
+For [run 45339184826](https://github.com/AsoraKK/Lythaus/actions/runs/45339184826),
+the only acknowledged mutation was creating Access application
+`edd1c92d-bb85-4cd3-b31b-5971a7b12d13`. Choose `inspect` to compare redacted
+per-check listing, application details and policy results. The account listing
+must prove unique coverage of the test hostname and a unique audience; the
+application details must match that audience and pass every configuration check.
+Only if all detail and policy checks pass, choose `resume-access` under the
+same normal owner review. It will not create, update or delete an Access app.
+It stops if the exact recorded app cannot be verified, or if the existing
+Worker, routing, Hyperdrive or production guards do not pass. It is not a
+generic retry or permission to reuse any other application.
 Keep the owner policy in place, the subject-mapping secret in its Worker, and
 the previous production resources available. Reusing the same secret and
 immutable Worker version matters once an owner membership is created.

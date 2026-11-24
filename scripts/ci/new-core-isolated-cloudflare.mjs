@@ -36,6 +36,7 @@ export function createSetupClient({token, fetchImpl = fetch, record}) {
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
   const reads = [
     [new RegExp(`^${ACCOUNT}/access/apps(?:/${idSegment}/policies)?${page}$`), 'access_inventory'],
+    [new RegExp(`^${ACCOUNT}/access/apps/${idSegment}$`), 'access_app_details'],
     [new RegExp(`^${ACCOUNT}/access/organizations$`), 'access_organization'],
     [new RegExp(`^${ACCOUNT}/workers/domains\\?hostname=${TARGET.hostname.replaceAll('.', '\\.')}$`), 'worker_domains'],
     [new RegExp(`^${ACCOUNT}/pages/projects(?:\\?page=(?:[2-9]|10))?$`), 'pages_inventory'],

@@ -6,6 +6,8 @@ import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DRIVE, ID, requireS
 const BASELINE = 'ecaecf69d5fae1edfd63ed54561c12abff3ee7ac01ecac8dc034417703e2ee19';
 const USER = `lythaus_admin.${TARGET.branch}`;
 const ROUTE = `${TARGET.hostname}/*`;
+const RESUME_ACCESS_ID = 'edd1c92d-bb85-4cd3-b31b-5971a7b12d13';
+const TEST_ACCESS_NAME = 'Lythaus New Core Admin Test';
 const PROD_APPS = [
   {id:'2d440b64-6cde-48d7-b3cb-132129ee036f', name:'Lythaus Admin UI', host:'admin.lythaus.co'},
   {id:'fa6906cc-3daf-4beb-82b5-143e708eca0d', name:'Lythaus Admin API', host:'admin-api.lythaus.co'},
@@ -67,21 +69,66 @@ async function accessSnapshot(api) {
   return {apps,live,owner:live[0].owner,idps:[...idps].sort(),issuer:`https://${org.auth_domain}`};
 }
 const testApps = apps => apps.filter(a=>appDomains(a).some(d=>matchesHost(d)));
-async function readTestAccess(api, context, id, owner) {
-  const apps = await api.list(`${ACCOUNT}/access/apps`);
+function testAccessChecks(app, apps, context, id) {
+  return {
+    id: app?.id === id,
+    name: app?.name === TEST_ACCESS_NAME,
+    type: app?.type === 'self_hosted',
+    sessionDuration: app?.session_duration === '1h',
+    httpOnlyCookie: app?.http_only_cookie_attribute === true,
+    pathCookie: app?.path_cookie_attribute === false,
+    sameSiteCookie: typeof app?.same_site_cookie_attribute === 'string' && app.same_site_cookie_attribute.toLowerCase() === 'lax',
+    noPreflightBypass: app?.options_preflight_bypass !== true,
+    noWarpBypass: app?.allow_authenticate_via_warp !== true,
+    exactHostname: !!app && equal(appDomains(app),[TARGET.hostname]),
+    publicDestinationsNoOverrides: !!app && (app.destinations ?? []).every(d=>d.type === 'public' && !Object.keys(d.overrides ?? {}).length),
+    allowedIdentityProviders: !!app && Array.isArray(app.allowed_idps ?? []) && equal([...(app.allowed_idps ?? [])].sort(),context.idps),
+    validAudience: typeof app?.aud === 'string' && /^[a-f0-9]{64}$/.test(app.aud),
+    uniqueAudience: !!app && apps.every(a=>a.id === id || a.aud !== app.aud),
+  };
+}
+const checksPass = checks => Object.values(checks).every(v=>v === true);
+const safeSetupCode = (error, otherwise) => /^(?:setup_[a-z0-9_]{1,100}|isolation_[a-z0-9_]{1,100}|WORKER_[A-Z_]{1,90})$/.test(error?.message ?? '')
+  ? error.message : otherwise;
+async function testAccessReadback(api, context, id, owner, {diagnostic=false} = {}) {
+  const apps = diagnostic ? context.apps : await api.list(`${ACCOUNT}/access/apps`);
   const matching = testApps(apps);
-  const app = matching[0];
-  check(matching.length === 1 && app.id === id && app.type === 'self_hosted' && app.session_duration === '1h'
-    && app.http_only_cookie_attribute === true && app.path_cookie_attribute === false
-    && app.same_site_cookie_attribute?.toLowerCase() === 'lax'
-    && app.options_preflight_bypass !== true && app.allow_authenticate_via_warp !== true
-    && equal(appDomains(app),[TARGET.hostname]) && (app.destinations ?? []).every(d=>d.type === 'public' && !Object.keys(d.overrides ?? {}).length)
-    && equal([...(app.allowed_idps ?? [])].sort(),context.idps) && /^[a-f0-9]{64}$/.test(app.aud ?? '')
-    && apps.every(a=>a.id === id || a.aud !== app.aud), 'test_access_app_readback');
-  const policies = await api.list(`${ACCOUNT}/access/apps/${id}/policies`);
-  const evidence = accessEvidence([{...app,domain:TARGET.hostname}],policies,owner);
-  check(evidence.intendedOwnerVerified === true && policies.some(p=>p.decision === 'allow' && p.precedence === 1)
-    && policies.some(p=>['deny','block'].includes(p.decision) && p.precedence === 2), 'test_access_policies_readback');
+  const listed = matching[0];
+  const listing = {soleCoveringApp:matching.length === 1,...testAccessChecks(listed,apps,context,id)};
+  const listingIdentity = listing.soleCoveringApp && listing.id && listing.type && listing.exactHostname
+    && listing.validAudience && listing.uniqueAudience;
+  const severityKeys = {
+    name:'name',sessionDuration:'session_duration',httpOnlyCookie:'http_only_cookie_attribute',
+    pathCookie:'path_cookie_attribute',sameSiteCookie:'same_site_cookie_attribute',allowedIdentityProviders:'allowed_idps',
+  };
+  const listingSettingsConsistent = !!listed && listing.publicDestinationsNoOverrides && listing.noPreflightBypass && listing.noWarpBypass
+    && Object.entries(severityKeys).every(([key,field])=>!Object.hasOwn(listed,field) || listing[key]);
+  const report = {listing:{...listing,settingsConsistent:listingSettingsConsistent}, details:null, policies:null, errors:[]};
+  if (!listingIdentity) return {report, app:null};
+  let app;
+  try {
+    app = await api.request(`${ACCOUNT}/access/apps/${id}`);
+    report.details = {...testAccessChecks(app,apps,context,id),audienceMatchesListing:app?.aud === listed.aud};
+  } catch (error) {
+    report.errors.push(safeSetupCode(error,'setup_test_access_details_unverified'));
+  }
+  if (diagnostic || (listingSettingsConsistent && report.details && checksPass(report.details))) {
+    try {
+      const policies = await api.list(`${ACCOUNT}/access/apps/${id}/policies`);
+      const evidence = accessEvidence([{...listed,domain:TARGET.hostname}],policies,owner);
+      report.policies = {ownerOnly:evidence.intendedOwnerVerified === true,
+        allowFirst:policies.some(p=>p.decision === 'allow' && p.precedence === 1),
+        denySecond:policies.some(p=>['deny','block'].includes(p.decision) && p.precedence === 2)};
+    } catch (error) {
+      report.errors.push(safeSetupCode(error,'setup_test_access_policies_unverified'));
+    }
+  }
+  return {report,app};
+}
+async function readTestAccess(api, context, id, owner) {
+  const {report,app} = await testAccessReadback(api,context,id,owner);
+  check(report.listing.settingsConsistent && report.details && checksPass(report.details), 'test_access_app_readback');
+  check(report.policies && checksPass(report.policies), 'test_access_policies_readback');
   return app;
 }
 async function productionPages(api) {
@@ -160,13 +207,13 @@ export async function inspectSetupInputs({env, sourceDir, authorize}) {
   const approval = await authorize();
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
   const errors = [];
-  let context, pages;
+  let context, pages, api;
   const get = avoidDeniedReadRetries((url, init) => {
     check(init?.method === 'GET','inspect_read_only');
     return fetch(url, init);
   });
   if (env.CLOUDFLARE_API_TOKEN) {
-    const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,record:()=>check(false,'inspect_read_only')});
+    api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,record:()=>check(false,'inspect_read_only')});
     try { context = await accessSnapshot(api); } catch { errors.push('setup_owner_policy_unverified'); }
     try { pages = await productionPages(api); } catch (error) {
       errors.push(/^setup_(?:pages_[a-z0-9_]+|production_pages_identity)$/.test(error.message) ? error.message : 'setup_pages_unverified');
@@ -175,14 +222,24 @@ export async function inspectSetupInputs({env, sourceDir, authorize}) {
   const owner = resolveOwner(env,approval,context);
   const ownerMatches = email(owner) && context ? owner.toLowerCase() === context.owner : null;
   if (ownerMatches === false) errors.push('setup_private_owner_selector_mismatch');
+  let existingTestAccess = null;
+  if (context) try {
+    if (testApps(context.apps).length || context.apps.some(a=>a.id === RESUME_ACCESS_ID)) {
+      const {report} = await testAccessReadback(api,context,RESUME_ACCESS_ID,owner,{diagnostic:true});
+      existingTestAccess = report;
+      if (!report.listing.settingsConsistent || !report.details || !checksPass(report.details)) errors.push('setup_test_access_app_readback');
+      if (!report.policies || !checksPass(report.policies)) errors.push('setup_test_access_policies_readback');
+    }
+  } catch (error) { errors.push(safeSetupCode(error,'setup_test_access_unverified')); }
   const result = await collectAdminInputs({env,sourceDir,expectedOwner:owner,fetchImpl:get,
     privateCredentialConfirmed:approval.privateCredentialConfirmed,
     existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true});
   return {...result,ready:result.ready && !!pages && ownerMatches === true && !errors.length,
     ownerMatchesReviewedSelector:ownerMatches, pagesInventoryComplete:!!pages, pagesProjectsChecked:pages?.projectCount ?? null,
+    existingTestAccess,
     errors:[...result.errors,...errors]};
 }
-export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record}) {
+export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record, resumeAccess=false}) {
   check(typeof authorize === 'function' && typeof record === 'function','reviewed_entrypoint_required');
   const approval = await authorize();
   const {loadArtifacts, stageWorker, verifyWorkerVersion} = await import('./new-core-isolated-worker.mjs');
@@ -193,8 +250,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   async function probe(label, operation) {
     try { return await operation(); }
     catch (error) {
-      const code = error?.message ?? '';
-      blocked.push(/^(?:setup_[a-z0-9_]{1,100}|isolation_[a-z0-9_]{1,100}|WORKER_[A-Z_]{1,90})$/.test(code) ? code : label);
+      blocked.push(safeSetupCode(error,label));
       return null;
     }
   }
@@ -215,9 +271,10 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   await probe('setup_live_isolation_unavailable', async () => {
     const base = await inspect();
     checkSnapshot(base,[]);
-    check(base.worker.exists === false && base.access.overlappingApplicationCount === 0,'isolated_resources_exist');
+    check(base.worker.exists === false && base.access.overlappingApplicationCount === (resumeAccess ? 1 : 0),'isolated_resources_exist');
   });
-  if (context && testApps(context.apps).length) blocked.push('setup_isolated_access_exists');
+  if (context && !resumeAccess && testApps(context.apps).length) blocked.push('setup_isolated_access_exists');
+  if (context && resumeAccess) await probe('setup_test_access_resume_unverified',()=>readTestAccess(api,context,RESUME_ACCESS_ID,owner));
   const network = await probe('setup_network_inventory',()=>networkSnapshot(api));
   await probe('setup_routing_inventory',()=>emptyRouting(api));
   const current = await probe('setup_hyperdrive_inventory',async ()=>{
@@ -238,8 +295,8 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   check(second.ownerSelectorConfirmedByOwner === approval.ownerSelectorConfirmedByOwner
     && second.privateCredentialConfirmed === approval.privateCredentialConfirmed
     && second.existingPlanConfirmedByOwner === approval.existingPlanConfirmedByOwner, 'owner_review_changed');
-  const access = await api.request(`${ACCOUNT}/access/apps`, {method:'POST',body:{
-    name:'Lythaus New Core Admin Test',type:'self_hosted',domain:TARGET.hostname,session_duration:'1h',
+  const access = resumeAccess ? {id:RESUME_ACCESS_ID} : await api.request(`${ACCOUNT}/access/apps`, {method:'POST',body:{
+    name:TEST_ACCESS_NAME,type:'self_hosted',domain:TARGET.hostname,session_duration:'1h',
     http_only_cookie_attribute:true,path_cookie_attribute:false,same_site_cookie_attribute:'lax',
     allowed_idps:context.idps, app_launcher_visible:false, options_preflight_bypass:false,allow_authenticate_via_warp:false,
     policies:[
@@ -297,7 +354,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   check(finalDns.length === 1 && finalDns[0].id === dns.id && dnsRecordMatches(finalDns[0]), 'final_test_dns_readback');
   const after = await accessSnapshot(api);
   check(equal(context.live,after.live) && context.issuer === after.issuer
-    && equal(sortIds(context.apps),sortIds(after.apps.filter(a=>a.id !== app.id))), 'production_access_changed');
+    && equal(sortIds(context.apps.filter(a=>a.id !== app.id)),sortIds(after.apps.filter(a=>a.id !== app.id))), 'production_access_changed');
   await readTestAccess(api,after,app.id,owner);
   check(equal(network,await networkSnapshot(api)), 'production_dns_pages_changed');
   checkOrigin(await api.request(DRIVE),caId);

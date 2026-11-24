@@ -10,13 +10,16 @@ const source = new X509Certificate(rootCertificates[0]);
 const ca = {id:'a'.repeat(32),pem:source.toString(),sha256:source.fingerprint256.replaceAll(':','').toLowerCase()};
 const workerId = 'c'.repeat(32), versionId = '11111111-2222-4333-8444-555555555555';
 const parentVersionId = 'aaaaaaaa-2222-4333-8444-555555555555';
-const accessId = 'b'.repeat(32), dnsId = 'd'.repeat(32), routeId = 'e'.repeat(32);
+const accessId = 'edd1c92d-bb85-4cd3-b31b-5971a7b12d13', dnsId = 'd'.repeat(32), routeId = 'e'.repeat(32);
 const uiId = '2d440b64-6cde-48d7-b3cb-132129ee036f', apiId='fa6906cc-3daf-4beb-82b5-143e708eca0d';
 const initialPolicies = [
   {id:'allow',name:'owner',decision:'allow',precedence:1,include:[{email:{email:owner}}]},
   {id:'deny',name:'all',decision:'deny',precedence:2,include:[{everyone:{}}]},
 ];
 let state;
+const accessApp = {id:accessId,name:'Lythaus New Core Admin Test',domain:TARGET.hostname,type:'self_hosted',
+  session_duration:'1h',http_only_cookie_attribute:true,path_cookie_attribute:false,
+  same_site_cookie_attribute:'lax',allowed_idps:[],aud:'a'.repeat(64)};
 mock.module('../../ci/lythaus-new-core-isolation-review.mjs',{namedExports:{
   ...inspector,
   hyperdriveEvidence(config) {
@@ -79,8 +82,13 @@ globalThis.fetch = async (url,init)=>{
   } else if (path.endsWith('/access/apps')) {
     result=[{id:uiId,name:'Lythaus Admin UI',domain:'admin.lythaus.co',type:'self_hosted'},
       {id:apiId,name:'Lythaus Admin API',domain:'admin-api.lythaus.co',type:'self_hosted'}];
-    if (state.testApp) result.push(state.testApp);
+    if (state.testApp) result.push(state.fault==='resume_sparse_list' ? {...state.testApp,path_cookie_attribute:undefined}
+      : state.fault==='resume_list_conflict' ? {...state.testApp,path_cookie_attribute:true} : state.testApp);
+    if (state.fault==='resume_duplicate_audience') result.push({id:'unrelated',domain:'unrelated.fixture.invalid',aud:accessApp.aud});
     if (state.fault==='overlap') result.push({id:'wildcard',type:'self_hosted',destinations:[{type:'public',uri:'admin-new-*.lythaus.co/path'}]});
+  } else if (path.endsWith('/access/apps/'+accessId)) {
+    assert.equal(method,'GET');
+    result=state.fault==='resume_audience_drift' ? {...state.testApp,aud:'b'.repeat(64)} : state.testApp;
   } else if (path.endsWith('/policies')) result=path.includes(accessId) ? state.testPolicies : initialPolicies;
   else if (path.endsWith('/access/organizations')) result={auth_domain:'fixture.cloudflareaccess.com'};
   else if (path.endsWith('/pages/projects')) {
@@ -123,13 +131,53 @@ globalThis.fetch = async (url,init)=>{
   return Response.json({success:true,result});
 };
 const {inspectSetupInputs,runIsolatedSetup} = await import('../../ci/lythaus-new-core-isolated-setup.mjs');
-for (const fault of ['none','overlap','later_pages_collision','missing_pages_metadata','owner_readback','cookie_readback','restart_readback']) {
+for (const fault of ['none','overlap','later_pages_collision','missing_pages_metadata','owner_readback','cookie_readback','restart_readback',
+  'resume_sparse_list','resume_wrong_id','resume_missing','resume_bad_cookie','resume_audience_drift','resume_duplicate_audience',
+  'resume_wrong_owner','resume_list_conflict']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
   const args={env:{CLOUDFLARE_API_TOKEN:token,LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL:`postgres://lythaus_admin.${TARGET.branch}:${password}@fixture.invalid/postgres`},
     authorize:async()=>({privateCredentialConfirmed:true,existingPlanConfirmedByOwner:true,ownerSelectorConfirmedByOwner:true}),record:entry=>journal.push(entry)};
-  if(fault==='none'){
+  if (fault.startsWith('resume_')) {
+    if (fault!=='resume_missing') {
+      state.testApp={...accessApp};
+      state.testPolicies=structuredClone(initialPolicies);
+      if (fault==='resume_wrong_id') state.testApp.id='b'.repeat(32);
+      if (fault==='resume_bad_cookie') delete state.testApp.path_cookie_attribute;
+      if (fault==='resume_wrong_owner') state.testPolicies[0].include=[{email:{email:'other@fixture.invalid'}}];
+    }
+    const inspection=await inspectSetupInputs(args);
+    assert.deepEqual(journal,[]);
+    if (fault==='resume_sparse_list') {
+      assert.equal(inspection.ready,true);
+      assert.equal(inspection.existingTestAccess.listing.pathCookie,false);
+      assert.equal(inspection.existingTestAccess.details.pathCookie,true);
+      assert.equal(inspection.existingTestAccess.policies.ownerOnly,true);
+      assert.equal((await runIsolatedSetup(args)).status,'ISOLATED_SETUP_BLOCKED');
+      assert.deepEqual(journal,[]);
+      const result=await runIsolatedSetup({...args,resumeAccess:true});
+      assert.equal(result.status,'OWNER_TEST_PENDING');
+      assert.equal(result.accessAppId,accessId);
+      assert.equal(result.bootstrapCalled,false);
+      assert.equal(journal[0].operation,'configure_hyperdrive');
+      assert.equal(journal.some(j=>j.operation==='create_access'),false);
+    } else {
+      if (fault!=='resume_missing') assert.equal(inspection.ready,false);
+      if (fault==='resume_bad_cookie') assert.equal(inspection.existingTestAccess.details.pathCookie,false);
+      if (fault==='resume_list_conflict') {
+        assert.equal(inspection.existingTestAccess.listing.settingsConsistent,false);
+        assert.equal(inspection.existingTestAccess.details.pathCookie,true);
+      }
+      if (fault==='resume_wrong_owner') assert.equal(inspection.existingTestAccess.policies.ownerOnly,false);
+      if (fault==='resume_audience_drift') assert.equal(inspection.existingTestAccess.details.audienceMatchesListing,false);
+      if (fault==='resume_duplicate_audience') assert.equal(inspection.existingTestAccess.listing.uniqueAudience,false);
+      const result=await runIsolatedSetup({...args,resumeAccess:true});
+      assert.equal(result.status,'ISOLATED_SETUP_BLOCKED');
+      assert.deepEqual(journal,[]);
+    }
+    assert.doesNotMatch(JSON.stringify(inspection),/@fixture|private-fixture|a{64}|b{64}/);
+  } else if(fault==='none'){
     const inspection=await inspectSetupInputs(args);
     assert.equal(inspection.ready,true);
     assert.equal(inspection.ownerMatchesReviewedSelector,true);
