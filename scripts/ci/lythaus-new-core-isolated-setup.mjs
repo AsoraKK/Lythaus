@@ -1,7 +1,8 @@
 import { createHash, X509Certificate } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { accessEvidence, hyperdriveEvidence, inspectIsolation, TARGET } from './lythaus-new-core-isolation-review.mjs';
-import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DRIVE, ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
+import { ACCOUNT, avoidDeniedReadRetries, createSetupClient, DRIVE, ID, RECORDED_WORKER, RECORDED_WORKER_ID, requireSetup as check, SCRIPT, ZONE } from './new-core-isolated-cloudflare.mjs';
+import { workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 
 const BASELINE = 'ecaecf69d5fae1edfd63ed54561c12abff3ee7ac01ecac8dc034417703e2ee19';
 const USER = `lythaus_admin.${TARGET.branch}`;
@@ -218,6 +219,58 @@ function checkSnapshot(report, consumers) {
 function resolveOwner(env, approval, context) {
   return env.LYTHAUS_NEW_CORE_OWNER_EMAIL || (approval.ownerSelectorConfirmedByOwner === true ? context?.owner : undefined);
 }
+async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca}) {
+  const errors = [];
+  async function read(label, operation) {
+    try { return await operation(); }
+    catch (error) { errors.push(safeSetupCode(error,label)); return null; }
+  }
+  const worker = await read('setup_recorded_worker_details_unverified',()=>api.request(RECORDED_WORKER));
+  if (worker == null) return {worker:null,errors};
+  const evidence = workerBoundaryEvidence(worker,RECORDED_WORKER_ID,TARGET.worker);
+  if (!evidence.checks.identity) return {worker:evidence,errors:['setup_recorded_worker_identity']};
+  const [versionsEmpty, deploymentsEmpty, subdomain, logging, routingEmpty, customDomainEmpty, hyperdrive, productionBaselineMatches] = await Promise.all([
+    read('setup_recorded_worker_versions_unverified',async ()=>(await api.list(`${RECORDED_WORKER}/versions`)).length === 0),
+    read('setup_recorded_worker_deployments_unverified',async ()=>{
+      const result = await api.request(`${SCRIPT}/deployments`);
+      const list = Array.isArray(result) ? result : result?.deployments;
+      check(Array.isArray(list),'recorded_worker_deployments_shape');
+      return list.length === 0;
+    }),
+    read('setup_recorded_worker_subdomain_unverified',async ()=>{
+      const row = await api.request(`${SCRIPT}/subdomain`);
+      const result = workerBoundaryEvidence({subdomain:row});
+      return {workersDev:result.fieldShapes.workersDev,previews:result.fieldShapes.previews};
+    }),
+    read('setup_recorded_worker_script_settings_unverified',async ()=>{
+      const row = await api.request(`${SCRIPT}/script-settings`);
+      const {workersDev:_workersDev,previews:_previews,customDomains:_customDomains,deployedOn:_deployedOn,...shapes} =
+        workerBoundaryEvidence(row).fieldShapes;
+      return shapes;
+    }),
+    read('setup_recorded_worker_routing_unverified',async ()=>{ await emptyRouting(api); return true; }),
+    read('setup_recorded_worker_custom_domain_unverified',async ()=>{
+      const result = await api.request(`${ACCOUNT}/workers/domains?hostname=${TARGET.hostname}`);
+      check(Array.isArray(result),'recorded_worker_custom_domain_shape');
+      return result.length === 0;
+    }),
+    read('setup_recorded_worker_hyperdrive_unverified',async ()=>{
+      const config = await api.request(DRIVE);
+      const drive = hyperdriveEvidence(config);
+      const exactVerifiedCa = !!ca?.id && config?.mtls?.ca_certificate_id === ca.id;
+      const caReadbackPassed = exactVerifiedCa && await readCa(api,ca,ca.id) === ca.id;
+      checkOrigin(config,caReadbackPassed ? ca.id : undefined);
+      return {scopedAdminLogin:drive.scopedAdminLogin,verifiedTlsConfigured:drive.verifyFullAndCaConfigured,
+        cacheDisabled:drive.cacheDisabled,caReadbackPassed,restartTimestampPresent:Number.isFinite(Date.parse(config.restarted_on))};
+    }),
+    read('setup_recorded_worker_production_baseline_unverified',async ()=>{
+      checkSnapshot(await inspectIsolation({token,expectedOwner,fetchImpl}),[]);
+      return true;
+    }),
+  ]);
+  return {worker:evidence,versionsEmpty,deploymentsEmpty,subdomain,logging,routingEmpty,customDomainEmpty,hyperdrive,
+    productionBaselineMatches,errors:[...new Set(errors)].sort()};
+}
 export async function inspectSetupInputs({env, sourceDir, authorize}) {
   const approval = await authorize();
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
@@ -246,12 +299,14 @@ export async function inspectSetupInputs({env, sourceDir, authorize}) {
       if (!report.policies || !checksPass(report.policies)) errors.push('setup_test_access_policies_readback');
     }
   } catch (error) { errors.push(safeSetupCode(error,'setup_test_access_unverified')); }
-  const result = await collectAdminInputs({env,sourceDir,expectedOwner:owner,fetchImpl:get,
+  let ca;
+  const result = await collectAdminInputs({env,sourceDir,expectedOwner:owner,fetchImpl:get,onVerifiedCa:result=>{ca=result;},
     privateCredentialConfirmed:approval.privateCredentialConfirmed,
     existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true});
+  const recordedWorker = api ? await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,ca}) : null;
   return {...result,ready:result.ready && !!pages && ownerMatches === true && !errors.length,
     ownerMatchesReviewedSelector:ownerMatches, pagesInventoryComplete:!!pages, pagesProjectsChecked:pages?.projectCount ?? null,
-    existingTestAccess,
+    existingTestAccess,recordedWorker,
     errors:[...result.errors,...errors]};
 }
 export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record, resumeAccess=false}) {
@@ -287,6 +342,14 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
     const base = await inspect();
     checkSnapshot(base,[]);
     check(base.worker.exists === false && base.access.overlappingApplicationCount === (resumeAccess ? 1 : 0),'isolated_resources_exist');
+  });
+  await probe('setup_recorded_worker_inventory_unverified',async ()=>{
+    try { await api.request(RECORDED_WORKER); }
+    catch (error) {
+      if (error.message === 'setup_recorded_worker_details_http_404') return;
+      throw error;
+    }
+    check(false,'recorded_worker_already_exists');
   });
   if (context && !resumeAccess && testApps(context.apps).length) blocked.push('setup_isolated_access_exists');
   if (context && resumeAccess) await probe('setup_test_access_resume_unverified',()=>readTestAccess(api,context,RESUME_ACCESS_ID,owner,true));

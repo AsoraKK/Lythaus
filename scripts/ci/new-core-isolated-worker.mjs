@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import blake3 from 'blake3-wasm';
+import { workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 
 const sourceSha = '276b43265584ec0dc158e67cbdb13cb58ece75db';
 const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
@@ -118,12 +119,7 @@ function expectedBindings(audience, issuer) {
 }
 
 function checkWorker(worker, id) {
-  requireGate(worker?.name === name && worker.id === id && worker.subdomain?.enabled === false &&
-    worker.subdomain.previews_enabled === false && worker.logpush === false &&
-    worker.observability?.enabled === false && worker.observability.logs?.enabled !== true &&
-    worker.observability.logs?.invocation_logs !== true && worker.observability.traces?.enabled !== true && Array.isArray(worker.tail_consumers) &&
-    worker.tail_consumers.length === 0 && Array.isArray(worker.references?.domains) &&
-    worker.references.domains.length === 0, 'WORKER_EXPOSURE_OR_LOGGING');
+  requireGate(Object.values(workerBoundaryEvidence(worker,id,name).checks).every(Boolean), 'WORKER_EXPOSURE_OR_LOGGING');
 }
 
 const contentTypes = {

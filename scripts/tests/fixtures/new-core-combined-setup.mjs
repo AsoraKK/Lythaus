@@ -9,6 +9,7 @@ const owner='owner@fixture.invalid', token='private-fixture-token', password='pr
 const source = new X509Certificate(rootCertificates[0]);
 const ca = {id:'a'.repeat(32),pem:source.toString(),sha256:source.fingerprint256.replaceAll(':','').toLowerCase()};
 const workerId = 'c'.repeat(32), versionId = '11111111-2222-4333-8444-555555555555';
+const recordedWorkerId = '89391a349e454b3994bd43299c6386ed';
 const parentVersionId = 'aaaaaaaa-2222-4333-8444-555555555555';
 const accessId = 'edd1c92d-bb85-4cd3-b31b-5971a7b12d13', dnsId = 'd'.repeat(32), routeId = 'e'.repeat(32);
 const uiId = '2d440b64-6cde-48d7-b3cb-132129ee036f', apiId='fa6906cc-3daf-4beb-82b5-143e708eca0d';
@@ -118,6 +119,23 @@ globalThis.fetch = async (url,init)=>{
     if(method==='PATCH') {assert.equal(body.origin.password,password);assert.equal(body.caching.disabled,true);
       assert.equal(body.mtls.sslmode,'verify-full'); Object.assign(state.drive.origin,{user:body.origin.user}); state.drive.mtls=body.mtls;}
     result=state.drive;
+  } else if (path.endsWith('/workers/workers/'+recordedWorkerId)) {
+    assert.equal(method,'GET');
+    if (!state.fault.startsWith('recorded_worker_')) return new Response('provider-private-not-found',{status:404});
+    result={id:recordedWorkerId,name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false},
+      logpush:false,observability:{enabled:false},references:{domains:[]},tail_consumers:[],deployed_on:null};
+    if (state.fault==='recorded_worker_partial') {
+      delete result.subdomain.previews_enabled;
+      result.observability.enabled=true;
+      result.tail_consumers=[{name:'provider-private-tail'}];
+    }
+  } else if (path.endsWith('/workers/workers/'+recordedWorkerId+'/versions')) {
+    assert.equal(method,'GET');
+    assert.equal(u.search,'?per_page=100&page=1');
+    result=[];
+  } else if (path.endsWith('/script-settings')) {
+    assert.equal(method,'GET');
+    result={logpush:false,observability:{enabled:false},tail_consumers:[]};
   } else if(path.endsWith('/restart')) {
     if(state.fault!=='restart_readback')state.drive.restarted_on='2026-11-17T00:00:00Z';
     result=state.drive;
@@ -137,13 +155,46 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
   'fresh_path_cookie_omitted','resume_sparse_list','resume_cookie_omitted','resume_wrong_id','resume_missing',
   ...Object.keys(rejectedCookieShapes),'resume_cookie_path_destination','resume_cookie_private_destination',
   'resume_cookie_destination_override','resume_cookie_duplicate_destination','resume_audience_drift','resume_duplicate_audience',
-  'resume_wrong_owner','resume_list_conflict']) {
+  'resume_wrong_owner','resume_list_conflict','recorded_worker_partial','recorded_worker_strict_pass']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
   const args={env:{CLOUDFLARE_API_TOKEN:token,LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL:`postgres://lythaus_admin.${TARGET.branch}:${password}@fixture.invalid/postgres`},
     authorize:async()=>({privateCredentialConfirmed:true,existingPlanConfirmedByOwner:true,ownerSelectorConfirmedByOwner:true}),record:entry=>journal.push(entry)};
-  if (fault.startsWith('resume_')) {
+  if (fault.startsWith('recorded_worker_')) {
+    state.testApp={...accessApp};
+    state.testPolicies=structuredClone(initialPolicies);
+    state.drive.origin.user='lythaus_admin.'+TARGET.branch;
+    state.drive.mtls={sslmode:'verify-full',ca_certificate_id:ca.id};
+    state.drive.restarted_on='2026-11-24T00:00:00Z';
+    const inspection=await inspectSetupInputs(args);
+    const report=inspection.recordedWorker;
+    assert.equal(report.worker.checks.identity,true);
+    assert.equal(report.versionsEmpty,true);
+    assert.equal(report.deploymentsEmpty,true);
+    assert.equal(report.routingEmpty,true);
+    assert.equal(report.customDomainEmpty,true);
+    assert.equal(report.productionBaselineMatches,true);
+    assert.equal(report.hyperdrive.caReadbackPassed,true);
+    assert.equal(report.hyperdrive.restartTimestampPresent,true);
+    assert.equal(report.subdomain.previews,'false');
+    assert.equal(report.logging.tailConsumers,'empty_array');
+    if (fault==='recorded_worker_partial') {
+      assert.equal(report.worker.fieldShapes.previews,'omitted');
+      assert.equal(report.worker.checks.previewsDisabled,false);
+      assert.equal(report.worker.fieldShapes.observability,'true');
+      assert.equal(report.worker.checks.observabilityDisabled,false);
+      assert.equal(report.worker.fieldShapes.tailConsumers,'nonempty_array');
+      assert.equal(report.worker.checks.tailConsumersEmpty,false);
+    } else assert.ok(Object.values(report.worker.checks).every(Boolean));
+    assert.doesNotMatch(JSON.stringify(inspection),/provider-private|fixture.invalid|private-fixture/);
+    assert.deepEqual(journal,[]);
+    assert.equal(state.deployed,false);
+    const result=await runIsolatedSetup({...args,resumeAccess:true});
+    assert.equal(result.status,'ISOLATED_SETUP_BLOCKED');
+    assert.ok(result.blocked.includes('setup_recorded_worker_already_exists'));
+    assert.deepEqual(journal,[]);
+  } else if (fault.startsWith('resume_')) {
     if (fault!=='resume_missing') {
       state.testApp={...accessApp};
       state.testPolicies=structuredClone(initialPolicies);
