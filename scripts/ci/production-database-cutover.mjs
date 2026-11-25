@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET, verifyIsolationReviewGate } from './lythaus-new-core-isolation-review.mjs';
 import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
 import { REPAIR_PINS } from './new-core-isolated-repair-pins.mjs';
+import { intent, priorRepairState, routed, uuid } from './new-core-isolated-repair-state.mjs';
 import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
 
 export const transition = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/production-database-transition.json', import.meta.url)));
@@ -15,8 +16,6 @@ const consumers = {
   'lythaus-auth-acceptance-coordinator': { DB_ADMIN_FRESH: 'lythaus_admin' },
 };
 
-const versionPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
-const intentPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 class PromotionSourceError extends Error {
   constructor(code, message) {
     super(message);
@@ -30,13 +29,18 @@ function distinctIds(ids, pattern) {
 function validateIsolatedVersions(destination) {
   const pins = destination.isolatedAdminVersions;
   const access = destination.ownerAccess;
-  if (!versionPattern.test(access?.applicationId) || !/^[a-f0-9]{64}$/.test(access?.issuerSha256)
+  if (!uuid.test(access?.applicationId) || !/^[a-f0-9]{64}$/.test(access?.issuerSha256)
     || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new PromotionSourceError('access_receipt_invalid','isolated owner Access receipt pins required');
   if (!pins || pins.workerId !== RECORDED_WORKER_ID || destination.isolatedAdminConnector !== TARGET.hyperdrive
     || pins.sourceSha !== TARGET.candidate || pins.repairSourceSha !== REPAIR_PINS.sourceSha
-    || !distinctIds([pins.parentVersionId,pins.childVersionId,pins.servingVersionId],versionPattern)
-    || !distinctIds([pins.parentIntent,pins.childIntent,pins.repairIntent,pins.activationIntent],intentPattern)
-    || !distinctIds([pins.childDeploymentId,pins.servingDeploymentId],versionPattern)) {
+    || pins.parentVersionId !== routed.ackParent || pins.parentIntent !== routed.parentIntent
+    || pins.childVersionId !== routed.ackChild || pins.childIntent !== routed.childIntent || pins.childDeploymentId !== routed.deploymentId
+    || pins.priorRepairSourceSha !== priorRepairState.sourceSha || pins.priorRepairVersionId !== priorRepairState.versionId
+    || pins.priorRepairIntent !== priorRepairState.intentId || pins.priorRepairActivationIntent !== priorRepairState.activationIntent
+    || pins.priorRepairDeploymentId !== priorRepairState.deploymentId
+    || !distinctIds([pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId],uuid)
+    || !distinctIds([pins.parentIntent,pins.childIntent,pins.priorRepairIntent,pins.priorRepairActivationIntent,pins.repairIntent,pins.activationIntent],intent)
+    || !distinctIds([pins.childDeploymentId,pins.priorRepairDeploymentId,pins.servingDeploymentId],uuid)) {
     throw new PromotionSourceError('lineage_receipt_invalid','replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
   }
   return pins;
@@ -68,7 +72,8 @@ export async function verifyIsolatedAdminVersions(destination, read) {
   for (const [id, intent, parent, source] of [
     [pins.parentVersionId, pins.parentIntent, 'parent', pins.sourceSha],
     [pins.childVersionId, pins.childIntent, pins.parentVersionId, pins.sourceSha],
-    [pins.servingVersionId, pins.repairIntent, pins.childVersionId, pins.repairSourceSha],
+    [pins.priorRepairVersionId, pins.priorRepairIntent, pins.childVersionId, pins.priorRepairSourceSha],
+    [pins.servingVersionId, pins.repairIntent, pins.priorRepairVersionId, pins.repairSourceSha],
   ]) {
     const version = await read(path + '/versions/' + id);
     const bindings = version?.bindings;
@@ -94,11 +99,13 @@ export async function verifyIsolatedAdminBeforePromotion(destination, read) {
   const rows = Array.isArray(raw) ? raw : raw?.deployments;
   const allTraffic = (row,id,versionId) => row?.id === id && row.versions?.length === 1 &&
     row.versions[0].version_id === versionId && row.versions[0].percentage === 100;
-  if (!Array.isArray(rows) || rows.length !== 2 ||
+  if (!Array.isArray(rows) || rows.length !== 3 ||
     !allTraffic(rows[0],pins.servingDeploymentId,pins.servingVersionId) ||
-    !allTraffic(rows[1],pins.childDeploymentId,pins.childVersionId) ||
+    !allTraffic(rows[1],pins.priorRepairDeploymentId,pins.priorRepairVersionId) ||
+    !allTraffic(rows[2],pins.childDeploymentId,pins.childVersionId) ||
     rows[0].annotations?.['workers/message'] !== 'lythaus-isolated-repair ' + pins.activationIntent ||
-    !(Date.parse(rows[0].created_on) > Date.parse(rows[1].created_on))) {
+    rows[1].annotations?.['workers/message'] !== 'lythaus-isolated-repair ' + pins.priorRepairActivationIntent ||
+    !(Date.parse(rows[0].created_on) > Date.parse(rows[1].created_on) && Date.parse(rows[1].created_on) > Date.parse(rows[2].created_on))) {
     throw new PromotionSourceError('serving_deployment_mismatch','isolated Admin serving deployment differs from the activated repair receipt');
   }
   const version = await read(script + '/versions/' + pins.servingVersionId);
@@ -119,7 +126,7 @@ export async function inspectPromotionSource({token, expectedVersion, fetchImpl 
   const script = '/workers/scripts/' + TARGET.worker;
   const paths = [
     '/access/apps/' + destination.ownerAccess.applicationId, '/access/organizations', worker,
-    ...[pins.parentVersionId,pins.childVersionId,pins.servingVersionId].map(id => worker + '/versions/' + id),
+    ...[pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId].map(id => worker + '/versions/' + id),
     script + '/deployments', script + '/versions/' + pins.servingVersionId,
   ];
   const client = createReadOnlyClient(token,fetchImpl,false,new Set(paths.map(path => account + path)));

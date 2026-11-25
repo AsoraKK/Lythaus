@@ -42,6 +42,10 @@ function fixture(destination = false) {
   }
   if (destination) {
     const target = plan.destination;
+    Object.assign(target.isolatedAdminVersions, {
+      servingVersionId:'40000000-0000-4000-8000-000000000001', repairIntent:'40000000-0000-4000-8000-000000000002',
+      activationIntent:'40000000-0000-4000-8000-000000000003', servingDeploymentId:'40000000-0000-4000-8000-000000000004',
+    });
     Object.assign(target.ownerAccess,{issuerSha256:createHash('sha256').update('https://fixture.cloudflareaccess.com').digest('hex'),
       audienceSha256:createHash('sha256').update('a'.repeat(64)).digest('hex')});
     const admin = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
@@ -92,6 +96,11 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
     ({plan}) => { plan.destination.isolatedAdminVersions.childIntent = plan.destination.isolatedAdminVersions.parentIntent; },
     ({plan}) => { plan.destination.isolatedAdminVersions.repairIntent = plan.destination.isolatedAdminVersions.childIntent; },
     ({plan}) => { plan.destination.isolatedAdminVersions.servingVersionId = plan.destination.isolatedAdminVersions.childVersionId; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.servingVersionId = plan.destination.isolatedAdminVersions.priorRepairVersionId; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.priorRepairIntent = plan.destination.isolatedAdminVersions.repairIntent; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.priorRepairSourceSha = plan.destination.isolatedAdminVersions.repairSourceSha; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.repairIntent = plan.destination.isolatedAdminVersions.priorRepairActivationIntent; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.servingDeploymentId = plan.destination.isolatedAdminVersions.priorRepairDeploymentId; },
     ({plan}) => { plan.destination.connectors.lythaus_jobs = plan.destination.connectors.lythaus_privacy; },
     ({plan}) => { plan.destination.connectors.lythaus_admin = plan.destination.isolatedAdminConnector; },
     ({plan}) => { plan.destination.connectors.lythaus_jobs = plan.rollback.connectors.lythaus_jobs; },
@@ -124,13 +133,16 @@ function isolatedEvidence() {
     {name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text'}];
   const rows = [[pins.parentVersionId,pins.parentIntent,'parent',pins.sourceSha],
     [pins.childVersionId,pins.childIntent,pins.parentVersionId,pins.sourceSha],
-    [pins.servingVersionId,pins.repairIntent,pins.childVersionId,pins.repairSourceSha]].map(([id,intent,parent,source],i) => ({
+    [pins.priorRepairVersionId,pins.priorRepairIntent,pins.childVersionId,pins.priorRepairSourceSha],
+    [pins.servingVersionId,pins.repairIntent,pins.priorRepairVersionId,pins.repairSourceSha]].map(([id,intent,parent,source],i) => ({
       id, number:i+1, bindings:structuredClone(bindings),
       annotations:{'workers/tag':source,'workers/message':`lythaus-isolated ${intent} ${parent}`},
     }));
   const deployments = {deployments:[
     {id:pins.servingDeploymentId,created_on:'2026-11-25T17:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + pins.activationIntent},
       versions:[{version_id:pins.servingVersionId,percentage:100}]},
+    {id:pins.priorRepairDeploymentId,created_on:'2026-11-25T15:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + pins.priorRepairActivationIntent},
+      versions:[{version_id:pins.priorRepairVersionId,percentage:100}]},
     {id:pins.childDeploymentId,created_on:'2026-11-25T12:19:00Z',versions:[{version_id:pins.childVersionId,percentage:100}]},
   ]};
   const current = {id:pins.servingVersionId,metadata:{annotations:{'workers/tag':pins.repairSourceSha}},resources:{bindings:structuredClone(bindings)}};
@@ -146,10 +158,11 @@ function isolatedEvidence() {
   return {destination,pins,app,org,shell,rows,deployments:deployments.deployments,current,replies,seen,read};
 }
 
-test('initial promotion requires the accepted three-version lineage and the repair serving all isolated traffic', async () => {
+test('initial promotion requires all four isolated versions and the binding fix serving all traffic', async () => {
   const d = isolatedEvidence();
-  assert.equal(d.pins.servingVersionId,'193c3dcb-9238-4adc-8eab-48707fdd8b7e');
-  assert.equal(d.pins.repairSourceSha,'78747f85d02c69efa8a1b6f86b73b08947cdce0b');
+  assert.equal(d.pins.priorRepairVersionId,'193c3dcb-9238-4adc-8eab-48707fdd8b7e');
+  assert.equal(d.pins.priorRepairSourceSha,'78747f85d02c69efa8a1b6f86b73b08947cdce0b');
+  assert.equal(d.pins.repairSourceSha,'78958d886d72eecc6ea01001d808f1d8c505046d');
   await verifyIsolatedAdminBeforePromotion(d.destination,d.read);
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
   const unrelated = '77777777-7777-4777-8777-777777777777';
@@ -161,8 +174,14 @@ test('initial promotion requires the accepted three-version lineage and the repa
     e => { e.deployments[0].annotations['workers/message'] = 'lythaus-isolated-repair ' + unrelated; },
     e => { e.deployments[0].created_on = e.deployments[1].created_on; },
     e => { e.deployments[1].versions[0].version_id = e.pins.parentVersionId; },
+    e => { e.deployments[1].annotations['workers/message'] = 'lythaus-isolated-repair ' + e.pins.priorRepairIntent; },
+    e => { e.deployments[1].versions[0].percentage = 95; },
+    e => { e.deployments[1].created_on = e.deployments[2].created_on; },
+    e => { e.deployments.splice(1,1); },
+    e => { e.deployments[2].id = unrelated; },
     e => { e.current.id = unrelated; },
     e => { e.current.metadata.annotations['workers/tag'] = e.pins.sourceSha; },
+    e => { e.current.metadata.annotations['workers/tag'] = e.pins.priorRepairSourceSha; },
     e => { e.current.annotations = {'workers/tag':e.pins.sourceSha}; },
     e => { e.current.resources.bindings[0].id = 'd'.repeat(32); },
     e => { e.current.resources.bindings.pop(); },
@@ -170,6 +189,14 @@ test('initial promotion requires the accepted three-version lineage and the repa
     const e = isolatedEvidence();
     change(e);
     await assert.rejects(verifyIsolatedAdminBeforePromotion(e.destination,e.read), /isolated Admin/);
+  }
+});
+
+test('a missing staging or activation pin blocks promotion before provider access', async () => {
+  for (const field of ['servingVersionId','repairIntent','activationIntent','servingDeploymentId']) {
+    const {destination,pins} = isolatedEvidence();
+    pins[field] = null;
+    await assert.rejects(inspectPromotionSource({destination,fetchImpl:() => assert.fail('unexpected provider read')}),{code:'lineage_receipt_invalid'});
   }
 });
 
@@ -195,10 +222,10 @@ test('historical verification rechecks each source, parent, intent, redacted key
   d.deployments.unshift({id:'77777777-7777-4777-8777-777777777777',versions:[{version_id:'88888888-8888-4888-8888-888888888888',percentage:100}]});
   await verifyIsolatedAdminVersions(d.destination,d.read);
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].filter(path => !path.startsWith('/workers/scripts/')).sort());
-  for (const i of [0,1,2]) {
+  for (const i of [0,1,2,3]) {
     for (const change of [
       row => { row.id = '77777777-7777-4777-8777-777777777777'; },
-      row => { row.annotations['workers/tag'] = i === 2 ? d.pins.sourceSha : d.pins.repairSourceSha; },
+      row => { row.annotations['workers/tag'] = 'f'.repeat(40); },
       row => { row.annotations['workers/message'] = 'lythaus-isolated ' + d.pins.activationIntent + ' ' + (i === 0 ? 'parent' : d.rows[i-1].id); },
       row => { row.bindings.at(-1).type = 'plain_text'; },
       row => { row.bindings.at(-1).text = 'synthetic'; },
@@ -214,6 +241,8 @@ test('historical verification rechecks each source, parent, intent, redacted key
     e => { e.app.aud = 'b'.repeat(64); }, e => { e.org.auth_domain = 'other.cloudflareaccess.com'; },
     e => { e.rows[2].annotations['workers/message'] = `lythaus-isolated ${e.pins.repairIntent} ${e.pins.parentVersionId}`; },
     e => { e.rows[2].number = e.rows[1].number; },
+    e => { e.rows[3].annotations['workers/message'] = 'lythaus-isolated ' + e.pins.repairIntent + ' ' + e.pins.childVersionId; },
+    e => { e.rows[3].number = e.rows[2].number; },
     e => { e.rows[2].bindings.find(b => b.name === 'ACCESS_AUDIENCES').text = 'b'.repeat(64); },
     e => { e.rows[2].bindings.push({name:'DB_OTHER',type:'hyperdrive',id:'b'.repeat(32)}); },
   ]) {

@@ -26,7 +26,7 @@ on:
         default: false
         type: boolean
       verify_isolated_promotion_source_only:
-        description: Verify the three isolated Worker versions and the active repair deployment before promotion
+        description: Verify all four isolated Worker versions and the active binding fix before promotion
         required: false
         default: false
         type: boolean

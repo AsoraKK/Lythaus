@@ -49,15 +49,19 @@ test('HTTP reads have a fixed scope, never follow redirects and do not leak prov
 
 test('the selected operation supplies the reviewed default and rejects a conflicting assertion',()=>{
   const original = {sourceSha:TARGET.candidate};
-  const repair = {sourceSha:'78747f85d02c69efa8a1b6f86b73b08947cdce0b',versionId:'193c3dcb-9238-4adc-8eab-48707fdd8b7e'};
+  const repair = {sourceSha:'78958d886d72eecc6ea01001d808f1d8c505046d',versionId:'40000000-0000-4000-8000-000000000001'};
+  const pins = {repairSourceSha:repair.sourceSha,servingVersionId:repair.versionId,repairIntent:'40000000-0000-4000-8000-000000000002',
+    activationIntent:'40000000-0000-4000-8000-000000000003',servingDeploymentId:'40000000-0000-4000-8000-000000000004'};
+  const file = (fields = pins) => () => JSON.stringify({destination:{isolatedAdminVersions:fields}});
   const mode = {PROMOTION_SOURCE_ONLY:'true'};
   assert.deepEqual(isolationReviewPins({}),original);
   assert.deepEqual(isolationReviewPins({EXPECTED_WORKER_SOURCE_SHA:original.sourceSha}),original);
-  assert.deepEqual(isolationReviewPins(mode),repair);
-  assert.deepEqual(isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:repair.sourceSha,EXPECTED_WORKER_VERSION_ID:repair.versionId}),repair);
+  assert.deepEqual(isolationReviewPins(mode,file()),repair);
+  assert.deepEqual(isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:repair.sourceSha,EXPECTED_WORKER_VERSION_ID:repair.versionId},file()),repair);
+  for (const name of Object.keys(pins)) assert.throws(()=>isolationReviewPins(mode,file({...pins,[name]:null})),/receipt_invalid/);
   assert.throws(()=>isolationReviewPins({EXPECTED_WORKER_SOURCE_SHA:repair.sourceSha}),/candidate_changed/);
-  assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:original.sourceSha}),/candidate_changed/);
-  assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_VERSION_ID:'unexpected'}),/version_mismatch/);
+  assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:original.sourceSha},file()),/candidate_changed/);
+  assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_VERSION_ID:'unexpected'},file()),/version_mismatch/);
   assert.throws(()=>isolationReviewPins({...mode,CONNECTOR_DISCOVERY_ONLY:'true'}),/modes_conflict/);
 });
 test('missing test resources remain blockers while production bindings are snapshotted and never changed',async()=>{

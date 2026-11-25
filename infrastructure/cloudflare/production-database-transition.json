@@ -42,11 +42,16 @@
       "childVersionId": "37f36eb4-911d-4c51-b723-751329cd1b92",
       "childDeploymentId": "307f3dcc-41f3-42e2-be4b-ad2a519ec51c",
       "sourceSha": "3fbaea846f67fe5ad452d53c456b5355069757ca",
-      "repairIntent": "c231d250-f91c-4626-bc7e-31fb2c8e1321",
-      "repairSourceSha": "78747f85d02c69efa8a1b6f86b73b08947cdce0b",
-      "servingVersionId": "193c3dcb-9238-4adc-8eab-48707fdd8b7e",
-      "activationIntent": "09d3fcd5-a4fd-477b-86d1-82e3d44769f4",
-      "servingDeploymentId": "85526c44-7551-41b0-805f-dd6270f05c2d"
+      "priorRepairIntent": "c231d250-f91c-4626-bc7e-31fb2c8e1321",
+      "priorRepairSourceSha": "78747f85d02c69efa8a1b6f86b73b08947cdce0b",
+      "priorRepairVersionId": "193c3dcb-9238-4adc-8eab-48707fdd8b7e",
+      "priorRepairActivationIntent": "09d3fcd5-a4fd-477b-86d1-82e3d44769f4",
+      "priorRepairDeploymentId": "85526c44-7551-41b0-805f-dd6270f05c2d",
+      "repairSourceSha": "78958d886d72eecc6ea01001d808f1d8c505046d",
+      "repairIntent": null,
+      "servingVersionId": null,
+      "activationIntent": null,
+      "servingDeploymentId": null
     },
     "connectors": {
       "lythaus_runtime": null,

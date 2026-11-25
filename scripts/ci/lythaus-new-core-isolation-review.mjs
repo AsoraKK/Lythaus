@@ -267,15 +267,17 @@ export async function inspectIsolation({ token, expectedOwner, expectedVersionId
     mutationCount:0, sqlExecuted:false, bootstrapCalled:false, readCount:api.reads.length,
     caveat:'Metadata tags are source claims and TLS fields show configuration only; artifact provenance, origin TLS/session validation, separate deployment approval and fresh browser acceptance remain required.' };
 }
-export function isolationReviewPins(env) {
+export function isolationReviewPins(env, readFile = readFileSync) {
   if (env.PROMOTION_SOURCE_ONLY !== 'true') {
     if (env.EXPECTED_WORKER_SOURCE_SHA && env.EXPECTED_WORKER_SOURCE_SHA !== TARGET.candidate) fail('isolation_candidate_changed');
     return {sourceSha:TARGET.candidate};
   }
   if (env.CONNECTOR_DISCOVERY_ONLY === 'true') fail('isolation_modes_conflict');
   const file = new URL('../../infrastructure/cloudflare/production-database-transition.json',import.meta.url);
-  const {repairSourceSha,servingVersionId} = JSON.parse(readFileSync(file,'utf8')).destination.isolatedAdminVersions;
-  if (!/^[a-f0-9]{40}$/.test(repairSourceSha) || !UUID.test(servingVersionId)) fail('isolation_receipt_invalid');
+  const {repairSourceSha,servingVersionId,repairIntent,activationIntent,servingDeploymentId} = JSON.parse(readFile(file,'utf8')).destination.isolatedAdminVersions;
+  if (!/^[a-f0-9]{40}$/.test(repairSourceSha) || ![servingVersionId,repairIntent,activationIntent,servingDeploymentId].every(id => UUID.test(id))) {
+    fail('isolation_receipt_invalid');
+  }
   if (env.EXPECTED_WORKER_SOURCE_SHA && env.EXPECTED_WORKER_SOURCE_SHA !== repairSourceSha) fail('isolation_candidate_changed');
   if (env.EXPECTED_WORKER_VERSION_ID && env.EXPECTED_WORKER_VERSION_ID !== servingVersionId) fail('isolated_promotion_version_mismatch');
   return {sourceSha:repairSourceSha,versionId:servingVersionId};
