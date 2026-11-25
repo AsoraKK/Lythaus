@@ -4,12 +4,14 @@ import { authorizeSetup } from './new-core-setup-control.mjs';
 import { inspectSetupInputs, runIsolatedSetup } from './lythaus-new-core-isolated-setup.mjs';
 import {loadPriorStageReceipt,recordStageReceipt} from './new-core-stage-receipt.mjs';
 import {readAdminHyperdriveMetrics} from './new-core-admin-read-diagnostic.mjs';
-import {isRepairOperation,routedRun,routedHead} from './new-core-repair-control.mjs';
+import {isRepairOperation} from './new-core-repair-control.mjs';
 import {REPAIR_PINS} from './new-core-isolated-repair-pins.mjs';
-import {loadRepairReceipt,recordRepairBeforeRequest,recordRepairState,requireRecordedRepairIntent} from './new-core-repair-receipt.mjs';
+import {loadRepairBaseline,loadRepairReceipt,recordRepairBeforeRequest,recordRepairState,requireRecordedRepairIntent} from './new-core-repair-receipt.mjs';
 
 const env = process.env;
-const authorize = () => authorizeSetup({ env, afterReview: true });
+// Run-scoped archives are immutable. Recheck current main, reviews and run history on each authorization.
+let verifiedBaseline;
+const authorize = () => authorizeSetup({env,afterReview:true,loadBaseline:() => verifiedBaseline ??= loadRepairBaseline(env)});
 const diagnoseRead = env.REQUESTED_OPERATION === 'diagnose-admin-read';
 const inspecting = env.REQUESTED_OPERATION === 'inspect' || diagnoseRead;
 const repairing = isRepairOperation(env.REQUESTED_OPERATION);
@@ -36,7 +38,7 @@ function record(entry) {
 try {
   if (repairing && env.REQUESTED_OPERATION !== 'reconcile-isolated-repair') recordRepairBeforeRequest(env,REPAIR_PINS);
   const gate = await authorize();
-  const prior = repairing ? loadPriorStageReceipt({...env,PRIOR_RUN:routedRun},routedHead) : loadPriorStageReceipt(env,gate.priorRunSha);
+  const prior = repairing ? gate.repairBaseline.prior : loadPriorStageReceipt(env,gate.priorRunSha);
   lineage = {...prior};
   if (repairing) {
     const pins=REPAIR_PINS;
@@ -49,7 +51,7 @@ try {
     const artifacts = operation === 'stage-isolated-repair' ? await loadArtifacts({
       sourceDir:resolve('application-source'),artifactDir:join(env.RUNNER_TEMP,'new-core-artifacts'),pins,
     }) : undefined;
-    const result = await runIsolatedRepair({operation,api:requireRecordedRepairIntent(api,env,pins),artifacts,pins,prior,repairReceipt,checkBoundary,
+    const result = await runIsolatedRepair({operation,api:requireRecordedRepairIntent(api,env,pins),artifacts,pins,prior,predecessor:gate.repairBaseline.predecessor,repairReceipt,checkBoundary,
       journal:state=>recordRepairState(env,state,pins)});
     console.log(JSON.stringify(result));
     if (!['REPAIR_BASELINE_VERIFIED','REPAIR_STAGED_NONSERVING','REPAIR_ACTIVE_OWNER_TEST_PENDING'].includes(result.status)) process.exitCode = 1;

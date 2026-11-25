@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import test, { beforeEach, mock } from 'node:test';
 import * as jose from 'jose';
+import { Client as PgClient } from 'pg';
 
 const host = 'admin-new-core-test.lythaus.co';
 const issuer = 'https://fixture.cloudflareaccess.com';
@@ -24,7 +25,8 @@ function failAt(stage) {
   }
 }
 
-class FixtureClient {
+class FixtureClient extends PgClient {
+  constructor(config) { failAt('construct'); super(config); }
   async connect() { failAt('connect'); }
   async query(statement, parameters) {
     statements.push(statement);
@@ -103,6 +105,21 @@ test('a signed nonmember receives the ordinary denial after exactly one bound lo
   assert.deepEqual(statements, [membershipSql, membershipSql]);
 });
 
+test('signed reads use native binding fields even when its connection string is unusable', async () => {
+  const binding = {
+    host:'fixture.hyperdrive.local', port:5432, user:'synthetic_admin', database:'postgres', password:'synthetic/#?@%2F+:',
+    connect() { assert.fail('pg owns the connection'); },
+    get connectionString() { throw new Error(rawMessage); },
+  };
+  for (const path of routes) {
+    const result = await read(isolated, path, { bindings:{...env, DB_ADMIN_FRESH:binding} });
+    assert.equal(result.status, 403);
+    assert.deepEqual(result.body, {error:'admin_role_required', correlationId:result.body.correlationId});
+    assertPrivate(result);
+  }
+  assert.deepEqual(statements, [membershipSql, membershipSql]);
+});
+
 test('missing or malformed assertions produce no diagnostic and never reach PostgreSQL', async () => {
   failure = { stage: 'query', code: '42501' };
   for (const [token, expected] of [['', 'access_required'], ['invalid', 'access_assertion_invalid']]) {
@@ -117,6 +134,7 @@ test('missing or malformed assertions produce no diagnostic and never reach Post
 });
 
 for (const [stage, code, expectedStage, category] of [
+  ['construct', 'SYNTHETIC_CONSTRUCTOR_FAILURE', 'db_binding', 'client_initialization_failed'],
   ['connect', 'ECONNREFUSED', 'db_connect', 'connection_failure'],
   ['connect', '08006', 'db_connect', 'connection_failure'],
   ['connect', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'db_connect', 'tls_verification_failed'],
@@ -167,7 +185,13 @@ test('unusable scoped binding and failed subject derivation expose only the oper
     const badBinding = await read(isolated, path, { bindings: { ...env, DB_ADMIN_FRESH: { connectionString: rawMessage } } });
     assertFailure(badBinding, 'db_binding', 'invalid_binding');
     const unavailableBinding = await read(isolated, path, { bindings: { ...env, get DB_ADMIN_FRESH() { throw new Error(rawMessage); } } });
-    assertFailure(unavailableBinding, 'db_binding', 'invalid_binding');
+    assertFailure(unavailableBinding, 'db_binding', 'binding_unavailable');
+    const missingBinding = await read(isolated, path, { bindings: { ...env, DB_ADMIN_FRESH:undefined } });
+    assertFailure(missingBinding, 'db_binding', 'binding_missing');
+    const failedGetter = await read(isolated, path, { bindings: { ...env, DB_ADMIN_FRESH:{
+      connect() {}, get host() { throw new Error(rawMessage); }, port:5432, database:'postgres', user:'fixture', password:'fixture',
+    } } });
+    assertFailure(failedGetter, 'db_binding', 'binding_unavailable');
     const badSubjectKey = await read(isolated, path, { bindings: { ...env, ACCESS_SUBJECT_HMAC_KEY: badKey } });
     assertFailure(badSubjectKey, 'subject_hmac', 'unclassified');
   }

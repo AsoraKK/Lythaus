@@ -109,12 +109,12 @@ function hasReadinessAuthorization(request: Request, env: Env): boolean {
 async function lookupAdmin(request: Request, env: Env, ReadFailure?: typeof IsolatedAdminReadFailure): Promise<AdminActor> {
   if (!env.ACCESS_SUBJECT_HMAC_KEY) throw new Error('admin_subject_key_not_configured');
   const subject = await verifiedAccessSubject(request, env);
-  let stage: 'subject_hmac' | 'binding' = 'subject_hmac';
+  let stage: 'subject_hmac' | 'binding_access' = 'subject_hmac';
   let subjectHmac: string;
   let binding: HyperdriveBinding;
   try {
     subjectHmac = hmacLookup(subject, env.ACCESS_SUBJECT_HMAC_KEY);
-    stage = 'binding';
+    stage = 'binding_access';
     binding = env.DB_ADMIN_FRESH;
   } catch (error) {
     throw ReadFailure ? new ReadFailure(stage, error) : error;
