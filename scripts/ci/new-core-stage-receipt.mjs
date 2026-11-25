@@ -3,6 +3,7 @@ import { lstatSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import { ID, RECORDED_WORKER_ID, requireSetup } from './new-core-isolated-cloudflare.mjs';
 import { TARGET } from './lythaus-new-core-isolation-review.mjs';
+import { REPOSITORY } from './lythaus-new-core-schema-install-control.mjs';
 
 const file = 'isolated-worker-lineage.json';
 const keys = new Set(['parentIntent','ackParent','childIntent','childParent','ackChild','activationTarget','deploymentId','dnsId','routeId']);
@@ -24,7 +25,7 @@ export function loadPriorStageReceipt(env,priorRunSha) {
   if (!env.PRIOR_RUN) return {};
   const dir = mkdtempSync(join(env.RUNNER_TEMP,'prior-lineage-'));
   try {
-    execFileSync('gh',['run','download',env.PRIOR_RUN,'--repo','AsoraKK/Lythaus','--name',
+    execFileSync('gh',['run','download',env.PRIOR_RUN,'--repo',REPOSITORY,'--name',
       'isolated-worker-lineage-'+env.PRIOR_RUN+'-1','--dir',dir],{
       env:{PATH:env.PATH,HOME:env.HOME,GH_TOKEN:env.GH_TOKEN},stdio:'ignore',timeout:30000});
     const path = join(dir,file), stat = lstatSync(path);
