@@ -5,7 +5,7 @@ import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/
 import { constantTimeEqual, decryptField, hmacLookup, uuidv7 } from '@lythaus/security';
 import { adminCorsPreflight, assertAdminMutationRequest, withAdminCors } from './admin-cors-policy.ts';
 import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } from './admin-access-runtime-policy.ts';
-import { IsolatedAdminReadFailure } from './isolated-admin-read-failure.ts';
+import type { IsolatedAdminReadFailure } from './isolated-admin-read-failure.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import { handleAdminBeta } from './authenticity-beta.ts';
 import { handleAdminAlpha } from './authenticity-alpha.ts';
@@ -106,7 +106,7 @@ function hasReadinessAuthorization(request: Request, env: Env): boolean {
   return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
 }
 
-async function lookupAdmin(request: Request, env: Env, isolatedRead: boolean): Promise<AdminActor> {
+async function lookupAdmin(request: Request, env: Env, ReadFailure?: typeof IsolatedAdminReadFailure): Promise<AdminActor> {
   if (!env.ACCESS_SUBJECT_HMAC_KEY) throw new Error('admin_subject_key_not_configured');
   const subject = await verifiedAccessSubject(request, env);
   let stage: 'subject_hmac' | 'binding' = 'subject_hmac';
@@ -117,11 +117,11 @@ async function lookupAdmin(request: Request, env: Env, isolatedRead: boolean): P
     stage = 'binding';
     binding = env.DB_ADMIN_FRESH;
   } catch (error) {
-    throw isolatedRead ? new IsolatedAdminReadFailure(stage, error) : error;
+    throw ReadFailure ? new ReadFailure(stage, error) : error;
   }
   const result = await query<{ user_id: string; role: string }>(binding,
     `SELECT user_id, role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true`,
-    [subjectHmac], isolatedRead ? (stage, error) => new IsolatedAdminReadFailure(stage, error) : undefined,
+    [subjectHmac], ReadFailure ? (stage, error) => new ReadFailure(stage, error) : undefined,
   );
   if (result.rowCount !== 1) throw new Error('admin_role_required');
   return requireActiveAdminMembership(result.rows[0]);
@@ -1161,8 +1161,8 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
 
 import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
 
-function createAdminFetch(isolatedRead: boolean) {
-  const requireAdmin = (request: Request, env: Env) => lookupAdmin(request, env, isolatedRead);
+export function createAdminFetch(ReadFailure?: typeof IsolatedAdminReadFailure) {
+  const requireAdmin = (request: Request, env: Env) => lookupAdmin(request, env, ReadFailure);
   return async function fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
     const cors = (response: Response) => withAdminCors(request, env.CORS_ALLOWED_ORIGINS, response);
@@ -1392,8 +1392,8 @@ function createAdminFetch(isolatedRead: boolean) {
       return cors(json({ error: 'not_found', correlationId: id }, { status: 404 }));
     } catch (error) {
       const classified = adminError(error);
-      const diagnostic = isolatedRead && error instanceof IsolatedAdminReadFailure ? error.diagnostic : undefined;
-      if (isolatedRead && classified.exposedCode === 'admin_request_failed') classified.internalCode = classified.exposedCode;
+      const diagnostic = ReadFailure && error instanceof ReadFailure ? error.diagnostic : undefined;
+      if (ReadFailure && classified.exposedCode === 'admin_request_failed') classified.internalCode = classified.exposedCode;
       logEvent({
         service: 'lythaus-admin-api',
         correlationId: id,
@@ -1409,5 +1409,4 @@ function createAdminFetch(isolatedRead: boolean) {
   };
 }
 
-export const fetchIsolatedAdminRead = createAdminFetch(true);
-export default { fetch: createAdminFetch(false) };
+export default { fetch: createAdminFetch() };
