@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {bindingRepairPins,priorRepairPins} from '../ci/new-core-isolated-repair-state.mjs';
 import {verifyRepairControl,predecessorRun,predecessorRuns,routedHead,routedRun} from '../ci/new-core-repair-control.mjs';
 
 const sha='a'.repeat(40), pins={sourceSha:'b'.repeat(40),workerSha:'c'.repeat(64),assetsSha:'d'.repeat(64),workerBytes:123,assetBytes:345,assetCount:3};
@@ -47,7 +48,7 @@ function withPrior(operation,from=stage,result='success') {
   x.rows.push(x.mapping['actions/runs/'+priorId]);
   return x;
 }
-test('binding fix requires the exact routed, diagnostic and activated predecessor and its separate protected source',async()=>{
+test('wrapped binding fix authenticates all four earlier writes and requires a separate protected descendant',async()=>{
   const valid=inputs();
   assert.deepEqual(await verifyRepairControl(valid),{repairBaseline:valid.baseline});
   for(const {runId,controllerSha} of predecessorRuns){
@@ -69,8 +70,14 @@ test('binding fix requires the exact routed, diagnostic and activated predecesso
     await assert.rejects(verifyRepairControl(x),/ancestry_unverified/);
   }
   await assert.rejects(verifyRepairControl({...inputs(),loadBaseline(){throw new Error('bad archive');}}),/bad archive/);
-  for(const [operation,runId] of [[stage,routedRun],[activate,predecessorRun],[activate,predecessorRuns[0].runId],
-    [reconcile,predecessorRuns[0].runId]]) await assert.rejects(verifyRepairControl(inputs(operation,runId)));
+  for(const {runId} of predecessorRuns){
+    await assert.rejects(verifyRepairControl(inputs(activate,runId)));
+    if(runId!==predecessorRun){
+      await assert.rejects(verifyRepairControl(inputs(stage,runId)));
+      await assert.rejects(verifyRepairControl(inputs(reconcile,runId)));
+    }
+  }
+  await assert.rejects(verifyRepairControl(inputs(stage,routedRun)));
   for(const [id,patch] of [[routedRun,{conclusion:'failure'}],[routedRun,{actor:{id:1}}],[diagnostic,{head_sha:sha}],
     [diagnostic,{display_title:'other'}],[diagnostic,{run_attempt:2}],[diagnostic,{event:'pull_request'}]]) {
     const x=inputs();
@@ -80,7 +87,7 @@ test('binding fix requires the exact routed, diagnostic and activated predecesso
   const x=inputs();
   x.mapping['actions/runs/'+diagnostic+'/approvals']=[];
   await assert.rejects(verifyRepairControl(x),/schema_owner_approval_missing/);
-  await assert.rejects(verifyRepairControl({...inputs(),pins:null}));
+  for(const sealed of [null,priorRepairPins,bindingRepairPins]) await assert.rejects(verifyRepairControl({...inputs(),pins:sealed}));
   await assert.rejects(verifyRepairControl({...inputs(),pins:{...pins,sourceSha:sha}}),/separate_application_pin/);
   await assert.rejects(verifyRepairControl(inputs(stage,priorId)),/baseline_unverified/);
 });

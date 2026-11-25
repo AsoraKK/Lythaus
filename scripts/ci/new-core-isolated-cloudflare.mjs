@@ -5,9 +5,14 @@ export const ZONE = `/zones/${TARGET.zone}`;
 export const SCRIPT = `${ACCOUNT}/workers/scripts/${TARGET.worker}`;
 export const DRIVE = `${ACCOUNT}/hyperdrive/configs/${TARGET.hyperdrive}`;
 export const RECORDED_WORKER_ID = '89391a349e454b3994bd43299c6386ed';
+export const ROUTED_PARENT_ID = '44cd6e04-15d7-467c-9d93-ff59d5d4fe0c';
 export const ROUTED_CHILD_ID = '37f36eb4-911d-4c51-b723-751329cd1b92';
 export const ROUTED_REPAIR_ID = '193c3dcb-9238-4adc-8eab-48707fdd8b7e';
 export const ROUTED_REPAIR_INTENT = 'c231d250-f91c-4626-bc7e-31fb2c8e1321';
+export const ROUTED_BINDING_ID = '1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f';
+export const ROUTED_BINDING_INTENT = 'a1bba168-fcda-4240-9170-c8e7b13a3dee';
+export const ROUTED_BINDING_SOURCE = '78958d886d72eecc6ea01001d808f1d8c505046d';
+const versionIntent = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 export const RECORDED_WORKER = `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`;
 export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/;
 const API = 'https://api.cloudflare.com/client/v4';
@@ -130,7 +135,7 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
         Object.keys(body ?? {}).sort().join() === 'annotations,strategy,versions' &&
         Object.keys(body.annotations ?? {}).join() === 'workers/message' &&
         /^lythaus-isolated-repair [a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(body.annotations['workers/message']);
-      requireSetup(observedRepairPredecessor && owned.workerId === RECORDED_WORKER_ID && owned.parentVersionId === ROUTED_REPAIR_ID &&
+      requireSetup(observedRepairPredecessor && owned.workerId === RECORDED_WORKER_ID && owned.parentVersionId === ROUTED_BINDING_ID &&
         (staging || activating), 'repair_provider_scope');
     }
     if (singleStage && method !== 'GET') requireSetup(resumeWorker && !stageCount &&
@@ -148,6 +153,12 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
     if (stage === 'stage_version') {
       const keys = body?.bindings?.filter(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY') ?? [];
       const key = keys[0];
+      if (repairOperation) {
+        const message = body?.annotations?.['workers/message'];
+        const [label, intentId, parent] = typeof message === 'string' ? message.split(' ') : [];
+        requireSetup(label === 'lythaus-isolated' && versionIntent.test(intentId) && parent === ROUTED_BINDING_ID &&
+          message === `lythaus-isolated ${intentId} ${parent}`, 'repair_version_annotation');
+      }
       requireSetup(!owned.versionId && keys.length === 1 && (owned.parentVersionId
         ? key.type === 'inherit' && key.version_id === owned.parentVersionId && Object.keys(key).length === 3
         : key.type === 'secret_text' && typeof key.text === 'string' && /^[A-Za-z0-9+/]{43}=$/.test(key.text)
@@ -202,11 +213,13 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
       const version = payload.result;
       observedVersions.add(version.id);
       const message = version.annotations?.['workers/message'];
-      if (version.id === ROUTED_REPAIR_ID) observedRepairPredecessor = message === `lythaus-isolated ${ROUTED_REPAIR_INTENT} ${ROUTED_CHILD_ID}`;
+      if (version.id === ROUTED_BINDING_ID) observedRepairPredecessor =
+        version.annotations?.['workers/tag'] === ROUTED_BINDING_SOURCE &&
+        message === `lythaus-isolated ${ROUTED_BINDING_INTENT} ${ROUTED_REPAIR_ID}`;
       const marker = typeof message === 'string' ? message.split(' ') : [];
       observedRepairChildren.delete(version.id);
-      if (repairOperation && marker?.length === 3 && marker[0] === 'lythaus-isolated' && ID.test(marker[1]) &&
-        marker[2] === ROUTED_REPAIR_ID && version.id !== ROUTED_REPAIR_ID) observedRepairChildren.add(version.id);
+      if (repairOperation && marker?.length === 3 && marker[0] === 'lythaus-isolated' && versionIntent.test(marker[1]) &&
+        marker[2] === ROUTED_BINDING_ID && ![ROUTED_PARENT_ID,ROUTED_CHILD_ID,ROUTED_REPAIR_ID,ROUTED_BINDING_ID].includes(version.id)) observedRepairChildren.add(version.id);
     }
     if (method !== 'GET') {
       const id = payload.result?.id;
@@ -302,7 +315,7 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   function selectLineage(parent,child) {
     requireSetup(resumeWorker && owned.workerId === RECORDED_WORKER_ID && !owned.parentVersionId && !stageCount &&
       observedVersions.has(parent) && (!child || child !== parent && observedVersions.has(child)), 'recorded_lineage_not_verified');
-    if (repairOperation) requireSetup(observedRepairPredecessor && parent === ROUTED_REPAIR_ID &&
+    if (repairOperation) requireSetup(observedRepairPredecessor && parent === ROUTED_BINDING_ID &&
       (repairOperation === 'stage-isolated-repair' ? !child : repairOperation === 'activate-isolated-repair' && observedRepairChildren.has(child)),
       'repair_lineage_selection');
     owned.parentVersionId = parent;

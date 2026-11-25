@@ -27,7 +27,7 @@ const audience = 'a'.repeat(64);
 const hostname = 'admin-new-core-test.lythaus.co';
 const workerName = 'lythaus-admin-api-new-core-test';
 const workerId = repair ? '89391a349e454b3994bd43299c6386ed' : 'd'.repeat(32);
-const parentId = repair ? '193c3dcb-9238-4adc-8eab-48707fdd8b7e' : '22222222-2222-4222-b222-222222222222';
+const parentId = repair ? '1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f' : '22222222-2222-4222-b222-222222222222';
 const childId = '33333333-3333-4333-b333-333333333333';
 const api = 'https://api.cloudflare.com/client/v4/accounts/e5b7ae46e04698f507b7e4b3d4ef1af0/workers';
 const versions = `${api}/workers/${workerId}/versions`;
@@ -105,7 +105,8 @@ const apiClient = createSetupClient({ token: accountToken, record: async () => {
     if (request.method === 'GET') {
       if (url === `${api}/workers/${workerId}`) return reply(repair ? {...shell, deployed_on: '2026-11-25T12:19:30Z'} : shell);
       if (repair && url === `${versions}/${parentId}?include=modules`) return reply({id:parentId,
-        annotations:{'workers/message':'lythaus-isolated c231d250-f91c-4626-bc7e-31fb2c8e1321 37f36eb4-911d-4c51-b723-751329cd1b92'}});
+        annotations:{'workers/tag':'78958d886d72eecc6ea01001d808f1d8c505046d',
+          'workers/message':'lythaus-isolated a1bba168-fcda-4240-9170-c8e7b13a3dee 193c3dcb-9238-4adc-8eab-48707fdd8b7e'}});
       if (url === versions) return reply([...versionMessages.keys()].map(id=>({id})));
       const id = [parentId,childId].find(id => url === `${versions}/${id}?include=modules`);
       if (id && versionMessages.has(id)) return reply({

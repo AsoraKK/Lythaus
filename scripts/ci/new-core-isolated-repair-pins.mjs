@@ -1,14 +1,14 @@
 import { pathToFileURL } from 'node:url';
 import { assertRepairPins } from './new-core-isolated-repair-state.mjs';
 
-// Independently rebuilt from the protected squash of application PR #1195.
+// Independently rebuilt from the protected squash of application PR #1197.
 export const REPAIR_PINS = Object.freeze({
-  sourceSha: '78958d886d72eecc6ea01001d808f1d8c505046d',
-  workerSha: 'e568b5cfc238a9b87f3ca87ff3ef1ebfff5efd7415cd2bd469d6089b2104b0bd',
-  workerBytes: 655674,
-  assetsSha: 'f9848f5188fad141385d3653c16adbc57eff69afa7317990ecccad7422284316',
+  sourceSha: 'fc1dce9683219edee3312cf339526b2850385aa2',
+  workerSha: '38bee5bd1a6b394816a7169c8209e788eabf99d9645ed8a1775909a69288fd07',
+  workerBytes: 657919,
+  assetsSha: 'd4d62e847efe855abf4b19484ef3a0d56118f511ae70c82ef9db370a1e29026d',
   assetCount: 30,
-  assetBytes: 393868,
+  assetBytes: 394578,
 });
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -8,34 +8,66 @@ import {
 import {TARGET} from '../ci/lythaus-new-core-isolation-review.mjs';
 
 const operations = ['stage-isolated-repair', 'activate-isolated-repair', 'reconcile-isolated-repair'];
-const servingChild = '193c3dcb-9238-4adc-8eab-48707fdd8b7e';
+const originalParent = '44cd6e04-15d7-467c-9d93-ff59d5d4fe0c';
+const originalChild = '37f36eb4-911d-4c51-b723-751329cd1b92';
+const priorRepair = '193c3dcb-9238-4adc-8eab-48707fdd8b7e';
+const servingChild = '1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f';
+const servingSource = '78958d886d72eecc6ea01001d808f1d8c505046d';
+const servingMarker = 'lythaus-isolated a1bba168-fcda-4240-9170-c8e7b13a3dee ' + priorRepair;
+const newIntent = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const newMarker = 'lythaus-isolated ' + newIntent + ' ' + servingChild;
 const candidate = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const deployment = version => ({strategy:'percentage', versions:[{version_id:version, percentage:100}]});
 const stagePath = RECORDED_WORKER + '/versions?deploy=false';
 
-test('the repair client requires the activated predecessor and the new annotated child', async () => {
-  const old = '37f36eb4-911d-4c51-b723-751329cd1b92';
-  const predecessorMarker = 'lythaus-isolated c231d250-f91c-4626-bc7e-31fb2c8e1321 ' + old;
-  for (const [op, parent, marker, target] of [
-    [operations[0],old,predecessorMarker,undefined],
-    [operations[0],servingChild,'wrong marker',undefined],
-    [operations[1],servingChild,predecessorMarker,old],
-    [operations[1],servingChild,predecessorMarker,candidate],
+async function observedRepairClient(operation, {tag = servingSource, marker = servingMarker, childMarker = newMarker} = {}) {
+  const api = createSetupClient({token:'local-fixture', repairOperation:operation, record:()=>assert.fail(), fetchImpl:async (url,options) => {
+    assert.equal(options.method,'GET');
+    const id = new URL(url).pathname.split('/').at(-1);
+    const result = url.endsWith(RECORDED_WORKER) ? {id, name:TARGET.worker} :
+      {id,annotations:{'workers/tag':id === servingChild ? tag : 'e'.repeat(40),
+        'workers/message':id === servingChild ? marker : childMarker}};
+    return Response.json({success:true,result});
+  }});
+  await api.request(RECORDED_WORKER);
+  api.selectRecordedWorker();
+  for (const id of [originalParent,originalChild,priorRepair,servingChild,candidate])
+    await api.request(RECORDED_WORKER + '/versions/' + id + '?include=modules');
+  return api;
+}
+
+test('the repair client requires the fourth version and its annotated fifth child', async () => {
+  for (const [op, parent, target, readback] of [
+    [operations[0],priorRepair,undefined,{}],
+    [operations[0],servingChild,undefined,{marker:'wrong marker'}],
+    [operations[0],servingChild,undefined,{tag:'e'.repeat(40)}],
+    [operations[1],servingChild,originalParent,{}],
+    [operations[1],servingChild,originalChild,{}],
+    [operations[1],servingChild,priorRepair,{}],
+    [operations[1],servingChild,candidate,{childMarker:'lythaus-isolated ' + newIntent + ' ' + priorRepair}],
   ]) {
-    const api = createSetupClient({token:'local-fixture', repairOperation:op, record:()=>assert.fail(), fetchImpl:async (url,options) => {
-      assert.equal(options.method,'GET');
-      const path = new URL(url).pathname;
-      const id = path.split('/').at(-1);
-      const result = url.endsWith(RECORDED_WORKER) ? {id, name:TARGET.worker} :
-        {id,annotations:{'workers/message':id === servingChild ? marker : 'lythaus-isolated c231d250-f91c-4626-bc7e-31fb2c8e1321 ' + old}};
-      return Response.json({success:true,result});
-    }});
-    await api.request(RECORDED_WORKER);
-    api.selectRecordedWorker();
-    for (const id of new Set([old,servingChild,...(target ? [target] : [])]))
-      await api.request(RECORDED_WORKER + '/versions/' + id + '?include=modules');
+    const api = await observedRepairClient(op,readback);
     assert.throws(() => api.selectLineage(parent,target));
   }
+});
+
+test('selected lineage still rejects a wrong stage annotation, secret source or activation target', async () => {
+  const stage = await observedRepairClient(operations[0]);
+  stage.selectLineage(servingChild);
+  const key = {name:'ACCESS_SUBJECT_HMAC_KEY', type:'inherit', version_id:servingChild};
+  for (const [annotation, binding] of [
+    ['lythaus-isolated ' + newIntent + ' ' + priorRepair, key],
+    [newMarker, {...key, version_id:priorRepair}],
+    [newMarker, {name:key.name,type:'secret_text',text:'synthetic fixture'}],
+  ]) {
+    await assert.rejects(stage.request(stagePath, {method:'POST',body:{
+      annotations:{'workers/message':annotation},bindings:[binding],
+    }}), /setup_(repair_version_annotation|subject_key_lineage)/);
+  }
+  const activate = await observedRepairClient(operations[1]);
+  activate.selectLineage(servingChild,candidate);
+  const wrong = {...deployment(servingChild),annotations:{'workers/message':'lythaus-isolated-repair ' + newIntent}};
+  await assert.rejects(activate.request(SCRIPT + '/deployments',{method:'POST',body:wrong}), /setup_deployment/);
 });
 
 test('staging, activating and reconciling a routed correction on the same Worker', () => {
