@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
-import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
+import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
+import { createAccessIssuer } from '../../../scripts/tests/fixtures/cloudflare-access-assertions.mjs';
 import { uuidv7, signAccessToken, hmacLookup } from '@lythaus/security';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
 import { nativePostgresActivityFixture } from './native-postgres-activity-fixture.mjs';
@@ -16,7 +17,7 @@ assert.ok(supplied.pathname.startsWith('/lythaus_auth_test') || (process.env.GIT
 const name = 'lythaus_auth_test_activity_integration_' + uuidv7().replaceAll('-','');
 const local = new URL(supplied); local.pathname = '/' + name;
 let control, bootstrap, publicApi, adminApi, jobsApi, workflow, jwksServer, created = false;
-let privateKey, privateKeyPem, jwks, accessToken;
+let privateKeyPem, accessToken;
 const keyId = 'synthetic-activity-integration', accessSubject = 'synthetic-activity-owner';
 const hmacKey = randomBytes(32).toString('base64');
 const actorA = uuidv7(), actorB = uuidv7(), owner = uuidv7();
@@ -29,10 +30,11 @@ before(async () => {
   for (const migration of loadApprovedMigrations().migrations) await sql(migration.contents.toString());
   await sql(readFileSync('database/planetscale/grants/roles.sql','utf8'));
   await sql(readFileSync('database/planetscale/proposals/profile-presentation-preferences.sql','utf8'));
-  const pair = await generateKeyPair('ES256', { extractable: true }); privateKey = pair.privateKey;
-  privateKeyPem = await exportPKCS8(privateKey);
-  jwks = { keys: [{ ...await exportJWK(pair.publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] };
-  jwksServer = createServer((_request,response) => { response.setHeader('Content-Type','application/json'); response.end(JSON.stringify(jwks)); });
+  const pair = await generateKeyPair('ES256', { extractable: true });
+  privateKeyPem = await exportPKCS8(pair.privateKey);
+  const jwks = { keys: [{ ...await exportJWK(pair.publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] };
+  const access = await createAccessIssuer('https://synthetic-access.invalid', 'synthetic-activity-admin');
+  jwksServer = createServer((_request,response) => { response.setHeader('Content-Type','application/json'); response.end(JSON.stringify(access.jwks)); });
   await new Promise(resolve => jwksServer.listen(0,'127.0.0.1',resolve));
   const bindings = { ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
     PII_HMAC_KEY_V1: hmacKey, JWT_PUBLIC_JWKS: JSON.stringify(jwks), ACCESS_SUBJECT_HMAC_KEY: hmacKey,
@@ -44,8 +46,7 @@ before(async () => {
   workflow = await nativePostgresPrivacyWorkflowFixture(local.toString());
   for (const id of [actorA,actorB,owner]) await sql('INSERT INTO identity.users(id) VALUES($1)',[id]);
   await sql("INSERT INTO identity.admin_memberships(user_id,access_subject_hmac,role,active) VALUES($1,decode($2,'base64'),'owner',true)",[owner,hmacLookup(accessSubject,hmacKey)]);
-  accessToken = await new SignJWT({}).setProtectedHeader({alg:'ES256',kid:keyId}).setSubject(accessSubject)
-    .setAudience('synthetic-activity-admin').setIssuer('https://synthetic-access.invalid').setIssuedAt().setExpirationTime('1h').sign(privateKey);
+  accessToken = await access.issue(accessSubject);
 });
 after(async () => {
   await publicApi?.dispose(); await adminApi?.dispose(); await jobsApi?.dispose(); await workflow?.dispose();

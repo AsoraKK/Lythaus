@@ -6,14 +6,12 @@ export interface AdminActor {
 }
 
 interface AccessConfiguration {
-  ACCESS_REQUIRE_SIGNED_SUBJECT?: string;
   ACCESS_JWKS_URL?: string;
   ACCESS_AUDIENCES?: string;
   ACCESS_TEAM_DOMAIN?: string;
 }
 
 interface VerifiedAccessConfiguration {
-  requireSignedSubject?: true;
   ACCESS_JWKS_URL: string;
   ACCESS_AUDIENCES: string[];
   ACCESS_TEAM_DOMAIN?: string;
@@ -24,7 +22,8 @@ type AssertionVerifier = (assertion: string, configuration: VerifiedAccessConfig
 async function verifyAssertion(assertion: string, configuration: VerifiedAccessConfiguration): Promise<{ sub?: string; email?: string }> {
   const jwks = createRemoteJWKSet(new URL(configuration.ACCESS_JWKS_URL));
   const verified = await jwtVerify(assertion, jwks, {
-    ...(configuration.requireSignedSubject ? { algorithms: ['RS256'], requiredClaims: ['sub', 'exp'] } : {}),
+    algorithms: ['RS256'],
+    requiredClaims: ['sub', 'exp'],
     audience: configuration.ACCESS_AUDIENCES,
     issuer: configuration.ACCESS_TEAM_DOMAIN ? `https://${configuration.ACCESS_TEAM_DOMAIN}` : undefined,
   });
@@ -55,7 +54,6 @@ export async function verifiedAccessSubject(
   let payload: { sub?: string; email?: string };
   try {
     payload = await verifier(assertion, {
-      ...(configuration.ACCESS_REQUIRE_SIGNED_SUBJECT === 'true' ? {requireSignedSubject:true} : {}),
       ACCESS_JWKS_URL: configuration.ACCESS_JWKS_URL,
       ACCESS_AUDIENCES: audiences,
       ACCESS_TEAM_DOMAIN: configuration.ACCESS_TEAM_DOMAIN,
@@ -63,8 +61,8 @@ export async function verifiedAccessSubject(
   } catch {
     throw new Error('access_assertion_invalid');
   }
-  const subject = configuration.ACCESS_REQUIRE_SIGNED_SUBJECT === 'true' ? payload.sub : payload.sub ?? payload.email;
-  if (!subject || (configuration.ACCESS_REQUIRE_SIGNED_SUBJECT === 'true' && (typeof subject !== 'string' || !subject.trim()))) throw new Error('access_subject_missing');
+  const subject = payload.sub;
+  if (typeof subject !== 'string' || !subject.trim()) throw new Error('access_subject_missing');
   return subject;
 }
 

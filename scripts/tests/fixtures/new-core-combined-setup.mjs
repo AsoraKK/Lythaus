@@ -3,6 +3,7 @@ import { X509Certificate } from 'node:crypto';
 import { rootCertificates } from 'node:tls';
 import { mock } from 'node:test';
 import * as inspector from '../../ci/lythaus-new-core-isolation-review.mjs';
+import {readLineage} from '../../ci/new-core-isolated-worker.mjs';
 
 const { TARGET } = inspector;
 const owner='owner@fixture.invalid', token='private-fixture-token', password='private-fixture-password';
@@ -45,14 +46,26 @@ mock.module('../../ci/lythaus-new-core-admin-inputs.mjs',{namedExports:{
   },
 }});
 mock.module('../../ci/new-core-isolated-worker.mjs',{namedExports:{
+  async readLineage(args) {
+    if (!state.fault.includes('_active_')) return readLineage(args);
+    assert.deepEqual(args.versions.map(row=>row.id),[parentVersionId,versionId]);
+    assert.equal(args.parentIntent,parentVersionId);
+    assert.equal(args.childIntent,versionId);
+    return {parent:{versionId:parentVersionId},child:{versionId}};
+  },
   async loadArtifacts(){return {};},
-  async stageWorker({request,existingWorkerId}) {
+  async stageWorker({request,existingWorkerId,singleStage,activeVersionId}) {
     assert.ok(state.drive.restarted_on);
     const path = `/accounts/${TARGET.account}/workers/workers`;
     if (!existingWorkerId) await request(path,{method:'POST',body:{name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false}}});
     else assert.equal(existingWorkerId,recordedWorkerId);
+    if (activeVersionId) {
+      assert.equal(activeVersionId,versionId);
+      return {workerId:existingWorkerId,parentVersionId,versionId,tag:TARGET.candidate};
+    }
     const stage = binding => request(`${path}/${existingWorkerId ?? workerId}/versions?deploy=false`, {method:'POST',body:{bindings:[binding]}});
     await stage({name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text',text:Buffer.alloc(32).toString('base64')});
+    if (singleStage) return {workerId:existingWorkerId,parentVersionId,tag:TARGET.candidate,checkpoint:'PARENT_CREATED_AND_VERIFIED'};
     await stage({name:'ACCESS_SUBJECT_HMAC_KEY',type:'inherit',version_id:parentVersionId});
     return {workerId:existingWorkerId ?? workerId,parentVersionId,versionId,tag:TARGET.candidate};
   },
@@ -127,6 +140,7 @@ globalThis.fetch = async (url,init)=>{
     if (state.fault.startsWith('recorded_worker_resume_')) {
       assert.equal(method,'GET');
       result.observability={enabled:false,logs:{enabled:false,invocation_logs:true},traces:{enabled:false}};
+      if (state.deployed) result.deployed_on='2026-11-25T05:00:00Z';
       if (state.fault==='recorded_worker_resume_drift') result.tail_consumers=[{name:'provider-private-tail'}];
       if (state.fault.endsWith('_worker_logs_enabled')) result.observability.logs.enabled=true;
       if (state.fault.endsWith('_worker_logs_missing')) delete result.observability.logs.enabled;
@@ -141,7 +155,7 @@ globalThis.fetch = async (url,init)=>{
   } else if (path.endsWith('/workers/workers/'+recordedWorkerId+'/versions') && method==='GET') {
     assert.equal(method,'GET');
     assert.equal(u.search,'?per_page=100&page=1');
-    result=[];
+    result=state.fault.includes('_active_') ? [{id:parentVersionId},{id:versionId}] : [];
   } else if (path.endsWith('/script-settings')) {
     result={logpush:false,observability:{enabled:false},tail_consumers:[]};
     if (state.fault.startsWith('recorded_worker_resume_')) {
@@ -157,12 +171,18 @@ globalThis.fetch = async (url,init)=>{
     if(state.fault!=='restart_readback')state.drive.restarted_on='2026-11-17T00:00:00Z';
     result=state.drive;
   } else if(path.endsWith('/workers/workers')) result={id:workerId,name:TARGET.worker};
-  else if(path.endsWith('/versions')) result={id:body.bindings[0].type==='inherit' ? versionId : parentVersionId};
+  else if(path.endsWith('/versions')) {
+    assert.equal(method,'POST');
+    assert.equal(u.search,'?deploy=false');
+    if (state.fault==='recorded_worker_resume_upload_rejected') return Response.json({success:false,
+      errors:[{code:10021,source:{pointer:'/modules/0'},message:'private-provider-data'}]}, {status:400});
+    result={id:body.bindings[0].type==='inherit' ? versionId : parentVersionId};
+  }
   else if(path.endsWith('/subdomain')) result={enabled:false,previews_enabled:false};
   else if(path.endsWith('/deployments')) {
     if(method==='POST'){assert.equal(body.versions[0].version_id,versionId);assert.equal(state.stagedReads,1);
       state.deployed=true;result={id:'f'.repeat(32)};}
-    else result=[];
+    else result=state.deployed ? [{id:'f'.repeat(32),versions:[{version_id:state.fault.endsWith('_wrong_child') ? parentVersionId : versionId,percentage:100}]}] : [];
   } else assert.fail('unexpected provider path');
   return Response.json({success:true,result});
 };
@@ -173,10 +193,13 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
   ...Object.keys(rejectedCookieShapes),'resume_cookie_path_destination','resume_cookie_private_destination',
   'resume_cookie_destination_override','resume_cookie_duplicate_destination','resume_audience_drift','resume_duplicate_audience',
   'resume_wrong_owner','resume_list_conflict','recorded_worker_partial','recorded_worker_strict_pass',
-  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_script_uncertain',
+  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_script_uncertain','recorded_worker_resume_upload_rejected',
   'recorded_worker_resume_script_enabled','recorded_worker_resume_script_child_enabled','recorded_worker_resume_script_null',
   'recorded_worker_resume_worker_logs_enabled','recorded_worker_resume_worker_logs_missing',
-  'recorded_worker_resume_worker_child_null','recorded_worker_resume_worker_export']) {
+  'recorded_worker_resume_worker_child_null','recorded_worker_resume_worker_export','recorded_worker_resume_single',
+  'recorded_worker_resume_active_only','recorded_worker_resume_active_dns','recorded_worker_resume_active_routed',
+  'recorded_worker_resume_active_wrong_child','recorded_worker_resume_active_route_collision',
+  'recorded_worker_resume_active_unacknowledged','recorded_worker_resume_active_unknown_route']) {
   state={fault,finalVerifier:0,challenges:0,stagedReads:0,deployed:false,drive:{id:TARGET.hyperdrive,
     origin:{scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres',user:'broad.'+TARGET.branch},caching:{disabled:true}}};
   const journal=[];
@@ -190,18 +213,49 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
     state.drive.restarted_on='2026-11-24T00:00:00Z';
     if (fault.startsWith('recorded_worker_resume_')) {
       const resume={...args,resumeWorker:true};
+      if (fault === 'recorded_worker_resume_single') {
+        const outcome=await runIsolatedSetup({...resume,singleStage:true});
+        assert.equal(outcome.status,'PARENT_CREATED_AND_VERIFIED');
+        assert.deepEqual(journal.map(row=>row.operation),['stage_version']);
+        assert.equal(state.deployed,false);
+        continue;
+      }
+      if (fault.includes('_active_')) {
+        state.deployed=true;
+        state.stagedReads=2;
+        resume.prior={parentIntent:parentVersionId,childIntent:versionId,activationTarget:versionId,deploymentId:'f'.repeat(32)};
+        if (!fault.endsWith('_only')) state.dns={name:TARGET.hostname,id:dnsId,type:'A',content:'192.0.2.1',ttl:1,proxied:true};
+        if (state.dns) resume.prior.dnsId=dnsId;
+        if (fault.endsWith('_unacknowledged')) delete resume.prior.deploymentId;
+        if (fault.endsWith('_routed') || fault.endsWith('_collision') || fault.endsWith('_unknown_route')) state.route={id:routeId,pattern:TARGET.hostname+'/*',
+          script:fault.endsWith('_collision') ? 'other-worker' : TARGET.worker};
+        if (fault.endsWith('_routed')) resume.prior.routeId=routeId;
+        if (/_wrong_child$|_unacknowledged$|_unknown_route$/.test(fault)) await assert.rejects(runIsolatedSetup(resume),/checkpoint_changed/);
+        else if (fault.endsWith('_collision')) assert.equal((await runIsolatedSetup(resume)).status,'ISOLATED_SETUP_BLOCKED');
+        else {
+          assert.equal((await runIsolatedSetup(resume)).checkpoint,'ROUTE_AND_ACCESS_VERIFIED');
+          assert.deepEqual(journal.map(row=>row.operation),['worker_active_verified',
+            ...(fault.endsWith('_only') ? ['create_test_dns'] : []), ...(fault.endsWith('_routed') ? [] : ['create_test_route']),'route_and_access_verified']);
+          continue;
+        }
+        assert.deepEqual(journal,[]);
+        continue;
+      }
       if (['recorded_worker_resume_success','recorded_worker_resume_script_null'].includes(fault)) {
         const outcome=await runIsolatedSetup(resume);
         assert.equal(outcome.status,'OWNER_TEST_PENDING');
         assert.equal(outcome.workerId,recordedWorkerId);
         assert.deepEqual(journal.map(j=>j.operation),['stage_version','stage_version',
-          'activate_version','create_test_dns','create_test_route']);
+          'activate_child_intent','activate_version','worker_active_verified','create_test_dns','create_test_route','route_and_access_verified']);
       } else {
-        const expected = /_script_(enabled|child_enabled)$/.test(fault)
-          ? /recorded_worker_script_logging_readback_changed/ : /recorded_worker_checkpoint_changed/;
+        const expected = fault.endsWith('_upload_rejected') ? {message:'setup_stage_version_initial_http_400_cf_10021_modules'}
+          : /_script_(enabled|child_enabled)$/.test(fault)
+            ? /recorded_worker_script_logging_readback_changed/ : /recorded_worker_checkpoint_changed/;
         await assert.rejects(runIsolatedSetup(resume),expected);
         assert.deepEqual(journal,[]);
         assert.equal(state.deployed,false);
+        assert.equal(state.dns,undefined);
+        assert.equal(state.route,undefined);
       }
       continue;
     }
@@ -292,7 +346,7 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
     assert.equal(result.status,'OWNER_TEST_PENDING'); assert.equal(result.bootstrapCalled,false);
     assert.equal(state.finalVerifier,1);assert.equal(state.challenges,2);
     assert.deepEqual(journal.map(j=>j.operation),['create_access','configure_hyperdrive','restart_hyperdrive','create_worker',
-      'stage_version','stage_version','activate_version','create_test_dns','create_test_route']);
+      'stage_version','stage_version','activate_child_intent','activate_version','worker_active_verified','create_test_dns','create_test_route','route_and_access_verified']);
     assert.doesNotMatch(JSON.stringify([result,journal]),/owner@|private-fixture/);
   } else if(['overlap','later_pages_collision','missing_pages_metadata'].includes(fault)){
     const result=await runIsolatedSetup(args);assert.equal(result.status,'ISOLATED_SETUP_BLOCKED');assert.deepEqual(journal,[]);

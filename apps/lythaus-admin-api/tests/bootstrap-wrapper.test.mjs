@@ -59,15 +59,17 @@ test('bootstrap rejects unknown request fields', async () => {
 
 test('bootstrap wrapper binds the existing Access verifier and subject HMAC without personal constants', async () => {
   const source = await fs.readFile('apps/lythaus-admin-api/src/bootstrap-wrapper.ts', 'utf8');
+  const handler = await fs.readFile('apps/lythaus-admin-api/src/first-admin-bootstrap-handler.ts', 'utf8');
   const wrangler = await fs.readFile('apps/lythaus-admin-api/wrangler.jsonc', 'utf8');
-  assert.match(source, /assertExpectedHostname/);
-  assert.match(source, /assertAdminMutationRequest/);
-  assert.match(source, /verifiedAccessSubject/);
-  assert.match(source, /ACCESS_SUBJECT_HMAC_KEY/);
-  assert.match(source, /hmacLookup/);
-  assert.match(source, /FIRST_ADMIN_BOOTSTRAP_CONFIRMATION/);
+  assert.match(source, /handleFirstAdminBootstrap/);
+  assert.match(handler, /assertExpectedHostname/);
+  assert.match(handler, /assertAdminMutationRequest/);
+  assert.match(handler, /verifiedAccessSubject/);
+  assert.match(handler, /ACCESS_SUBJECT_HMAC_KEY/);
+  assert.match(handler, /hmacLookup/);
+  assert.match(handler, /FIRST_ADMIN_BOOTSTRAP_CONFIRMATION/);
   assert.match(source, /adminWorker\.fetch/);
   assert.doesNotMatch(source, /@[a-z0-9.-]+\.[a-z]{2,}/i);
-  assert.doesNotMatch(source, /FIRST_ADMIN_(?:EMAIL|ACCESS_SUBJECT)/);
+  assert.doesNotMatch(handler, /FIRST_ADMIN_(?:EMAIL|ACCESS_SUBJECT)/);
   assert.match(wrangler, /"main": "src\/bootstrap-wrapper\.ts"/);
 });

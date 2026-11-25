@@ -208,9 +208,16 @@ test('replacement serves checked assets and the ordinary Admin handler behind ex
   assert.deepEqual(ui,[origin+'/flags']);
   assert.deepEqual(api,[origin+'/api/admin/moderation/cases']);
   const req = new Request(origin+'/flags',{headers:{'cf-access-jwt-assertion':'fixture'}});
-  await assert.rejects(verifiedAccessSubject(req,env,async (_,config)=>{
-    assert.equal(config.requireSignedSubject,true); return {email:'fixture@example.invalid'};
-  }),/access_subject_missing/);
+  for (const configuration of [env, {...env, ACCESS_REQUIRE_SIGNED_SUBJECT: undefined}]) {
+    for (const sub of [undefined, '', ' ']) {
+      await assert.rejects(verifiedAccessSubject(req, configuration, async () => ({
+        sub, email: 'fixture@example.invalid',
+      })), /access_subject_missing/);
+    }
+    assert.equal(await verifiedAccessSubject(req, configuration, async () => ({
+      sub: 'signed-subject', email: 'fixture@example.invalid',
+    })), 'signed-subject');
+  }
   assert.equal((await createControlWorker().fetch(new Request(origin+'/flags'),env)).status,401);
 });
 
