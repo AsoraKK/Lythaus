@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lythaus-admin-api-new-core-test",
+  "account_id": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+  "main": "src/new-core-test-worker.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "admin-new-core-test.lythaus.co/*", "zone_name": "lythaus.co" }
+  ],
+  "keep_vars": false,
+  "version_metadata": { "binding": "WORKER_VERSION" },
+  "vars": {
+    "ENVIRONMENT": "owner-testing",
+    "EXPECTED_HOSTNAMES": "admin-new-core-test.lythaus.co",
+    "CORS_ALLOWED_ORIGINS": "https://admin-new-core-test.lythaus.co",
+    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
+  },
+  "hyperdrive": [
+    { "binding": "DB_ADMIN_FRESH", "id": "7e39fc4a286147988ed12df7a6322616" }
+  ],
+  "assets": {
+    "directory": "../control-panel/dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "single-page-application"
+  },
+  "env": {}
+}

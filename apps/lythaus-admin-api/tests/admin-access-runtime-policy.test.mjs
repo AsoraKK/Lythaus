@@ -39,7 +39,9 @@ test('accepts only a verified subject and preserves issuer and audience configur
     ACCESS_TEAM_DOMAIN: configuration.ACCESS_TEAM_DOMAIN,
   });
   await assert.rejects(() => verifiedAccessSubject(request, configuration, async () => ({})), /access_subject_missing/);
-  assert.equal(await verifiedAccessSubject(request, configuration, async () => ({ email: 'fallback-subject@example.com' })), 'fallback-subject@example.com');
+  for (const sub of [undefined, '', ' ', 12]) {
+    await assert.rejects(() => verifiedAccessSubject(request, configuration, async () => ({ sub, email: 'fixture@example.invalid' })), /access_subject_missing/);
+  }
 });
 
 test('fails closed when Access verification configuration is malformed', async () => {
