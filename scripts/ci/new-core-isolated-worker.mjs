@@ -8,7 +8,7 @@ import blake3 from 'blake3-wasm';
 import { scriptLoggingEvidence,workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 import { RECORDED_WORKER_ID,SCRIPT } from './new-core-isolated-cloudflare.mjs';
 
-const sourceSha = '3dc46d098242d9dcbca7a98f3272935a34942d3a';
+const sourceSha = '3fbaea846f67fe5ad452d53c456b5355069757ca';
 const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
 const assetsSha = '5c3969463149d5611e50b73fc030e1ae46e84aa08b27222c3122f9a17a9565c0';
 const configSha = '0056b85f1b4b2ab10c01db76ea7a587744ef6224ff274afdfc835d5fa3c4a6ac';

@@ -2,7 +2,7 @@
 
 This manually dispatched workflow configures the test site on the existing
 new-core database. The setup uses the application from
-`3dc46d098242d9dcbca7a98f3272935a34942d3a` and the schema installed by
+`3fbaea846f67fe5ad452d53c456b5355069757ca` and the schema installed by
 [run 44045540354](https://github.com/AsoraKK/Lythaus/actions/runs/44045540354).
 The [isolated inspection](https://github.com/AsoraKK/Lythaus/actions/runs/44114706197)
 recorded the origin, disabled query caching, zero observed consumers and the
@@ -150,13 +150,12 @@ payload change. Do not print provider message text, raw pointers, tokens or bind
 
 ### Stage and resume the repaired version
 
-The old application pin `276b4326` diverged from main. The application commit
-`3dc46d09` brings the isolated entry, bootstrap handler and signed-subject
-verifier onto the controller's history while retaining main's old-core recovery
-logic. Use a reviewed merge that preserves this commit as an ancestor. A squash
-requires repinning and checking the resulting reviewed source before dispatch.
-The job proves ancestry before building. The old checkout remains pinned for
-the previously verified read-only schema fingerprint implementation.
+PR #1190 was squash-merged on protected main as
+`3fbaea846f67fe5ad452d53c456b5355069757ca`. The reviewed PR head and the
+protected commit share Git tree `7562808920f718ad05babf3e6aadd6623ece4bed`.
+The staging job verifies ancestry, builds from the protected application commit
+and checks the sealed artifacts. The separate schema checkout supplies the
+previously verified read-only fingerprint implementation.
 
 Two failures reproduced offline with the original artifact. Workerd rejected
 the named string export in the Worker entry module. Cloudflare's Workers
