@@ -20,7 +20,7 @@ let member;
 function failAt(stage) {
   const code = stage === failure?.stage ? failure.code : stage === 'end' ? failure?.endCode : undefined;
   if (code) {
-    throw Object.assign(new Error(rawMessage), { code, detail: subject, hint: key });
+    throw Object.assign(new Error(failure.message ?? rawMessage), { code, detail: subject, hint: key });
   }
 }
 
@@ -143,11 +143,30 @@ test('a cleanup error that supersedes a failed read reports the cleanup stage an
   for (const path of routes) assertFailure(await read(isolated, path), 'db_close', 'connection_failure');
 });
 
+test('only documented database system error messages select specific provider categories', async () => {
+  for (const [code, message, category] of [
+    ['58000', 'Failed to acquire a connection from the pool.', 'pool_acquire_failed'],
+    ['58000', 'Server connection attempt failed: connection_refused', 'server_connection_refused'],
+    ['58000', 'Internal error.', 'upstream_internal_error'],
+    ['58000', 'Failed to acquire a connection from the pool. ' + rawMessage, 'database_system_error'],
+    ['XX000', 'Failed to acquire a connection from the pool.', 'unclassified'],
+  ]) {
+    failure = { stage: 'connect', code, message };
+    for (const path of routes) {
+      const result = await read(isolated, path);
+      assertFailure(result, 'db_connect', category);
+      assert.equal(JSON.stringify(result).includes(message), false);
+    }
+  }
+});
+
 test('unusable scoped binding and failed subject derivation expose only the operation and its category', async () => {
   const badKey = { toString() { throw new Error(rawMessage); } };
   for (const path of routes) {
     const badBinding = await read(isolated, path, { bindings: { ...env, DB_ADMIN_FRESH: { connectionString: rawMessage } } });
     assertFailure(badBinding, 'db_binding', 'invalid_binding');
+    const unavailableBinding = await read(isolated, path, { bindings: { ...env, get DB_ADMIN_FRESH() { throw new Error(rawMessage); } } });
+    assertFailure(unavailableBinding, 'db_binding', 'invalid_binding');
     const badSubjectKey = await read(isolated, path, { bindings: { ...env, ACCESS_SUBJECT_HMAC_KEY: badKey } });
     assertFailure(badSubjectKey, 'subject_hmac', 'unclassified');
   }
@@ -155,6 +174,7 @@ test('unusable scoped binding and failed subject derivation expose only the oper
 });
 
 test('the full Admin handler keeps the ordinary response under the same signed lookup failure', async () => {
+  assert.deepEqual(Object.keys(production), ['fetch']);
   failure = { stage: 'query', code: '42501' };
   const productionHost = 'admin.lythaus.co';
   const bindings = { ...env, EXPECTED_HOSTNAMES: productionHost, CORS_ALLOWED_ORIGINS: 'https://' + productionHost };
