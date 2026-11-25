@@ -29,8 +29,9 @@ function loggingShapes(row) {
     tailConsumers:shape(row,'tail_consumers')};
 }
 
-function secondaryLoggingNotEnabled(s) {
-  return [s.observabilityObject,s.logsObject,s.tracesObject,s.agentsObject,s.issuesObject].every(absentOrObject)
+function secondaryLoggingNotEnabled(s, {allowNullRoot = false} = {}) {
+  return (absentOrObject(s.observabilityObject) || (allowNullRoot && s.observabilityObject === 'null'))
+    && [s.logsObject,s.tracesObject,s.agentsObject,s.issuesObject].every(absentOrObject)
     && [s.traces,s.agents,s.issues].every(absentOrFalse)
     && [s.logsDestinations,s.tracesDestinations,s.agentsDestinations,s.issuesDestinations].every(noDestinations);
 }
@@ -71,6 +72,8 @@ export function scriptLoggingEvidence(row, worker) {
     && !!worker && Object.values(worker.checks).every(Boolean)
     && worker.fieldShapes.observability === 'false' && worker.fieldShapes.logs === 'false'
     && shapes.logpush === 'false' && [shapes.observability,shapes.logs,shapes.invocationLogs].every(absentOrFalse)
-    && secondaryLoggingNotEnabled(shapes)
+    // The independent script-settings response can have no override (null).
+    // This is not proof of disabled logging without the explicit Worker readback above.
+    && secondaryLoggingNotEnabled(shapes,{allowNullRoot:true})
     && ['omitted','null','empty_array'].includes(shapes.tailConsumers)};
 }

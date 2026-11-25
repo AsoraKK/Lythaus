@@ -52,7 +52,7 @@ test('version verification accepts dormant invocation flags only with fresh expl
   await assert.rejects(verifyWorkerVersion({request:async (path,opts)=>{
     assert.equal(opts.method,'GET');
     reads.push(path);
-    return path.endsWith('/script-settings') ? {logpush:false} : worker;
+    return path.endsWith('/script-settings') ? {logpush:false,observability:null,tail_consumers:null} : worker;
   },workerId:RECORDED_WORKER_ID,versionId}),/WORKER_VERSION_CONFIGURATION/);
   assert.deepEqual(reads,[`${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`,`${SCRIPT}/script-settings`,
     `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}/versions/${versionId}?include=modules`]);
@@ -62,7 +62,10 @@ test('version verification accepts dormant invocation flags only with fresh expl
     {logpush:false,observability:{enabled:false,agents:{enabled:'false'}}},
     {logpush:false,observability:{enabled:false,issues:{enabled:true}}},
     {logpush:false,observability:{enabled:false,traces:{destinations:['export']}}},
-    {logpush:false,observability:null}, {logpush:false,observability:{logs:null}},
+    {logpush:false,observability:{logs:null}},
+    {logpush:false,observability:false},
+    {logpush:'false',observability:null},
+    {logpush:false,observability:null,tail_consumers:[{}]},
     {logpush:false,tail_consumers:[{}]},
   ]) await assert.rejects(verifyWorkerVersion({request:async path=>path.endsWith('/script-settings') ? badScript : worker,
     workerId:RECORDED_WORKER_ID,versionId}),/WORKER_SCRIPT_LOGGING_READBACK/);
@@ -70,7 +73,7 @@ test('version verification accepts dormant invocation flags only with fresh expl
     const contradictory=structuredClone(worker);
     if (value === undefined) delete contradictory.observability.logs.enabled;
     else contradictory.observability.logs.enabled=value;
-    await assert.rejects(verifyWorkerVersion({request:async path=>path.endsWith('/script-settings') ? {logpush:false} : contradictory,
+    await assert.rejects(verifyWorkerVersion({request:async path=>path.endsWith('/script-settings') ? {logpush:false,observability:null} : contradictory,
       workerId:RECORDED_WORKER_ID,versionId}),/WORKER_EXPOSURE_OR_LOGGING/);
   }
 });
