@@ -19,7 +19,7 @@ const createPg = async config => new (await import('pg')).default.Client(config)
 async function loadReaders() {
   const directory = path.resolve('worker-source');
   const git = (...args) => execFileSync('git', ['-C', directory, ...args], { stdio:['ignore','pipe','pipe'], encoding:'utf8' }).trim();
-  requireCheck(git('rev-parse','HEAD') === TARGET.candidate && !git('status','--porcelain','--untracked-files=no'), 'fingerprint_source_unverified');
+  requireCheck(git('rev-parse','HEAD') === '276b43265584ec0dc158e67cbdb13cb58ece75db' && !git('status','--porcelain','--untracked-files=no'), 'fingerprint_source_unverified');
   return import(pathToFileURL(path.join(directory, 'scripts/ci/lythaus-new-core-clean-install.mjs')).href);
 }
 

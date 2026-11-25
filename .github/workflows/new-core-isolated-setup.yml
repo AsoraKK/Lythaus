@@ -12,6 +12,11 @@ on:
           - setup
           - resume-access
           - resume-worker-script-settings
+          - stage-one-nonserving-version
+      prior_run:
+        description: Prior protected setup run containing the cumulative isolated Worker receipt
+        required: false
+        type: string
       control_sha:
         description: Exact reviewed protected main commit
         required: true
@@ -26,6 +31,7 @@ concurrency:
 env:
   REQUESTED_CONTROL_SHA: ${{ inputs.control_sha }}
   REQUESTED_OPERATION: ${{ inputs.operation }}
+  PRIOR_RUN: ${{ inputs.prior_run }}
   NODE_DEBUG: ''
   NODE_OPTIONS: ''
 
@@ -37,7 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Verify reviewed application ancestry before the environment review
+        if: inputs.operation != 'inspect'
+        run: git merge-base --is-ancestor 3dc46d098242d9dcbca7a98f3272935a34942d3a "$GITHUB_SHA"
       - name: Verify pinned receipts, workflow and review gate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,6 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -64,17 +75,22 @@ jobs:
       - name: Install locked dependencies without provider credentials
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Prepare the pinned Worker and assets without provider credentials
-        if: inputs.operation == 'setup' || inputs.operation == 'resume-access' || inputs.operation == 'resume-worker-script-settings'
+        if: inputs.operation != 'inspect'
         env:
           WRANGLER_SEND_METRICS: 'false'
         run: |
-          npm --prefix worker-source ci --ignore-scripts --no-audit --no-fund
-          npm --prefix worker-source/apps/control-panel ci --ignore-scripts --no-audit --no-fund
-          node scripts/check-npm-audit.js worker-source
-          node scripts/check-npm-audit.js worker-source/apps/control-panel
-          (cd worker-source && node --experimental-strip-types --test apps/lythaus-admin-api/tests/admin-access-runtime-policy.test.mjs apps/lythaus-admin-api/tests/new-core-test-worker.test.mjs apps/lythaus-admin-api/tests/first-admin-bootstrap.test.mjs)
-          node scripts/ci/new-core-isolated-worker.mjs prepare worker-source "$RUNNER_TEMP/new-core-artifacts"
-          node scripts/ci/new-core-isolated-worker-rehearsal.mjs worker-source "$RUNNER_TEMP/new-core-artifacts"
+          pin=3dc46d098242d9dcbca7a98f3272935a34942d3a
+          git merge-base --is-ancestor "$pin" "$GITHUB_SHA"
+          git worktree add --detach application-source "$pin"
+          npm --prefix application-source ci --ignore-scripts --no-audit --no-fund
+          npm --prefix application-source/apps/control-panel ci --ignore-scripts --no-audit --no-fund
+          node scripts/check-npm-audit.js application-source
+          node scripts/check-npm-audit.js application-source/apps/control-panel
+          (cd application-source && node --experimental-strip-types --test apps/lythaus-admin-api/tests/admin-access-runtime-policy.test.mjs apps/lythaus-admin-api/tests/new-core-test-worker.test.mjs apps/lythaus-admin-api/tests/first-admin-bootstrap.test.mjs)
+          node scripts/ci/new-core-isolated-worker.mjs prepare application-source "$RUNNER_TEMP/new-core-artifacts"
+          node scripts/ci/new-core-isolated-worker-rehearsal.mjs application-source "$RUNNER_TEMP/new-core-artifacts"
+          node scripts/ci/new-core-worker-wire-contract.mjs application-source "$RUNNER_TEMP/new-core-artifacts"
+          bash scripts/ci/new-core-isolated-pg-test.sh application-source "$RUNNER_TEMP/new-core-artifacts"
       - name: Require actual owner approval and current protected main
         env:
           GH_TOKEN: ${{ github.token }}
@@ -87,3 +103,11 @@ jobs:
           LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL }}
           LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL }}
         run: node scripts/ci/run-new-core-setup.mjs
+      - name: Retain the sanitized Worker lineage receipt
+        if: always() && inputs.operation != 'inspect'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isolated-worker-lineage-${{ github.run_id }}-1
+          path: ${{ runner.temp }}/isolated-worker-lineage.json
+          if-no-files-found: ignore
+          retention-days: 30

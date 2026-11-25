@@ -10,7 +10,7 @@ on:
       worker_source_sha:
         description: Prepared isolated Worker source candidate; this does not authorize deployment
         required: true
-        default: 276b43265584ec0dc158e67cbdb13cb58ece75db
+        default: 3dc46d098242d9dcbca7a98f3272935a34942d3a
         type: string
       worker_version_id:
         description: Exact reviewed serving version if known; empty remains an explicit pinning blocker

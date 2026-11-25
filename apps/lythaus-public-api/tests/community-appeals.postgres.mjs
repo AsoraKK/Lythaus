@@ -6,7 +6,8 @@ import pg from 'pg';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { createHash } from 'node:crypto';
-import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from 'jose';
+import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
+import { createAccessIssuer } from '../../../scripts/tests/fixtures/cloudflare-access-assertions.mjs';
 import * as database from '@lythaus/db';
 import { hmacLookup, signAccessToken, uuidv7 } from '@lythaus/security';
 import { MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
@@ -68,9 +69,10 @@ const adminEnv = { EXPECTED_HOSTNAMES: 'admin-api.lythaus.test', CORS_ALLOWED_OR
   DB_ADMIN_FRESH: adminBinding, COMMUNITY_APPEAL_RULES_VERSION: rules, ACCESS_AUDIENCES: 'synthetic-community-admin',
   ACCESS_SUBJECT_HMAC_KEY: 'synthetic-community-access-subject-key', ACCESS_TEAM_DOMAIN: 'synthetic-access.lythaus.test',
   ACCESS_JWKS_URL: 'https://synthetic-access.lythaus.test/cdn-cgi/access/certs' };
+const access = await createAccessIssuer(`https://${adminEnv.ACCESS_TEAM_DOMAIN}`, adminEnv.ACCESS_AUDIENCES);
 mock.method(globalThis, 'fetch', async url => {
   assert.equal(String(url), adminEnv.ACCESS_JWKS_URL);
-  return Response.json({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] });
+  return Response.json(access.jwks);
 });
 const users = [], cases = [], posts = [], grantRestores = [], priorSelectGrants = [];
 let owner, decider, triager, voters, unverified;
@@ -220,8 +222,7 @@ test('reopened review cycle blocks enabled community closure until a fresh eligi
   await majority(fixture.appealId);
   await due(fixture.appealId);
   await sql('UPDATE moderation.cases SET resolved_at = clock_timestamp() WHERE id = $1', [fixture.caseId]);
-  const token = await new SignJWT({}).setProtectedHeader({ alg: 'ES256', kid: keyId }).setSubject(triager.id)
-    .setAudience(adminEnv.ACCESS_AUDIENCES).setIssuer(`https://${adminEnv.ACCESS_TEAM_DOMAIN}`).setIssuedAt().setExpirationTime('10m').sign(privateKey);
+  const token = await access.issue(triager.id);
   const staff = (method, path, body) => adminWorker.fetch(new Request(`https://admin-api.lythaus.test/api/admin${path}`, {
     method, headers: { 'CF-Access-Jwt-Assertion': token, Origin: 'https://admin-api.lythaus.test', 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -781,8 +782,7 @@ test('CAL-19/REL-03: first assembly cannot omit final peer evidence through miss
 
 test('APP-07/12: actual staff routes verify Access JWT, membership, Origin, private evidence and triage', async () => {
   const appeal = await submit(await blocked());
-  const token = await new SignJWT({}).setProtectedHeader({ alg: 'ES256', kid: keyId }).setSubject(triager.id)
-    .setAudience(adminEnv.ACCESS_AUDIENCES).setIssuer(`https://${adminEnv.ACCESS_TEAM_DOMAIN}`).setIssuedAt().setExpirationTime('10m').sign(privateKey);
+  const token = await access.issue(triager.id);
   const adminCall = (method, path, body, patch = {}) => adminWorker.fetch(new Request('https://admin-api.lythaus.test/api/admin/appeals' + path,
     { method, headers: { 'CF-Access-Jwt-Assertion': token, Origin: 'https://admin-api.lythaus.test', 'Content-Type': 'application/json', ...patch },
       ...(body ? { body: JSON.stringify(body) } : {}) }), adminEnv);
@@ -820,8 +820,7 @@ test('APP-11/PTS-03/RPT-04: actual equal-vote comment restoration retains contex
     collect_from,approved_by,approved_at,approval_reference,collection_privacy_version)
     VALUES ($1,$2,$3,$4,$5,'shadow','pending_owner_approval','2020-01-01',$6,now(),'Synthetic only','monthly-privacy-v1')`,
   [contextVersion,MONTHLY_REPUTATION_POLICY_VERSION,PROPOSED_WEEKLY_EARNING_RULES.version,MONTHLY_REPUTATION_CATALOGUE_HASH,rubric,triager.id]);
-  const accessToken=await new SignJWT({}).setProtectedHeader({alg:'ES256',kid:keyId}).setSubject(triager.id)
-    .setAudience(adminEnv.ACCESS_AUDIENCES).setIssuer(`https://${adminEnv.ACCESS_TEAM_DOMAIN}`).setIssuedAt().setExpirationTime('10m').sign(privateKey);
+  const accessToken = await access.issue(triager.id);
   for(const pending of [false,true]){
     const root=uuidv7(),threadSource=uuidv7(),commentId=uuidv7(),source=uuidv7(),caseId=uuidv7();posts.push(root);cases.push(caseId);
     await sql(`INSERT INTO content.posts (id,author_id,body,declared_creation_mode,visibility,moderation_state,moderation_source_event_id)

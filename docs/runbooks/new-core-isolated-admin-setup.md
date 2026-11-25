@@ -2,7 +2,7 @@
 
 This manually dispatched workflow configures the test site on the existing
 new-core database. The setup uses the application from
-`276b43265584ec0dc158e67cbdb13cb58ece75db` and the schema installed by
+`3dc46d098242d9dcbca7a98f3272935a34942d3a` and the schema installed by
 [run 44045540354](https://github.com/AsoraKK/Lythaus/actions/runs/44045540354).
 The [isolated inspection](https://github.com/AsoraKK/Lythaus/actions/runs/44114706197)
 recorded the origin, disabled query caching, zero observed consumers and the
@@ -125,6 +125,83 @@ blocks. The protected inspect mode reports redacted shapes.
 Only after both pass does it stage the pinned build and attach the isolated site
 under the existing checks. It does not recreate the Worker or Access app,
 reconfigure or restart Hyperdrive, or bootstrap any user.
+
+### Verify an interrupted first upload before any retry
+
+The [successful Lythaus Admin release](https://github.com/AsoraKK/Lythaus/actions/runs/36693424861/job/109874000726)
+staged on an existing serving Worker, verified the exact uploaded version,
+and then assigned traffic. Keep those stages separate. Do not copy the
+Wrangler upload command to an empty Worker: [Cloudflare documents the first-upload limitation](https://developers.cloudflare.com/workers/versions-and-deployments/deployment-management/#first-upload).
+Use the [Worker-ID version API](https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/subresources/versions/methods/create/)
+and the [asset completion-token flow](https://developers.cloudflare.com/workers/static-assets/direct-upload/)
+as the first-upload contract. Do not substitute a command that deploys as a side effect.
+
+[Run 45542341904](https://github.com/AsoraKK/Lythaus/actions/runs/45542341904)
+completed the asset uploads, then received HTTP 400 on the first version POST.
+It did not acknowledge a version or reach activation, DNS or routing.
+The HTTP status alone does not establish Cloudflare's rejection reason or prove
+the Worker version list is empty. Use the protected read-only `inspect` mode
+before another write. If a version, deployment, route, or custom domain exists,
+stop for reconciliation; do not overwrite, delete, or generate another key.
+If a fresh upload is reviewed, a provider rejection receipt identifies `initial` or
+`inherit` and, for a supported error response, the numeric provider code and a
+fixed field category. A missing category or code is not grounds to guess at a
+payload change. Do not print provider message text, raw pointers, tokens or bindings.
+
+### Stage and resume the repaired version
+
+The old application pin `276b4326` diverged from main. The application commit
+`3dc46d09` brings the isolated entry, bootstrap handler and signed-subject
+verifier onto the controller's history while retaining main's old-core recovery
+logic. Use a reviewed merge that preserves this commit as an ancestor. A squash
+requires repinning and checking the resulting reviewed source before dispatch.
+The job proves ancestry before building. The old checkout remains pinned for
+the previously verified read-only schema fingerprint implementation.
+
+Two failures reproduced offline with the original artifact. Workerd rejected
+the named string export in the Worker entry module. Cloudflare's Workers
+Assets parser rejected the sole Pages rewrite `/* /index.html 200` as a loop.
+The JSON upload now stages `isolated-entry.js`, a default-only module with
+SHA-256 `73bddc229c88563f494f8f2d7d014371ac2af4a212e0e88e26bffc7f18c86ee5`,
+alongside the sealed application module and the original security headers.
+The sealed UI remains intact. SPA fallback supplies the index response.
+Cloudflare's original rejection code and field are still unknown.
+
+Use `inspect` first. The recorded Worker is
+`89391a349e454b3994bd43299c6386ed`. With a reviewed controller on protected
+main, select `stage-one-nonserving-version` only after the exact empty or
+parent-only checkpoint is confirmed. This bounds the operation to asset upload
+and at most one undeployed immutable version. The client excludes activation,
+DNS, routes, Worker creation, Access changes, Hyperdrive changes and bootstrap.
+Recheck disabled workers.dev/previews and no active deployment or route.
+On failure retain acknowledged uploads and leave the site unrouted.
+
+For a continuation, pass the previous protected job's numeric `prior_run`.
+The controller checks repository, owner, environment review, attempt, workflow
+and merged-main history, then loads its immutable, cumulative
+`isolated-worker-lineage-<run>-1` artifact. Each version POST has its own
+nonsecret intent UUID recorded before transmission. The response ID, when
+available, must agree with provider readback. A lost version acknowledgement
+can be reconciled by the same intent, exact bytes/configuration and parent ID.
+Inspect every accepted immutable version, check the complete inventory again,
+and inherit the existing key. An unknown row, mismatched receipt, missing
+acknowledged row, competing deployment or unexpected route blocks continuation.
+A lost activation, DNS or route acknowledgement requires independent provider
+reconciliation when the protected receipt lacks that resource ID.
+
+Only a separately authorized serving operation may activate the verified
+child or attach the isolated route. Both the acknowledged deployment ID and
+its sole 100% child must match before DNS and at final readback. A repeated
+operation re-verifies the recorded route and Access boundary. Human acceptance,
+first-admin bootstrap and production cutover retain their separate gates.
+
+The wire-contract unit test uses Cloudflare's pinned JSON API definition and the
+real HTTP serializer with a local transport. The runtime test starts the exact
+module set with the pinned compatibility flags. The disposable PostgreSQL test
+uses signed fixture assertions, the normal API and concurrent bootstrap, then
+checks the locked administrator, latch and audit counts and removes the container.
+[Worker-ID API contract](https://github.com/cloudflare/api-schemas/blob/10837344ff6c5abd1d5602f1aeebe82ef353fa32/openapi.json)
+· [Workers Assets parser fixture](https://github.com/cloudflare/workers-sdk/blob/87fd28ce586693e50aa17d410f121394c5fef24c/packages/workers-shared/utils/tests/parseRedirects.invalid.test.ts)
 
 Keep the owner policy in place, the subject-mapping secret in its Worker, and
 the previous production resources available. Reusing the same secret and
