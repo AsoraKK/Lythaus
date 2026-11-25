@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { adminRequest } from '../api/adminApi.js';
 import AdminAccessGate from './AdminAccessGate.jsx';
 
-vi.mock('../api/adminApi.js', () => ({ adminRequest: vi.fn() }));
+vi.mock('../api/adminApi.js', async importOriginal => ({ ...await importOriginal(), adminRequest: vi.fn() }));
 beforeEach(() => { adminRequest.mockReset(); });
 const originalUrl = window.location.href;
 afterEach(() => { globalThis.jsdom.reconfigure({ url: originalUrl }); });
@@ -44,6 +44,7 @@ it('keeps the panel closed on a successful HTTP response with an unexpected body
 const isolatedOrigin = 'https://admin-new-core-test.lythaus.co';
 const reference = '01900000-0000-7000-8000-000000000042';
 const privateDetail = 'private-provider-message';
+const build = { versionId: '33333333-3333-4333-8333-333333333333', sourceSha: 'a'.repeat(40) };
 const readFailure = {
   error: 'admin_request_failed', correlationId: reference,
   diagnostic: { stage: 'db_connect', category: 'pool_acquire_failed', detail: privateDetail },
@@ -54,14 +55,19 @@ it.each([
   ['db_binding','binding_missing'],
   ['db_binding','binding_unavailable'],
   ['db_binding','client_initialization_failed'],
+  ...['native_host_rejected','native_port_rejected','native_user_rejected','native_password_rejected',
+    'native_database_rejected','native_scheme_rejected','legacy_url_invalid','legacy_tls_policy_rejected']
+    .map(category => ['db_binding',category]),
 ])('shows the reviewed %s/%s and request reference on the isolated panel', async (stage, category) => {
   globalThis.jsdom.reconfigure({ url: isolatedOrigin + '/flags' });
-  adminRequest.mockRejectedValue({ status: 500, payload: {...readFailure, diagnostic:{stage,category,detail:privateDetail}} });
+  adminRequest.mockRejectedValue({ status: 500, payload: {...readFailure, diagnostic:{stage,category,detail:privateDetail}}, workerBuild: build });
   render(<AdminAccessGate>Panel content</AdminAccessGate>);
   const alert = await screen.findByRole('alert');
   expect(alert).toHaveTextContent('Request stage ' + stage);
   expect(alert).toHaveTextContent('Failure category ' + category);
   expect(alert).toHaveTextContent(reference);
+  expect(alert).toHaveTextContent('Worker version ' + build.versionId);
+  expect(alert).toHaveTextContent('Source commit ' + build.sourceSha);
   expect(alert).not.toHaveTextContent(privateDetail);
   expect(screen.queryByText('Panel content')).not.toBeInTheDocument();
 });
@@ -78,9 +84,9 @@ it.each([
   ['unknown category', isolatedOrigin, 500, { diagnostic: { stage: 'membership_query', category: privateDetail } }],
 ])('omits the diagnostic for %s', async (_name, origin, status, overrides) => {
   globalThis.jsdom.reconfigure({ url: origin + '/flags' });
-  adminRequest.mockRejectedValue({ status, payload: { ...readFailure, ...overrides } });
+  adminRequest.mockRejectedValue({ status, payload: { ...readFailure, ...overrides }, workerBuild: build });
   render(<AdminAccessGate>Panel content</AdminAccessGate>);
   const alert = await screen.findByRole('alert');
   expect(alert).toHaveTextContent(/could not verify access/i);
-  expect(alert).not.toHaveTextContent(/Request stage|Failure category|private-provider-message/);
+  expect(alert).not.toHaveTextContent(/Request stage|Failure category|Worker version|Source commit|private-provider-message/);
 });

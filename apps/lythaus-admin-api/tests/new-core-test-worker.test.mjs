@@ -90,6 +90,10 @@ test('the deployed entry point rejects absent and malformed signed Access assert
   }), env);
   assert.equal(noAssertion.status, 401);
   assert.equal(malformedAssertion.status, 401);
+  for (const response of [noAssertion, malformedAssertion]) {
+    assert.equal(response.headers.get('x-lythaus-worker-version'), null);
+    assert.equal(response.headers.get('x-lythaus-source-sha'), null);
+  }
   assert.equal(calls.assets, 0);
 });
 
@@ -124,6 +128,8 @@ test('allows only normal health, moderation read and one-time bootstrap paths', 
   assert.equal((await worker.fetch(new Request(`https://${hostname}/api/admin/bootstrap/first-administrator`), env)).status, 404);
   const bootstrap = await worker.fetch(new Request(`https://${hostname}/api/admin/bootstrap/first-administrator`, { method: 'POST' }), env);
   assert.equal(bootstrap.status, 201);
+  assert.equal(bootstrap.headers.get('x-lythaus-worker-version'), null);
+  assert.equal(bootstrap.headers.get('x-lythaus-source-sha'), null);
   assert.deepEqual(calls.admin, ['GET /api/admin/health', 'GET /api/admin/moderation/cases']);
   assert.equal(calls.bootstrap, 1);
 });

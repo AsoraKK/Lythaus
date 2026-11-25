@@ -29,13 +29,14 @@ function notFound(): Response {
   return new Response(null, { status: 404, headers: { 'cache-control': 'private, no-store' } });
 }
 
-function addBuildIdentity(response: Response, env: Env): Response {
-  if (!response.ok
-    || !/^[a-f0-9]{40}$/.test(env.WORKER_VERSION?.tag ?? '')
-    || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(env.WORKER_VERSION?.id ?? '')) return response;
+function addBuildIdentity(response: Response, env: Pick<Env, 'WORKER_VERSION'>): Response {
+  const source = env.WORKER_VERSION?.tag;
+  const version = env.WORKER_VERSION?.id;
+  if (typeof source !== 'string' || !/^[a-f0-9]{40}$/.test(source) ||
+      typeof version !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(version)) return response;
   const headers = new Headers(response.headers);
-  headers.set('x-lythaus-source-sha', env.WORKER_VERSION.tag);
-  headers.set('x-lythaus-worker-version', env.WORKER_VERSION.id);
+  headers.set('x-lythaus-source-sha', source);
+  headers.set('x-lythaus-worker-version', version);
   headers.set('cache-control', 'private, no-store');
   return new Response(response.body, { status: response.status, headers });
 }
@@ -79,17 +80,20 @@ export function createNewCoreTestWorker(dependencies: Dependencies) {
       if (request.method === 'POST' && url.pathname === BOOTSTRAP_PATH) {
         return dependencies.bootstrap(request, env);
       }
+      let response: Response;
       if (request.method === 'GET' && NEW_CORE_TEST_READ_ROUTES.has(url.pathname)) {
-        return addBuildIdentity(await dependencies.adminFetch(request, env), env);
+        response = await dependencies.adminFetch(request, env);
+      } else {
+        if (url.pathname.startsWith('/api/admin/') || !['GET', 'HEAD'].includes(request.method)) return notFound();
+        if (!await dependencies.verifyAccess(request, env)) return denied(401);
+        response = await env.ASSETS.fetch(request);
       }
-      if (url.pathname.startsWith('/api/admin/') || !['GET', 'HEAD'].includes(request.method)) return notFound();
-      if (!await dependencies.verifyAccess(request, env)) return denied(401);
-      return addBuildIdentity(await env.ASSETS.fetch(request), env);
+      return response.ok ? addBuildIdentity(response, env) : response;
     },
   };
 }
 
-const readContext = createIsolatedAdminReadContext(IsolatedAdminReadFailure);
+const readContext = createIsolatedAdminReadContext(IsolatedAdminReadFailure, addBuildIdentity);
 const worker = createNewCoreTestWorker({
   adminFetch: (request, env) => adminWorker.fetch(request, env as Parameters<typeof adminWorker.fetch>[1], readContext),
   bootstrap: (request, env) => handleFirstAdminBootstrap(request, env),

@@ -52,4 +52,31 @@ describe('adminApi same-origin requests', () => {
     expect(capturedOptions.headers['Content-Type']).toBe('application/json');
     expect(capturedOptions.body).toBe('{"status":"invited"}');
   });
+
+  it('accepts a build identity only from the same isolated health response with a valid version and source', async () => {
+    const { adminRequest, isolatedAdminOrigin } = await import('../api/adminApi.js');
+    const version = '33333333-3333-4333-8333-333333333333';
+    const source = 'a'.repeat(40);
+    const payload = {error:'admin_request_failed', workerBuild:{versionId:version, sourceSha:source}};
+    for (const [origin, path, id, sha, responseUrl, redirected, accepted] of [
+      [isolatedAdminOrigin, 'health', version, source, isolatedAdminOrigin + '/api/admin/health', false, true],
+      [isolatedAdminOrigin, 'health', 'private', source, isolatedAdminOrigin + '/api/admin/health', false, false],
+      [isolatedAdminOrigin, 'health', version, 'private', isolatedAdminOrigin + '/api/admin/health', false, false],
+      [isolatedAdminOrigin, 'health', version, source, isolatedAdminOrigin + '/api/admin/health', true, false],
+      [isolatedAdminOrigin, 'health', version, source, 'https://other.invalid/', false, false],
+      [isolatedAdminOrigin, 'moderation/cases', version, source, isolatedAdminOrigin + '/api/admin/moderation/cases', false, false],
+      [mockOrigin, 'health', version, source, mockOrigin + '/api/admin/health', false, false],
+    ]) {
+      window.location.origin = origin;
+      globalThis.fetch = vi.fn(async () => ({
+        ok:false, status:500, url:responseUrl, redirected,
+        headers:new Headers({'x-lythaus-worker-version':id,'x-lythaus-source-sha':sha}),
+        text:async () => JSON.stringify(payload),
+      }));
+      let received;
+      try { await adminRequest(path); } catch (failure) { received = failure; }
+      expect(received?.status).toBe(500);
+      expect(received.workerBuild).toEqual(accepted ? {versionId:version, sourceSha:source} : undefined);
+    }
+  });
 });

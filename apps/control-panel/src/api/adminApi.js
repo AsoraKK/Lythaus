@@ -1,4 +1,5 @@
 const ADMIN_API_BASE_PATH = '/api/admin';
+export const isolatedAdminOrigin = 'https://admin-new-core-test.lythaus.co';
 
 export function getAdminApiUrl() {
   return ADMIN_API_BASE_PATH;
@@ -34,12 +35,20 @@ export async function adminRequest(path, { method = 'GET', body, query, headers:
       options.body = JSON.stringify(body);
     }
   }
-  const response = await fetch(buildUrl(path, query), options);
+  const url = buildUrl(path, query);
+  const response = await fetch(url, options);
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
     const error = new Error(payload?.error?.message ?? payload?.message ?? response.statusText ?? 'Request failed');
     error.status = response.status;
     error.payload = payload;
+    if (path === 'health' && method === 'GET' && window.location.origin === isolatedAdminOrigin &&
+        response.url === url && !response.redirected) {
+      const versionId = response.headers.get('x-lythaus-worker-version');
+      const sourceSha = response.headers.get('x-lythaus-source-sha');
+      if (/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(versionId) &&
+          /^[a-f0-9]{40}$/.test(sourceSha)) error.workerBuild = { versionId, sourceSha };
+    }
     throw error;
   }
   return payload;
