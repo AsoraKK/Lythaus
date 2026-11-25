@@ -19,7 +19,7 @@ const usage = ['requests','milliseconds'].map(unit => ({ ServiceName:'Workers', 
   ConsumedUnit:unit, ConsumedQuantity:5, BillingPeriodStart:'2026-11-01', ChargePeriodEnd:'2026-11-17' }));
 const ca = { id, ca:true, certificates:issuer.toString() };
 
-function fixture({ providers={}, rowOverride={}, connectorError, changedGrant=false, clean=true }={}) {
+function fixture({ providers={}, rowOverride={}, connectorError, membershipError, changedGrant=false, clean=true }={}) {
   const queries = [], reads = [], clients = [], delivered = [];
   const env = { LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL:makeUrl('lythaus_admin'), LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL:makeUrl('lythaus_verifier'),
     LYTHAUS_NEW_CORE_OWNER_EMAIL:user.email, CLOUDFLARE_API_TOKEN:'fixture-binding' };
@@ -34,9 +34,15 @@ function fixture({ providers={}, rowOverride={}, connectorError, changedGrant=fa
       const isAdmin = branchQualifiedDatabaseTarget(config.connectionString).role === 'lythaus_admin';
       const client = { connection:{stream:{}}, ended:false, async end() { this.ended = true; },
         async connect() { if (isAdmin && connectorError) throw Object.assign(new Error(env.CLOUDFLARE_API_TOKEN), {code:connectorError}); },
-        async query(sql) {
+        async query(sql, values) {
           queries.push(sql);
           assert.match(sql,/^SELECT /);
+          if (sql.startsWith('SELECT user_id, role FROM identity.admin_memberships')) {
+            assert.equal(isAdmin, true);
+            assert.deepEqual(values, [Buffer.alloc(32).toString('base64')]);
+            if (membershipError) throw Object.assign(new Error('private fixture detail'), { code:membershipError });
+            return { rowCount:0, rows:[] };
+          }
           return { rows:[sql.includes('FROM pg_roles r') ? {session_matches:true, read_only:true, restricted_role:true,
             ddl_denied:true, direct_inserts_denied:true, bootstrap_execute:isAdmin, verifier_execute:!isAdmin,
             ...(isAdmin ? rowOverride : {})} : {clean}] };
@@ -80,6 +86,18 @@ test('private inputs verified by role, TLS, immutable receipt and current accoun
   assert.ok(f.queries.every(sql => !/FROM identity\.bootstrap_first_administrator/i.test(sql)));
   const json=JSON.stringify(report);
   for (const privateValue of [...Object.values(f.env),id,issuer.toString(),'fixture-only']) assert.ok(!json.includes(privateValue));
+});
+
+test('the optional scoped membership read uses synthetic bytes and reports only fixed categories', async () => {
+  const ordinary = await fixture().run();
+  assert.equal(ordinary.admin.syntheticMembershipRead, undefined);
+  const working = await fixture().run({probeMembershipRead:true});
+  assert.equal(working.admin.syntheticMembershipRead, 'no_match');
+  assert.equal(working.ready, true);
+  const denied = await fixture({membershipError:'42501'}).run({probeMembershipRead:true});
+  assert.equal(denied.admin.syntheticMembershipRead, 'permission_denied');
+  assert.equal(denied.ready, false);
+  assert.ok(!JSON.stringify(denied).includes('private fixture detail'));
 });
 
 test('inaccessible, invalid, wrong target, wrong role and rejected login are distinct',async () => {

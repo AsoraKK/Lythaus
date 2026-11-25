@@ -29,9 +29,10 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     || env.GITHUB_ACTOR_ID !== String(PINS.ownerId) || env.GITHUB_ACTOR !== env.GITHUB_TRIGGERING_ACTOR
     || env.GITHUB_RUN_ATTEMPT !== '1' || !/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID ?? '')
     || env.REQUESTED_CONTROL_SHA !== env.GITHUB_SHA || !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? '')
-    || !['inspect', 'setup', 'resume-access', 'resume-worker-script-settings', 'stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)
+    || !['inspect', 'diagnose-admin-read', 'setup', 'resume-access', 'resume-worker-script-settings', 'stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)
+    || (env.REQUESTED_OPERATION === 'diagnose-admin-read' && env.PRIOR_RUN !== '45611431085')
     || (env.PRIOR_RUN && (!/^[1-9]\d{0,18}$/.test(env.PRIOR_RUN) || env.PRIOR_RUN === env.GITHUB_RUN_ID ||
-      !['inspect','resume-worker-script-settings','stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)))
+      !['inspect','diagnose-admin-read','resume-worker-script-settings','stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)))
     || env.NODE_OPTIONS || env.NODE_DEBUG || env.RUNNER_DEBUG === '1') throw new Error('setup_dispatch_changed');
   const main = await get('branches/main');
   if (!main.protected || main.commit.sha !== env.GITHUB_SHA) throw new Error('setup_main_changed');
@@ -51,6 +52,11 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
   if (env.PRIOR_RUN) {
     const run = await get('actions/runs/'+env.PRIOR_RUN);
     const title = run.display_title;
+    if (env.REQUESTED_OPERATION === 'diagnose-admin-read' &&
+      (run.conclusion !== 'success' || run.head_sha !== 'd4cf5bb1229383f736b0287101096482ca9a535e'
+        || title !== 'resume-worker-script-settings admin-new-core-test.lythaus.co at '+run.head_sha)) {
+      throw new Error('setup_serving_receipt_changed');
+    }
     if (String(run.id) !== env.PRIOR_RUN || run.repository?.id !== 1010752912 || run.path !== workflow ||
       run.head_branch !== 'main' || run.event !== 'workflow_dispatch' || run.run_attempt !== 1 || run.status !== 'completed' ||
       run.actor?.id !== PINS.ownerId || run.triggering_actor?.id !== PINS.ownerId || !/^[a-f0-9]{40}$/.test(run.head_sha) ||

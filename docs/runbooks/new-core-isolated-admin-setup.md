@@ -208,6 +208,10 @@ immutable Worker version matters once an owner membership is created.
 
 ## Acceptance and production
 
+The protected activation verified the isolated route on 25 November. The owner then received `admin_request_failed` during the pre-bootstrap check. The deployed Admin handler uses HTTP 500 for that code. An empty membership query ordinarily returns `403 admin_role_required`. Keep bootstrap paused while investigating this response. [Activation receipt](https://github.com/AsoraKK/Lythaus/actions/runs/45611431085)
+
+For this incident, select `diagnose-admin-read` on protected main with prior run `45611431085`. The job rechecks the deployed child, Access application, database role and read-only session. It exercises the application's membership SELECT with a fixed synthetic value using the existing scoped Admin login. It also requests aggregate complete and error counts for the isolated Hyperdrive between 12:19:30 and 13:00 UTC on 25 November. The authenticated browser request has no per-request identifier in those aggregate counts. The receipt distinguishes an empty dataset, unavailable telemetry, a denied SQL read and a successful read with zero rows. The probe emits no membership rows or subject identifiers. It leaves deployment, credentials, logging and bootstrap untouched.
+
 Setup stops before the one-time bootstrap. Under its own approval the owner
 first establishes that a verified nonmember receives 403 on the moderation API.
 After bootstrap a fresh owner session must load the normal `/flags` page and
