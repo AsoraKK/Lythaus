@@ -27,7 +27,7 @@ function githubGet(path) {
   return JSON.parse(json);
 }
 
-export async function authorizeSetup({ env = process.env, get = githubGet, afterReview = true, repairPins = REPAIR_PINS } = {}) {
+export async function authorizeSetup({ env = process.env, get = githubGet, afterReview = true, repairPins = REPAIR_PINS, loadBaseline } = {}) {
   const repair = isRepairOperation(env.REQUESTED_OPERATION);
   if (env.GITHUB_ACTIONS !== 'true' || env.GITHUB_EVENT_NAME !== 'workflow_dispatch'
     || env.GITHUB_REF_PROTECTED !== 'true' || env.GITHUB_REF !== 'refs/heads/main'
@@ -56,10 +56,10 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
   let attested = false;
   let privateCredentialConfirmed = false;
   let priorRunSha;
-  let repairPrior;
+  let repairControl;
   const beforeRequestRuns = [];
   if (repair) {
-    repairPrior = await verifyRepairControl({env,get,pins:repairPins,onVerifiedNoRequest:id=>beforeRequestRuns.push(id)});
+    repairControl = await verifyRepairControl({env,get,pins:repairPins,loadBaseline,onVerifiedNoRequest:id=>beforeRequestRuns.push(id)});
   } else if (env.PRIOR_RUN) {
     const run = await get('actions/runs/'+env.PRIOR_RUN);
     const title = run.display_title;
@@ -90,7 +90,7 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     if (repair && !attested) throw new Error('setup_repair_owner_attestation_missing');
   }
   return { existingPlanConfirmedByOwner: attested, ownerSelectorConfirmedByOwner: attested, privateCredentialConfirmed,
-    ...(priorRunSha ? {priorRunSha} : {}), ...(repairPrior ? {repairPrior} : {}),
+    ...(priorRunSha ? {priorRunSha} : {}), ...repairControl,
     ...(beforeRequestRuns.length ? {beforeRequestRuns} : {}) };
 }
 
@@ -110,7 +110,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       }[env.REQUESTED_OPERATION];
       const summary = [
         purpose, 'Worker: `lythaus-admin-api-new-core-test` (`89391a349e454b3994bd43299c6386ed`).',
-        'Before the repair, isolated deployment `307f3dcc-41f3-42e2-be4b-ad2a519ec51c` served version `37f36eb4-911d-4c51-b723-751329cd1b92` at 100%. Preserve this rollback reference.',
+        'Verified baseline from protected activation `45660396889`: isolated deployment `'+gate.repairBaseline.predecessor.deploymentId+
+          '` served version `'+gate.repairBaseline.predecessor.versionId+'` at 100%. Preserve this rollback reference.',
         'Candidate application: `' + REPAIR_PINS.sourceSha + '`. Worker SHA-256: `' + REPAIR_PINS.workerSha + '`. Assets SHA-256: `' + REPAIR_PINS.assetsSha + '`.',
         'Prior run: `' + env.PRIOR_RUN + '`.' + (state?.versionId ? ' Repair version: `' + state.versionId + '`.' : ''),
         ...(gate.beforeRequestRuns ? ['Prior protected runs with verified receipts showing no version or deployment request: '+gate.beforeRequestRuns.join(', ')+'.'] : []),

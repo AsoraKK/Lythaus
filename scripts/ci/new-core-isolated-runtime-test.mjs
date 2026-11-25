@@ -8,15 +8,19 @@ import { loadArtifacts, workerVersionCode } from './new-core-isolated-worker.mjs
 
 const [source, directory, ...options] = process.argv.slice(2);
 assert.ok(source && directory && options.length === new Set(options).size &&
-  options.every(value => ['--repair', '--local-pg', '--denied-membership-read'].includes(value)));
+  options.every(value => ['--repair', '--binding-fix', '--local-pg', '--denied-membership-read'].includes(value)));
 const sourceDir = resolve(source);
 const artifactDir = resolve(directory);
 const repair = options.includes('--repair');
+const bindingFix = options.includes('--binding-fix');
+assert.ok(!(repair && bindingFix));
 const databaseTest = options.includes('--local-pg');
 const deniedRead = options.includes('--denied-membership-read');
-assert.ok(!deniedRead || repair && databaseTest);
-const pins = repair ? (await import('./new-core-isolated-repair-pins.mjs')).REPAIR_PINS : undefined;
-if (repair) assert.ok(pins, 'Repair source and artifacts require a reviewed pin');
+assert.ok(!deniedRead || (repair || bindingFix) && databaseTest);
+let pins;
+if (repair) pins = (await import('./new-core-isolated-repair-state.mjs')).priorRepairPins;
+if (bindingFix) pins = (await import('./new-core-isolated-repair-pins.mjs')).REPAIR_PINS;
+if (repair || bindingFix) assert.ok(pins, 'Repair source and artifacts require a reviewed pin');
 const require = createRequire(join(sourceDir, 'node_modules/wrangler/package.json'));
 const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
 const configBytes = await readFile(join(sourceDir, 'apps/lythaus-admin-api/wrangler.new-core-test.jsonc'));
@@ -34,6 +38,11 @@ if (databaseTest) {
   assert.equal(localPg.username, 'lythaus_admin');
   assert.equal(localPg.pathname, '/postgres');
   assert.ok(localPg.port && !localPg.search && !localPg.hash);
+  if (bindingFix) {
+    assert.ok(decodeURIComponent(localPg.password) === 'disposable/role#%23?@only', 'Expected the disposable reserved-character fixture');
+    localPg.searchParams.set('sslmode','verify-full');
+    localPg.searchParams.set('sslrootcert',join(process.cwd(),'ca.crt'));
+  }
 }
 const issuer = 'https://isolated-jwt-fixture.invalid';
 const audience = digest('local-only');

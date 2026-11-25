@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { RECORDED_WORKER,RECORDED_WORKER_ID,SCRIPT } from './new-core-isolated-cloudflare.mjs';
 import { REPOSITORY } from './lythaus-new-core-schema-install-control.mjs';
-import { assertRepairPins,routed,validateRepairState } from './new-core-isolated-repair-state.mjs';
-import { routedRun } from './new-core-repair-control.mjs';
+import { assertRepairPins,assertRepairPredecessor,assertRoutedLineage,priorRepairState,validateRepairState } from './new-core-isolated-repair-state.mjs';
+import { loadPriorStageReceipt } from './new-core-stage-receipt.mjs';
+import { predecessorRun,predecessorRuns,routedHead,routedRun } from './new-core-repair-control.mjs';
 
 const name = 'isolated-worker-repair.json';
 const beforeRequest = {
@@ -23,7 +24,7 @@ function beforeRequestEnvelope(scope,pins) {
     || !/^[1-9]\d{0,18}$/.test(scope.priorRun) || !/^[a-f0-9]{40}$/.test(scope.controllerSha)) {
     throw new Error('setup_repair_scope_invalid');
   }
-  return {schema:1,workerId:RECORDED_WORKER_ID,baselineRun:routedRun,...scope,
+  return {schema:1,workerId:RECORDED_WORKER_ID,baselineRun:predecessorRun,...scope,
     checkpoint:beforeRequest[scope.operation],pins};
 }
 
@@ -44,7 +45,7 @@ export function requireRecordedRepairIntent(api,env,pins) {
       const marker=options.body?.annotations?.['workers/message'];
       const authorized=version
         ? scope.operation==='stage-isolated-repair' && !state.versionId
-          && marker==='lythaus-isolated '+state.intentId+' '+routed.ackChild
+          && marker==='lythaus-isolated '+state.intentId+' '+priorRepairState.versionId
         : scope.operation==='activate-isolated-repair' && !state.deploymentId
           && marker==='lythaus-isolated-repair '+state.activationIntent
           && options.body?.versions?.length===1 && options.body.versions[0].version_id===state.versionId;
@@ -55,13 +56,13 @@ export function requireRecordedRepairIntent(api,env,pins) {
 }
 
 export function validateRepairReceipt(row, expected, pins) {
-  if (row?.schema !== 1 || row.workerId !== RECORDED_WORKER_ID || row.baselineRun !== routedRun
+  if (row?.schema !== 1 || row.workerId !== RECORDED_WORKER_ID || row.baselineRun !== predecessorRun
     || Object.keys(row).sort().join() !== 'baselineRun,controllerSha,operation,priorRun,runId,schema,state,workerId'
     || !['runId','controllerSha','operation','priorRun'].every(key => row[key] === expected[key])) {
     throw new Error('setup_repair_receipt_invalid');
   }
   const state = validateRepairState(row.state,pins);
-  if (row.operation === 'stage-isolated-repair' && (row.priorRun !== routedRun || state.activationIntent)
+  if (row.operation === 'stage-isolated-repair' && (row.priorRun !== predecessorRun || state.activationIntent)
     || row.operation === 'activate-isolated-repair' && (!state.stageVerified || !state.activationIntent)) {
     throw new Error('setup_repair_receipt_wrong_operation');
   }
@@ -79,6 +80,26 @@ function readRepairArtifact(env,expected) {
     return JSON.parse(readFileSync(path,'utf8'));
   } catch { throw new Error('setup_prior_repair_artifact_unverified'); }
   finally { rmSync(dir,{recursive:true,force:true}); }
+}
+
+// Historical artifacts use the original baseline and cannot be consumed as current repair intents.
+export function loadRepairBaseline(env,readRepair=readRepairArtifact,readLineage=loadPriorStageReceipt) {
+  const prior = readLineage({...env,PRIOR_RUN:routedRun},routedHead);
+  assertRoutedLineage(prior);
+  const {sourceSha,workerSha,assetsSha,intentId,versionId,stageVerified} = priorRepairState;
+  const stagedState = {sourceSha,workerSha,assetsSha,intentId,versionId,stageVerified};
+  let predecessor;
+  for (const {runId,controllerSha,operation,priorRun} of predecessorRuns) {
+    const scope = {runId,controllerSha,operation,priorRun};
+    const row = readRepair(env,scope);
+    const state = operation === 'stage-isolated-repair' ? stagedState : priorRepairState;
+    if (!isDeepStrictEqual(row,{schema:1,workerId:RECORDED_WORKER_ID,baselineRun:routedRun,...scope,state})) {
+      throw new Error('setup_repair_predecessor_receipt_unverified');
+    }
+    if (operation === 'activate-isolated-repair') predecessor = row.state;
+  }
+  assertRepairPredecessor(predecessor);
+  return {prior,predecessor};
 }
 
 export function verifyNoRepairRequest(env,expected,pins,read=readRepairArtifact) {
@@ -99,7 +120,7 @@ export function loadRepairReceipt(env, expected, pins) {
 
 export function recordRepairState(env, state, pins) {
   const scope = receiptScope(env);
-  const receipt = {schema:1,workerId:RECORDED_WORKER_ID,baselineRun:routedRun,...scope,state};
+  const receipt = {schema:1,workerId:RECORDED_WORKER_ID,baselineRun:predecessorRun,...scope,state};
   validateRepairReceipt(receipt,scope,pins);
   const path = join(env.RUNNER_TEMP,name);
   writeFileSync(path+'.tmp',JSON.stringify(receipt)+'\n',{mode:0o600});

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { authorizeSetup, credentialAttestation, planAttestation } from '../ci/new-core-setup-control.mjs';
+import {predecessorRun,predecessorRuns} from '../ci/new-core-repair-control.mjs';
 import { verifyAnonymousTestGate } from '../ci/new-core-test-access-probe.mjs';
 
 const sha = 'a'.repeat(40);
@@ -120,7 +121,8 @@ test('Worker resume requires the exact prior read-only receipt and owner review'
 
 test('repair approval requires the existing private credential and owner-selector attestation for this run',async()=>{
   const prior='45611431085',diagnostic='45628704670',app='b'.repeat(40);
-  const scope={...env,REQUESTED_OPERATION:'stage-isolated-repair',PRIOR_RUN:prior};
+  const scope={...env,REQUESTED_OPERATION:'stage-isolated-repair',PRIOR_RUN:predecessorRun};
+  const loadBaseline=()=>({prior:{},predecessor:{}});
   const repairPins={sourceSha:app,workerSha:'c'.repeat(64),assetsSha:'d'.repeat(64),workerBytes:123,assetBytes:345,assetCount:3};
   const map=sources([approval]);
   for(const [id,head,operation] of [[prior,'d4cf5bb1229383f736b0287101096482ca9a535e','resume-worker-script-settings'],
@@ -131,10 +133,21 @@ test('repair approval requires the existing private credential and owner-selecto
     map['actions/runs/'+id+'/approvals']=[approval];
     map['compare/'+head+'...'+sha]={merge_base_commit:{sha:head}};
   }
+  for(const {runId,controllerSha,operation,priorRun,jobId,digest} of predecessorRuns){
+    const path='actions/runs/'+runId;
+    map[path]={...map['actions/runs/'+prior],id:Number(runId),head_sha:controllerSha,
+      display_title:operation+' admin-new-core-test.lythaus.co at '+controllerSha+' from '+priorRun};
+    map[path+'/approvals']=[approval];
+    map[path+'/jobs?per_page=100']={total_count:1,jobs:[{id:jobId,name:'Owner review for isolated setup',conclusion:'success',
+      steps:['Perform only the selected operation on the isolated target','Retain the separate sanitized isolated repair receipt']
+        .map(name=>({name,conclusion:'success'}))}]};
+    map[path+'/artifacts?per_page=100']={total_count:1,artifacts:[{name:'isolated-worker-repair-'+runId+'-1',expired:false,digest}]};
+    map['compare/'+controllerSha+'...'+app]={merge_base_commit:{sha:controllerSha}};
+  }
   map['compare/'+app+'...'+sha]={merge_base_commit:{sha:app}};
   const get=path=>path.startsWith('actions/workflows/')?{total_count:1,workflow_runs:[{id:765}]}:map[path];
-  assert.equal((await authorizeSetup({env:scope,get,repairPins})).existingPlanConfirmedByOwner,true);
+  assert.equal((await authorizeSetup({env:scope,get,loadBaseline,repairPins})).existingPlanConfirmedByOwner,true);
   map['actions/runs/765/approvals']=[{...approval,comment:''}];
-  await assert.rejects(authorizeSetup({env:scope,get,repairPins}),/repair_owner_attestation_missing/);
-  assert.equal((await authorizeSetup({env:scope,get,afterReview:false,repairPins})).privateCredentialConfirmed,false);
+  await assert.rejects(authorizeSetup({env:scope,get,loadBaseline,repairPins}),/repair_owner_attestation_missing/);
+  assert.equal((await authorizeSetup({env:scope,get,loadBaseline,afterReview:false,repairPins})).privateCredentialConfirmed,false);
 });

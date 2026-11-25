@@ -8,10 +8,35 @@ import {
 import {TARGET} from '../ci/lythaus-new-core-isolation-review.mjs';
 
 const operations = ['stage-isolated-repair', 'activate-isolated-repair', 'reconcile-isolated-repair'];
-const servingChild = '37f36eb4-911d-4c51-b723-751329cd1b92';
+const servingChild = '193c3dcb-9238-4adc-8eab-48707fdd8b7e';
 const candidate = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const deployment = version => ({strategy:'percentage', versions:[{version_id:version, percentage:100}]});
 const stagePath = RECORDED_WORKER + '/versions?deploy=false';
+
+test('the repair client requires the activated predecessor and the new annotated child', async () => {
+  const old = '37f36eb4-911d-4c51-b723-751329cd1b92';
+  const predecessorMarker = 'lythaus-isolated c231d250-f91c-4626-bc7e-31fb2c8e1321 ' + old;
+  for (const [op, parent, marker, target] of [
+    [operations[0],old,predecessorMarker,undefined],
+    [operations[0],servingChild,'wrong marker',undefined],
+    [operations[1],servingChild,predecessorMarker,old],
+    [operations[1],servingChild,predecessorMarker,candidate],
+  ]) {
+    const api = createSetupClient({token:'local-fixture', repairOperation:op, record:()=>assert.fail(), fetchImpl:async (url,options) => {
+      assert.equal(options.method,'GET');
+      const path = new URL(url).pathname;
+      const id = path.split('/').at(-1);
+      const result = url.endsWith(RECORDED_WORKER) ? {id, name:TARGET.worker} :
+        {id,annotations:{'workers/message':id === servingChild ? marker : 'lythaus-isolated c231d250-f91c-4626-bc7e-31fb2c8e1321 ' + old}};
+      return Response.json({success:true,result});
+    }});
+    await api.request(RECORDED_WORKER);
+    api.selectRecordedWorker();
+    for (const id of new Set([old,servingChild,...(target ? [target] : [])]))
+      await api.request(RECORDED_WORKER + '/versions/' + id + '?include=modules');
+    assert.throws(() => api.selectLineage(parent,target));
+  }
+});
 
 test('staging, activating and reconciling a routed correction on the same Worker', () => {
   execFileSync(process.execPath, ['--experimental-test-module-mocks',

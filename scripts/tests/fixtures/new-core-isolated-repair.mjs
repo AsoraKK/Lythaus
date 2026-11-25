@@ -7,6 +7,7 @@ import {
 } from '../../ci/new-core-isolated-cloudflare.mjs';
 import * as sealedWorker from '../../ci/new-core-isolated-worker.mjs';
 import {TARGET} from '../../ci/lythaus-new-core-isolation-review.mjs';
+import {priorRepairPins, priorRepairState as predecessor} from '../../ci/new-core-isolated-repair-state.mjs';
 
 const prior = {
   parentIntent:'d340cb66-cb62-4c87-ab64-400a7cf79c01', ackParent:'44cd6e04-15d7-467c-9d93-ff59d5d4fe0c',
@@ -33,15 +34,27 @@ const artifacts = {worker, assets};
 const originalSource = '3fbaea846f67fe5ad452d53c456b5355069757ca';
 const originalDeployment = {id:prior.deploymentId, created_on:'2026-11-25T12:19:00Z',
   annotations:{}, strategy:'percentage', versions:[{version_id:prior.ackChild, percentage:100}]};
-const shell = {id:RECORDED_WORKER_ID, name:TARGET.worker, deployed_on:originalDeployment.created_on,
+const precedingDeployment = {id:predecessor.deploymentId, created_on:'2026-11-25T19:00:00Z', strategy:'percentage',
+  annotations:{'workers/message':'lythaus-isolated-repair ' + predecessor.activationIntent},
+  versions:[{version_id:predecessor.versionId, percentage:100}]};
+const baseline = [precedingDeployment,originalDeployment];
+const shell = {id:RECORDED_WORKER_ID, name:TARGET.worker, deployed_on:precedingDeployment.created_on,
   subdomain:{enabled:false, previews_enabled:false}, logpush:false, tail_consumers:[], references:{domains:[]},
   observability:{enabled:false, logs:{enabled:false, invocation_logs:false}, traces:{enabled:false}}};
 
-// The standard CI fixture substitutes only the original two rows. Pass the sealed
-// historical Worker bundle to exercise their original module hashes as well.
+// Passing the two retained bundles also checks their real historical module hashes.
 const oldWorker = process.argv[2] ? await readFile(process.argv[2]) : null;
-if (!oldWorker) mock.module('../../ci/new-core-isolated-worker.mjs', {namedExports:{...sealedWorker,
+const precedingWorker = process.argv[3] ? await readFile(process.argv[3]) : Buffer.from('synthetic previously activated module');
+if (!oldWorker || !process.argv[3]) mock.module('../../ci/new-core-isolated-worker.mjs', {namedExports:{...sealedWorker,
+  async verifyWorkerVersion(args) {
+    if (!process.argv[3] && args.versionId === predecessor.versionId) {
+      assert.deepEqual(args.pins,priorRepairPins);
+      return sealedWorker.verifyWorkerVersion({...args,pins:{...args.pins,workerSha:digest(precedingWorker)}});
+    }
+    return sealedWorker.verifyWorkerVersion(args);
+  },
   async readLineage(args) {
+    if (oldWorker) return sealedWorker.readLineage(args);
     const {request, versions} = args;
     assert.equal(args.workerId, RECORDED_WORKER_ID);
     assert.deepEqual(versions.map(v => v.id).sort(), [prior.ackParent, prior.ackChild].sort());
@@ -56,19 +69,21 @@ const {runIsolatedRepair, assertRoutedLineage} = await import('../../ci/new-core
 
 function fixture() {
   const module = (name, bytes, content_type) => ({name, content_base64:bytes.toString('base64'), content_type});
-  function originalVersion(id, number, message) {
-    if (!oldWorker) return {id, number};
+  function originalVersion(id, number, message, bytes=oldWorker, source=originalSource) {
+    if (!bytes) return {id, number};
     return {id, number, urls:[], main_module:'isolated-entry.js', compatibility_date:'2026-07-27',
-      compatibility_flags:['nodejs_compat'], annotations:{'workers/tag':originalSource, 'workers/message':message},
+      compatibility_flags:['nodejs_compat'], annotations:{'workers/tag':source, 'workers/message':message},
       bindings:sealedWorker.expectedBindings(audience, issuer), assets:{config:{run_worker_first:true, not_found_handling:'single-page-application'}},
       modules:[module('isolated-entry.js', Buffer.from("export { default } from './new-core-test-worker.js';\n"), 'application/javascript+module'),
-        module('new-core-test-worker.js', oldWorker, 'application/javascript+module'),
+        module('new-core-test-worker.js', bytes, 'application/javascript+module'),
         module('_headers', assets.get('_headers'), 'text/plain')]};
   }
   const state = {
     versions:new Map([[prior.ackParent, originalVersion(prior.ackParent, 1, 'lythaus-isolated ' + prior.parentIntent + ' parent')],
-      [prior.ackChild, originalVersion(prior.ackChild, 2, 'lythaus-isolated ' + prior.childIntent + ' ' + prior.ackParent)]]),
-    deployments:[structuredClone(originalDeployment)], receipts:[], writes:[], boundaries:[], fault:null,
+      [prior.ackChild, originalVersion(prior.ackChild, 2, 'lythaus-isolated ' + prior.childIntent + ' ' + prior.ackParent)],
+      [predecessor.versionId, originalVersion(predecessor.versionId, 3, 'lythaus-isolated ' + predecessor.intentId + ' ' + prior.ackChild,
+        precedingWorker,predecessor.sourceSha)]]),
+    deployments:structuredClone(baseline), receipts:[], writes:[], boundaries:[], fault:null,
   };
   const deploymentPath = SCRIPT + '/deployments';
   const stagePath = RECORDED_WORKER + '/versions?deploy=false';
@@ -102,16 +117,17 @@ function fixture() {
         if (state.fault === 'deployment_after_assets') state.deployments[0].id = unexpectedId;
         result = {buckets:[], jwt:'a.e30.b'};
       } else if (path === stagePath) {
-        assert.equal(state.deployments[0].id, prior.deploymentId);
-        assert.equal(state.deployments[0].versions[0].version_id, prior.ackChild);
+        assert.equal(state.deployments[0].id, predecessor.deploymentId);
+        assert.equal(state.deployments[0].versions[0].version_id, predecessor.versionId);
         const name = 'ACCESS_SUBJECT_HMAC_KEY';
         assert.deepEqual(body.bindings.filter(binding => binding.name === name),
-          [{name, type:'inherit', version_id:prior.ackChild}]);
+          [{name, type:'inherit', version_id:predecessor.versionId}]);
+        assert.equal(body.annotations['workers/message'].split(' ')[2],predecessor.versionId);
         assert.equal(body.annotations['workers/tag'], pins.sourceSha);
         assert.equal(body.main_module, 'isolated-entry.js');
         assert.equal(body.assets.config.run_worker_first, true);
         const bindings = body.bindings.map(binding => binding.name === name ? {name, type:'secret_text'} : binding);
-        const version = {...body, bindings, id:candidate, number:3, urls:[], assets:{config:body.assets.config}};
+        const version = {...body, bindings, id:candidate, number:4, urls:[], assets:{config:body.assets.config}};
         state.versions.set(candidate, version);
         if (state.fault === 'version_ack_lost') throw new Error('private fixture transport detail');
         result = {id:candidate};
@@ -119,7 +135,7 @@ function fixture() {
         assert.deepEqual(body.versions, [{version_id:candidate, percentage:100}]);
         assert.equal(body.strategy, 'percentage');
         assert.match(body.annotations['workers/message'], /^lythaus-isolated-repair [a-f0-9-]{36}$/);
-        state.deployments.unshift({...body, id:deploymentId, created_on:'2026-11-25T15:00:00Z'});
+        state.deployments.unshift({...body, id:deploymentId, created_on:'2026-11-25T20:00:00Z'});
         if (state.fault === 'deployment_ack_lost') throw new Error('private fixture transport detail');
         result = {id:deploymentId};
       } else assert.fail('unexpected repair write ' + path);
@@ -131,9 +147,9 @@ function fixture() {
     const checkBoundary = async () => {
       const id = state.deployments[0].versions[0].version_id;
       state.boundaries.push(id);
-      return {audience, issuer, servingVersionId:id, servingSourceSha:id === prior.ackChild ? originalSource : pins.sourceSha};
+      return {audience, issuer, servingVersionId:id, servingSourceSha:id === predecessor.versionId ? predecessor.sourceSha : pins.sourceSha};
     };
-    return runIsolatedRepair({operation, api, artifacts, pins, prior, repairReceipt, checkBoundary,
+    return runIsolatedRepair({operation, api, artifacts, pins, prior, predecessor, repairReceipt, checkBoundary,
       journal:async receipt => state.receipts.push(structuredClone(receipt)), ...overrides});
   }
   return {state, run, stagePath, deploymentPath};
@@ -146,14 +162,21 @@ const reconcile = 'reconcile-isolated-repair';
 {
   const {run, state} = fixture();
   assert.deepEqual(await run(reconcile), {status:'REPAIR_BASELINE_VERIFIED', workerId:RECORDED_WORKER_ID,
-    servingVersionId:prior.ackChild, servingDeploymentId:prior.deploymentId, bootstrapCalled:false});
-  assert.deepEqual(state.boundaries, [prior.ackChild]);
+    servingVersionId:predecessor.versionId, servingDeploymentId:predecessor.deploymentId, bootstrapCalled:false});
+  assert.deepEqual(state.boundaries, [predecessor.versionId]);
   assert.deepEqual(state.receipts, []);
   assert.deepEqual(state.writes, []);
 }
 for (const drift of [
   state => state.versions.set(unexpectedId, {id:unexpectedId}),
   state => { state.versions.delete(prior.ackParent); },
+  state => { state.versions.delete(predecessor.versionId); },
+  state => { state.versions.get(predecessor.versionId).number = 2; },
+  state => { state.versions.get(predecessor.versionId).annotations['workers/message'] = 'lythaus-isolated ' + predecessor.intentId + ' ' + prior.ackParent; },
+  state => { state.versions.get(predecessor.versionId).annotations['workers/tag'] = originalSource; },
+  state => { state.deployments[0].annotations['workers/message'] = 'lythaus-isolated-repair ' + unexpectedId; },
+  state => { state.deployments[0].created_on = originalDeployment.created_on; },
+  state => { state.deployments.pop(); },
   state => { state.deployments[0].versions[0].percentage = 99; },
   state => { state.deployments[0].versions[0].version_id = prior.ackParent; },
   state => { state.deployments[0].id = unexpectedId; },
@@ -170,6 +193,17 @@ assert.doesNotThrow(() => assertRoutedLineage(prior));
 for (const key of Object.keys(prior)) {
   assert.throws(() => assertRoutedLineage({...prior, [key]:unexpectedId}), undefined, 'modified prior ' + key);
 }
+for (const changed of [undefined, {...predecessor,sourceSha:pins.sourceSha}, {...predecessor,versionId:prior.ackChild},
+  {...predecessor,intentId:prior.childIntent}, {...predecessor,activationVerified:false}]) {
+  const {run,state} = fixture();
+  await assert.rejects(run(stage, undefined, {predecessor:changed}), /repair_predecessor_receipt/);
+  assert.deepEqual(state.writes, []);
+}
+for (const changed of [priorRepairPins, {...pins,workerSha:priorRepairPins.workerSha}]) {
+  const {run,state} = fixture();
+  await assert.rejects(run(stage, undefined, {pins:changed}), /repair_artifact_pins/);
+  assert.deepEqual(state.writes, []);
+}
 
 {
   const {run, state, stagePath, deploymentPath} = fixture();
@@ -178,17 +212,17 @@ for (const key of Object.keys(prior)) {
   assert.equal(staged.versionId, candidate);
   assert.equal(staged.stageVerified, true);
   assert.deepEqual(state.writes, [SCRIPT + '/assets-upload-session', stagePath]);
-  assert.deepEqual(state.deployments, [originalDeployment]);
-  assert.deepEqual(new Set(state.boundaries), new Set([prior.ackChild]));
+  assert.deepEqual(state.deployments, baseline);
+  assert.deepEqual(new Set(state.boundaries), new Set([predecessor.versionId]));
 
   await run(activate, staged);
   const active = state.receipts.at(-1);
   assert.equal(active.activationVerified, true);
   assert.equal(active.deploymentId, deploymentId);
   assert.deepEqual(state.writes, [SCRIPT + '/assets-upload-session', stagePath, deploymentPath]);
-  assert.deepEqual(state.deployments[1], originalDeployment);
+  assert.deepEqual(state.deployments.slice(1), baseline);
   assert.deepEqual(state.deployments[0].versions, [{version_id:candidate, percentage:100}]);
-  assert.deepEqual(new Set(state.boundaries), new Set([prior.ackChild, candidate]));
+  assert.deepEqual(new Set(state.boundaries), new Set([predecessor.versionId, candidate]));
   const writes = state.writes.length;
   assert.equal((await run(reconcile, active)).status, 'REPAIR_ACTIVE_OWNER_TEST_PENDING');
   assert.equal(state.writes.length, writes);
@@ -205,7 +239,7 @@ for (const fault of ['deployment_after_assets', 'inventory_after_assets']) {
 {
   const {run, state} = fixture();
   await assert.rejects(run(stage, undefined, {checkBoundary:async () => ({
-    audience, issuer, servingVersionId:prior.ackChild, servingSourceSha:'0'.repeat(40),
+    audience, issuer, servingVersionId:predecessor.versionId, servingSourceSha:'0'.repeat(40),
   })}));
   assert.deepEqual(state.writes, []);
   await assert.rejects(run(stage, undefined, {artifacts:{...artifacts, worker:Buffer.from('changed Worker')}}));
@@ -219,8 +253,8 @@ for (const fault of ['deployment_after_assets', 'inventory_after_assets']) {
   const intent = state.receipts.at(-1);
   assert.ok(intent.intentId);
   assert.ok(!intent.stageVerified);
-  assert.equal(state.versions.size, 3);
-  assert.equal(state.deployments[0].id, prior.deploymentId);
+  assert.equal(state.versions.size, 4);
+  assert.equal(state.deployments[0].id, predecessor.deploymentId);
   const writes = state.writes.length;
   await assert.rejects(run(activate, intent));
   await assert.rejects(run(stage));
@@ -274,12 +308,12 @@ for (const fault of ['deployment_after_assets', 'inventory_after_assets']) {
   assert.equal((await run(reconcile, intent)).status, 'REPAIR_ACTIVATION_UNCONFIRMED');
   await assert.rejects(run(activate, intent));
   assert.equal(state.writes.length, writes);
-  assert.deepEqual(state.deployments, [originalDeployment]);
+  assert.deepEqual(state.deployments, baseline);
 }
 
 for (const change of [
   row => { row.annotations['workers/message'] = 'lythaus-isolated-repair ' + unexpectedId; },
-  row => { row.created_on = originalDeployment.created_on; },
+  row => { row.created_on = precedingDeployment.created_on; },
   row => { row.versions[0].percentage = 99; },
 ]) {
   const {run, state} = fixture();
