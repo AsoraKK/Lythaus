@@ -29,13 +29,15 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     || env.GITHUB_ACTOR_ID !== String(PINS.ownerId) || env.GITHUB_ACTOR !== env.GITHUB_TRIGGERING_ACTOR
     || env.GITHUB_RUN_ATTEMPT !== '1' || !/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID ?? '')
     || env.REQUESTED_CONTROL_SHA !== env.GITHUB_SHA || !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? '')
-    || !['inspect', 'setup', 'resume-access', 'resume-worker-script-settings'].includes(env.REQUESTED_OPERATION)
+    || !['inspect', 'setup', 'resume-access', 'resume-worker-script-settings', 'stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)
+    || (env.PRIOR_RUN && (!/^[1-9]\d{0,18}$/.test(env.PRIOR_RUN) || env.PRIOR_RUN === env.GITHUB_RUN_ID ||
+      !['inspect','resume-worker-script-settings','stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)))
     || env.NODE_OPTIONS || env.NODE_DEBUG || env.RUNNER_DEBUG === '1') throw new Error('setup_dispatch_changed');
   const main = await get('branches/main');
   if (!main.protected || main.commit.sha !== env.GITHUB_SHA) throw new Error('setup_main_changed');
   verifyEnvironment(await get('environments/production'),
     await get('environments/production/deployment-branch-policies?per_page=100'));
-  for (const [id, sha, filename] of env.REQUESTED_OPERATION === 'resume-worker-script-settings' ? [...receipts,workerReceipt] : receipts) {
+  for (const [id, sha, filename] of ['resume-worker-script-settings','stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION) ? [...receipts,workerReceipt] : receipts) {
     const run = await get('actions/runs/' + id);
     if (run.repository?.id !== 1010752912 || String(run.id) !== id || run.head_sha !== sha
       || run.path !== '.github/workflows/' + filename || run.head_branch !== 'main'
@@ -45,6 +47,22 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
   }
   let attested = false;
   let privateCredentialConfirmed = false;
+  let priorRunSha;
+  if (env.PRIOR_RUN) {
+    const run = await get('actions/runs/'+env.PRIOR_RUN);
+    const title = run.display_title;
+    if (String(run.id) !== env.PRIOR_RUN || run.repository?.id !== 1010752912 || run.path !== workflow ||
+      run.head_branch !== 'main' || run.event !== 'workflow_dispatch' || run.run_attempt !== 1 || run.status !== 'completed' ||
+      run.actor?.id !== PINS.ownerId || run.triggering_actor?.id !== PINS.ownerId || !/^[a-f0-9]{40}$/.test(run.head_sha) ||
+      !['setup','resume-access','resume-worker-script-settings','stage-one-nonserving-version'].some(op =>
+        title === op+' admin-new-core-test.lythaus.co at '+run.head_sha)) throw new Error('setup_prior_lineage_run_unverified');
+    if (run.head_sha !== env.GITHUB_SHA) {
+      const compare = await get('compare/'+run.head_sha+'...'+env.GITHUB_SHA);
+      if (compare.merge_base_commit?.sha !== run.head_sha) throw new Error('setup_prior_lineage_source_unverified');
+    }
+    verifyOwnerReview(await get('actions/runs/'+env.PRIOR_RUN+'/approvals'));
+    priorRunSha = run.head_sha;
+  }
   if (afterReview) {
     const history = await get('actions/runs/' + env.GITHUB_RUN_ID + '/approvals');
     verifyOwnerReview(history);
@@ -53,7 +71,8 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     attested = ownerComments.includes(planAttestation);
     privateCredentialConfirmed = attested || ownerComments.includes(credentialAttestation);
   }
-  return { existingPlanConfirmedByOwner: attested, ownerSelectorConfirmedByOwner: attested, privateCredentialConfirmed };
+  return { existingPlanConfirmedByOwner: attested, ownerSelectorConfirmedByOwner: attested, privateCredentialConfirmed,
+    ...(priorRunSha ? {priorRunSha} : {}) };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

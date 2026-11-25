@@ -8,7 +8,7 @@ export const TARGET = Object.freeze({
   hostname: 'admin-new-core-test.lythaus.co', worker: 'lythaus-admin-api-new-core-test',
   hyperdrive: '7e39fc4a286147988ed12df7a6322616', branch: 'xwkb9quljkzd',
   origin: '30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558',
-  candidate: '276b43265584ec0dc158e67cbdb13cb58ece75db',
+  candidate: '3dc46d098242d9dcbca7a98f3272935a34942d3a',
 });
 const API = 'https://api.cloudflare.com/client/v4';
 const ACCOUNT = `/accounts/${TARGET.account}`;
@@ -153,7 +153,8 @@ export async function inspectIsolation({ token, expectedOwner, expectedVersionId
     snapshots.push({ name, exists:true, bindings:databaseBindings(settings.result),
       versions:serving,
       workersDevEnabled:subdomain?.enabled, previewUrlsEnabled:subdomain?.previews_enabled,
-      ...(name === TARGET.worker ? { settings:settings.result } : {}) });
+      ...(name === TARGET.worker ? { settings:settings.result,
+        undeployed:Array.isArray(deployment) ? deployment.length === 0 : Array.isArray(deployment?.deployments) && deployment.deployments.length === 0 } : {}) });
   }
   const test = snapshots.find(s => s.name === TARGET.worker);
   const active = test.versions?.filter(v => v.percentage > 0) ?? [];
@@ -175,8 +176,12 @@ export async function inspectIsolation({ token, expectedOwner, expectedVersionId
   const expectedBindings = JSON.stringify([{name:'DB_ADMIN_FRESH',id:TARGET.hyperdrive}]);
   const exactBindings = JSON.stringify(test.bindings) === expectedBindings && active.length === 1
     && active[0].bindingsAvailable && JSON.stringify(active[0].bindings) === expectedBindings;
-  const servingBindingsComplete = externalBindingsComplete && snapshots.filter(s => s.exists).every(s => s.versions.length > 0 && s.versions.every(v => v.bindingsAvailable));
-  const consumers = snapshots.filter(s => s.exists && (s.bindings.some(b => b.id === TARGET.hyperdrive)
+  const verifiedStandby = s => s.name === TARGET.worker && s.undeployed && !s.versions.length &&
+    s.workersDevEnabled === false && s.previewUrlsEnabled === false && Array.isArray(s.settings?.bindings) &&
+    (!s.bindings.length || JSON.stringify(s.bindings) === expectedBindings);
+  const servingBindingsComplete = externalBindingsComplete && snapshots.filter(s => s.exists).every(s => verifiedStandby(s) ||
+    s.versions.length > 0 && s.versions.every(v => v.bindingsAvailable));
+  const consumers = snapshots.filter(s => s.exists && !verifiedStandby(s) && (s.bindings.some(b => b.id === TARGET.hyperdrive)
     || s.versions.some(v => v.bindings.some(b => b.id === TARGET.hyperdrive)))).map(s => s.name);
   const worker = { exists:test.exists, name:TARGET.worker, servingVersionId:id,
     servingSourceTag:/^[a-f0-9]{40}$/.test(tag ?? '') ? tag : null, sourceTagMatchesCandidate:tag === TARGET.candidate,

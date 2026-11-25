@@ -174,6 +174,25 @@ async function routes(api) {
 async function emptyRouting(api) {
   check((await routes(api)).length === 0 && (await api.dns(TARGET.hostname)).length === 0,'test_routing_collision');
 }
+async function routingCheckpoint(api) {
+  const attached = await routes(api);
+  const dns = await api.dns(TARGET.hostname);
+  check(dns.length <= 1 && dns.every(row => ID.test(row.id) && dnsRecordMatches(row)) &&
+    attached.length <= 1 && attached.every(row => ID.test(row.id) && row.pattern === ROUTE && row.script === TARGET.worker) &&
+    (!attached.length || dns.length === 1), 'test_routing_collision');
+  return {dnsId:dns[0]?.id,routeId:attached[0]?.id};
+}
+
+async function deploymentCheckpoint(api) {
+  const raw = await api.request(`${SCRIPT}/deployments`);
+  const list = Array.isArray(raw) ? raw : raw?.deployments;
+  check(Array.isArray(list) && list.length <= 1, 'unexpected_test_deployment');
+  if (!list.length) return null;
+  const row = list[0];
+  check(ID.test(row?.id) && row.versions?.length === 1 && ID.test(row.versions[0].version_id) &&
+    row.versions[0].percentage === 100, 'unexpected_test_deployment');
+  return {id:row.id,versionId:row.versions[0].version_id};
+}
 function checkCa(ca) {
   check(ca?.pem && /^[a-f0-9]{64}$/.test(ca.sha256),'issuer_ca_unverified');
   const digest = pem => {
@@ -219,7 +238,7 @@ function checkSnapshot(report, consumers) {
 function resolveOwner(env, approval, context) {
   return env.LYTHAUS_NEW_CORE_OWNER_EMAIL || (approval.ownerSelectorConfirmedByOwner === true ? context?.owner : undefined);
 }
-async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca}) {
+async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca, audience, issuer, prior={}}) {
   const errors = [];
   async function read(label, operation) {
     try { return await operation(); }
@@ -229,14 +248,13 @@ async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca})
   if (worker == null) return {worker:null,errors};
   const evidence = workerBoundaryEvidence(worker,RECORDED_WORKER_ID,TARGET.worker);
   if (!evidence.checks.identity) return {worker:evidence,errors:['setup_recorded_worker_identity']};
-  const [versionsEmpty, deploymentsEmpty, subdomain, logging, routingEmpty, customDomainEmpty, hyperdrive, productionBaselineMatches] = await Promise.all([
-    read('setup_recorded_worker_versions_unverified',async ()=>(await api.list(`${RECORDED_WORKER}/versions`)).length === 0),
-    read('setup_recorded_worker_deployments_unverified',async ()=>{
-      const result = await api.request(`${SCRIPT}/deployments`);
-      const list = Array.isArray(result) ? result : result?.deployments;
-      check(Array.isArray(list),'recorded_worker_deployments_shape');
-      return list.length === 0;
+  const [versionIds, deploymentRead, subdomain, logging, routing, customDomainEmpty, hyperdrive, productionBaselineMatches] = await Promise.all([
+    read('setup_recorded_worker_versions_unverified',async ()=>{
+      const rows = await api.list(`${RECORDED_WORKER}/versions`);
+      check(rows.length <= 2 && rows.every(row => ID.test(row.id)), 'recorded_worker_lineage_unknown');
+      return rows.map(row => row.id);
     }),
+    read('setup_recorded_worker_deployments_unverified',async ()=>({active:await deploymentCheckpoint(api)})),
     read('setup_recorded_worker_subdomain_unverified',async ()=>{
       const row = await api.request(`${SCRIPT}/subdomain`);
       const result = workerBoundaryEvidence({subdomain:row});
@@ -246,7 +264,7 @@ async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca})
       const row = await api.request(`${SCRIPT}/script-settings`);
       return scriptLoggingEvidence(row,evidence);
     }),
-    read('setup_recorded_worker_routing_unverified',async ()=>{ await emptyRouting(api); return true; }),
+    read('setup_recorded_worker_routing_unverified',()=>routingCheckpoint(api)),
     read('setup_recorded_worker_custom_domain_unverified',async ()=>{
       const result = await api.request(`${ACCOUNT}/workers/domains?hostname=${TARGET.hostname}`);
       check(Array.isArray(result),'recorded_worker_custom_domain_shape');
@@ -262,14 +280,38 @@ async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca})
         cacheDisabled:drive.cacheDisabled,caReadbackPassed,restartTimestampPresent:Number.isFinite(Date.parse(config.restarted_on))};
     }),
     read('setup_recorded_worker_production_baseline_unverified',async ()=>{
-      checkSnapshot(await inspectIsolation({token,expectedOwner,fetchImpl}),[]);
+      checkSnapshot(await inspectIsolation({token,expectedOwner,fetchImpl}),worker.deployed_on === null ? [] : [TARGET.worker]);
       return true;
     }),
   ]);
-  return {worker:evidence,versionsEmpty,deploymentsEmpty,subdomain,logging,routingEmpty,customDomainEmpty,hyperdrive,
-    productionBaselineMatches,errors:[...new Set(errors)].sort()};
+  const routingEmpty = !!routing && !routing.dnsId && !routing.routeId;
+  const deployment = deploymentRead?.active;
+  let checkpoint = 'UNRECOGNIZED_OR_AMBIGUOUS';
+  const lineage = await read('setup_recorded_worker_lineage_unknown', async () => {
+    const {readLineage,verifyWorkerVersion} = await import('./new-core-isolated-worker.mjs');
+    // Inspect immutable rows even when the operator has no prior intent receipt.
+    // Their existence alone cannot authorize adopting a secret or a deployment.
+    if (versionIds?.length && !prior.parentIntent) {
+      await Promise.all(versionIds.map(versionId=>verifyWorkerVersion({request:api.request,workerId:RECORDED_WORKER_ID,
+        audience,issuer,versionId})));
+    }
+    return readLineage({request:api.request,workerId:RECORDED_WORKER_ID,issuer,audience,...prior,
+      versions:versionIds?.map(id=>({id}))});
+  });
+  if (lineage && !errors.length && checksPass(evidence.checks) && logging?.disabled && customDomainEmpty &&
+      productionBaselineMatches && subdomain?.workersDev === 'false' && subdomain.previews === 'false') {
+    if (worker.deployed_on === null && !deployment && routingEmpty && !prior.activationTarget && !prior.deploymentId && !prior.dnsId && !prior.routeId)
+      checkpoint = lineage.child ? 'CHILD_CREATED_AND_VERIFIED' : lineage.parent ? 'PARENT_CREATED_AND_VERIFIED' : 'RECONCILED_EMPTY';
+    else if (Number.isFinite(Date.parse(worker.deployed_on)) && deployment && deployment.versionId === lineage.child?.versionId &&
+      prior.activationTarget === deployment.versionId && prior.deploymentId === deployment.id &&
+      routing && prior.dnsId === routing.dnsId && prior.routeId === routing.routeId)
+      checkpoint = 'ACTIVATED_VERIFIED_CHILD';
+  }
+  return {worker:evidence,checkpoint,versionIds,versionsEmpty:versionIds?.length === 0,
+    deploymentsEmpty:deploymentRead ? deployment === null : null,
+    deployment,subdomain,logging,routing,routingEmpty,customDomainEmpty,hyperdrive,productionBaselineMatches,errors:[...new Set(errors)].sort()};
 }
-export async function inspectSetupInputs({env, sourceDir, authorize}) {
+export async function inspectSetupInputs({env, sourceDir, authorize, prior={}}) {
   const approval = await authorize();
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
   const errors = [];
@@ -301,20 +343,26 @@ export async function inspectSetupInputs({env, sourceDir, authorize}) {
   const result = await collectAdminInputs({env,sourceDir,expectedOwner:owner,fetchImpl:get,onVerifiedCa:result=>{ca=result;},
     privateCredentialConfirmed:approval.privateCredentialConfirmed,
     existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true});
-  const recordedWorker = api ? await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,ca}) : null;
+  const recordedWorker = api ? await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,ca,
+    audience:context && testApps(context.apps)[0]?.aud, issuer:context?.issuer, prior}) : null;
+  if (recordedWorker && !(!recordedWorker.worker && recordedWorker.errors.includes('setup_recorded_worker_details_http_404'))) {
+    errors.push(...recordedWorker.errors);
+    if (!recordedWorker.checkpoint || recordedWorker.checkpoint === 'UNRECOGNIZED_OR_AMBIGUOUS') errors.push('setup_recorded_worker_lineage_unknown');
+  }
   return {...result,ready:result.ready && !!pages && ownerMatches === true && !errors.length,
     ownerMatchesReviewedSelector:ownerMatches, pagesInventoryComplete:!!pages, pagesProjectsChecked:pages?.projectCount ?? null,
     existingTestAccess,recordedWorker,
     errors:[...result.errors,...errors]};
 }
-export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record, resumeAccess=false, resumeWorker=false}) {
+export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, record, resumeAccess=false, resumeWorker=false, singleStage=false, prior={}}) {
+  resumeWorker ||= singleStage;
   resumeAccess ||= resumeWorker;
   check(typeof authorize === 'function' && typeof record === 'function','reviewed_entrypoint_required');
   const approval = await authorize();
   const {loadArtifacts, stageWorker, verifyWorkerVersion} = await import('./new-core-isolated-worker.mjs');
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
   const fetchImpl = avoidDeniedReadRetries();
-  const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN, record, fetchImpl,resumeWorker});
+  const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN, record, fetchImpl,resumeWorker,singleStage});
   const blocked = [];
   async function probe(label, operation) {
     try { return await operation(); }
@@ -339,7 +387,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   const inspect = expectedVersionId => inspectIsolation({token:env.CLOUDFLARE_API_TOKEN, expectedOwner:owner, expectedVersionId,fetchImpl});
   await probe('setup_live_isolation_unavailable', async () => {
     const base = await inspect();
-    checkSnapshot(base,[]);
+    checkSnapshot(base,resumeWorker && prior.childIntent && base.hyperdriveConsumers.includes(TARGET.worker) ? [TARGET.worker] : []);
     check((resumeWorker || base.worker.exists === false) && base.access.overlappingApplicationCount === (resumeAccess ? 1 : 0),'isolated_resources_exist');
   });
   if (!resumeWorker) await probe('setup_recorded_worker_inventory_unverified',async ()=>{
@@ -353,7 +401,7 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   if (context && !resumeAccess && testApps(context.apps).length) blocked.push('setup_isolated_access_exists');
   if (context && resumeAccess) await probe('setup_test_access_resume_unverified',()=>readTestAccess(api,context,RESUME_ACCESS_ID,owner,true));
   const network = await probe('setup_network_inventory',()=>networkSnapshot(api));
-  await probe('setup_routing_inventory',()=>emptyRouting(api));
+  await probe('setup_routing_inventory',()=>resumeWorker && prior.childIntent && !singleStage ? routingCheckpoint(api) : emptyRouting(api));
   const current = await probe('setup_hyperdrive_inventory',async ()=>{
     const value = await api.request(DRIVE);
     checkOrigin(value);
@@ -385,22 +433,27 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   const app = await readTestAccess(api,context,access.id,owner,resumeAccess);
   if (resumeWorker) check(ca.id,'recorded_worker_existing_ca_required');
   const caId = await verifiedCa(api,ca);
-  checkSnapshot(await inspect(),[]);
+  const before = await inspect();
+  checkSnapshot(before,resumeWorker && prior.childIntent && before.hyperdriveConsumers.includes(TARGET.worker) ? [TARGET.worker] : []);
   const old = await api.request(DRIVE);
   checkOrigin(old,resumeWorker ? caId : undefined);
   check(equal(old,current),'hyperdrive_changed');
+  let priorDeployment;
   if (resumeWorker) {
-    const receipt = await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl,ca});
+    const receipt = await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl,ca,
+      issuer:context.issuer,audience:app.aud,prior});
+    if (receipt.logging && receipt.worker && checksPass(receipt.worker.checks))
+      check(receipt.logging.disabled, 'recorded_worker_script_logging_readback_changed');
     check(receipt.worker && checksPass(receipt.worker.checks)
-      && receipt.worker.fieldShapes.deployedOn === 'null'
       && ['logs','traces'].every(key=>receipt.worker.fieldShapes[key] === 'false')
       && ['agents','issues'].every(key=>receipt.worker.fieldShapes[key] === 'omitted')
       && receipt.subdomain?.workersDev === 'false' && receipt.subdomain.previews === 'false'
-      && receipt.versionsEmpty && receipt.deploymentsEmpty && receipt.routingEmpty && receipt.customDomainEmpty
+      && receipt.checkpoint !== 'UNRECOGNIZED_OR_AMBIGUOUS' && receipt.customDomainEmpty
       && receipt.productionBaselineMatches && receipt.hyperdrive && checksPass(receipt.hyperdrive)
       && !receipt.errors.length, 'recorded_worker_checkpoint_changed');
-    check(receipt.logging?.disabled, 'recorded_worker_script_logging_readback_changed');
-    await emptyRouting(api);
+    priorDeployment = receipt.deployment;
+    if (singleStage || !priorDeployment) await emptyRouting(api);
+    check(!singleStage || !priorDeployment, 'nonserving_stage_scope');
     api.selectRecordedWorker();
   } else {
     await api.request(DRIVE,{method:'PATCH',body:{origin:{user:USER,password},caching:{disabled:true},mtls:{sslmode:'verify-full',ca_certificate_id:caId}}});
@@ -413,37 +466,53 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
     check(Number.isFinite(Date.parse(drained.restarted_on)) && drained.restarted_on === restart.restarted_on
       && (old.restarted_on == null || Date.parse(old.restarted_on) < Date.parse(drained.restarted_on)), 'pool_restart_readback');
   }
-  const stageArgs = {request:api.request, artifacts, issuer:context.issuer, audience:app.aud, journal:async()=>{},
-    ...(resumeWorker ? {existingWorkerId:RECORDED_WORKER_ID} : {})};
+  const stageArgs = {request:api.request, artifacts, issuer:context.issuer, audience:app.aud,
+    journal:async(operation,details)=>{ if (operation.endsWith('_intent') || operation.endsWith('_verified')) await record({operation,...details}); },
+    ...(resumeWorker ? {existingWorkerId:RECORDED_WORKER_ID, singleStage, ...prior,
+      activeVersionId:priorDeployment?.versionId, selectLineage:api.selectLineage,
+      listVersions:()=>api.list(`${RECORDED_WORKER}/versions`)} : {})};
   const staged = await stageWorker(stageArgs);
   if (resumeWorker) check(staged.workerId === RECORDED_WORKER_ID,'recorded_worker_stage_identity');
+  if (singleStage) {
+    check(!await deploymentCheckpoint(api), 'nonserving_stage_deployed');
+    const disabled = await api.request(`${SCRIPT}/subdomain`);
+    check(disabled.enabled === false && disabled.previews_enabled === false, 'public_fallback');
+    await emptyRouting(api);
+    return {status:staged.checkpoint, ...staged, bootstrapCalled:false};
+  }
   check(staged.tag === TARGET.candidate && ID.test(staged.workerId) && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(staged.versionId), 'staged_identity');
   await verifyWorkerVersion({...stageArgs,...staged});
   const subdomain = await api.request(`${SCRIPT}/subdomain`);
   check(subdomain.enabled === false && subdomain.previews_enabled === false, 'public_fallback');
-  const deployments = await api.request(`${SCRIPT}/deployments`);
-  const list = Array.isArray(deployments) ? deployments : deployments?.deployments;
-  check(Array.isArray(list) && !list.length, 'unexpected_test_deployment');
+  const observedDeployment = await deploymentCheckpoint(api);
+  check(equal(observedDeployment,priorDeployment ?? null),'unexpected_test_deployment');
   await readTestAccess(api,context,access.id,owner,resumeAccess);
-  await emptyRouting(api);
-  const deployment = await api.request(`${SCRIPT}/deployments`,{method:'POST',body:{strategy:'percentage',versions:[{version_id:staged.versionId,percentage:100}]}});
+  if (!priorDeployment) await emptyRouting(api);
+  if (!priorDeployment) await record({operation:'activate_child_intent',workerId:staged.workerId,versionId:staged.versionId});
+  const deployment = priorDeployment ?? await api.request(`${SCRIPT}/deployments`,{method:'POST',body:{strategy:'percentage',versions:[{version_id:staged.versionId,percentage:100}]}});
   check(ID.test(deployment?.id ?? ''), 'deployment_id');
+  const exactDeployment = {id:deployment.id,versionId:staged.versionId};
+  check(equal(await deploymentCheckpoint(api),exactDeployment), 'active_deployment_readback');
   const serving = await inspect(staged.versionId);
   checkSnapshot(serving,[TARGET.worker]);
   check(Object.entries(serving.checks).every(([k,v])=>['dns','exactRoute'].includes(k) || v === true), 'active_worker_before_route');
   await verifyWorkerVersion({...stageArgs,...staged});
-  await emptyRouting(api);
-  const dns = await api.request(`${ZONE}/dns_records`,{method:'POST',body:testRecord});
+  await record({operation:'worker_active_verified',workerId:staged.workerId,versionId:staged.versionId,deploymentId:deployment.id});
+  const existingRoute = await routingCheckpoint(api);
+  check(existingRoute.dnsId === prior.dnsId && existingRoute.routeId === prior.routeId, 'test_routing_collision');
+  const dns = existingRoute.dnsId ? {id:existingRoute.dnsId} : await api.request(`${ZONE}/dns_records`,{method:'POST',body:testRecord});
   const actual = await api.dns(TARGET.hostname);
   check(ID.test(dns?.id ?? '') && actual.length === 1 && actual[0].id === dns.id && dnsRecordMatches(actual[0]), 'test_dns_readback');
-  check((await routes(api)).length === 0, 'route_collision');
-  const route = await api.request(`${ZONE}/workers/routes`,{method:'POST',body:{pattern:ROUTE,script:TARGET.worker}});
+  const refreshed = await routingCheckpoint(api);
+  check(refreshed.dnsId === dns.id && refreshed.routeId === existingRoute.routeId, 'route_collision');
+  const route = refreshed.routeId ? {id:refreshed.routeId} : await api.request(`${ZONE}/workers/routes`,{method:'POST',body:{pattern:ROUTE,script:TARGET.worker}});
   const attached = await routes(api);
   check(ID.test(route?.id ?? '') && attached.length === 1 && attached[0].id === route.id && attached[0].pattern === ROUTE
     && attached[0].script === TARGET.worker,'exact_route_readback');
   const final = await inspect(staged.versionId);
   checkSnapshot(final,[TARGET.worker]);
   check(final.readiness === 'PINNED_METADATA_CHECKS_PASS','final_isolation_readback');
+  check(equal(await deploymentCheckpoint(api),exactDeployment), 'final_deployment_readback');
   await verifyWorkerVersion({...stageArgs,...staged});
   const finalDns = await api.dns(TARGET.hostname);
   check(finalDns.length === 1 && finalDns[0].id === dns.id && dnsRecordMatches(finalDns[0]), 'final_test_dns_readback');
@@ -457,7 +526,8 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
   await verifyAnonymousTestGate(context.issuer);
   const verification = await collectAdminInputs({...args,previousInputs:initial});
   check(verification.ready, 'final_schema_grants_or_clean_state');
-  return {status:'OWNER_TEST_PENDING', worker:TARGET.worker, hostname:TARGET.hostname, source:TARGET.candidate,
+  await record({operation:'route_and_access_verified',workerId:staged.workerId,versionId:staged.versionId,routeId:route.id,dnsId:dns.id});
+  return {status:'OWNER_TEST_PENDING', checkpoint:'ROUTE_AND_ACCESS_VERIFIED',worker:TARGET.worker, hostname:TARGET.hostname, source:TARGET.candidate,
     workerId:staged.workerId, subjectKeyParentVersionId:staged.parentVersionId,
     versionId:staged.versionId, deploymentId:deployment.id, accessAppId:app.id, caId, caSha256:ca.sha256,
     accessIssuerSha256:sha(context.issuer), accessAudienceSha256:sha(app.aud),

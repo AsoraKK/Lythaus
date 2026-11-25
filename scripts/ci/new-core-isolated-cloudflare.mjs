@@ -10,31 +10,40 @@ export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})
 const API = 'https://api.cloudflare.com/client/v4';
 export const requireSetup = (condition, code) => { if (!condition) throw new Error(`setup_${code}`); };
 
-// Only the provider's numeric error code and a fixed request-field category may
-// reach the public run log. Never emit its text, pointer, body, or request data.
+// The protected response is classified here; no free-form provider text is returned.
 const versionFields = new Map([
   ['annotations','annotations'], ['main_module','modules'], ['modules','modules'],
   ['bindings','bindings'], ['compatibility_date','compatibility'],
   ['compatibility_flags','compatibility'], ['assets','assets'], ['deploy','deploy'],
 ]);
 async function stageRejection(response, phase) {
+  const ray = /^([0-9a-f]{16})(?:-[A-Z]{3})?$/.exec(response.headers.get('cf-ray') ?? '');
+  const reference = ray ? `_ray_${ray[1]}` : '';
   const prefix = `stage_version_${phase}_http_${response.status}`;
-  if (!response.body || !/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) return prefix;
+  if (!response.body || !/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) return prefix + reference;
   try {
     const chunks = [];
     let size = 0;
     for await (const chunk of response.body) {
       size += chunk.byteLength;
-      if (size > 16 * 1024) return prefix;
+      if (size > 16 * 1024) return prefix + reference;
       chunks.push(chunk);
     }
     const error = JSON.parse(Buffer.concat(chunks).toString())?.errors?.[0];
     const code = error?.code;
-    if (!Number.isInteger(code) || code < 1000 || code > 999999) return prefix;
-    const first = typeof error.source?.pointer === 'string'
+    const numeric = Number.isInteger(code) && code >= 1000 && code <= 999999;
+    const first = typeof error?.source?.pointer === 'string'
       ? /^\/([a-z_]+)(?:\/|$)/.exec(error.source.pointer)?.[1] : undefined;
-    return `${prefix}_cf_${code}_${versionFields.get(first) ?? 'unknown_field'}`;
-  } catch { return prefix; }
+    const messages = typeof error?.message === 'string' ? error.message : '';
+    const hints = [
+      ['redirects', /\b_redirects\b/i], ['headers', /\b_headers\b/i],
+      ['bindings', /\b(?:binding|bindings)\b/i], ['modules', /\b(?:main_module|module|modules)\b/i],
+      ['compatibility', /\bcompatibility[_ ](?:date|flags?)\b/i],
+      ['assets', /\b(?:assets|completion token)\b/i], ['annotations', /\bannotations?\b/i],
+    ].filter(([, pattern]) => pattern.test(messages));
+    const category = versionFields.get(first) ?? (hints.length === 1 ? hints[0][0] : undefined);
+    return prefix + (numeric ? `_cf_${code}_${category ?? 'unknown_field'}` : category ? `_${category}` : '') + reference;
+  } catch { return prefix + reference; }
 }
 export function avoidDeniedReadRetries(fetchImpl = fetch) {
   const denied = new Map();
@@ -59,14 +68,17 @@ const writes = new Map([
   [`POST ${ZONE}/workers/routes`, 'create_test_route'],
 ]);
 
-export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false}) {
+export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false, singleStage=false}) {
   const owned = { workerId:null, parentVersionId:null, versionId:null };
-  let sawRecordedUndeployedWorker = false;
+  let sawRecordedWorker = false;
+  let stageCount = 0;
+  const observedVersions = new Set();
   let stageResultUnverified = false;
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
   const reads = [
     [new RegExp(`^${RECORDED_WORKER}/versions\\?per_page=100&page=(?:[1-9]|10)$`), 'recorded_worker_versions'],
+    [new RegExp(`^${RECORDED_WORKER}/versions/${idSegment}\\?include=modules$`), 'recorded_worker_version'],
     [new RegExp(`^${ACCOUNT}/access/apps(?:/${idSegment}/policies)?${page}$`), 'access_inventory'],
     [new RegExp(`^${ACCOUNT}/access/apps/${idSegment}$`), 'access_app_details'],
     [new RegExp(`^${ACCOUNT}/access/organizations$`), 'access_organization'],
@@ -99,6 +111,8 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   async function call(path, {method='GET',body,headers={}} = {}) {
     const stage = operation(method,path);
     requireSetup(method === 'GET' || !stageResultUnverified, 'stage_version_reconciliation_required');
+    if (singleStage && method !== 'GET') requireSetup(resumeWorker && !stageCount &&
+      ['open_assets_session','upload_assets','stage_version'].includes(stage), 'nonserving_stage_scope');
     if (stage === 'create_worker') requireSetup(body?.name === TARGET.worker && body.subdomain?.enabled === false
       && body.subdomain.previews_enabled === false, 'worker_create_target');
     if (stage === 'create_access') requireSetup(body?.type === 'self_hosted' && body.domain === TARGET.hostname
@@ -137,11 +151,11 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
     }
     h.set('accept', 'application/json');
     let response, payload;
-    if (stage === 'stage_version') stageResultUnverified = true;
+    if (stage === 'stage_version') { stageResultUnverified = true; stageCount++; }
     try {
       response = await fetchImpl(API + path,{method,body,headers:h,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(45000)});
       const expectedResponse = !response.redirected && (!response.url || response.url === API + path);
-      if (expectedResponse && stage === 'stage_version' && response.status >= 400 && response.status < 500) {
+      if (expectedResponse && stage === 'stage_version' && response.status >= 400 && response.status < 600) {
         throw new Error(`setup_${await stageRejection(response, owned.parentVersionId ? 'inherit' : 'initial')}`);
       }
       requireSetup(response.ok && expectedResponse, `${stage}_http_${Number(response.status)}`);
@@ -158,8 +172,10 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
       throw new Error(`setup_${stage}_response_unavailable`);
     }
     requireSetup(payload?.success === true && Object.hasOwn(payload,'result'), `${stage}_provider_failure`);
-    if (stage === 'recorded_worker_details') sawRecordedUndeployedWorker =
-      payload.result?.id === RECORDED_WORKER_ID && payload.result.name === TARGET.worker && payload.result.deployed_on === null;
+    if (stage === 'recorded_worker_details') sawRecordedWorker =
+      payload.result?.id === RECORDED_WORKER_ID && payload.result.name === TARGET.worker;
+    if (stage === 'recorded_worker_version' && ID.test(payload.result?.id ?? '') &&
+      path === `${RECORDED_WORKER}/versions/${payload.result.id}?include=modules`) observedVersions.add(payload.result.id);
     if (method !== 'GET') {
       const id = payload.result?.id;
       await record({operation:stage,...(ID.test(id ?? '') ? {id} : {})});
@@ -215,6 +231,7 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   }
   async function list(path) {
     const result = [], seen = new Set();
+    let versionTotal;
     for (let index=1; index<=10; index++) {
       const payload = await call(`${path}?per_page=100&page=${index}`);
       requireSetup(Array.isArray(payload.result), 'inventory_shape');
@@ -224,6 +241,18 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
         result.push(row);
       }
       const pages = payload.result_info?.total_pages;
+      if (path === RECORDED_WORKER+'/versions') {
+        const info = payload.result_info ?? {};
+        requireSetup((info.page === undefined || info.page === index) &&
+          (info.count === undefined || info.count === payload.result.length) &&
+          (pages === undefined || Number.isSafeInteger(pages) && pages >= 0 && index <= Math.max(1,pages)) &&
+          (info.total_count === undefined || Number.isSafeInteger(info.total_count) && info.total_count >= result.length) &&
+          (index === 1 || info.total_count === versionTotal), 'version_pagination_unverified');
+        versionTotal = info.total_count;
+        const last = pages === undefined ? payload.result.length < 100 : index >= pages;
+        requireSetup(last ? versionTotal === undefined || result.length === versionTotal : payload.result.length > 0,
+          'version_inventory_incomplete');
+      }
       if (Number.isInteger(pages) ? index >= pages : payload.result.length < 100) return result;
     }
     requireSetup(false,'inventory_incomplete');
@@ -235,8 +264,14 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
     return payload.result;
   }
   function selectRecordedWorker() {
-    requireSetup(resumeWorker && !owned.workerId && sawRecordedUndeployedWorker,'recorded_worker_not_verified');
+    requireSetup(resumeWorker && !owned.workerId && sawRecordedWorker,'recorded_worker_not_verified');
     owned.workerId = RECORDED_WORKER_ID;
   }
-  return {request,list,listPagesProjects,dns,selectRecordedWorker};
+  function selectLineage(parent,child) {
+    requireSetup(resumeWorker && owned.workerId === RECORDED_WORKER_ID && !owned.parentVersionId && !stageCount &&
+      observedVersions.has(parent) && (!child || child !== parent && observedVersions.has(child)), 'recorded_lineage_not_verified');
+    owned.parentVersionId = parent;
+    owned.versionId = child ?? null;
+  }
+  return {request,list,listPagesProjects,dns,selectRecordedWorker,selectLineage};
 }

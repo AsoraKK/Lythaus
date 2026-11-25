@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createSetupClient, ACCOUNT, DRIVE, RECORDED_WORKER_ID, SCRIPT, ZONE } from '../ci/new-core-isolated-cloudflare.mjs';
 import { inspectSetupInputs, runIsolatedSetup } from '../ci/lythaus-new-core-isolated-setup.mjs';
 import { TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
+import { recordStageReceipt,validateStageReceipt } from '../ci/new-core-stage-receipt.mjs';
 import { verifyFlagsSession } from '../ci/verify-new-core-flags-session.mjs';
 
 test('flags acceptance requires the normal page and exact same-origin versioned cases JSON', async () => {
@@ -185,6 +189,10 @@ test('first-version rejection exposes only a safe diagnosis and blocks further w
 test('inheritance rejection handles malformed, oversized and unexpected provider errors without logging them', async()=>{
   const parent='cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
   const variants=[
+    [()=>Response.json({errors:[{code:10999,message:'invalid _redirects: private fixture material'}]},
+      {status:400,headers:{'cf-ray':'0123456789abcdef-JNB'}}), '_cf_10999_redirects_ray_0123456789abcdef'],
+    [()=>Response.json({errors:[{code:10999,message:'invalid _headers in module'}]},
+      {status:400,headers:{'cf-ray':'private-fixture-material'}}), '_cf_10999_unknown_field'],
     [()=>Response.json({errors:[{code:10999,source:{pointer:'/fixture_secret/value'}}]},{status:400}), '_cf_10999_unknown_field'],
     [()=>Response.json({errors:[{code:'fixture-secret'}]},{status:400}), ''],
     [()=>new Response('{fixture-secret',{status:400,headers:{'content-type':'application/json'}}), ''],
@@ -250,4 +258,26 @@ test('Pages verifies provider totals before returning inventory or reporting a s
     [[...Array.from({length:10},(_,i)=>page(i+1,{total_pages:11,total_count:11}))],'pages_inventory_incomplete'],
     [[page(1),new Response('private response',{status:400})],'pages_inventory_http_400'],
   ]) await assert.rejects(read(responses),{message:'setup_'+reason});
+});
+test('protected stage receipt retains intent before ack and binds run, source, worker and order', t=>{
+  const dir=mkdtempSync(join(tmpdir(),'isolated-receipt-test-'));
+  t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const env={RUNNER_TEMP:dir,GITHUB_RUN_ID:'22',GITHUB_SHA:'e'.repeat(40)};
+  const lineage={};
+  const record=(operation,row)=>recordStageReceipt(lineage,{operation,workerId:RECORDED_WORKER_ID,...row},env);
+  const receipt=()=>JSON.parse(readFileSync(join(dir,'isolated-worker-lineage.json'),'utf8'));
+  record('worker_parent_intent',{intentId:versionId});
+  assert.deepEqual(validateStageReceipt(receipt(),'22',env.GITHUB_SHA),{parentIntent:versionId});
+  assert.throws(()=>validateStageReceipt(receipt(),'21',env.GITHUB_SHA),/lineage_receipt/);
+  assert.throws(()=>validateStageReceipt({...receipt(),applicationSha:'0'.repeat(40)},'22',env.GITHUB_SHA),/lineage_receipt/);
+  const parent='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', child='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  record('stage_version',{id:parent});
+  assert.throws(()=>record('worker_parent_intent',{intentId:child}),/parent_lineage_conflict/);
+  record('worker_child_intent',{intentId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',parentVersionId:parent});
+  record('stage_version',{id:child});
+  assert.throws(()=>record('activate_child_intent',{versionId:parent}),/activation_lineage_conflict/);
+  record('activate_child_intent',{versionId:child});
+  record('activate_version',{id:'f'.repeat(32)});
+  assert.equal(receipt().lineage.activationTarget,child);
+  assert.equal(receipt().lineage.deploymentId,'f'.repeat(32));
 });

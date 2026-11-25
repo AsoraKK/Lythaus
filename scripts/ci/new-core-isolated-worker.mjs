@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
@@ -8,11 +8,13 @@ import blake3 from 'blake3-wasm';
 import { scriptLoggingEvidence,workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 import { RECORDED_WORKER_ID,SCRIPT } from './new-core-isolated-cloudflare.mjs';
 
-const sourceSha = '276b43265584ec0dc158e67cbdb13cb58ece75db';
+const sourceSha = '3dc46d098242d9dcbca7a98f3272935a34942d3a';
 const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
 const assetsSha = '5c3969463149d5611e50b73fc030e1ae46e84aa08b27222c3122f9a17a9565c0';
 const configSha = '0056b85f1b4b2ab10c01db76ea7a587744ef6224ff274afdfc835d5fa3c4a6ac';
 const moduleName = 'new-core-test-worker.js';
+const entryName = 'isolated-entry.js';
+const entryBytes = Buffer.from("export { default } from './new-core-test-worker.js';\n");
 const configPath = 'apps/lythaus-admin-api/wrangler.new-core-test.jsonc';
 const host = 'admin-new-core-test.lythaus.co';
 const name = 'lythaus-admin-api-new-core-test';
@@ -76,6 +78,7 @@ export async function prepareArtifacts({ sourceDir, artifactDir }) {
   artifactDir = resolve(artifactDir);
   await sourceConfig(sourceDir);
   execFileSync('git', ['diff', '--exit-code', 'HEAD', '--'], { cwd: sourceDir, stdio: 'ignore' });
+  requireGate(execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:sourceDir}).length === 0,'WORKER_SOURCE_DIRTY');
   requireGate(process.versions.node === '22.23.4', 'WORKER_BUILD_NODE_PIN');
   const wrangler = join(sourceDir, 'node_modules/wrangler');
   requireGate(JSON.parse(await readFile(join(wrangler, 'package.json'))).version === '4.129.1', 'WORKER_BUILD_WRANGLER_PIN');
@@ -88,10 +91,14 @@ export async function prepareArtifacts({ sourceDir, artifactDir }) {
   const scratch = await mkdtemp(join(tmpdir(), 'isolated-worker-build-'));
   const env = { PATH: process.env.PATH, HOME: scratch, CI: 'true', WRANGLER_SEND_METRICS: 'false' };
   try {
+    const bundleDir = join(scratch,'bundle');
     execFileSync(process.execPath, [join(ui, 'node_modules/vite/bin/vite.js'), 'build'], { cwd: ui, env, stdio: 'inherit' });
     execFileSync(process.execPath, [join(wrangler, 'bin/wrangler.js'), 'deploy', '--dry-run',
-      '--config', 'wrangler.new-core-test.jsonc', '--outdir', scratch], { cwd: join(sourceDir, 'apps/lythaus-admin-api'), env, stdio: 'inherit' });
-    const artifacts = { worker: await readFile(join(scratch, moduleName)), assets: new Map(await readAssets(dist)) };
+      '--config', 'wrangler.new-core-test.jsonc', '--outdir', bundleDir], { cwd: join(sourceDir, 'apps/lythaus-admin-api'), env, stdio: 'inherit' });
+    const outputs = await readdir(bundleDir,{withFileTypes:true});
+    requireGate(outputs.every(file=>file.isFile() && [moduleName,moduleName+'.map','README.md'].includes(file.name)),
+      'WORKER_UNREVIEWED_MODULE');
+    const artifacts = { worker: await readFile(join(bundleDir, moduleName)), assets: new Map(await readAssets(dist)) };
     checkArtifactBytes(artifacts);
     await mkdir(join(artifactDir, 'portable-worker'));
     await writeFile(join(artifactDir, 'portable-worker', moduleName), artifacts.worker, { flag: 'wx' });
@@ -188,8 +195,39 @@ function asModule(name, bytes, content_type) {
   return { name, content_type, content_base64: bytes.toString('base64') };
 }
 
-export async function stageWorker({ artifacts, request, audience, issuer, journal, existingWorkerId }) {
+export function workerVersionCode(artifacts) {
   checkArtifactBytes(artifacts);
+  // Pages needs this source file; Workers Assets rejects its sole index rewrite.
+  requireGate(sha256(artifacts.assets.get('_redirects')) === controlHashes._redirects, 'WORKER_REDIRECTS_PIN');
+  return { main_module: entryName, modules: [
+    asModule(entryName, entryBytes, 'application/javascript+module'),
+    asModule(moduleName, artifacts.worker, 'application/javascript+module'),
+    asModule('_headers', artifacts.assets.get('_headers'), 'text/plain'),
+  ] };
+}
+
+export async function readLineage({ request, workerId, audience, issuer, versions, parentIntent, childIntent, ackParent, ackChild, childParent }) {
+  requireGate(Array.isArray(versions) && versions.length <= 2, 'WORKER_LINEAGE_AMBIGUOUS');
+  requireGate((!versions.length || parentIntent) && (versions.length !== 2 || childIntent) && (!childIntent || parentIntent) &&
+    (!parentIntent || uuid.test(parentIntent)) && (!childIntent || uuid.test(childIntent) && childIntent !== parentIntent),
+    'WORKER_HAS_EXISTING_VERSION');
+  // The two intent IDs originate in previous protected job summaries, before
+  // each POST. A caller's version number or the newest row cannot select a key.
+  const checked = [];
+  for (const row of versions) {
+    checked.push(await verifyWorkerVersion({ request, workerId, versionId:row.id, audience, issuer }));
+  }
+  const parent = checked.find(row => row.intentId === parentIntent && !row.parentVersionId);
+  const child = checked.find(row => row.intentId === childIntent && parent && row.parentVersionId === parent.versionId);
+  requireGate((!versions.length || parent) && (versions.length !== 2 || child && child.number > parent.number) &&
+    (!ackParent || parent?.versionId === ackParent) && (!ackChild || child?.versionId === ackChild) &&
+    (!childParent || parent?.versionId === childParent) && (versions.length || !childIntent), 'WORKER_LINEAGE_AMBIGUOUS');
+  return { parent, child };
+}
+
+export async function stageWorker({ artifacts, request, audience, issuer, journal, existingWorkerId,
+  parentIntent, childIntent, ackParent, ackChild, childParent, selectLineage, singleStage = false, listVersions, activeVersionId }) {
+  const code = workerVersionCode(artifacts);
   const bindings = expectedBindings(audience, issuer);
   const workers = account + '/workers';
   requireGate(existingWorkerId === undefined || existingWorkerId === RECORDED_WORKER_ID,'WORKER_RESUME_ID');
@@ -203,50 +241,78 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
   const workerPath = workers + '/' + workerId;
   const worker = await request(workerPath, { method: 'GET' });
   await checkWorker(request, worker, workerId);
-  requireGate(worker.deployed_on == null, 'WORKER_ALREADY_DEPLOYED');
-  const versions = await request(workerPath + '/versions', { method: 'GET' });
-  requireGate(Array.isArray(versions) && versions.length === 0, 'WORKER_HAS_EXISTING_VERSION');
-  const modules = [asModule(moduleName, artifacts.worker, 'application/javascript+module'),
-    ...Object.keys(controlHashes).map(key => asModule(key, artifacts.assets.get(key), 'text/plain'))];
-  async function stage(bindings) {
+  requireGate(activeVersionId ? childIntent && Number.isFinite(Date.parse(worker.deployed_on)) : worker.deployed_on === null,
+    'WORKER_ALREADY_DEPLOYED');
+  const inventory = listVersions ?? (()=>request(workerPath + '/versions',{method:'GET'}));
+  const versions = await inventory();
+  const args = { request, workerId, audience, issuer };
+  let {parent,child} = await readLineage({...args, versions, parentIntent, childIntent, ackParent, ackChild, childParent});
+  const expectedIds = versions.map(row=>row.id);
+  async function checkInventory() {
+    const live = await inventory();
+    requireGate(Array.isArray(live) && live.length === expectedIds.length &&
+      expectedIds.every(id=>live.some(row=>row.id === id)), 'WORKER_VERSION_INVENTORY_CHANGED');
+  }
+  if (activeVersionId) requireGate(child?.versionId === activeVersionId, 'WORKER_ACTIVE_LINEAGE');
+  if (parent) {
+    selectLineage(parent.versionId,child?.versionId);
+    await journal('worker_parent_verified',{workerId,versionId:parent.versionId,intentId:parent.intentId});
+    if (child) await journal('worker_child_verified',{workerId,versionId:child.versionId,intentId:child.intentId});
+  }
+  async function stage(bindings, parentVersionId) {
     const jwt = await uploadAssets(artifacts.assets, request, journal);
+    const shell = await request(workerPath,{method:'GET'});
+    await checkWorker(request,shell,workerId);
+    requireGate(shell.deployed_on === null,'WORKER_PREMATURE_DEPLOYMENT');
+    await checkInventory();
+    const intentId = randomUUID();
+    await journal(parentVersionId ? 'worker_child_intent' : 'worker_parent_intent',
+      { workerId, intentId, ...(parentVersionId ? {parentVersionId} : {}) });
     const version = await request(workerPath + '/versions?deploy=false', { method: 'POST', body: {
-      annotations: { 'workers/tag': sourceSha }, main_module: moduleName, modules, bindings,
+      annotations: { 'workers/tag': sourceSha, 'workers/message': `lythaus-isolated ${intentId} ${parentVersionId ?? 'parent'}` }, ...code, bindings,
       compatibility_date: '2026-07-27', compatibility_flags: ['nodejs_compat'],
       assets: { jwt, config: { run_worker_first: true, not_found_handling: 'single-page-application' } },
     } });
     const versionId = version?.id;
     requireGate(typeof versionId === 'string' && uuid.test(versionId), 'WORKER_VERSION_ID');
-    await journal('worker_version_staged', { workerId, versionId });
+    requireGate(!expectedIds.includes(versionId),'WORKER_INHERITANCE_VERSION');
+    expectedIds.push(versionId);
     const stagedWorker = await request(workerPath, { method: 'GET' });
     await checkWorker(request, stagedWorker, workerId);
     requireGate(stagedWorker.deployed_on === null, 'WORKER_PREMATURE_DEPLOYMENT');
-    return versionId;
+    const verified = await verifyWorkerVersion({...args, versionId});
+    await checkInventory();
+    requireGate(verified.intentId === intentId && verified.parentVersionId === parentVersionId, 'WORKER_LINEAGE_AMBIGUOUS');
+    await journal(parentVersionId ? 'worker_child_verified' : 'worker_parent_verified', {workerId,versionId,intentId});
+    return verified;
   }
-  const key = randomBytes(32);
-  let parentVersionId;
-  try {
-    bindings.at(-1).text = key.toString('base64');
-    parentVersionId = await stage(bindings);
-  } finally {
-    delete bindings.at(-1).text;
-    key.fill(0);
+  if (!parent) {
+    const key = randomBytes(32);
+    try {
+      bindings.at(-1).text = key.toString('base64');
+      parent = await stage(bindings);
+    } finally {
+      delete bindings.at(-1).text;
+      key.fill(0);
+    }
+    if (singleStage) return {workerId,parentVersionId:parent.versionId,tag:sourceSha,checkpoint:'PARENT_CREATED_AND_VERIFIED'};
   }
-  await verifyWorkerVersion({ request, workerId, versionId:parentVersionId, audience, issuer, versionNumber:1 });
-  const inherited = bindings.map(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY'
-    ? { name:binding.name, type:'inherit', version_id:parentVersionId } : binding);
-  const versionId = await stage(inherited);
-  requireGate(versionId !== parentVersionId, 'WORKER_INHERITANCE_VERSION');
-  return { workerId, parentVersionId, versionId, tag:sourceSha };
+  if (!child) {
+    const inherited = bindings.map(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY'
+      ? { name:binding.name, type:'inherit', version_id:parent.versionId } : binding);
+    child = await stage(inherited,parent.versionId);
+  }
+  requireGate(child.versionId !== parent.versionId && child.number > parent.number, 'WORKER_INHERITANCE_VERSION');
+  return { workerId, parentVersionId:parent.versionId, versionId:child.versionId, tag:sourceSha, checkpoint:'CHILD_CREATED_AND_VERIFIED' };
 }
 
-export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer, versionNumber = 2 }) {
+export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer }) {
   requireGate(workerIdPattern.test(workerId) && uuid.test(versionId), 'WORKER_READBACK_IDS');
   const path = account + '/workers/' + workerId;
   await checkWorker(request, await request(path, { method: 'GET' }), workerId);
   const version = await request(path + '/versions/' + versionId + '?include=modules', { method: 'GET' });
-  requireGate(version?.id === versionId && version.number === versionNumber && version.annotations?.['workers/tag'] === sourceSha &&
-    version.main_module === moduleName && version.compatibility_date === '2026-07-27' &&
+  requireGate(version?.id === versionId && Number.isSafeInteger(version.number) && version.number > 0 && version.annotations?.['workers/tag'] === sourceSha &&
+    version.main_module === entryName && version.compatibility_date === '2026-07-27' &&
     JSON.stringify(version.compatibility_flags) === '["nodejs_compat"]' &&
     Array.isArray(version.urls) && version.urls.length === 0 &&
     version.assets?.config?.run_worker_first === true &&
@@ -256,11 +322,15 @@ export async function verifyWorkerVersion({ request, workerId, versionId, audien
   requireGate(Array.isArray(actual) && actual.length === expected.length &&
     expected.every(binding => actual.some(value => Object.keys(value).length === Object.keys(binding).length &&
       Object.entries(binding).every(([key, val]) => value[key] === val))), 'WORKER_VERSION_BINDINGS');
-  const expectedModules = { [moduleName]: workerSha, ...controlHashes };
-  requireGate(Array.isArray(version.modules) && version.modules.length === 3 && Object.entries(expectedModules).every(([name, hash]) =>
-    version.modules.some(mod => mod.name === name && mod.content_type === (name === moduleName ? 'application/javascript+module' : 'text/plain') &&
+  const expectedModules = { [entryName]: sha256(entryBytes), [moduleName]: workerSha, _headers: controlHashes._headers };
+  requireGate(Array.isArray(version.modules) && version.modules.length === Object.keys(expectedModules).length && Object.entries(expectedModules).every(([name, hash]) =>
+    version.modules.some(mod => mod.name === name && mod.content_type === (name === '_headers' ? 'text/plain' : 'application/javascript+module') &&
       typeof mod.content_base64 === 'string' && sha256(Buffer.from(mod.content_base64, 'base64')) === hash)), 'WORKER_VERSION_MODULES');
-  return { workerId, versionId, tag: sourceSha, hmacBindingPresent: true };
+  const marker = version.annotations?.['workers/message']?.split(' ');
+  requireGate(marker?.length === 3 && marker[0] === 'lythaus-isolated' && uuid.test(marker[1]) &&
+    (marker[2] === 'parent' || uuid.test(marker[2])), 'WORKER_LINEAGE_AMBIGUOUS');
+  return { workerId, versionId, tag: sourceSha, hmacBindingPresent: true, number:version.number,
+    intentId:marker[1], parentVersionId:marker[2] === 'parent' ? undefined : marker[2] };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

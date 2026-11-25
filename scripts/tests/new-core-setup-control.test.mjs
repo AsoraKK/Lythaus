@@ -88,6 +88,13 @@ test('Worker resume requires the exact prior read-only receipt and owner review'
   const map=sources([approval]);
   const get=path=>path==='actions/runs/'+id ? receipt : map[path];
   assert.equal((await authorizeSetup({env:resume,get})).ownerSelectorConfirmedByOwner,true);
+  const stage={...resume,REQUESTED_OPERATION:'stage-one-nonserving-version',PRIOR_RUN:'123'};
+  const previous={...receipt,id:123,head_sha:sha,actor:{id:owner},triggering_actor:{id:owner},conclusion:'failure',
+    display_title:'stage-one-nonserving-version admin-new-core-test.lythaus.co at '+sha};
+  const priorGet=(path,run)=>path==='actions/runs/123' ? run : path==='actions/runs/123/approvals' ? [approval] : get(path);
+  assert.equal((await authorizeSetup({env:stage,get:path=>priorGet(path,previous)})).priorRunSha,sha);
+  for (const invalid of [{actor:{id:0}},{path:'somewhere'},{head_branch:'other'},{run_attempt:2},{status:'in_progress'}])
+    await assert.rejects(authorizeSetup({env:stage,get:path=>priorGet(path,{...previous,...invalid})}),/setup_prior_lineage_run_unverified/);
   await assert.rejects(authorizeSetup({env:{...env,REQUESTED_OPERATION:'resume-worker'},get}),/setup_dispatch_changed/);
   for (const change of [{conclusion:'failure'},{display_title:'setup'},{head_sha:sha},{run_attempt:2}]) {
     await assert.rejects(authorizeSetup({env:resume,get:path=>path==='actions/runs/'+id ? {...receipt,...change} : map[path]}),
