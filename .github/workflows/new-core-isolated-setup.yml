@@ -47,7 +47,7 @@ jobs:
           persist-credentials: false
       - name: Verify reviewed application ancestry before the environment review
         if: inputs.operation != 'inspect'
-        run: git merge-base --is-ancestor 3dc46d098242d9dcbca7a98f3272935a34942d3a "$GITHUB_SHA"
+        run: git merge-base --is-ancestor 3fbaea846f67fe5ad452d53c456b5355069757ca "$GITHUB_SHA"
       - name: Verify pinned receipts, workflow and review gate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,7 +79,7 @@ jobs:
         env:
           WRANGLER_SEND_METRICS: 'false'
         run: |
-          pin=3dc46d098242d9dcbca7a98f3272935a34942d3a
+          pin=3fbaea846f67fe5ad452d53c456b5355069757ca
           git merge-base --is-ancestor "$pin" "$GITHUB_SHA"
           git worktree add --detach application-source "$pin"
           npm --prefix application-source ci --ignore-scripts --no-audit --no-fund

@@ -17,7 +17,7 @@ const [sourceDir, artifactDir] = process.argv.slice(2);
 assert.ok(sourceDir && artifactDir, 'Pass pinned source and prepared artifact directories');
 const artifacts = await loadArtifacts({ sourceDir, artifactDir });
 const sha = value => createHash('sha256').update(value).digest('hex');
-const tag = '3dc46d098242d9dcbca7a98f3272935a34942d3a';
+const tag = '3fbaea846f67fe5ad452d53c456b5355069757ca';
 const issuer = 'https://fixture.cloudflareaccess.com';
 const audience = 'a'.repeat(64);
 const hostname = 'admin-new-core-test.lythaus.co';
