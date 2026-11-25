@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
 import YAML from 'yaml';
-import {TARGET,accessEvidence,hyperdriveEvidence,createReadOnlyClient,inspectIsolation} from '../ci/lythaus-new-core-isolation-review.mjs';
+import {TARGET,accessEvidence,hyperdriveEvidence,createReadOnlyClient,inspectIsolation,isolationReviewPins} from '../ci/lythaus-new-core-isolation-review.mjs';
 
 const app={id:'testapp',type:'self_hosted',domain:TARGET.hostname,aud:'synthetic-audience'};
 const policies=[{id:'allow-fixture',decision:'allow',precedence:1,include:[{email:{email:'fixture@example.invalid'}}]},
@@ -26,11 +26,16 @@ test('publication cannot run the inspector and existing owner review precedes Cl
   assert.deepEqual(Object.keys(workflow.on),['workflow_dispatch']);assert.equal(workflow.on.workflow_dispatch.inputs.confirm_read_only.default,false);
   assert.deepEqual(workflow.permissions,{contents:'read',actions:'read'});assert.equal(workflow.jobs.inspect.needs,'verify-gate');assert.equal(workflow.jobs.inspect.environment,'production');
   const first=JSON.stringify(workflow.jobs['verify-gate']);assert.doesNotMatch(first,/CLOUDFLARE_API_TOKEN|secrets\./);
-  const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL','CLOUDFLARE_API_TOKEN']);
-  const discovery=workflow.jobs.inspect.steps.at(-1);
+  const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL','CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_TOKEN']);
+  const discovery=workflow.jobs.inspect.steps.at(-2);
   assert.equal(discovery.if,'${{ inputs.production_connector_discovery_only }}');
   assert.deepEqual(Object.keys(discovery.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
   assert.match(discovery.run,/--discover-connectors$/);
+  const promotion=workflow.jobs.inspect.steps.at(-1);
+  assert.equal(workflow.on.workflow_dispatch.inputs.verify_isolated_promotion_source_only.default,false);
+  assert.equal(promotion.if,'${{ inputs.verify_isolated_promotion_source_only }}');
+  assert.deepEqual(Object.keys(promotion.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
+  assert.match(promotion.run,/production-database-cutover\.mjs --inspect-promotion-source$/);
   assert.doesNotMatch(text,/DATABASE_URL|PLANETSCALE_API_TOKEN|wrangler|--apply|secrets: inherit/);
 });
 test('HTTP reads have a fixed scope, never follow redirects and do not leak provider response bodies',async()=>{
@@ -40,6 +45,20 @@ test('HTTP reads have a fixed scope, never follow redirects and do not leak prov
   await assert.rejects(api.get('/accounts/other/workers/scripts'),/scope_blocked/);
   await assert.rejects(api.get(`/accounts/${TARGET.account}/hyperdrive/configs/other`),/scope_blocked/);
   assert.equal(calls.length,1);
+});
+
+test('the selected operation supplies the reviewed default and rejects a conflicting assertion',()=>{
+  const original = {sourceSha:TARGET.candidate};
+  const repair = {sourceSha:'78747f85d02c69efa8a1b6f86b73b08947cdce0b',versionId:'193c3dcb-9238-4adc-8eab-48707fdd8b7e'};
+  const mode = {PROMOTION_SOURCE_ONLY:'true'};
+  assert.deepEqual(isolationReviewPins({}),original);
+  assert.deepEqual(isolationReviewPins({EXPECTED_WORKER_SOURCE_SHA:original.sourceSha}),original);
+  assert.deepEqual(isolationReviewPins(mode),repair);
+  assert.deepEqual(isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:repair.sourceSha,EXPECTED_WORKER_VERSION_ID:repair.versionId}),repair);
+  assert.throws(()=>isolationReviewPins({EXPECTED_WORKER_SOURCE_SHA:repair.sourceSha}),/candidate_changed/);
+  assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:original.sourceSha}),/candidate_changed/);
+  assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_VERSION_ID:'unexpected'}),/version_mismatch/);
+  assert.throws(()=>isolationReviewPins({...mode,CONNECTOR_DISCOVERY_ONLY:'true'}),/modes_conflict/);
 });
 test('missing test resources remain blockers while production bindings are snapshotted and never changed',async()=>{
   const account=`/accounts/${TARGET.account}`,zone=`/zones/${TARGET.zone}`,calls=[];

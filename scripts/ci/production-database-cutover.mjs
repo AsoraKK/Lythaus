@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
-import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET } from './lythaus-new-core-isolation-review.mjs';
+import { pathToFileURL } from 'node:url';
+import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET, verifyIsolationReviewGate } from './lythaus-new-core-isolation-review.mjs';
+import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
+import { REPAIR_PINS } from './new-core-isolated-repair-pins.mjs';
 import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
 
 export const transition = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/production-database-transition.json', import.meta.url)));
@@ -14,18 +17,37 @@ const consumers = {
 
 const versionPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const intentPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+class PromotionSourceError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
+function distinctIds(ids, pattern) {
+  return ids.every(id => typeof id === 'string' && pattern.test(id)) && new Set(ids).size === ids.length;
+}
 function validateIsolatedVersions(destination) {
   const pins = destination.isolatedAdminVersions;
   const access = destination.ownerAccess;
   if (!versionPattern.test(access?.applicationId) || !/^[a-f0-9]{64}$/.test(access?.issuerSha256)
-    || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new Error('isolated owner Access receipt pins required');
-  if (!pins || (!versionPattern.test(pins.workerId) && !/^[a-f0-9]{32}$/.test(pins.workerId))
-    || !versionPattern.test(pins.parentVersionId) || !versionPattern.test(pins.servingVersionId)
-    || !intentPattern.test(pins.parentIntent) || !intentPattern.test(pins.childIntent) || pins.parentIntent === pins.childIntent
-    || pins.parentVersionId === pins.servingVersionId || pins.sourceSha !== TARGET.candidate) {
-    throw new Error('replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
+    || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new PromotionSourceError('access_receipt_invalid','isolated owner Access receipt pins required');
+  if (!pins || pins.workerId !== RECORDED_WORKER_ID || destination.isolatedAdminConnector !== TARGET.hyperdrive
+    || pins.sourceSha !== TARGET.candidate || pins.repairSourceSha !== REPAIR_PINS.sourceSha
+    || !distinctIds([pins.parentVersionId,pins.childVersionId,pins.servingVersionId],versionPattern)
+    || !distinctIds([pins.parentIntent,pins.childIntent,pins.repairIntent,pins.activationIntent],intentPattern)
+    || !distinctIds([pins.childDeploymentId,pins.servingDeploymentId],versionPattern)) {
+    throw new PromotionSourceError('lineage_receipt_invalid','replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
   }
   return pins;
+}
+
+function hasIsolatedBindings(bindings, connector) {
+  if (!Array.isArray(bindings)) return false;
+  const drives = databaseBindings({bindings});
+  const keys = bindings.filter(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY');
+  return drives.length === 1 && drives[0].name === 'DB_ADMIN_FRESH' && drives[0].id === connector
+    && keys.length === 1 && keys[0].type === 'secret_text' && Object.keys(keys[0]).length === 2;
 }
 
 export async function verifyIsolatedAdminVersions(destination, read) {
@@ -37,33 +59,73 @@ export async function verifyIsolatedAdminVersions(destination, read) {
   const team = org?.auth_domain;
   if (app?.id !== access.applicationId || app.type !== 'self_hosted' || !/^[a-f0-9]{64}$/.test(app.aud)
     || hash(app.aud) !== access.audienceSha256 || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareaccess\.com$/.test(team)
-    || hash('https://' + team) !== access.issuerSha256) throw new Error('isolated owner Access application or issuer differs');
+    || hash('https://' + team) !== access.issuerSha256) throw new PromotionSourceError('access_application_changed','isolated owner Access application or issuer differs');
   const path = '/workers/workers/' + pins.workerId;
   const worker = await read(path);
   if (worker?.id !== pins.workerId || worker.name !== TARGET.worker || worker.subdomain?.enabled !== false
-    || worker.subdomain?.previews_enabled !== false) throw new Error('isolated Admin Worker identity or exposure changed');
+    || worker.subdomain?.previews_enabled !== false) throw new PromotionSourceError('isolated_worker_changed','isolated Admin Worker identity or exposure changed');
   let previousNumber = 0;
-  for (const [id, intent, parent] of [
-    [pins.parentVersionId, pins.parentIntent, 'parent'],
-    [pins.servingVersionId, pins.childIntent, pins.parentVersionId],
+  for (const [id, intent, parent, source] of [
+    [pins.parentVersionId, pins.parentIntent, 'parent', pins.sourceSha],
+    [pins.childVersionId, pins.childIntent, pins.parentVersionId, pins.sourceSha],
+    [pins.servingVersionId, pins.repairIntent, pins.childVersionId, pins.repairSourceSha],
   ]) {
     const version = await read(path + '/versions/' + id);
     const bindings = version?.bindings;
-    const databases = Array.isArray(bindings) ? databaseBindings({bindings}) : [];
-    const keys = bindings?.filter(binding=>binding.name === 'ACCESS_SUBJECT_HMAC_KEY') ?? [];
     const exactText = (name,text) => bindings?.filter(binding=>binding.name===name).length === 1
       && bindings.some(binding=>binding.name===name && binding.type==='plain_text' && binding.text===text);
     if (version?.id !== id || !Number.isSafeInteger(version.number) || version.number <= previousNumber
-      || version.annotations?.['workers/tag'] !== pins.sourceSha
+      || version.annotations?.['workers/tag'] !== source
       || version.annotations?.['workers/message'] !== `lythaus-isolated ${intent} ${parent}`
-      || databases.length !== 1 || databases[0].name !== 'DB_ADMIN_FRESH' || databases[0].id !== destination.isolatedAdminConnector
-      || keys.length !== 1 || keys[0].type !== 'secret_text' || Object.keys(keys[0]).length !== 2
+      || !hasIsolatedBindings(bindings,destination.isolatedAdminConnector)
       || !exactText('NEW_CORE_ACCESS_ISSUER','https://' + team) || !exactText('ACCESS_AUDIENCES',app.aud)
       || !exactText('NEW_CORE_ACCESS_AUDIENCE_SHA256',access.audienceSha256)) {
-      throw new Error('isolated Admin version, source, subject-key binding or database differs from the reviewed receipt');
+      throw new PromotionSourceError('immutable_version_mismatch','isolated Admin version, source, subject-key binding or database differs from the reviewed receipt');
     }
     previousNumber = version.number;
   }
+}
+
+export async function verifyIsolatedAdminBeforePromotion(destination, read) {
+  await verifyIsolatedAdminVersions(destination,read);
+  const pins = destination.isolatedAdminVersions;
+  const script = '/workers/scripts/' + TARGET.worker;
+  const raw = await read(script + '/deployments');
+  const rows = Array.isArray(raw) ? raw : raw?.deployments;
+  const allTraffic = (row,id,versionId) => row?.id === id && row.versions?.length === 1 &&
+    row.versions[0].version_id === versionId && row.versions[0].percentage === 100;
+  if (!Array.isArray(rows) || rows.length !== 2 ||
+    !allTraffic(rows[0],pins.servingDeploymentId,pins.servingVersionId) ||
+    !allTraffic(rows[1],pins.childDeploymentId,pins.childVersionId) ||
+    rows[0].annotations?.['workers/message'] !== 'lythaus-isolated-repair ' + pins.activationIntent ||
+    !(Date.parse(rows[0].created_on) > Date.parse(rows[1].created_on))) {
+    throw new PromotionSourceError('serving_deployment_mismatch','isolated Admin serving deployment differs from the activated repair receipt');
+  }
+  const version = await read(script + '/versions/' + pins.servingVersionId);
+  const tags = [version?.annotations,version?.metadata?.annotations]
+    .filter(annotations => annotations && Object.hasOwn(annotations,'workers/tag'))
+    .map(annotations => annotations['workers/tag']);
+  if (version?.id !== pins.servingVersionId || !tags.length || tags.some(tag => tag !== pins.repairSourceSha) ||
+    !hasIsolatedBindings(version.resources?.bindings,destination.isolatedAdminConnector)) {
+    throw new PromotionSourceError('serving_script_mismatch','isolated Admin serving script version or bindings differ from the activated repair receipt');
+  }
+}
+
+export async function inspectPromotionSource({token, expectedVersion, fetchImpl = fetch, destination = transition.destination}) {
+  const pins = validateIsolatedVersions(destination);
+  if (expectedVersion && expectedVersion !== pins.servingVersionId) throw new Error('isolated_promotion_version_mismatch');
+  const account = '/accounts/' + TARGET.account;
+  const worker = '/workers/workers/' + pins.workerId;
+  const script = '/workers/scripts/' + TARGET.worker;
+  const paths = [
+    '/access/apps/' + destination.ownerAccess.applicationId, '/access/organizations', worker,
+    ...[pins.parentVersionId,pins.childVersionId,pins.servingVersionId].map(id => worker + '/versions/' + id),
+    script + '/deployments', script + '/versions/' + pins.servingVersionId,
+  ];
+  const client = createReadOnlyClient(token,fetchImpl,false,new Set(paths.map(path => account + path)));
+  await verifyIsolatedAdminBeforePromotion(destination,async path => (await client.get(account + path)).result);
+  return {status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:pins.workerId,versionId:pins.servingVersionId,
+    deploymentId:pins.servingDeploymentId,sourceSha:pins.repairSourceSha};
 }
 
 export function validateProductionDatabaseMap(manifest, configs, plan = transition, requireDestination = false, releaseAdminWorker) {
@@ -165,4 +227,24 @@ export async function verifyRollbackPlane({ manifest, snapshot, token, fetchImpl
     }
   }
   if (checked.size !== 4) throw new Error('rollback role connector inventory incomplete');
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    if (process.argv.length !== 3 || process.argv[2] !== '--inspect-promotion-source' ||
+      process.env.PROMOTION_SOURCE_ONLY !== 'true') throw new Error('isolation_mode_blocked');
+    await verifyIsolationReviewGate(process.env,true);
+    const receipt = await inspectPromotionSource({token:process.env.CLOUDFLARE_API_TOKEN,
+      expectedVersion:process.env.EXPECTED_WORKER_VERSION_ID});
+    console.log(JSON.stringify(receipt));
+  } catch (error) {
+    const reason = error?.message ?? '';
+    const providerFailure = /^isolation_provider_(?:access_apps|access_organization|worker_details|worker_version|worker_deployments)_(?:http_[1-5][0-9]{2}|read_unavailable)$/;
+    const gateFailure = /^(?:isolation_(?:mode_blocked|modes_conflict|candidate_changed|receipt_invalid|main_changed|main_metadata_unavailable|environment_changed|read_scope_blocked|provider_(?:body_missing|body_oversized|result_invalid|json_invalid))|isolated_promotion_version_mismatch|preflight_context_blocked|metadata_read_blocked)$/;
+    let code = 'isolated_promotion_source_unverified';
+    if (error instanceof PromotionSourceError) code = error.code;
+    else if (providerFailure.test(reason) || gateFailure.test(reason)) code = reason;
+    console.error(JSON.stringify({status:'ISOLATED_PROMOTION_SOURCE_BLOCKED',code}));
+    process.exitCode = 1;
+  }
 }

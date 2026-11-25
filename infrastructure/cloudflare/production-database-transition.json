@@ -39,8 +39,14 @@
       "parentIntent": "d340cb66-cb62-4c87-ab64-400a7cf79c01",
       "childIntent": "49503582-9aff-4d20-a6f2-888d10d1a92a",
       "parentVersionId": "44cd6e04-15d7-467c-9d93-ff59d5d4fe0c",
-      "servingVersionId": "37f36eb4-911d-4c51-b723-751329cd1b92",
-      "sourceSha": "3fbaea846f67fe5ad452d53c456b5355069757ca"
+      "childVersionId": "37f36eb4-911d-4c51-b723-751329cd1b92",
+      "childDeploymentId": "307f3dcc-41f3-42e2-be4b-ad2a519ec51c",
+      "sourceSha": "3fbaea846f67fe5ad452d53c456b5355069757ca",
+      "repairIntent": "c231d250-f91c-4626-bc7e-31fb2c8e1321",
+      "repairSourceSha": "78747f85d02c69efa8a1b6f86b73b08947cdce0b",
+      "servingVersionId": "193c3dcb-9238-4adc-8eab-48707fdd8b7e",
+      "activationIntent": "09d3fcd5-a4fd-477b-86d1-82e3d44769f4",
+      "servingDeploymentId": "85526c44-7551-41b0-805f-dd6270f05c2d"
     },
     "connectors": {
       "lythaus_runtime": null,

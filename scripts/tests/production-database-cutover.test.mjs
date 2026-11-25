@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { transition, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
+import { inspectPromotionSource, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
 import { inspectProductionConnectors, TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
 import { coversHost, inspectControlRouting } from '../ci/control-host-routing.mjs';
 import { createControlWorker } from '../../apps/lythaus-admin-api/src/control-worker.ts';
@@ -42,12 +42,8 @@ function fixture(destination = false) {
   }
   if (destination) {
     const target = plan.destination;
-    Object.assign(target.ownerAccess,{applicationId:'33333333-3333-4333-8333-333333333333',
-      issuerSha256:createHash('sha256').update('https://fixture.cloudflareaccess.com').digest('hex'),
+    Object.assign(target.ownerAccess,{issuerSha256:createHash('sha256').update('https://fixture.cloudflareaccess.com').digest('hex'),
       audienceSha256:createHash('sha256').update('a'.repeat(64)).digest('hex')});
-    Object.assign(target.isolatedAdminVersions,{workerId:'d'.repeat(32),parentVersionId:'11111111-1111-4111-8111-111111111111',
-      servingVersionId:'22222222-2222-4222-8222-222222222222',
-      parentIntent:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',childIntent:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'});
     const admin = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
     Object.assign(admin, {name:TARGET.worker, main:'src/control-worker.ts', assets:{binding:'ASSETS',run_worker_first:true}});
     Object.assign(admin.vars, {EXPECTED_HOSTNAMES:'control.lythaus.co',CORS_ALLOWED_ORIGINS:'https://control.lythaus.co',ACCESS_REQUIRE_SIGNED_SUBJECT:'true'});
@@ -74,6 +70,11 @@ test('checks six production references on the serving and proposed maps', () => 
   const next = fixture(true);
   assert.throws(() => validateProductionDatabaseMap(next.manifest,next.configs,next.plan,true,'lythaus-admin-api-development'), /different physical Admin/);
   assert.equal(validateProductionDatabaseMap(next.manifest,next.configs,next.plan,true,TARGET.worker),next.plan.destination);
+  for (const role of Object.keys(next.plan.destination.connectors)) {
+    const partial = structuredClone(next.plan);
+    partial.destination.connectors[role] = null;
+    assert.throws(() => validateProductionDatabaseMap(next.manifest,next.configs,partial,true), {message:'missing, shared across roles, or wrong-plane production connector for ' + role});
+  }
 });
 
 test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
@@ -83,11 +84,14 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
     ({manifest,plan}) => { manifest.productionBranchId = plan.rollback.branchId; },
     ({manifest}) => { manifest.planetScaleDatabaseId = 'other'; },
     ({plan}) => { plan.destination.isolatedAdminVersions.sourceSha = 'f'.repeat(40); },
+    ({plan}) => { plan.destination.isolatedAdminVersions.repairSourceSha = plan.destination.isolatedAdminVersions.sourceSha; },
     ({manifest}) => { manifest.bindings[0].expectedRoleKey = 'lythaus_admin'; },
-    ({plan}) => { plan.destination.connectors.lythaus_runtime = null; },
     ({plan}) => { plan.destination.isolatedAdminVersions.workerId = null; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.workerId = 'e'.repeat(32); },
     ({plan}) => { plan.destination.isolatedAdminVersions.childIntent = null; },
     ({plan}) => { plan.destination.isolatedAdminVersions.childIntent = plan.destination.isolatedAdminVersions.parentIntent; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.repairIntent = plan.destination.isolatedAdminVersions.childIntent; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.servingVersionId = plan.destination.isolatedAdminVersions.childVersionId; },
     ({plan}) => { plan.destination.connectors.lythaus_jobs = plan.destination.connectors.lythaus_privacy; },
     ({plan}) => { plan.destination.connectors.lythaus_admin = plan.destination.isolatedAdminConnector; },
     ({plan}) => { plan.destination.connectors.lythaus_jobs = plan.rollback.connectors.lythaus_jobs; },
@@ -105,36 +109,117 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
   }
 });
 
-test('replacement reads the immutable Worker and both previously staged versions', async () => {
+function isolatedEvidence() {
   const {plan:{destination}} = fixture(true);
   const pins = destination.isolatedAdminVersions;
-  for (const fault of ['none','wrong_service','wrong_source','extra_db','missing_key','swapped_version','wrong_parent',
-    'wrong_intent','unmarked_parent','new_access_app','issuer_drift','isolated_audience_drift']) {
-    const seen = [];
-    const check = () => verifyIsolatedAdminVersions(destination,async path=>{
-      seen.push(path);
-      if (path === '/access/apps/' + destination.ownerAccess.applicationId) return {
-        id:destination.ownerAccess.applicationId,type:'self_hosted',aud:(fault==='new_access_app'?'b':'a').repeat(64)};
-      if (path === '/access/organizations') return {auth_domain:fault==='issuer_drift'?'other.cloudflareaccess.com':'fixture.cloudflareaccess.com'};
-      const worker = '/workers/workers/' + pins.workerId;
-      if (path === worker) return {id:pins.workerId,name:fault==='wrong_service'?'other':TARGET.worker,subdomain:{enabled:false,previews_enabled:false}};
-      const id = path.split('/').at(-1);
-      const bindings = [{name:'DB_ADMIN_FRESH',type:'hyperdrive',id:destination.isolatedAdminConnector}];
-      bindings.push({name:'NEW_CORE_ACCESS_ISSUER',type:'plain_text',text:'https://fixture.cloudflareaccess.com'},
-        {name:'ACCESS_AUDIENCES',type:'plain_text',text:(fault==='isolated_audience_drift'?'b':'a').repeat(64)},
-        {name:'NEW_CORE_ACCESS_AUDIENCE_SHA256',type:'plain_text',text:destination.ownerAccess.audienceSha256});
-      if (fault !== 'missing_key') bindings.push({name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text'});
-      if (fault === 'extra_db') bindings.push({name:'DB_OTHER',type:'hyperdrive',id:'0'.repeat(32)});
-      const isParent = id === pins.parentVersionId;
-      const number = isParent ? 7 : fault === 'swapped_version' ? 6 : 12;
-      const intent = isParent || fault === 'wrong_intent' ? pins.parentIntent : pins.childIntent;
-      const parent = isParent || fault === 'wrong_parent' ? 'parent' : pins.parentVersionId;
-      const annotations = {'workers/tag':fault==='wrong_source'?'other':pins.sourceSha};
-      if (!isParent || fault !== 'unmarked_parent') annotations['workers/message'] = `lythaus-isolated ${intent} ${parent}`;
-      return {id,number,annotations,bindings};
-    });
-    if (fault === 'none') { await check(); assert.equal(seen.length,5); }
-    else await assert.rejects(check,/isolated (Admin|owner Access)/);
+  const workerPath = '/workers/workers/' + pins.workerId;
+  const scriptPath = '/workers/scripts/' + TARGET.worker;
+  const app = {id:destination.ownerAccess.applicationId,type:'self_hosted',aud:'a'.repeat(64)};
+  const org = {auth_domain:'fixture.cloudflareaccess.com'};
+  const shell = {id:pins.workerId,name:TARGET.worker,subdomain:{enabled:false,previews_enabled:false}};
+  const bindings = [{name:'DB_ADMIN_FRESH',type:'hyperdrive',id:destination.isolatedAdminConnector},
+    {name:'NEW_CORE_ACCESS_ISSUER',type:'plain_text',text:'https://' + org.auth_domain},
+    {name:'ACCESS_AUDIENCES',type:'plain_text',text:app.aud},
+    {name:'NEW_CORE_ACCESS_AUDIENCE_SHA256',type:'plain_text',text:destination.ownerAccess.audienceSha256},
+    {name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text'}];
+  const rows = [[pins.parentVersionId,pins.parentIntent,'parent',pins.sourceSha],
+    [pins.childVersionId,pins.childIntent,pins.parentVersionId,pins.sourceSha],
+    [pins.servingVersionId,pins.repairIntent,pins.childVersionId,pins.repairSourceSha]].map(([id,intent,parent,source],i) => ({
+      id, number:i+1, bindings:structuredClone(bindings),
+      annotations:{'workers/tag':source,'workers/message':`lythaus-isolated ${intent} ${parent}`},
+    }));
+  const deployments = {deployments:[
+    {id:pins.servingDeploymentId,created_on:'2026-11-25T17:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + pins.activationIntent},
+      versions:[{version_id:pins.servingVersionId,percentage:100}]},
+    {id:pins.childDeploymentId,created_on:'2026-11-25T12:19:00Z',versions:[{version_id:pins.childVersionId,percentage:100}]},
+  ]};
+  const current = {id:pins.servingVersionId,metadata:{annotations:{'workers/tag':pins.repairSourceSha}},resources:{bindings:structuredClone(bindings)}};
+  const replies = new Map([['/access/apps/' + app.id,app],['/access/organizations',org],[workerPath,shell],
+    ...rows.map(row => [workerPath + '/versions/' + row.id,row]),[scriptPath + '/deployments',deployments],
+    [scriptPath + '/versions/' + pins.servingVersionId,current]]);
+  const seen = [];
+  const read = async path => {
+    assert.ok(replies.has(path), 'unexpected provider read ' + path);
+    seen.push(path);
+    return replies.get(path);
+  };
+  return {destination,pins,app,org,shell,rows,deployments:deployments.deployments,current,replies,seen,read};
+}
+
+test('initial promotion requires the accepted three-version lineage and the repair serving all isolated traffic', async () => {
+  const d = isolatedEvidence();
+  assert.equal(d.pins.servingVersionId,'193c3dcb-9238-4adc-8eab-48707fdd8b7e');
+  assert.equal(d.pins.repairSourceSha,'78747f85d02c69efa8a1b6f86b73b08947cdce0b');
+  await verifyIsolatedAdminBeforePromotion(d.destination,d.read);
+  assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
+  const unrelated = '77777777-7777-4777-8777-777777777777';
+  for (const change of [
+    e => { e.deployments.shift(); },
+    e => { e.deployments[0].versions = [{version_id:e.pins.servingVersionId,percentage:95},{version_id:e.pins.childVersionId,percentage:5}]; },
+    e => { e.deployments[0].versions[0].version_id = unrelated; },
+    e => { e.deployments[0].id = unrelated; },
+    e => { e.deployments[0].annotations['workers/message'] = 'lythaus-isolated-repair ' + unrelated; },
+    e => { e.deployments[0].created_on = e.deployments[1].created_on; },
+    e => { e.deployments[1].versions[0].version_id = e.pins.parentVersionId; },
+    e => { e.current.id = unrelated; },
+    e => { e.current.metadata.annotations['workers/tag'] = e.pins.sourceSha; },
+    e => { e.current.annotations = {'workers/tag':e.pins.sourceSha}; },
+    e => { e.current.resources.bindings[0].id = 'd'.repeat(32); },
+    e => { e.current.resources.bindings.pop(); },
+  ]) {
+    const e = isolatedEvidence();
+    change(e);
+    await assert.rejects(verifyIsolatedAdminBeforePromotion(e.destination,e.read), /isolated Admin/);
+  }
+});
+
+test('the protected pre-promotion inspection reads the pinned metadata and reports only the verified identifiers', async () => {
+  const d = isolatedEvidence();
+  const account = 'https://api.cloudflare.com/client/v4/accounts/' + TARGET.account;
+  const options = {destination:d.destination,token:'fixture',fetchImpl:async (url,init) => {
+    assert.ok(url.startsWith(account + '/'));
+    assert.equal(init.method,'GET');
+    assert.equal(init.redirect,'error');
+    return Response.json({success:true,result:await d.read(url.slice(account.length))});
+  }};
+  await assert.rejects(inspectPromotionSource({...options,expectedVersion:d.pins.childVersionId}),/version_mismatch/);
+  assert.deepEqual(d.seen,[]);
+  const receipt = await inspectPromotionSource({...options,expectedVersion:d.pins.servingVersionId});
+  assert.deepEqual(receipt,{status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:d.pins.workerId,
+    versionId:d.pins.servingVersionId,deploymentId:d.pins.servingDeploymentId,sourceSha:d.pins.repairSourceSha});
+  assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
+});
+
+test('historical verification rechecks each source, parent, intent, redacted key and database on the same Worker', async () => {
+  const d = isolatedEvidence();
+  d.deployments.unshift({id:'77777777-7777-4777-8777-777777777777',versions:[{version_id:'88888888-8888-4888-8888-888888888888',percentage:100}]});
+  await verifyIsolatedAdminVersions(d.destination,d.read);
+  assert.deepEqual(d.seen.sort(),[...d.replies.keys()].filter(path => !path.startsWith('/workers/scripts/')).sort());
+  for (const i of [0,1,2]) {
+    for (const change of [
+      row => { row.id = '77777777-7777-4777-8777-777777777777'; },
+      row => { row.annotations['workers/tag'] = i === 2 ? d.pins.sourceSha : d.pins.repairSourceSha; },
+      row => { row.annotations['workers/message'] = 'lythaus-isolated ' + d.pins.activationIntent + ' ' + (i === 0 ? 'parent' : d.rows[i-1].id); },
+      row => { row.bindings.at(-1).type = 'plain_text'; },
+      row => { row.bindings.at(-1).text = 'synthetic'; },
+      row => { row.bindings[0].id = 'c'.repeat(32); },
+    ]) {
+      const e = isolatedEvidence();
+      change(e.rows[i]);
+      await assert.rejects(verifyIsolatedAdminVersions(e.destination,e.read), /isolated Admin/);
+    }
+  }
+  for (const change of [
+    e => { e.shell.id = 'd'.repeat(32); }, e => { e.shell.name = 'unrelated-worker'; },
+    e => { e.app.aud = 'b'.repeat(64); }, e => { e.org.auth_domain = 'other.cloudflareaccess.com'; },
+    e => { e.rows[2].annotations['workers/message'] = `lythaus-isolated ${e.pins.repairIntent} ${e.pins.parentVersionId}`; },
+    e => { e.rows[2].number = e.rows[1].number; },
+    e => { e.rows[2].bindings.find(b => b.name === 'ACCESS_AUDIENCES').text = 'b'.repeat(64); },
+    e => { e.rows[2].bindings.push({name:'DB_OTHER',type:'hyperdrive',id:'b'.repeat(32)}); },
+  ]) {
+    const e = isolatedEvidence();
+    change(e);
+    await assert.rejects(verifyIsolatedAdminVersions(e.destination,e.read), /isolated (Admin|owner Access)/);
   }
 });
 

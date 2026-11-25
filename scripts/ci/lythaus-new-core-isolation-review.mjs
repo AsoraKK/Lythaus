@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { verifyExistingGate } from './lythaus-new-core-secret-preflight.mjs';
 import { inspectControlRouting } from './control-host-routing.mjs';
@@ -75,17 +76,19 @@ function allowedPath(path) {
   if (new RegExp(`^${ACCOUNT}/workers/scripts/[a-zA-Z0-9_-]+/(?:settings|deployments|subdomain|versions/[a-f0-9-]+)$`).test(path)) return true;
   return path === `${ZONE}/dns_records?name=${TARGET.hostname}&per_page=100&page=1`;
 }
-export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscovery = false) {
+export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscovery = false, onlyPaths) {
   const reads = [];
   const get = async (path, optional = false) => {
     const connectorPath = connectorDiscovery && (new RegExp('^' + ACCOUNT + '/hyperdrive/configs/[a-f0-9]{32}$').test(path)
       || new RegExp('^' + ACCOUNT + '/hyperdrive/configs\\?per_page=100&page=[1-9][0-9]?$').test(path));
-    if (!token || !(allowedPath(path) || connectorPath) || reads.length >= 160) fail('isolation_read_scope_blocked');
+    const permitted = onlyPaths ? onlyPaths.has(path) : allowedPath(path) || connectorPath;
+    if (!token || !permitted || reads.length >= 160) fail('isolation_read_scope_blocked');
     reads.push(path);
     const stage = path.includes('/hyperdrive/') ? 'hyperdrive' : path.includes('/policies?') ? 'access_policies'
-      : path.includes('/access/apps?') ? 'access_apps' : path.endsWith('/access/organizations') ? 'access_organization'
+      : path.includes('/access/apps') ? 'access_apps' : path.endsWith('/access/organizations') ? 'access_organization'
         : path.endsWith('/settings') ? 'worker_settings' : path.endsWith('/deployments') ? 'worker_deployments'
           : path.endsWith('/subdomain') ? 'worker_subdomain' : path.includes('/versions/') ? 'worker_version'
+            : path.includes('/workers/workers/') ? 'worker_details'
             : path.includes('/workers/scripts?') ? 'worker_inventory' : path.includes('/dns_records?') ? 'dns'
               : path.endsWith('/workers/routes') ? 'routes' : 'zone';
     let response;
@@ -264,8 +267,23 @@ export async function inspectIsolation({ token, expectedOwner, expectedVersionId
     mutationCount:0, sqlExecuted:false, bootstrapCalled:false, readCount:api.reads.length,
     caveat:'Metadata tags are source claims and TLS fields show configuration only; artifact provenance, origin TLS/session validation, separate deployment approval and fresh browser acceptance remain required.' };
 }
-async function gate(env) {
-  const result = await verifyExistingGate({env,requireApproval:process.argv[2] !== '--gate'});
+export function isolationReviewPins(env) {
+  if (env.PROMOTION_SOURCE_ONLY !== 'true') {
+    if (env.EXPECTED_WORKER_SOURCE_SHA && env.EXPECTED_WORKER_SOURCE_SHA !== TARGET.candidate) fail('isolation_candidate_changed');
+    return {sourceSha:TARGET.candidate};
+  }
+  if (env.CONNECTOR_DISCOVERY_ONLY === 'true') fail('isolation_modes_conflict');
+  const file = new URL('../../infrastructure/cloudflare/production-database-transition.json',import.meta.url);
+  const {repairSourceSha,servingVersionId} = JSON.parse(readFileSync(file,'utf8')).destination.isolatedAdminVersions;
+  if (!/^[a-f0-9]{40}$/.test(repairSourceSha) || !UUID.test(servingVersionId)) fail('isolation_receipt_invalid');
+  if (env.EXPECTED_WORKER_SOURCE_SHA && env.EXPECTED_WORKER_SOURCE_SHA !== repairSourceSha) fail('isolation_candidate_changed');
+  if (env.EXPECTED_WORKER_VERSION_ID && env.EXPECTED_WORKER_VERSION_ID !== servingVersionId) fail('isolated_promotion_version_mismatch');
+  return {sourceSha:repairSourceSha,versionId:servingVersionId};
+}
+
+export async function verifyIsolationReviewGate(env, requireApproval) {
+  const pins = isolationReviewPins(env);
+  const result = await verifyExistingGate({env,requireApproval});
   let main,environment; try {
     main = JSON.parse(execFileSync('gh',['api','--method','GET',`repos/${REPOSITORY}/branches/main`],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:20000}));
     environment = JSON.parse(execFileSync('gh',['api','--method','GET',`repos/${REPOSITORY}/environments/production`],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:20000}));
@@ -273,14 +291,14 @@ async function gate(env) {
   catch { fail('isolation_main_metadata_unavailable'); }
   if (!main.protected || main.commit?.sha !== env.GITHUB_SHA) fail('isolation_main_changed');
   if (environment.id !== 18972418184) fail('isolation_environment_changed');
-  if (env.EXPECTED_WORKER_SOURCE_SHA !== TARGET.candidate) fail('isolation_candidate_changed');
-  return result;
+  return {...result,...pins};
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     if (!['--gate','--inspect','--discover-connectors'].includes(process.argv[2])) fail('isolation_mode_blocked');
-    await gate(process.env);
-    const result = process.argv[2] === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false }
+    const review = await verifyIsolationReviewGate(process.env, process.argv[2] !== '--gate');
+    const result = process.argv[2] === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false,
+      sourceSha:review.sourceSha,...(review.versionId ? {versionId:review.versionId} : {}) }
       : process.argv[2] === '--discover-connectors' ? {
         ...await inspectProductionConnectors({token:process.env.CLOUDFLARE_API_TOKEN}),
         hostRouting:await inspectControlRouting({token:process.env.CLOUDFLARE_API_TOKEN})}
