@@ -124,7 +124,10 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
   let response;
   let text;
   try {
-    response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15_000) });
+    response = await fetch(url, {
+      ...options, headers, signal: AbortSignal.timeout(15_000),
+      ...(service === 'lythaus-admin-api-development' ? { redirect: 'manual' } : {}),
+    });
     observation.httpStatus = response.status;
     observation.cfRay = identity(response.headers.get('cf-ray'), /^[a-f0-9]{16}-[A-Z]{3}$/);
     text = await response.text();
@@ -192,6 +195,17 @@ function assertDatabaseReport(report, worker, label, { skipReadinessExpectation 
 
 function assertReadiness(body, target, { knownPreviousServingVersion = false, previousPublicVersions = [] } = {}) {
   if (target.worker === 'lythaus-admin-api-development') {
+    if (!knownPreviousServingVersion) {
+      if (body.service !== 'lythaus-admin-api' || body.readiness !== 'pass') {
+        throw new Error('Admin candidate did not report a ready Admin service');
+      }
+      const reports = body.databases;
+      if (!reports || typeof reports !== 'object' || Array.isArray(reports) || Object.keys(reports).length !== 2
+        || !['admin', 'privacy'].every(label => Object.hasOwn(reports, label) && reports[label]
+          && typeof reports[label] === 'object' && !Array.isArray(reports[label]))) {
+        throw new Error('Admin candidate must report both the Admin and Privacy databases');
+      }
+    }
     const publicVersionIsExpected = knownPreviousServingVersion
       ? body.emailBinding?.publicWorkerVersion === expectedPublicVersion
         || previousPublicVersions.some(({ versionId }) => body.emailBinding?.publicWorkerVersion === versionId)
@@ -311,7 +325,12 @@ async function probeTargets() {
       continue;
     }
     const base = `${new URL(target.baseUrl).origin}${target.routePrefix}`;
-    for (const path of target.anonymousPaths) await fetchJson(`${base}${path}`, {}, target.worker);
+    for (const path of target.anonymousPaths) {
+      const health = await fetchJson(`${base}${path}`, {}, target.worker);
+      if (target.worker === 'lythaus-admin-api-development' && (health.service !== 'lythaus-admin-api' || health.status !== 'ok')) {
+        throw new Error('Admin candidate health response did not identify a healthy Admin service');
+      }
+    }
     const body = await fetchCandidateReadiness(base, target, previousVersions);
     const { reports, primaryReport } = assertReadiness(body, target);
     evidence.workers.push({
