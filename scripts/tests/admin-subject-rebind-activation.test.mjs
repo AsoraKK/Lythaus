@@ -196,7 +196,8 @@ function liveFixture() {
   const bindings=[{name:'DB_ADMIN_FRESH',type:'hyperdrive',id:drive},{name:'WORKER_VERSION',type:'version_metadata'},
     {name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text'},...Object.entries({ACCESS_TEAM_DOMAIN:'synthetic.cloudflareaccess.com',
       ACCESS_AUDIENCES:'synthetic-ui,synthetic-api',EXPECTED_HOSTNAMES:'admin.lythaus.co',CORS_ALLOWED_ORIGINS:p.origin}).map(([name,text])=>({name,type:'plain_text',text}))];
-  const data={deployments:{deployments:[{id:'deployment',created_on:new Date(now).toISOString(),versions:[{version_id:version,percentage:100}]}]},
+  const data={organization:{auth_domain:'synthetic.cloudflareaccess.com'},
+    deployments:{deployments:[{id:'deployment',created_on:new Date(now).toISOString(),versions:[{version_id:version,percentage:100}]}]},
     version:{id:version,annotations:{'workers/tag':source},resources:{bindings}},
     routes:[{id:'route',pattern:'admin.lythaus.co/api/admin/*',script:worker}],
     apps:[{id:'ui',name:'Lythaus Admin UI',domain:'admin.lythaus.co',aud:'synthetic-ui'},
@@ -206,7 +207,8 @@ function liveFixture() {
   const fetchImpl=async(url,options)=>{
     assert.equal(options.method,'GET');assert.equal(options.redirect,'error');const u=new URL(url);assert.equal(u.host,'api.cloudflare.com');
     const result=u.pathname.endsWith('/deployments')?data.deployments:u.pathname.includes('/versions/')?data.version:
-      u.pathname.endsWith('/routes')?data.routes:u.pathname.endsWith('/apps')?data.apps:data.policies;
+      u.pathname.endsWith('/routes')?data.routes:u.pathname.endsWith('/apps')?data.apps:
+      u.pathname.endsWith('/access/organizations')?data.organization:data.policies;
     return {ok:true,json:async()=>({success:true,result,...(Array.isArray(result)?{result_info:{page:1,total_pages:1,total_count:result.length}}:{})})};
   };
   return {data,env:environment,policy:p,roles,executor:{...executor,originFingerprint:p.databaseTarget.originFingerprint},fetchImpl,manifest,now:()=>now,verifyTargets:async()=>({status:'pass',targetBranch:'main',
@@ -219,6 +221,8 @@ test('read-only serving check binds exact Worker, UI audience, both sole human s
   assert.notEqual(branchQualifiedDatabaseTarget(f.env.PLANETSCALE_ADMIN_DATABASE_URL).role,roles.lythaus_migrations);
   assert.deepEqual(verified.bindingProof,proof(f.policy));
   const changes=[f=>f.executor.roleFingerprint='f'.repeat(64),f=>f.executor.roleMapSha256='f'.repeat(64),
+    f=>f.data.organization.auth_domain='different.cloudflareaccess.com',
+    f=>f.data.policies[0].include[0].everyone={},
     f=>f.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL=f.env.PLANETSCALE_ADMIN_DATABASE_URL,
     f=>f.data.deployments.deployments[0].versions[0].percentage=50,
     f=>f.data.version.annotations['workers/tag']='b'.repeat(40),f=>f.data.version.resources.bindings[0].id='b'.repeat(32),

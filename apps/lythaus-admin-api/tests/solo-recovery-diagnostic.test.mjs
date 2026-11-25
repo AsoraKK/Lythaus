@@ -38,11 +38,17 @@ mock.module('jose', { cache: true, namedExports: { ...jose, createRemoteJWKSet: 
 } } });
 mock.method(globalThis, 'fetch', async () => { throw new Error('external_network_forbidden'); });
 
-const { handleSubjectDiagnostic, SUBJECT_DIAGNOSTIC_PATH, SUBJECT_DIAGNOSTIC_SQL } = await import('../src/solo-recovery/subject-diagnostic.ts');
+const { handleSubjectDiagnostic, SUBJECT_DIAGNOSTIC_PATH, SUBJECT_DIAGNOSTIC_SQL, SUBJECT_DIAGNOSTIC_SESSION_SQL } = await import('../src/solo-recovery/subject-diagnostic.ts');
 const { SUBJECT_DIAGNOSTIC_MAX_WINDOW_SECONDS, validateSubjectDiagnosticPolicy } = await import('../src/solo-recovery/diagnostic-policy.ts');
 const { hmacLookup } = await import('../../../packages/security/src/index.ts');
 
-function fixture({ row = { role: 'administrator', active: true, principal_status: 'locked', principal_deleted: false }, session = {} } = {}) {
+const checksum = value => createHash('sha256').update(value).digest('hex');
+function original(overrides = {}) {
+  return { role: 'administrator', active: true, principal_status: 'locked', principal_deleted: false,
+    binding_checksum: checksum(Buffer.from(hmacLookup('synthetic-subject-a', 'synthetic-key-only'), 'base64')),
+    revoked: false, bootstrap_principal: true, ...overrides };
+}
+function fixture({ row = original(), session = {} } = {}) {
   const now = Math.floor(Date.now() / 1000);
   const sourceCommit = 'a'.repeat(40);
   const origin = 'https://admin.example.invalid';
@@ -50,6 +56,7 @@ function fixture({ row = { role: 'administrator', active: true, principal_status
   const databaseOriginFingerprint = createHash('sha256').update(JSON.stringify(databaseOrigin)).digest('hex');
   const policy = {
     origin,
+    sourceSha: sourceCommit,
     accessIssuer: 'https://fixture.cloudflareaccess.com',
     accessAudience: 'fixture-api',
     notBefore: now - 30,
@@ -63,6 +70,7 @@ function fixture({ row = { role: 'administrator', active: true, principal_status
     WORKER_VERSION: { id: '01900000-0000-7000-8000-000000000011', tag: sourceCommit },
     DB_ADMIN_FRESH: { connectionString: 'postgresql://fixture_admin.branchfixture:synthetic@db.example.invalid/postgres?sslmode=verify-full' },
     ACCESS_SUBJECT_HMAC_KEY: 'synthetic-key-only',
+    ADMIN_SUBJECT_DIAGNOSTIC_HUMAN_PIN: checksum(`lythaus:diagnostic-human:v1:${sourceCommit}:operator@example.invalid`),
     ACCESS_JWKS_URL: policy.accessIssuer + '/cdn-cgi/access/certs',
     ACCESS_TEAM_DOMAIN: 'fixture.cloudflareaccess.com',
     ACCESS_AUDIENCES: 'fixture-ui,fixture-api',
@@ -71,7 +79,7 @@ function fixture({ row = { role: 'administrator', active: true, principal_status
   const subject = 'synthetic-subject-a';
   const email = 'operator@example.invalid';
   const sql = [];
-  const dbSession = { database_name: 'postgres', current_user: 'fixture_admin', session_user: 'fixture_admin', transaction_read_only: 'on', ...session };
+  const dbSession = { database_name: 'postgres', current_user: 'fixture_admin', session_user: 'fixture_admin', transaction_read_only: 'on', branch_primary: true, ...session };
   const run = async (binding, work) => {
     assert.equal(binding, env.DB_ADMIN_FRESH);
     const client = { async query(statement, values) {
@@ -84,7 +92,7 @@ function fixture({ row = { role: 'administrator', active: true, principal_status
     return work(client);
   };
   const sign = (patch = {}, key = keys.privateKey) => new jose.SignJWT({
-    iss: policy.accessIssuer, aud: ['fixture-api'], sub: subject, email, type: 'app', nbf: now - 5, exp: now + 120, ...patch,
+    iss: policy.accessIssuer, aud: ['fixture-api'], sub: subject, email, type: 'app', iat: now, nbf: now - 5, exp: now + 120, ...patch,
   }).setProtectedHeader({ alg: 'RS256', kid: 'fixture' }).sign(key);
   const request = async (patch = {}, { path = SUBJECT_DIAGNOSTIC_PATH, host = 'admin.example.invalid', key = keys.privateKey, headers = {} } = {}) => new Request(
     origin.replace('admin.example.invalid', host) + path,
@@ -143,40 +151,45 @@ test('strict signed identity gets only a no-store read-only subject comparison',
   assert.match(response.headers.get('cache-control') ?? '', /no-store/);
   assert.equal(response.headers.get('access-control-allow-origin'), null);
   const body = await response.json();
-  assert.deepEqual(body, {
+  const { correlationId, ...evidence } = body;
+  assert.match(correlationId, /^[0-9a-f-]{36}$/);
+  assert.deepEqual(evidence, {
     status: 'verified', workerVersionId: f.env.WORKER_VERSION.id,
     sourceCommit: f.env.WORKER_VERSION.tag, databaseTargetMatchesPinnedMain: true,
     databaseTransactionReadOnly: true, subjectBindingMatches: true, activeMembershipMatches: true,
-    membershipRole: 'administrator', principalStatus: 'locked', principalDeleted: false,
+    intendedHumanVerified: true, membershipCount: 1, subjectBindingMatchCount: 1, originalBootstrapPrincipal: true,
+    membershipIsAdministrator: true, membershipActive: true, membershipRevoked: false, principalLocked: true, principalDeleted: false,
   });
   assert.deepEqual(f.sql.map(entry => entry.statement), [
     'SET TRANSACTION READ ONLY',
-    "SELECT current_database() AS database_name,\n        current_user AS current_user, session_user AS session_user,\n        current_setting('transaction_read_only') AS transaction_read_only",
+    SUBJECT_DIAGNOSTIC_SESSION_SQL,
     SUBJECT_DIAGNOSTIC_SQL,
   ]);
   assert.ok(f.sql.every(entry => /^(?:SET TRANSACTION READ ONLY|SELECT)\b/.test(entry.statement)));
-  assert.deepEqual(f.sql[2].values, [hmacLookup(f.subject, f.key)]);
+  assert.deepEqual(f.sql.map(entry => entry.values), [undefined, [f.policy.databaseTarget.branchId], undefined]);
   const returned = JSON.stringify(body);
   assert.equal(returned.includes(assertion), false);
   assert.equal(returned.includes(f.email), false);
   assert.equal(returned.includes(f.subject), false);
   assert.equal(returned.includes(f.key), false);
-  assert.equal(returned.includes(f.sql[2].values[0]), false);
+  assert.equal(returned.includes(hmacLookup(f.subject, f.key)), false);
+  assert.equal(returned.includes(original().binding_checksum), false);
+  assert.equal(returned.includes(f.env.ADMIN_SUBJECT_DIAGNOSTIC_HUMAN_PIN), false);
   assert.ok(logSpies.every(spy => spy.mock.callCount() === 0));
 });
 
 test('default database runner uses one explicit read-only transaction with no writes', async () => {
   const f = fixture();
   databaseFixture = {
-    row: { role: 'administrator', active: true, principal_status: 'locked', principal_deleted: false },
-    session: { database_name: 'postgres', current_user: 'fixture_admin', session_user: 'fixture_admin', transaction_read_only: 'on' },
+    row: original(),
+    session: { database_name: 'postgres', current_user: 'fixture_admin', session_user: 'fixture_admin', transaction_read_only: 'on', branch_primary: true },
   };
   transactionTrace.length = 0;
   const response = await handleSubjectDiagnostic(await f.request(), f.env, { policy: f.policy });
   assert.equal(response.status, 200);
   assert.deepEqual(transactionTrace.map(item => item.statement), [
     'BEGIN', 'SET TRANSACTION READ ONLY',
-    "SELECT current_database() AS database_name,\n        current_user AS current_user, session_user AS session_user,\n        current_setting('transaction_read_only') AS transaction_read_only",
+    SUBJECT_DIAGNOSTIC_SESSION_SQL,
     SUBJECT_DIAGNOSTIC_SQL, 'COMMIT',
   ]);
   assert.ok(transactionTrace.every(item => /^(?:BEGIN|COMMIT|SET TRANSACTION READ ONLY|SELECT)\b/.test(item.statement)));
@@ -188,8 +201,11 @@ for (const [name, patch, key] of [
   ['empty subject', { sub: '' }],
   ['missing email', { email: undefined }],
   ['expired assertion', { exp: 1 }],
+  ['assertion issued before the window', { iat: 1 }],
+  ['assertion without issuance time', { iat: undefined }],
   ['future nbf', { nbf: 9999999999 }],
   ['wrong issuer', { iss: 'https://wrong.example.invalid' }],
+  ['different signed human', { email: 'another@example.invalid' }],
   ['wrong audience', { aud: ['fixture-ui'] }],
   ['multiple audiences', { aud: ['fixture-api', 'fixture-ui'] }],
   ['service token', { type: 'service', common_name: 'synthetic-service' }],
@@ -212,24 +228,28 @@ test('missing runtime HMAC key is rejected before database access', async () => 
   assert.deepEqual(f.sql, []);
 });
 
-test('nonmatching subject returns only mismatch booleans and no private binding values', async () => {
-  const f = fixture({ row: null });
-  const response = await handleSubjectDiagnostic(await f.request(), f.env, { policy: f.policy, run: f.run });
+test('changed subject reports the original membership state without sending identity to SQL', async () => {
+  const f = fixture();
+  const response = await handleSubjectDiagnostic(await f.request({ sub: 'changed-subject' }), f.env, { policy: f.policy, run: f.run });
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.subjectBindingMatches, false);
   assert.equal(body.activeMembershipMatches, false);
-  assert.equal(body.membershipRole, null);
+  assert.equal(body.membershipCount, 1);
+  assert.equal(body.subjectBindingMatchCount, 0);
+  assert.equal(body.originalBootstrapPrincipal, true);
+  assert.equal(body.principalLocked, true);
   assert.equal(JSON.stringify(body).includes(f.subject), false);
   assert.equal(JSON.stringify(body).includes(f.key), false);
 });
 
 test('inactive match is reported without changing the membership', async () => {
-  const f = fixture({ row: { role: 'administrator', active: false, principal_status: 'locked', principal_deleted: false } });
+  const f = fixture({ row: original({ active: false, revoked: true }) });
   const response = await handleSubjectDiagnostic(await f.request(), f.env, { policy: f.policy, run: f.run });
   const body = await response.json();
   assert.equal(body.subjectBindingMatches, true);
   assert.equal(body.activeMembershipMatches, false);
+  assert.equal(body.membershipRevoked, true);
   assert.ok(f.sql.every(entry => /^(?:SET TRANSACTION READ ONLY|SELECT)\b/.test(entry.statement)));
 });
 
@@ -238,6 +258,8 @@ test('policy, request, source, and main-target mismatches fail before database a
     { name: 'expired policy', policy: f => ({ ...f.policy, expiresAt: f.policy.notBefore + 1 }) },
     { name: 'invalid Worker version id', change: f => { f.env.WORKER_VERSION.id = 'fixture'; } },
     { name: 'invalid source tag', change: f => { f.env.WORKER_VERSION.tag = 'not-a-release-sha'; } },
+    { name: 'another release', change: f => { f.env.WORKER_VERSION.tag = 'b'.repeat(40); } },
+    { name: 'no protected human pin', change: f => { delete f.env.ADMIN_SUBJECT_DIAGNOSTIC_HUMAN_PIN; } },
     { name: 'wrong route origin', request: f => f.request({}, { host: 'other.example.invalid' }) },
     { name: 'extra URL query', request: f => f.request({}, { path: SUBJECT_DIAGNOSTIC_PATH + '?debug=1' }) },
     { name: 'bearer credential', request: f => f.request({}, { headers: { authorization: 'Bearer synthetic' } }) },
@@ -278,4 +300,27 @@ test('duplicate subject matches and unexpected SQL fail closed', async () => {
   const response = await handleSubjectDiagnostic(await f.request(), f.env, { policy: f.policy, run: f.run });
   assert.equal(response.status, 404);
   assert.ok(f.sql.every(entry => /^(?:SET TRANSACTION READ ONLY|SELECT)\b/.test(entry.statement)));
+});
+
+test('platform-local proxy requires the verified branch primary and effective role in PostgreSQL', async () => {
+  for (const [session, status] of [[{}, 200], [{ branch_primary: false }, 404],
+    [{ current_user: 'other', session_user: 'other' }, 404], [{ database_name: 'other' }, 404]]) {
+    const f = fixture({ session });
+    f.env.DB_ADMIN_FRESH.connectionString = 'postgresql://proxy:synthetic@hyperdrive.local:5432/postgres?sslmode=disable';
+    const response = await handleSubjectDiagnostic(await f.request(), f.env, { policy: f.policy, run: f.run });
+    assert.equal(response.status, status);
+    assert.equal(f.sql.some(entry => entry.statement === SUBJECT_DIAGNOSTIC_SQL), status === 200);
+  }
+});
+
+test('key drift and a deleted membership stay distinct from a successful match', async () => {
+  const f = fixture();
+  f.env.ACCESS_SUBJECT_HMAC_KEY = 'another-synthetic-key';
+  const changed = await (await handleSubjectDiagnostic(await f.request(), f.env, { policy: f.policy, run: f.run })).json();
+  assert.equal(changed.subjectBindingMatchCount, 0);
+  assert.equal(changed.membershipCount, 1);
+  const empty = fixture({ row: null });
+  const missing = await (await handleSubjectDiagnostic(await empty.request(), empty.env, { policy: empty.policy, run: empty.run })).json();
+  assert.equal(missing.subjectBindingMatchCount, 0);
+  assert.equal(missing.membershipCount, 0);
 });

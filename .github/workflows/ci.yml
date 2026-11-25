@@ -84,7 +84,7 @@ jobs:
       - name: Validate read-only Cloudflare audit contract
         run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs scripts/tests/admin-identity-audit.test.mjs
       - name: Validate read-only Pages alias observation
-        run: node --test scripts/tests/pages-alias-evidence.test.mjs scripts/tests/pages-alias-collector.test.mjs
+        run: node --test scripts/tests/pages-alias-evidence.test.mjs scripts/tests/pages-alias-collector.test.mjs scripts/tests/production-pages-rollback.test.mjs
       - name: Validate read-only GitHub controls audit contract
         run: node --test scripts/tests/github-controls-audit.test.mjs
       - name: Validate the owner-reviewed new-core secret preflight without credentials
@@ -93,6 +93,8 @@ jobs:
         run: node --test scripts/tests/lythaus-new-core-schema-install-control.test.mjs
       - name: Validate the isolated admin metadata inspector without credentials
         run: node --test scripts/tests/lythaus-new-core-isolation-review.test.mjs
+      - name: Validate the combined isolated setup without credentials
+        run: node --test scripts/tests/lythaus-new-core-admin-inputs.test.mjs scripts/tests/lythaus-new-core-isolated-setup.test.mjs scripts/tests/new-core-setup-control.test.mjs
 
   native_runtime:
     name: Native Workers and PlanetScale
@@ -104,6 +106,7 @@ jobs:
           POSTGRES_USER: fixture_root
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: lythaus_auth_test_post_control
+          POSTGRES_INITDB_ARGS: '--set=cluster_name=fixture-vqa2g2xc9wsl'
         ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U fixture_root -d lythaus_auth_test_post_control"
@@ -272,6 +275,14 @@ jobs:
       - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run validate:production-gates
       - run: node --test scripts/tests/public-waitlist-cutover.test.mjs
+      - name: Verify protected Admin diagnostic and serving bindings
+        run: >-
+          node --experimental-test-module-mocks --experimental-strip-types --test
+          apps/lythaus-admin-api/tests/solo-recovery-diagnostic.test.mjs
+          scripts/tests/prepare-subject-diagnostic-policy.test.mjs
+          scripts/tests/subject-diagnostic-release-contract.test.mjs
+          scripts/tests/admin-runtime-target-pass-fail.test.mjs
+          scripts/tests/admin-health-request-receipt.test.mjs
       - name: Verify disabled admin identity rebind on isolated PG17
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres

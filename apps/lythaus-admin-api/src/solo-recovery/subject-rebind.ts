@@ -3,6 +3,7 @@ import { hmacLookup, uuidv7 } from '@lythaus/security';
 import { assertAdminMutationRequest } from '../admin-cors-policy.ts';
 import { readBoundedJson } from '../request-body-policy.ts';
 import { verifiedHumanAccessIdentity } from './human-access.ts';
+import { SUBJECT_DIAGNOSTIC_SESSION_SQL, type AdminRecoverySessionRow } from './subject-diagnostic.ts';
 import { rebindRuntimeTarget, rebindSessionMatches } from './rebind-target.ts';
 import { REBIND_CAPABILITY_SHA256, REBIND_READER_BODY_SHA256, REBIND_MUTATOR_BODY_SHA256, parseRebindPolicy, rebindCommitment } from './rebind-protocol.ts';
 
@@ -115,15 +116,13 @@ export async function handleSubjectRebind(request: Request, env: Env, deps: Depe
         || policy.accessIssuer !== `https://${env.ACCESS_TEAM_DOMAIN}`
         || policy.bindingProof.checkedAt * 1000 > Date.now()) fail();
       const target = await rebindRuntimeTarget(env.DB_ADMIN_FRESH.connectionString, policy);
-      const identity = await verifiedHumanAccessIdentity(request, { ...env, ACCESS_RECOVERY_AUDIENCE: policy.accessAudience });
+      const identity = await verifiedHumanAccessIdentity(request, { ...env, ACCESS_RECOVERY_AUDIENCE: policy.accessAudience, freshSince: policy.notBefore });
       const emailSha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity.email.toLowerCase()))));
       if (emailSha256 !== policy.emailSha256) fail();
-      const session = await client.query<{ database_name: unknown; current_role: unknown; session_role: unknown; read_only: unknown }>(
-        `SELECT current_database() AS database_name, current_user AS current_role, session_user AS session_role,
-                current_setting('transaction_read_only') AS read_only`);
+      const session = await client.query<AdminRecoverySessionRow>(SUBJECT_DIAGNOSTIC_SESSION_SQL, [policy.databaseTarget.branchId]);
       const row = session.rows[0];
       if (session.rowCount !== 1 || !(await rebindSessionMatches(row, policy, target))
-        || row.read_only !== (method === 'GET' ? 'on' : 'off')) fail();
+        || row.transaction_read_only !== (method === 'GET' ? 'on' : 'off')) fail();
       const records = await client.query<Membership>(REBIND_MEMBERSHIP_SQL);
       const original = records.rows[0];
       if (records.rowCount !== 1 || records.rows.length !== 1 || original.membership_count !== 1 || original.bootstrap_count !== 1

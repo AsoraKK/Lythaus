@@ -423,6 +423,12 @@ jobs:
           echo 'RELEASE_FAILURE_CODE=release_dependency_install_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=exact release dependency installation failed' >> "$GITHUB_ENV"
           npm ci --ignore-scripts
+      - name: Stage the privately approved human for the read-only Admin diagnostic
+        if: inputs.enable_subject_diagnostic == true && inputs.acceptance_run_id == '' && contains(steps.release_plan.outputs.changed_components_json, '"admin"')
+        env:
+          EXPECTED_DIAGNOSTIC_HUMAN_EMAIL: ${{ secrets.LYTHAUS_NEW_CORE_OWNER_EMAIL }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: node --experimental-strip-types scripts/ci/prepare-subject-diagnostic-policy.mjs --stage-human
       - name: Validate committed production configuration
         env:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
@@ -852,6 +858,7 @@ jobs:
           if coordinator_managed; then test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"; fi
           umask 077
           base_secrets_file="$RUNNER_TEMP/production-cutover/base-secrets.json"
+          admin_secrets_file="$base_secrets_file"
           public_secrets_file="$RUNNER_TEMP/production-cutover/public-secrets.json"
           jobs_secrets_file="$RUNNER_TEMP/production-cutover/jobs-secrets.json"
           coordinator_secrets_file="$RUNNER_TEMP/production-cutover/coordinator-secrets.json"
@@ -871,6 +878,7 @@ jobs:
           diagnostic_policy_output="$RUNNER_TEMP/production-cutover/subject-diagnostic-policy.json"
           if component_changed public; then test -s "$turnstile_secret_file"; fi
           cleanup_candidate_upload() {
+            rm -f "$RUNNER_TEMP/admin-diagnostic-human.json" "$RUNNER_TEMP/admin-diagnostic-candidate.json"
             if [[ -f "$diagnostic_policy_backup" ]]; then cp "$diagnostic_policy_backup" "$diagnostic_policy_module" || true; fi
             rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output" "$coordinator_response_file" "$diagnostic_policy_backup" "$diagnostic_policy_output"
           }
@@ -960,6 +968,9 @@ jobs:
             SUBJECT_DIAGNOSTIC_POLICY_OUTPUT_PATH="$diagnostic_policy_output" \
             RUNNER_TEMP="$RUNNER_TEMP" \
             node --experimental-strip-types scripts/ci/prepare-subject-diagnostic-policy.mjs
+            admin_secrets_file="$RUNNER_TEMP/admin-diagnostic-candidate.json"
+            jq -es 'if length == 2 and (.[1] | keys) == ["ADMIN_SUBJECT_DIAGNOSTIC_HUMAN_PIN"] then .[0] + .[1] else error("invalid diagnostic binding") end' \
+              "$base_secrets_file" "$RUNNER_TEMP/admin-diagnostic-human.json" > "$admin_secrets_file"
             diagnostic_expiry_epoch="$(jq -er '.expiresAt' "$diagnostic_policy_output")"
             diagnostic_expiry="$(date -u -d "@$diagnostic_expiry_epoch" +%Y-%m-%dT%H:%M:%S.000Z)"
             diagnostic_not_before="$(jq -er '.notBefore' "$diagnostic_policy_output")"
@@ -968,7 +979,7 @@ jobs:
               echo "SUBJECT_DIAGNOSTIC_NOT_BEFORE=$diagnostic_not_before"
             } >> "$GITHUB_ENV"
           fi
-          if component_changed admin; then upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$base_secrets_file"; fi
+          if component_changed admin; then upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$admin_secrets_file"; fi
           if component_changed jobs; then upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"; fi
           if coordinator_managed; then upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"; fi
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
@@ -2203,7 +2214,11 @@ jobs:
       - name: Remove ephemeral production secret files
         if: always()
         shell: bash
-        run: rm -f "$RUNNER_TEMP/production-cutover/base-secrets.json" "$RUNNER_TEMP/production-cutover/public-secrets.json" "$RUNNER_TEMP/production-cutover/jobs-secrets.json" "$RUNNER_TEMP/production-cutover/coordinator-secrets.json" "$RUNNER_TEMP/production-cutover/worker-secrets.json" "$RUNNER_TEMP/production-cutover/turnstile-secret.json"
+        run: >-
+          rm -f "$RUNNER_TEMP/production-cutover/base-secrets.json" "$RUNNER_TEMP/production-cutover/public-secrets.json"
+          "$RUNNER_TEMP/production-cutover/jobs-secrets.json" "$RUNNER_TEMP/production-cutover/coordinator-secrets.json"
+          "$RUNNER_TEMP/production-cutover/worker-secrets.json" "$RUNNER_TEMP/production-cutover/turnstile-secret.json"
+          "$RUNNER_TEMP/admin-diagnostic-human.json" "$RUNNER_TEMP/admin-diagnostic-candidate.json"
       - name: Upload sanitized production cutover evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

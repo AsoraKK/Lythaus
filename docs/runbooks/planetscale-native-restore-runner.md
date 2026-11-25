@@ -206,6 +206,22 @@ database actions checked below and organization `read_service_tokens` for its
 self-read. Secret presence alone does not prove those grants or authorize a
 restore, copied-role reset, migration or deletion.
 
+For an approved private handoff to this secret, the same protected qualification
+job can check delivery before any PlanetScale grants. Use the reviewed current
+main SHA, `credential_delivery_only=true`, `execute=false`, an empty approval
+record, and `plan_pins_json` containing only `{"expectedTokenId":"<public-id>"}`.
+Only enter the issued public token ID in dispatch inputs. The secret value
+belongs solely in the existing protected environment secret. A matching public
+ID and a well-formed, nonempty credential in the job produce `delivery_id_matched`.
+The check contacts no provider, receives no SQL credential and produces no
+qualification artifact. If the ID differs or the value is missing or malformed,
+pause the handoff. An ID match alone cannot verify the secret bytes or clear an
+ambiguous save. Reconcile it with the private writer's confirmed submission of
+the complete pair before approving any grant. Provider authentication, exact
+grants and expiry still need the normal read-only plan after separately
+approved grants. The workflow
+continues to label every read-only invocation as a plan in its run history.
+
 Qualification also uses the existing `PLANETSCALE_SCHEMA_READ_DATABASE_URL`. It first reads
 database identity and that token's own permissions. Missing `read_service_tokens`
 or database-level access blocks before spending. No new scope is granted.
@@ -238,6 +254,15 @@ failure evidence retains numeric HTTP status, a UUID-shaped request ID from
 recognized correlation headers, and an allowlisted error code from at most
 8 KiB of response JSON. Messages, arbitrary codes, headers and response bodies
 are redacted; unavailable correlation fields remain null. No mutation is retried.
+
+If the opening source database GET returns HTTP 401, 403 or 404, the read-only
+plan makes one GET for the configured restore token's own metadata. The
+`sourceAccessAfterDenial` entry records whether the returned token matches
+the configured credential and whether its visible access rows explicitly grant
+`read_database` on the pinned source database. A null field means the runner
+could not verify it. A false grant observation describes only the returned rows.
+The original source denial remains the failure. The check stops before branch,
+backup or SQL access. Execution and cleanup retain their existing gates.
 
 Read-only plans preserve an `authorityDiagnostic` checkpoint before rejecting
 missing database-specific permissions. Version 3 projects every access row up

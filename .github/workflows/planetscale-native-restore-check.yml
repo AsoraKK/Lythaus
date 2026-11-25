@@ -9,9 +9,13 @@ on:
         required: true
         type: string
       plan_pins_json:
-        description: Exact backup ID, completion timestamp, target name and storage bytes; no automatic selection
+        description: Exact backup ID, completion time, target and bytes for restore, or only expectedTokenId for delivery
         required: true
         type: string
+      credential_delivery_only:
+        description: Compare the privately delivered pair with its public token ID, without contacting PlanetScale
+        type: boolean
+        default: false
       execute:
         description: Restore and target-only qualification; retains target for separate reviewed cleanup
         required: true
@@ -48,6 +52,7 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       REF_PROTECTED: ${{ github.ref_protected }}
       RESTORE_CHECK_EXECUTE: ${{ inputs.execute }}
+      RESTORE_CHECK_DELIVERY_ONLY: ${{ inputs.credential_delivery_only }}
       RESTORE_CHECK_SCHEMA_MODE: ${{ inputs.schema_mode }}
       RESTORE_CHECK_PLAN_PINS_JSON: ${{ inputs.plan_pins_json }}
       RESTORE_CHECK_APPROVAL_JSON: ${{ inputs.approval_json }}
@@ -57,8 +62,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
+          persist-credentials: ${{ !inputs.credential_delivery_only }}
       - name: Require exact protected main before loading dependencies or credentials
         timeout-minutes: 1
+        env:
+          GH_TOKEN: ${{ inputs.credential_delivery_only && github.token || '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -69,8 +77,13 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$GITHUB_SHA" = "$RELEASE_SHA"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          git fetch --no-tags origin main
-          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          if [[ "$RESTORE_CHECK_DELIVERY_ONLY" == true ]]; then
+            test "$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq 'select(.protected == true) | .commit.sha')" = "$RELEASE_SHA"
+            node scripts/ci/check-native-restore-token-delivery.mjs --validate-inputs
+          else
+            git fetch --no-tags origin main
+            test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          fi
           printf 'EVIDENCE_DIR=%s/native-restore-check\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         timeout-minutes: 1
@@ -82,19 +95,30 @@ jobs:
         timeout-minutes: 1
         run: node scripts/ci/planetscale-native-restore-admission.mjs
       - run: npm ci --ignore-scripts --no-audit
+        if: ${{ !inputs.credential_delivery_only }}
         timeout-minutes: 4
       - name: Run fixed-target runner using only existing protected access
         timeout-minutes: 22
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ !inputs.credential_delivery_only && github.token || '' }}
           PLANETSCALE_RESTORE_API_TOKEN: ${{ secrets.PLANETSCALE_RESTORE_API_TOKEN }}
-          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
-        run: node scripts/ci/planetscale-native-restore-check.mjs
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ !inputs.credential_delivery_only && secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL || '' }}
+        shell: bash
+        run: |
+          if [[ "$RESTORE_CHECK_DELIVERY_ONLY" == true ]]; then
+            exec node scripts/ci/check-native-restore-token-delivery.mjs
+          fi
+          exec node scripts/ci/planetscale-native-restore-check.mjs
       - name: Finalize immutable qualification evidence without provider access
         if: always()
         timeout-minutes: 2
         shell: bash
         run: |
+          if [[ "$RESTORE_CHECK_DELIVERY_ONLY" == true && "$RESTORE_CHECK_EXECUTE" == false ]] &&
+             [[ -e "$EVIDENCE_DIR/checkpoint.json" || -e "$EVIDENCE_DIR/qualification.json" ]]; then
+            echo 'Unexpected qualification evidence during a credential delivery check.' >&2
+            exit 1
+          fi
           if [[ -s "$EVIDENCE_DIR/checkpoint.json" ]]; then
             node scripts/ci/planetscale-native-restore-check.mjs --finalize-only
           fi
@@ -116,4 +140,4 @@ jobs:
           name: native-restore-qualification-${{ inputs.release_sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/native-restore-check/qualification.json
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: ${{ inputs.credential_delivery_only && !inputs.execute && 'ignore' || 'error' }}

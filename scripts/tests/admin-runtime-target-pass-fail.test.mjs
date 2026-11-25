@@ -20,9 +20,9 @@ const sourceShas = {
   admin: 'a'.repeat(40),
 };
 const bindingTargets = [
-  { worker: 'lythaus-public-api-development', binding: 'DB_APP_FRESH' },
-  { worker: 'lythaus-admin-api-development', binding: 'DB_ADMIN_FRESH' },
-  { worker: 'lythaus-admin-api-development', binding: 'DB_PRIVACY_FRESH' },
+  { worker: 'lythaus-public-api-development', binding: 'DB_APP_FRESH', hyperdriveId: '1'.repeat(32) },
+  { worker: 'lythaus-admin-api-development', binding: 'DB_ADMIN_FRESH', hyperdriveId: '2'.repeat(32) },
+  { worker: 'lythaus-admin-api-development', binding: 'DB_PRIVACY_FRESH', hyperdriveId: '3'.repeat(32) },
 ];
 
 function syntheticEnvironment() {
@@ -108,7 +108,7 @@ function hyperdriveResponseFetcher(manifest, wrongRoleFor = null) {
   return { fetchImpl, calls };
 }
 
-function syntheticDependencies({ race = false, targetFailure = false, probeFailure = false } = {}) {
+function syntheticDependencies({ race = false, targetFailure = false, probeFailure = false, wrongServingBinding = false } = {}) {
   const statusCounts = new Map();
   const probeEnvironments = [];
   const verifierCalls = [];
@@ -130,7 +130,11 @@ function syntheticDependencies({ race = false, targetFailure = false, probeFailu
     }
     if (args[0] === 'versions' && args[1] === 'view') {
       const isAdmin = workerName.includes('admin');
-      return versionMetadata(args[2], isAdmin ? sourceShas.admin : sourceShas.public)[0];
+      return { ...versionMetadata(args[2], isAdmin ? sourceShas.admin : sourceShas.public)[0],
+        resources: { bindings: bindingTargets.filter(entry => entry.worker === workerName).map(entry => ({
+          type: 'hyperdrive', name: entry.binding,
+          id: wrongServingBinding && entry.binding === 'DB_ADMIN_FRESH' ? 'f'.repeat(32) : entry.hyperdriveId,
+        })) } };
     }
     throw new Error('unexpected synthetic Wrangler command');
   };
@@ -162,6 +166,12 @@ test('target parser maps exact active version to its source SHA', () => {
   assert.deepEqual(parsed.serving.map(({ versionId, sourceSha, percentage }) => ({ versionId, sourceSha, percentage })), [
     { versionId: id, sourceSha: sourceShas.admin, percentage: 100 },
   ]);
+});
+
+test('a valid provider config cannot substitute for the serving Admin version binding', async () => {
+  const deps = syntheticDependencies({wrongServingBinding:true});
+  assert.equal(await performAdminRuntimePreflight({...deps,environment:syntheticEnvironment()}),false);
+  assert.equal(deps.probeEnvironments.length,0);
 });
 
 test('real Hyperdrive verifier checks synthetic Admin runtime bindings with GET only', async () => {

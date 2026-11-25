@@ -998,29 +998,6 @@ test('qualification target absence accepts only the provider GET 404 and uses th
   await assert.rejects(() => api(new Response(null, { status: 204 })).request(path, { absent: true }), /provider_response_invalid/);
   assert.equal((await api(Response.json({ id: 'existing', name: TEST_TARGET })).request(path, { absent: true })).name, TEST_TARGET);
 });
-test('a denied source stays denied after a read-only plan checks its dedicated token descriptor', async () => {
-  for (const [inspect, selfStatus] of [[false, 200], [true, 200], [true, 403]]) {
-    const calls = [], evidence = [];
-    const api = new TestRestoreApi('fixture-id:fixture-token', async (url, options) => {
-      assert.equal(options.method, 'GET');
-      const pathname = new URL(url).pathname;
-      calls.push(pathname);
-      if (pathname.endsWith('/databases/lythaus-core')) return new Response(null, {status:404});
-      assert.ok(pathname.endsWith('/service-tokens/fixture-id'));
-      if (selfStatus === 403) return new Response(null,{status:403});
-      return Response.json({id:'fixture-id',ignored:'fixture-token',service_token_accesses:[
-        { resource_id:RESTORE.databaseId,resource:{id:RESTORE.databaseId,name:RESTORE.database,deleted_at:null},
-          resource_type:'Database',access:'read_database' },
-      ]});
-    });
-    await assert.rejects(() => api.authority(row=>evidence.push(row),false,undefined,inspect),
-      error=>error.httpStatus===404 && error.providerDiagnostic.operationClass==='database_metadata_read');
-    assert.equal(calls.length, inspect ? 2 : 1);
-    assert.deepEqual(evidence, inspect ? [{databaseMetadataHttp:404,selfMetadataHttp:selfStatus,
-      exactDatabaseReadDescriptor:selfStatus===200?'PRESENT':'UNVERIFIED'}] : []);
-  }
-});
-
 test('provider failure diagnostics classify only the initial read endpoint and never expose the token or URL', async () => {
   const requestId = 'abcdefab-1234-4234-8234-abcdefabcdef';
   const tokenId = 'synthetic-token-id-never-output';
@@ -1180,6 +1157,66 @@ const authorityAccesses = ['read_database', 'read_branch', 'delete_branch', 'del
   'create_branch', 'connect_branch', 'connect_production_branch', 'restore_production_branch_backup', 'delete_production_branch_password'];
 const authorityRows = () => authorityAccesses.map(access => ({ access, resource_id: RESTORE.databaseId, resource_type: 'Database',
   resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } }));
+
+test('a read-only plan keeps the source denial and checks only its own token metadata once', async () => {
+  const tokenId = 'privatefixturetoken';
+  const selfUrl = 'https://api.planetscale.com/v1/organizations/' + RESTORE.organization + '/service-tokens/' + tokenId;
+  const sourceRead = authorityRows()[0];
+  const exact = { id: tokenId, service_token_accesses: [sourceRead], name: password };
+  const scenarios = [
+    [404, exact, 'READ', true, true, null],
+    [403, { ...exact, service_token_accesses: [{ ...sourceRead, resource_id: RESTORE.sourceId }] }, 'READ', true, false, null],
+    [401, { ...exact, service_token_accesses: [] }, 'READ', true, false, null],
+    [404, { ...exact, id: 'anotherfixture' }, 'READ', false, null, null],
+    [404, { ...exact, service_token_accesses: null }, 'READ', true, null, null],
+    [404, { ...exact, service_token_accesses: [null] }, 'READ', true, null, null],
+    [404, { ...exact, service_token_accesses: [{ access: 'read_database' }] }, 'READ', true, null, null],
+    [404, {}, 'UNVERIFIED', null, null, null],
+    [404, 403, 'UNVERIFIED', null, null, 403],
+    [404, 'transport', 'UNVERIFIED', null, null, null],
+  ];
+  for (const [status, selfResponse, selfRead, configuredTokenMatches, explicitSourceReadGrantInResponse, selfReadFailureHttpStatus] of scenarios) {
+    const f = fixture(), requests = [];
+    f.options.environment.RESTORE_CHECK_EXECUTE = 'false';
+    f.options.api = new TestRestoreApi(tokenId + ':' + password, async (url, options) => {
+      requests.push([options.method, url]);
+      if (url === apiBase) return Response.json({ code: 'not_found', message: password }, { status });
+      if (selfResponse === 'transport') throw new Error(password);
+      if (typeof selfResponse === 'number') return Response.json({ message: password }, { status: selfResponse });
+      return Response.json(selfResponse);
+    });
+    let sqlSessions = 0;
+    f.options.readSession = async () => { sqlSessions++; };
+    const report = await runNativeRestore(f.options);
+    assert.deepEqual(requests, [['GET', apiBase], ['GET', selfUrl]]);
+    assert.deepEqual(report.sourceAccessAfterDenial, { selfRead, selfReadFailureHttpStatus, configuredTokenMatches, explicitSourceReadGrantInResponse });
+    assert.equal(report.providerFailure.operationClass, 'database_metadata_read');
+    assert.equal(report.providerFailure.httpStatus, status);
+    assert.deepEqual(report.blockers, [status === 404 ? 'provider_request_failed' : 'provider_access_denied']);
+    assert.equal(report.qualificationOutcome, 'FAILED');
+    assert.equal(report.deploymentAuthorized, false);
+    assert.equal(report.state, 'NO_TARGET_CREATED');
+    assert.deepEqual(report.credentialActions, []); assert.deepEqual(report.providerMutations, []);
+    assert.equal(sqlSessions, 0);
+    assert.doesNotMatch(JSON.stringify(f.checkpoints), /privatefixturetoken|anotherfixture|synthetic-secret-never-output/);
+  }
+});
+
+test('execute, transient errors and target mismatches stop without the additional metadata request', async () => {
+  for (const [execute, status] of [[true, 404], [false, 429], [false, 500], [false, 200]]) {
+    const f = fixture(), requests = [];
+    f.options.environment.RESTORE_CHECK_EXECUTE = String(execute);
+    f.options.api = new TestRestoreApi('privatefixturetoken:' + password, async (url, options) => {
+      requests.push([options.method, url]);
+      return Response.json(status === 200 ? { id: 'unexpectedproduction', name: RESTORE.database, kind: 'postgresql' } : {}, { status });
+    });
+    const report = await runNativeRestore(f.options);
+    assert.deepEqual(requests, [['GET', apiBase]]);
+    assert.equal(report.sourceAccessAfterDenial, undefined);
+    assert.equal(report.qualificationOutcome, 'FAILED');
+    assert.deepEqual(report.credentialActions, []); assert.deepEqual(report.providerMutations, []);
+  }
+});
 
 test('role reset requires connect AND password-delete for the target classification', async () => {
   for (const production of [false, true]) {

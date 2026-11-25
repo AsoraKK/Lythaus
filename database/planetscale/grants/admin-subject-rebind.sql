@@ -73,6 +73,11 @@ DECLARE
   principal identity.users%ROWTYPE;
   commitment text;
 BEGIN
+  IF pg_catalog.pg_is_in_recovery()
+     OR ('vqa2g2xc9wsl' = ANY(pg_catalog.regexp_split_to_array(
+       pg_catalog.current_setting('cluster_name'), '[^a-z0-9]+'))) IS NOT TRUE THEN
+    RETURN false;
+  END IF;
   PERFORM pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'));
   PERFORM pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'));
   SELECT control.policy_text, control.revision, control.capability_sha256, control.disabled_from_policy_sha256

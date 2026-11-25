@@ -460,6 +460,11 @@ function authorityDiagnostic(token) {
     grants: { status: 'NOT_REQUESTED' },
   };
 }
+export function isSourceDatabaseGrant(row) {
+  return row.resource_id === RESTORE.databaseId && row.resource?.id === RESTORE.databaseId
+    && row.resource.name === RESTORE.database && row.resource.deleted_at === null
+    && row.resource_type?.toLowerCase() === 'database';
+}
 function grantsDiagnostic(rows, pages) {
   const projected = rows.slice(0, diagnosticLimit).map(value => {
     const row = object(value) ? value : {}, accesses = Array.isArray(row.accesses) ? row.accesses : [];
@@ -610,29 +615,28 @@ export class RestoreApi {
     }
     throw new RestoreFailure('token_grants_inventory_incomplete');
   }
-  async authority(onEvidence = () => {}, includeGrantDiagnostic = false, requiredThrough, diagnosePlan404 = false) {
-    let database;
+  async inspectDeniedSourceRead() {
+    const evidence = { selfRead: 'UNVERIFIED', selfReadFailureHttpStatus: null,
+      configuredTokenMatches: null, explicitSourceReadGrantInResponse: null };
     try {
-      database = await this.request('');
-    } catch (sourceError) {
-      if (!this.#cleanupOnly && diagnosePlan404 && sourceError.httpStatus === 404) {
-        const evidence = { databaseMetadataHttp: 404, selfMetadataHttp: null, exactDatabaseReadDescriptor: 'UNVERIFIED' };
-        try {
-          const self = await this.request('/../service-tokens/self');
-          evidence.selfMetadataHttp = 200;
-          if (self?.id === this.tokenId && Array.isArray(self.service_token_accesses)) {
-            const found = self.service_token_accesses.some(row => row?.resource_id === RESTORE.databaseId
-              && row.resource?.id === RESTORE.databaseId && row.resource.name === RESTORE.database
-              && row.resource.deleted_at === null && row.resource_type?.toLowerCase() === 'database' && row.access === 'read_database');
-            evidence.exactDatabaseReadDescriptor = found ? 'PRESENT' : 'NOT_SHOWN';
-          }
-        } catch (selfError) {
-          evidence.selfMetadataHttp = selfError.httpStatus ?? null;
+      const token = await this.request('/../service-tokens/self');
+      if (!safeId(token.id)) return evidence;
+      evidence.selfRead = 'READ';
+      evidence.configuredTokenMatches = token.id === this.tokenId;
+      const rows = token.service_token_accesses;
+      if (evidence.configuredTokenMatches && Array.isArray(rows) && rows.every(object)) {
+        const matching = rows.filter(row => row.access === 'read_database');
+        if (matching.every(row => typeof row.resource_type === 'string')) {
+          evidence.explicitSourceReadGrantInResponse = matching.some(isSourceDatabaseGrant);
         }
-        await onEvidence(evidence);
       }
-      throw sourceError;
+    } catch (error) {
+      if (error instanceof RestoreFailure && Number.isInteger(error.httpStatus)) evidence.selfReadFailureHttpStatus = error.httpStatus;
     }
+    return evidence;
+  }
+  async authority(onEvidence = () => {}, includeGrantDiagnostic = false, requiredThrough) {
+    const database = await this.request('');
     requireThat(database.id === RESTORE.databaseId && database.name === RESTORE.database && database.kind === 'postgresql', 'database_identity_changed');
     const token = await this.request('/../service-tokens/self');
     requireThat(token.id === this.tokenId && Array.isArray(token.service_token_accesses), 'existing_token_authority_unverifiable');
@@ -660,9 +664,7 @@ export class RestoreApi {
       if (evidence.rowsTruncated && !grantDiagnosticFailure) grantDiagnosticFailure = new RestoreFailure('token_authority_diagnostic_truncated');
       await onEvidence(structuredClone(evidence));
     }
-    const accesses = new Set(token.service_token_accesses.filter(row => row.resource_id === RESTORE.databaseId
-      && row.resource?.id === RESTORE.databaseId && row.resource.name === RESTORE.database && row.resource.deleted_at === null
-      && row.resource_type?.toLowerCase() === 'database').map(row => row.access));
+    const accesses = new Set(token.service_token_accesses.filter(isSourceDatabaseGrant).map(row => row.access));
     const required = ['read_database', 'read_branch', 'delete_branch', 'delete_production_branch', 'read_backups'];
     if (!this.#cleanupOnly) required.push('create_branch', 'connect_branch', 'connect_production_branch');
     for (const access of required) {

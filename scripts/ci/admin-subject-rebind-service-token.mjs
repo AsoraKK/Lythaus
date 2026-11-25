@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
-import { RESTORE } from './planetscale-native-restore-contract.mjs';
+import { RESTORE, isSourceDatabaseGrant } from './planetscale-native-restore-contract.mjs';
 import { ownerContext, AuditFailure, check, object, safeId } from './planetscale-migration-role-audit.mjs';
 import { requireRebindPacketMain, rebindPacketGithubRead } from './admin-subject-rebind-install-packet.mjs';
 import { quietConsumers } from './planetscale-migration-probe-evidence.mjs';
@@ -22,6 +22,31 @@ const operationClasses = Object.freeze(['database_metadata_read', 'main_branch_m
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const completedCheckNames = Object.freeze(['databaseVerified', 'productionBranchVerified', 'selfMetadataVerified',
   'tokenExpiryKnown', 'grantPaginationComplete']);
+
+// These names control reporting only. Qualification and cleanup still check their dedicated token independently.
+const restoreActions = new Set(['read_database', 'read_branch', 'read_backups', 'create_branch', 'delete_branch',
+  'delete_production_branch', 'connect_branch', 'connect_production_branch', 'delete_production_branch_password',
+  'restore_production_branch_backup', 'restore_production_branch_backups']);
+const organizationTokenActions = new Set(['read_service_tokens', 'write_service_tokens', 'delete_service_tokens']);
+
+function sharedTokenSelfRecord(token, lifetimeCoversWindow) {
+  const report = { lifetimeCoversWindow, oldCoreActionsObserved: null, organizationActionsObserved: null,
+    otherOrUnclassifiedAccessObserved: null };
+  const rows = token.service_token_accesses;
+  if (!Array.isArray(rows) || !rows.every(row => object(row) && typeof row.resource_type === 'string' && typeof row.access === 'string')) return report;
+  const database = new Set(), organization = new Set();
+  let other = false;
+  for (const row of rows) {
+    if (isSourceDatabaseGrant(row) && restoreActions.has(row.access)) database.add(row.access);
+    else if (row.resource_type.toLowerCase() === 'organization' && row.resource_id === 'im68in7j2miy'
+      && row.resource?.id === row.resource_id && row.resource.name === RESTORE.organization
+      && (row.resource.deleted_at === null || !Object.hasOwn(row.resource, 'deleted_at'))
+      && organizationTokenActions.has(row.access)) organization.add(row.access);
+    else other = true;
+  }
+  return { ...report, oldCoreActionsObserved: [...database].sort(), organizationActionsObserved: [...organization].sort(),
+    otherOrUnclassifiedAccessObserved: other };
+}
 
 export function utcMicros(value) {
   const match = typeof value === 'string' ? /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,6}))?Z$/.exec(value) : null;
@@ -141,7 +166,7 @@ export async function serviceGrantInventory(reader) {
 }
 
 export async function inspectServiceAuthority(reader, { now = Date.now(), requiredThrough = now + 2 * 3600000 + 300000,
-  onCheckpoint = () => {} } = {}) {
+  onCheckpoint = () => {}, onSharedSelfRecord = () => {} } = {}) {
   check(Number.isSafeInteger(now) && Number.isSafeInteger(requiredThrough) && requiredThrough >= now, 'service_audit_window_invalid');
   const database = await reader.get('');
   check(database.id === RESTORE.databaseId && database.name === 'lythaus-core' && database.kind === 'postgresql', 'service_audit_database_mismatch');
@@ -157,6 +182,7 @@ export async function inspectServiceAuthority(reader, { now = Date.now(), requir
   check(Object.hasOwn(token, 'expires_at') && (token.expires_at === null || expiry !== null), 'service_audit_token_expiry_unverified');
   onCheckpoint('tokenExpiryKnown');
   const lifetimeCoversWindow = token.expires_at === null || expiry > BigInt(requiredThrough) * 1000n;
+  if (reader.source === 'existing_api_token') onSharedSelfRecord(sharedTokenSelfRecord(token, lifetimeCoversWindow));
   const grants = await serviceGrantInventory(reader);
   onCheckpoint('grantPaginationComplete');
   const target = grants.rows.filter(row => row.resource_type.toLowerCase() === 'database'
@@ -199,7 +225,9 @@ export async function auditRebindServiceTokens({ env = process.env, fetchImpl = 
     if (!configured.configured) { report.sources.push({ source, configured: false, status: configured.status }); continue; }
     const reader = new RebindServiceReader(env, source, fetchImpl);
     const completedChecks = Object.fromEntries(completedCheckNames.map(name => [name, false]));
+    let sharedSelfRecord;
     try { report.sources.push(await inspectServiceAuthority(reader, { now,
+      onSharedSelfRecord: value => { sharedSelfRecord = value; },
       onCheckpoint: name => { check(completedCheckNames.includes(name), 'service_audit_checkpoint_invalid'); completedChecks[name] = true; } })); }
     catch (error) {
       report.sources.push({ source, configured: true, status: 'BLOCKED_AUTHORITY_UNVERIFIED', tokenFingerprint: reader.tokenFingerprint,
@@ -210,6 +238,7 @@ export async function auditRebindServiceTokens({ env = process.env, fetchImpl = 
           && error.requestPage >= 1 && error.requestPage <= 5 ? error.requestPage : null,
         requestId: uuid(error?.requestId) ? error.requestId : null, completedChecks });
     }
+    if (sharedSelfRecord) report.sources.at(-1).sharedSelfRecord = sharedSelfRecord;
   }
   report.recommendedSource = TOKEN_SOURCES.find(source => report.sources.some(row => row.source === source
     && row.status === 'DECLARED_AUTHORITY_VERIFIED_NOT_ISSUANCE_PROOF')) ?? null;

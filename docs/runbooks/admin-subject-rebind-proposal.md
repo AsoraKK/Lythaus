@@ -11,6 +11,56 @@ stored identity or key history. Both Access selectors were restored to the
 current Lythaus address and the old session logged out. Do not repeat that
 experiment or change the selectors as part of this procedure.
 
+## Prove where the current human request fails
+
+The ordinary production health response includes its opaque correlation reference on a denial. To trace that response before considering a deployment, dispatch **Admin runtime target check (pass/fail only)** on protected main. Supply `health_denial_correlation` and `health_observed_before_utc` and leave `inspect_subject_recovery` off. Choose a UTC end time just after the observed request. This mode checks the preceding hour against the serving deployment attested by [canonical release 40576668956](https://github.com/AsoraKK/Lythaus/actions/runs/40576668956) and [Cloudflare inspection 44719053793](https://github.com/AsoraKK/Lythaus/actions/runs/44719053793).
+
+Following production environment approval, the job uses the existing Cloudflare token to read Worker deployment metadata and the Workers Logs column catalog. It asks Cloudflare Analytics for an aggregate count matching the fixed script, health route and reference. Only a boolean is reported. The protected job takes no database connection and does not read raw log events. `no_sampled_match` means the retained dataset had no matching event in the checked representation. The serving Worker samples logs. A matched log corroborates the request path and serving version and does not identify the human, establish key continuity or authorize a recovery write. [Cloudflare read-only SQL API](https://developers.cloudflare.com/analytics/sql-api/get-started/)
+
+Run the protected, read-only **Admin runtime target check** on the reviewed
+merged SHA. Select `inspect_subject_recovery` to compare the production
+environment's existing approved human selector with both Access applications.
+The selector comes from `LYTHAUS_NEW_CORE_OWNER_EMAIL`. Only the human selector
+is reused. All database, Worker, issuer and route checks target the original
+production environment. Record the runner SHA and the distinct serving SHA,
+Worker version and origin. Keep the selectors and credentials private.
+
+The candidate requires the **canonical auth-critical diagnostic release**,
+exact build acceptance, independent and native recovery evidence and a
+separate production approval. Include the Admin-only temporary secret
+`ADMIN_SUBJECT_DIAGNOSTIC_HUMAN_PIN` and its closure in that approval. Its
+release-specific value stays in protected runner files and the Admin Worker
+secret store. Candidate upload and publication alone do not establish that
+the diagnostic version serves the route. Verify the live version on
+`admin.lythaus.co/api/admin/*` and its `DB_ADMIN_FRESH` binding before sign-in.
+
+Once the exact version serves and the approved window is open, the intended
+human opens `https://admin.lythaus.co/api/admin/recovery/subject-diagnostic`
+in a fresh private browser session and completes ordinary Access sign-in.
+Record the opaque correlation reference and sanitized outcome. The Worker
+validates the app token signature, issuer, UI audience, issue time and identity.
+Its read-only transaction checks the production primary's startup branch
+identifier, database, session role and original bootstrap link. The only
+SQL input to this diagnostic is the branch ID. Keep authentication material,
+membership checksums, request headers and raw database results out of receipts.
+
+A missing binding match with one original active administrator establishes
+that the current derived binding differs. Check the authenticated provisioning
+and release history of the lookup key before attributing that difference to
+the subject. Secret names by themselves cannot establish key continuity.
+If the binding matches, trace the failing ordinary route using its correlation
+reference. A successful diagnostic response alone does not establish access
+to health, the normal flags page or the moderation API.
+
+Close the diagnostic by returning to an approved version with the diagnostic
+disabled. Verify the live version, an unavailable diagnostic, and removal of
+the temporary binding from the serving configuration. Retained immutable
+versions can still contain an encrypted historical binding. Their compiled
+window expires after at most three hours. Preserve the existing lookup key.
+Before a later membership mutation, independently confirm that the effective
+Admin session and provider logging, Insights and tracing protect bound
+parameters. Stop if their confidentiality or the key history is unverified.
+
 ## Preserved identity and permission boundary
 
 Only the lookup binding of the unique original active control-plane
@@ -79,6 +129,8 @@ token-ID fingerprints, exact token expiry, permission booleans and pagination
 counts. It never records token material, provider bodies, connection strings or
 database rows. Verify original artifact bytes, SHA-256, run/attempt/job/source
 provenance and freshness before using its evidence in any later approval.
+
+For `existing_api_token`, `sharedSelfRecord` records the restore actions explicitly visible on the pinned old-core database and the token-management actions visible on the pinned Lythaus organization. The audit retains this observation after verifying the branch, token identity and expiry, even if the following grants-list request fails. Null action lists mean the inline representation was missing or malformed. Empty lists mean there were no recognized matching rows in that representation. Other resources and unrecognized actions are reported together as a boolean. The existing grants-list and qualification checks still apply. Inspect the two sources independently. A restore continues to require the dedicated `PLANETSCALE_RESTORE_API_TOKEN`, and issuance and private storage require separate approval.
 
 Declared create/delete production-password permissions are not issuance or SQL
 qualification proof. No qualified existing source means BLOCKED; do not create a
@@ -373,6 +425,12 @@ observations of serving route/version, both unchanged Access selectors and the
 exact Hyperdrive origin, role, TLS and cache settings. The proof must remain
 no more than two minutes old through the policy transaction. No routing or
 database rebinding outside this lane is allowed during the window.
+
+Preview and execute verify the primary branch identifier from PostgreSQL's
+startup setting in the same transaction as the membership check. The rebind
+function independently checks that identifier and refuses a standby before
+taking locks. A restored copy with the same database and role names cannot
+use the production approval.
 
 All write paths coordinate schema/bootstrap locks before policy/membership
 locks. Operator transitions lock the three exact canonical function catalog rows
