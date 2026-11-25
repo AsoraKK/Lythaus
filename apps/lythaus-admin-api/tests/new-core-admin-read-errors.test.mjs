@@ -52,6 +52,7 @@ const production = (await import('../src/index.ts')).default;
 const { IsolatedAdminReadFailure } = await import('../src/isolated-admin-read-failure.ts');
 
 const env = {
+  WORKER_VERSION: { id: '33333333-3333-4333-8333-333333333333', tag: 'a'.repeat(40), timestamp:'2026-11-25T00:00:00Z' },
   EXPECTED_HOSTNAMES: host, CORS_ALLOWED_ORIGINS: 'https://' + host,
   ACCESS_TEAM_DOMAIN: new URL(issuer).host, ACCESS_JWKS_URL: issuer + '/cdn-cgi/access/certs',
   ACCESS_AUDIENCES: audience, ACCESS_SUBJECT_HMAC_KEY: key,
@@ -79,7 +80,12 @@ async function read(worker, path, { bindings = env, token = assertion, context }
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
   assert.match(body.correlationId, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
   assert.equal(response.headers.get('x-correlation-id'), body.correlationId);
-  return { status: response.status, body, headers: [...response.headers] };
+  return { status: response.status, body, headers: Object.fromEntries(response.headers) };
+}
+
+function assertBuild(result, version = env.WORKER_VERSION) {
+  assert.equal(result.headers['x-lythaus-worker-version'], version?.id);
+  assert.equal(result.headers['x-lythaus-source-sha'], version?.tag);
 }
 
 function assertPrivate(result) {
@@ -93,6 +99,7 @@ function assertFailure(result, stage, category) {
     error: 'admin_request_failed', correlationId: result.body.correlationId, diagnostic: { stage, category },
   });
   assertPrivate(result);
+  assertBuild(result);
 }
 
 test('a signed nonmember receives the ordinary denial after exactly one bound lookup on each isolated read route', async () => {
@@ -100,6 +107,7 @@ test('a signed nonmember receives the ordinary denial after exactly one bound lo
     const result = await read(isolated, path);
     assert.equal(result.status, 403);
     assert.deepEqual(result.body, { error: 'admin_role_required', correlationId: result.body.correlationId });
+    assertBuild(result);
     assertPrivate(result);
   }
   assert.deepEqual(statements, [membershipSql, membershipSql]);
@@ -127,6 +135,7 @@ test('missing or malformed assertions produce no diagnostic and never reach Post
       const result = await read(isolated, path, { token });
       assert.equal(result.status, 401);
       assert.deepEqual(result.body, { error: expected, correlationId: result.body.correlationId });
+      assertBuild(result, null);
       assertPrivate(result);
     }
   }
@@ -179,11 +188,30 @@ test('only documented database system error messages select specific provider ca
   }
 });
 
+test('each rejected Hyperdrive component produces only its own diagnostic before the membership read', async () => {
+  const binding = {connect() {}, host:'fixture.hyperdrive.local', port:5432, user:'fixture', password:'fixture', database:'postgres'};
+  const cases = [
+    [{...binding,host:'foreign.invalid'},'native_host_rejected'],
+    [{...binding,port:0},'native_port_rejected'],
+    [{...binding,user:''},'native_user_rejected'],
+    [{...binding,password:''},'native_password_rejected'],
+    [{...binding,database:''},'native_database_rejected'],
+    [{...binding,host:'0123456789abcdef0123456789abcdef.workers.alt',scheme:'mysql'},'native_scheme_rejected'],
+    [{connectionString:rawMessage},'legacy_url_invalid'],
+    [{connectionString:'postgresql://fixture@fixture.hyperdrive.local/postgres?sslmode=require'},'legacy_tls_policy_rejected'],
+  ];
+  for (const [invalid, category] of cases) {
+    for (const path of routes) {
+      const result = await read(isolated, path, {bindings:{...env,DB_ADMIN_FRESH:invalid}});
+      assertFailure(result, 'db_binding', category);
+    }
+  }
+  assert.deepEqual(statements, []);
+});
+
 test('unusable scoped binding and failed subject derivation expose only the operation and its category', async () => {
   const badKey = { toString() { throw new Error(rawMessage); } };
   for (const path of routes) {
-    const badBinding = await read(isolated, path, { bindings: { ...env, DB_ADMIN_FRESH: { connectionString: rawMessage } } });
-    assertFailure(badBinding, 'db_binding', 'invalid_binding');
     const unavailableBinding = await read(isolated, path, { bindings: { ...env, get DB_ADMIN_FRESH() { throw new Error(rawMessage); } } });
     assertFailure(unavailableBinding, 'db_binding', 'binding_unavailable');
     const missingBinding = await read(isolated, path, { bindings: { ...env, DB_ADMIN_FRESH:undefined } });
@@ -198,6 +226,17 @@ test('unusable scoped binding and failed subject derivation expose only the oper
   assert.deepEqual(statements, []);
 });
 
+test('signed read failures omit both build headers if either provider version identifier is malformed', async () => {
+  failure = {stage:'query',code:'42501'};
+  for (const version of [undefined, {...env.WORKER_VERSION,id:rawMessage}, {...env.WORKER_VERSION,tag:rawMessage}]) {
+    const result = await read(isolated, routes[0], {bindings:{...env, WORKER_VERSION:version}});
+    assert.equal(result.status, 500);
+    assert.deepEqual(result.body.diagnostic, {stage:'membership_query',category:'permission_denied'});
+    assertBuild(result, null);
+    assertPrivate(result);
+  }
+});
+
 test('the full Admin handler keeps the ordinary response under the same signed lookup failure', async () => {
   assert.deepEqual(Object.keys(production), ['fetch']);
   failure = { stage: 'query', code: '42501' };
@@ -208,6 +247,7 @@ test('the full Admin handler keeps the ordinary response under the same signed l
     const result = await read(production, path, { bindings, context });
     assert.equal(result.status, 500);
     assert.deepEqual(result.body, { error: 'admin_request_failed', correlationId: result.body.correlationId });
+    assertBuild(result, null);
     for (const value of secrets) assert.equal(JSON.stringify(result).includes(value), false);
   }
 });
@@ -218,6 +258,7 @@ test('a failure after successful membership verification never appears as a fail
     const result = await read(isolated, path);
     assert.equal(result.status, 500);
     assert.deepEqual(result.body, { error: 'admin_request_failed', correlationId: result.body.correlationId });
+    assertBuild(result, null);
     assertPrivate(result);
   }
   assert.equal(statements.length, 4);
