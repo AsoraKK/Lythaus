@@ -5,7 +5,7 @@ import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET, ver
 import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
 import { REPAIR_PINS } from './new-core-isolated-repair-pins.mjs';
 import { intent, priorRepairState, routed, uuid } from './new-core-isolated-repair-state.mjs';
-import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
+import { parseProductionDeploymentState, WORKER_VERSION_ID } from './resolve-production-version-state.mjs';
 
 export const transition = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/production-database-transition.json', import.meta.url)));
 
@@ -179,7 +179,7 @@ function assertFullAdminVersion(version, bindings, id, sourceSha, destination, c
   const text = name => has(name,b => b.type === 'plain_text' && typeof b.text === 'string') ? named(name)[0].text : '';
   const emailService = config.services?.filter(s => s.binding === 'AUTH_EMAIL_ENVELOPE');
   const buckets = config.r2_buckets ?? [];
-  if (!versionPattern.test(previousDeploymentId) || version?.id !== id || !annotations.length || !annotations.every(a => a['workers/tag'] === sourceSha &&
+  if (!WORKER_VERSION_ID.test(previousDeploymentId) || version?.id !== id || !annotations.length || !annotations.every(a => a['workers/tag'] === sourceSha &&
     a['workers/message'] === fullAdminMessage(pins.servingVersionId,previousDeploymentId)) ||
     secrets.length !== uploadSecrets.length + 1 || ![subjectKey,...uploadSecrets].every(name => has(name,b => b.type === 'secret_text' && Object.keys(b).length === 2)) ||
     !has('ASSETS',b => b.type === 'assets') || !has('WORKER_VERSION',b => b.type === 'version_metadata') ||
@@ -199,7 +199,7 @@ function assertFullAdminVersion(version, bindings, id, sourceSha, destination, c
 
 function assertStillServing(deployments, expectedVersion, expectedDeployment) {
   const active = (Array.isArray(deployments) ? deployments : deployments?.deployments)?.[0];
-  if (!versionPattern.test(expectedDeployment) || active?.id !== expectedDeployment ||
+  if (!WORKER_VERSION_ID.test(expectedDeployment) || active?.id !== expectedDeployment ||
     active.versions?.length !== 1 || active.versions[0].version_id !== expectedVersion || active.versions[0].percentage !== 100) {
     throw new Error('replacement Admin serving deployment differs from the predeployment snapshot');
   }
@@ -233,7 +233,7 @@ async function verifyAdminInventory({pins,current,releaseSha,token,fetchImpl}) {
   }
   const latest = versions.find(row => row.id === current.versionId);
   if (!latest || !Number.isSafeInteger(latest.number) || latest.number <= 0 ||
-    !versions.every(row => versionPattern.test(row.id) && Number.isSafeInteger(row.number) && row.number > 0 &&
+    !versions.every(row => WORKER_VERSION_ID.test(row.id) && Number.isSafeInteger(row.number) && row.number > 0 &&
       row.number <= latest.number && row.annotations?.['workers/tag'] !== releaseSha) ||
     new Set(versions.map(row => row.number)).size !== versions.length || new Set(versions.map(row => row.id)).size !== versions.length) {
     throw new Error('previous Admin version upload requires read-only reconciliation');
@@ -287,8 +287,8 @@ export async function verifyReplacementAdminUpload({versionId, releaseSha, snaps
   fetchImpl = fetch, destination = transition.destination}) {
   const pins = validateIsolatedVersions(destination);
   const current = soleAdminBefore(snapshot);
-  if (!versionPattern.test(versionId) || !/^[a-f0-9]{40}$/.test(releaseSha) ||
-    [pins.parentVersionId,pins.childVersionId,pins.servingVersionId,current.versionId].includes(versionId)) {
+  if (!WORKER_VERSION_ID.test(versionId) || !/^[a-f0-9]{40}$/.test(releaseSha) ||
+    [pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId,current.versionId].includes(versionId)) {
     throw new Error('exact replacement Admin upload acknowledgement required');
   }
   const account = '/accounts/' + TARGET.account;
@@ -307,13 +307,13 @@ export async function verifyReplacementAdminUpload({versionId, releaseSha, snaps
   const {result:deployments} = await client.get(deploymentsPath);
   const history = Array.isArray(deployments) ? deployments : deployments?.deployments;
   const active = history?.[0];
-  if (!versionPattern.test(snapshot.observedDeployment?.id) || active?.id !== snapshot.observedDeployment.id) {
+  if (!WORKER_VERSION_ID.test(snapshot.observedDeployment?.id) || active?.id !== snapshot.observedDeployment.id) {
     throw new Error('replacement Admin serving deployment differs from the same-run observation');
   }
   if (resumeZeroTraffic && active?.versions?.length === 2) {
     const staged = active.versions.find(v => v.version_id === versionId && v.percentage === 0);
     const serving = active.versions.find(v => v.version_id === current.versionId && v.percentage === 100);
-    if (!staged || !serving || !versionPattern.test(active.id) || active.id === history[1]?.id ||
+    if (!staged || !serving || !WORKER_VERSION_ID.test(active.id) || active.id === history[1]?.id ||
       active.annotations?.['workers/message'] !== 'Stage reviewed Lythaus admin candidate at zero traffic' ||
       !(Date.parse(active.created_on) > Date.parse(history[1]?.created_on))) throw new Error('replacement Admin zero-traffic stage differs from prior acceptance');
     assertStillServing(history.slice(1),current.versionId,predecessor);
