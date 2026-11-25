@@ -190,14 +190,16 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
     state.drive.restarted_on='2026-11-24T00:00:00Z';
     if (fault.startsWith('recorded_worker_resume_')) {
       const resume={...args,resumeWorker:true};
-      if (fault==='recorded_worker_resume_success') {
+      if (['recorded_worker_resume_success','recorded_worker_resume_script_null'].includes(fault)) {
         const outcome=await runIsolatedSetup(resume);
         assert.equal(outcome.status,'OWNER_TEST_PENDING');
         assert.equal(outcome.workerId,recordedWorkerId);
         assert.deepEqual(journal.map(j=>j.operation),['stage_version','stage_version',
           'activate_version','create_test_dns','create_test_route']);
       } else {
-        await assert.rejects(runIsolatedSetup(resume),/recorded_worker_checkpoint_changed/);
+        const expected = /_script_(enabled|child_enabled)$/.test(fault)
+          ? /recorded_worker_script_logging_readback_changed/ : /recorded_worker_checkpoint_changed/;
+        await assert.rejects(runIsolatedSetup(resume),expected);
         assert.deepEqual(journal,[]);
         assert.equal(state.deployed,false);
       }

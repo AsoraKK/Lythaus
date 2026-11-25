@@ -396,10 +396,10 @@ export async function runIsolatedSetup({env, sourceDir, artifactDir, authorize, 
       && ['logs','traces'].every(key=>receipt.worker.fieldShapes[key] === 'false')
       && ['agents','issues'].every(key=>receipt.worker.fieldShapes[key] === 'omitted')
       && receipt.subdomain?.workersDev === 'false' && receipt.subdomain.previews === 'false'
-      && receipt.logging?.disabled
       && receipt.versionsEmpty && receipt.deploymentsEmpty && receipt.routingEmpty && receipt.customDomainEmpty
       && receipt.productionBaselineMatches && receipt.hyperdrive && checksPass(receipt.hyperdrive)
       && !receipt.errors.length, 'recorded_worker_checkpoint_changed');
+    check(receipt.logging?.disabled, 'recorded_worker_script_logging_readback_changed');
     await emptyRouting(api);
     api.selectRecordedWorker();
   } else {
