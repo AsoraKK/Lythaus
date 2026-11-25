@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import pg from 'pg';
-import { generateKeyPair, exportJWK, exportPKCS8, jwtVerify, SignJWT } from 'jose';
+import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
 import { hmacLookup, signAccessToken, uuidv7 } from '../../security/src/index.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
 import { registerSupportCompletionCases } from './support-feedback-completion.postgres.mjs';
@@ -18,7 +18,7 @@ const url=new URL(supplied);
 if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname)||!/^\/lythaus_support_test/.test(url.pathname))throw new Error('support_tests_refuse_nonlocal_database');
 const root=process.cwd(),database=`lythaus_support_test_${uuidv7().replaceAll('-','')}`;
 const local=new URL(url);local.pathname=`/${database}`;
-let control,privateKey,publicKey,jwks,jwksServer,jwksUrl;
+let control,memberPrivateKey,accessPrivateKey,jwks,jwksServer,jwksUrl;
 const workerFixture={supportQueries:0,failAudit:false};
 class LocalHyperdriveClient extends pg.Client {
   constructor(config) {
@@ -121,8 +121,13 @@ before(async()=>{
   await control.query(`CREATE FUNCTION support.fixture_scrub_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
     IF current_setting('support_fixture.fail_scrub',true)='on' THEN RAISE EXCEPTION 'PRIVATE_SENTINEL'; END IF; RETURN OLD; END $$;
     CREATE TRIGGER fixture_scrub_failure BEFORE DELETE ON support.notes FOR EACH ROW EXECUTE FUNCTION support.fixture_scrub_failure();`);
-  ({privateKey,publicKey}=await generateKeyPair('ES256',{extractable:true}));const publicJwk=await exportJWK(publicKey);publicJwk.kid='local-fixture';jwks=JSON.stringify({keys:[publicJwk]});
-  jwksServer=createServer((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(jwks);});
+  const memberKeys=await generateKeyPair('ES256',{extractable:true});
+  memberPrivateKey=memberKeys.privateKey;
+  jwks=JSON.stringify({keys:[{...await exportJWK(memberKeys.publicKey),kid:'local-fixture',alg:'ES256'}]});
+  const accessKeys=await generateKeyPair('RS256');
+  accessPrivateKey=accessKeys.privateKey;
+  const accessJwks=JSON.stringify({keys:[{...await exportJWK(accessKeys.publicKey),kid:'local-access',alg:'RS256'}]});
+  jwksServer=createServer((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(accessJwks);});
   await new Promise((resolve,reject)=>{jwksServer.once('error',reject);jwksServer.listen(0,'127.0.0.1',resolve);});
   jwksUrl=`http://127.0.0.1:${jwksServer.address().port}/certs`;
 });
@@ -135,14 +140,13 @@ async function fixture(t,custom=policy()) {
   const member=uuidv7(),other=uuidv7(),owner=uuidv7(),admin=uuidv7(),subject=`local-owner-${owner}`,adminSubject=`local-admin-${admin}`;
   const ids=[member,other,owner,admin];for(const user of ids)await control.query('INSERT INTO identity.users(id) VALUES($1)',[user]);
   for(const [user,accessSubject,role] of [[owner,subject,'owner'],[admin,adminSubject,'administrator']])await control.query('INSERT INTO identity.admin_memberships(user_id,role,active,access_subject_hmac) VALUES($1,$2,true,decode($3,\'base64\'))',[user,role,hmacLookup(accessSubject,'local-fixture-secret')]);
-  const auth=supportAuthentication({JWT_PUBLIC_JWKS:jwks,ACCESS_JWKS_URL:'https://local-fixture.example.invalid/certs',ACCESS_AUDIENCES:'local-owner',ACCESS_TEAM_DOMAIN:'local-fixture.example.invalid',ACCESS_SUBJECT_HMAC_KEY:'local-fixture-secret'},
-    async(token,config)=>(await jwtVerify(token,publicKey,{algorithms:['ES256'],audience:config.ACCESS_AUDIENCES,issuer:`https://${config.ACCESS_TEAM_DOMAIN}`})).payload);
+  const auth=supportAuthentication(workerEnvironment());
   async function memberRequest(user=member,key=uuidv7(),version=1,claimedRoles=[]) {
-    const token=await signAccessToken({userId:user,privateKeyPem:await exportPKCS8(privateKey),keyId:'local-fixture',tokenVersion:version,roles:claimedRoles});
+    const token=await signAccessToken({userId:user,privateKeyPem:await exportPKCS8(memberPrivateKey),keyId:'local-fixture',tokenVersion:version,roles:claimedRoles});
     return new Request('https://local-fixture.example.invalid/support',{headers:{authorization:`Bearer ${token}`,'idempotency-key':key}});
   }
   async function ownerRequest(accessSubject=subject,key=uuidv7()) {
-    const assertion=await new SignJWT({}).setProtectedHeader({alg:'ES256'}).setSubject(accessSubject).setIssuer('https://local-fixture.example.invalid').setAudience('local-owner').setIssuedAt().setExpirationTime('5m').sign(privateKey);
+    const assertion=await new SignJWT({}).setProtectedHeader({alg:'RS256',kid:'local-access'}).setSubject(accessSubject).setIssuer('https://local-fixture.example.invalid').setAudience('local-owner').setIssuedAt().setExpirationTime('5m').sign(accessPrivateKey);
     return new Request('https://local-fixture.example.invalid/support',{headers:{'cf-access-jwt-assertion':assertion,'idempotency-key':key}});
   }
   const service=(channel,options={})=>createSupportService({authentication:auth,runTransaction:runner(channel==='member'?'lythaus_runtime':'lythaus_admin',options),policy:custom});

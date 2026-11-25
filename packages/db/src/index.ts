@@ -1,6 +1,7 @@
 import { Client, type QueryResult, type QueryResultRow } from 'pg';
 
 export type DatabaseClient = Client;
+export type DatabaseQueryStage = 'binding' | 'connect' | 'query' | 'close';
 
 export interface HyperdriveBinding {
   connectionString: string;
@@ -65,15 +66,24 @@ export { parseSupportServicePolicy, type SupportServicePolicy } from './support-
 export async function query<T extends QueryResultRow = QueryResultRow>(
   binding: HyperdriveBinding,
   text: string,
-  values: readonly unknown[] = []
+  values: readonly unknown[] = [],
+  classifyFailure?: (stage: DatabaseQueryStage, error: unknown) => Error,
 ): Promise<QueryResult<T>> {
-  const connectionString = verifyFullConnectionString(binding.connectionString);
-  const client = new Client({ connectionString });
-  await client.connect();
+  let stage: DatabaseQueryStage = 'binding';
   try {
-    return await client.query<T>(text, values as unknown[]);
-  } finally {
-    await client.end();
+    const connectionString = verifyFullConnectionString(binding.connectionString);
+    const client = new Client({ connectionString });
+    stage = 'connect';
+    await client.connect();
+    stage = 'query';
+    try {
+      return await client.query<T>(text, values as unknown[]);
+    } finally {
+      try { await client.end(); }
+      catch (error) { stage = 'close'; throw error; }
+    }
+  } catch (error) {
+    throw classifyFailure ? classifyFailure(stage, error) : error;
   }
 }
 

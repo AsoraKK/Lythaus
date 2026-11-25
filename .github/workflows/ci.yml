@@ -278,6 +278,7 @@ jobs:
         run: >-
           node --experimental-test-module-mocks --experimental-strip-types --test
           apps/lythaus-admin-api/tests/solo-recovery-diagnostic.test.mjs
+          apps/lythaus-admin-api/tests/new-core-admin-read-errors.test.mjs
           scripts/tests/prepare-subject-diagnostic-policy.test.mjs
           scripts/tests/subject-diagnostic-release-contract.test.mjs
           scripts/tests/admin-runtime-target-pass-fail.test.mjs
