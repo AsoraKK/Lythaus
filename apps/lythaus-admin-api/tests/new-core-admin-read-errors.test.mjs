@@ -15,6 +15,7 @@ const routes = ['/api/admin/health', '/api/admin/moderation/cases'];
 const membershipSql = "SELECT user_id, role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true";
 let failure;
 let statements;
+let member;
 
 function failAt(stage) {
   const code = stage === failure?.stage ? failure.code : stage === 'end' ? failure?.endCode : undefined;
@@ -27,10 +28,11 @@ class FixtureClient {
   async connect() { failAt('connect'); }
   async query(statement, parameters) {
     statements.push(statement);
+    if (member && statement.startsWith('INSERT INTO system.rate_limit_windows')) throw new Error(rawMessage);
     assert.equal(statement, membershipSql);
     assert.deepEqual(parameters, [digest]);
     failAt('query');
-    return { command: 'SELECT', rowCount: 0, rows: [] };
+    return { command: 'SELECT', rowCount: member ? 1 : 0, rows: member ? [member] : [] };
   }
   async end() { failAt('end'); }
 }
@@ -62,6 +64,7 @@ const error = mock.method(console, 'error', () => {});
 beforeEach(() => {
   failure = undefined;
   statements = [];
+  member = undefined;
   for (const spy of [log, warn, error]) spy.mock.resetCalls();
 });
 
@@ -161,4 +164,16 @@ test('the full Admin handler keeps the ordinary response under the same signed l
     assert.deepEqual(result.body, { error: 'admin_request_failed', correlationId: result.body.correlationId });
     for (const value of secrets) assert.equal(JSON.stringify(result).includes(value), false);
   }
+});
+
+test('a failure after successful membership verification never appears as a failed membership lookup', async () => {
+  member = { user_id: '01900000-0000-7000-8000-000000000001', role: 'administrator' };
+  for (const path of routes) {
+    const result = await read(isolated, path);
+    assert.equal(result.status, 500);
+    assert.deepEqual(result.body, { error: 'admin_request_failed', correlationId: result.body.correlationId });
+    assertPrivate(result);
+  }
+  assert.equal(statements.length, 4);
+  assert.equal(statements.filter(statement => statement.startsWith('INSERT INTO system.rate_limit_windows')).length, 2);
 });
