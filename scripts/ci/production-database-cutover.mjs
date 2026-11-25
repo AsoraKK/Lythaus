@@ -50,7 +50,8 @@ function hasIsolatedBindings(bindings, connector) {
   if (!Array.isArray(bindings)) return false;
   const drives = databaseBindings({bindings});
   const keys = bindings.filter(binding => binding.name === 'ACCESS_SUBJECT_HMAC_KEY');
-  return drives.length === 1 && drives[0].name === 'DB_ADMIN_FRESH' && drives[0].id === connector
+  return bindings.filter(binding => binding.type?.includes('secret')).length === 1 &&
+    drives.length === 1 && drives[0].name === 'DB_ADMIN_FRESH' && drives[0].id === connector
     && keys.length === 1 && keys[0].type === 'secret_text' && Object.keys(keys[0]).length === 2;
 }
 
@@ -133,6 +134,194 @@ export async function inspectPromotionSource({token, expectedVersion, fetchImpl 
   await verifyIsolatedAdminBeforePromotion(destination,async path => (await client.get(account + path)).result);
   return {status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:pins.workerId,versionId:pins.servingVersionId,
     deploymentId:pins.servingDeploymentId,sourceSha:pins.repairSourceSha};
+}
+
+const subjectKey = 'ACCESS_SUBJECT_HMAC_KEY';
+const piiKeys = ['PII_ENCRYPTION_KEY_V1','PII_HMAC_KEY_V1'];
+const uploadSecrets = ['CLOUDFLARE_ACCOUNT_ID','DATABASE_READINESS_TOKEN',...piiKeys];
+
+function fullAdminMessage(anchor, previousDeploymentId) {
+  return `lythaus-admin ${anchor} ${previousDeploymentId}`;
+}
+
+function soleAdminBefore(snapshot) {
+  const before = parseProductionDeploymentState(snapshot.deployment,snapshot.versions);
+  if (before.serving.length !== 1 || before.zeroTraffic.length || before.serving[0].percentage !== 100) {
+    throw new Error('replacement Admin requires an unambiguous current serving version');
+  }
+  return before.serving[0];
+}
+
+function accessSettingsMatch(text, destination) {
+  const issuer = 'https://' + text('ACCESS_TEAM_DOMAIN');
+  const audience = text('ACCESS_AUDIENCES');
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  return typeof audience === 'string' && /^[a-f0-9]{64}$/.test(audience) &&
+    text('EXPECTED_HOSTNAMES') === 'control.lythaus.co' && text('CORS_ALLOWED_ORIGINS') === 'https://control.lythaus.co' &&
+    text('ACCESS_REQUIRE_SIGNED_SUBJECT') === 'true' && text('ACCESS_JWKS_URL') === issuer + '/cdn-cgi/access/certs' &&
+    hash(issuer) === destination.ownerAccess.issuerSha256 && hash(audience) === destination.ownerAccess.audienceSha256 &&
+    text('CONTROL_ACCESS_ISSUER_SHA256') === destination.ownerAccess.issuerSha256 &&
+    text('CONTROL_ACCESS_AUDIENCE_SHA256') === destination.ownerAccess.audienceSha256;
+}
+
+function assertFullAdminVersion(version, bindings, id, sourceSha, destination, config) {
+  const pins = destination.isolatedAdminVersions;
+  const annotations = [version?.annotations,version?.metadata?.annotations].filter(Boolean);
+  const named = name => Array.isArray(bindings) ? bindings.filter(b => b.name === name) : [];
+  const has = (name, check) => {
+    const matches = named(name);
+    return matches.length === 1 && check(matches[0]);
+  };
+  const drives = Array.isArray(bindings) ? databaseBindings({bindings}) : [];
+  const secrets = Array.isArray(bindings) ? bindings.filter(b => b.type?.includes('secret')) : [];
+  const marker = annotations[0]?.['workers/message'];
+  const previousDeploymentId = typeof marker === 'string' ? marker.split(' ')[2] : undefined;
+  const text = name => has(name,b => b.type === 'plain_text' && typeof b.text === 'string') ? named(name)[0].text : '';
+  const emailService = config.services?.filter(s => s.binding === 'AUTH_EMAIL_ENVELOPE');
+  const buckets = config.r2_buckets ?? [];
+  if (!versionPattern.test(previousDeploymentId) || version?.id !== id || !annotations.length || !annotations.every(a => a['workers/tag'] === sourceSha &&
+    a['workers/message'] === fullAdminMessage(pins.servingVersionId,previousDeploymentId)) ||
+    secrets.length !== uploadSecrets.length + 1 || ![subjectKey,...uploadSecrets].every(name => has(name,b => b.type === 'secret_text' && Object.keys(b).length === 2)) ||
+    !has('ASSETS',b => b.type === 'assets') || !has('WORKER_VERSION',b => b.type === 'version_metadata') ||
+    emailService?.length !== 1 || emailService[0].entrypoint !== 'AuthEmailEnvelope' || !emailService[0].service ||
+    !has('AUTH_EMAIL_ENVELOPE',b => b.type === 'service' && b.service === emailService[0].service && b.entrypoint === emailService[0].entrypoint) ||
+    !['AUDIT_ARCHIVE','PRIVATE_EXPORTS'].every(name => {
+      const matches = buckets.filter(b => b.binding === name);
+      return matches.length === 1 && matches[0].bucket_name && has(name,b => b.type === 'r2_bucket' && b.bucket_name === matches[0].bucket_name);
+    }) ||
+    !accessSettingsMatch(text,destination) ||
+    drives.length !== 2 || !drives.some(b => b.name === 'DB_ADMIN_FRESH' && b.id === destination.connectors.lythaus_admin) ||
+    !drives.some(b => b.name === 'DB_PRIVACY_FRESH' && b.id === destination.connectors.lythaus_privacy)) {
+    throw new Error('replacement Admin version, inheritance, Access settings or production bindings are unverified');
+  }
+  return previousDeploymentId;
+}
+
+function assertStillServing(deployments, expectedVersion, expectedDeployment) {
+  const active = (Array.isArray(deployments) ? deployments : deployments?.deployments)?.[0];
+  if (!versionPattern.test(expectedDeployment) || active?.id !== expectedDeployment ||
+    active.versions?.length !== 1 || active.versions[0].version_id !== expectedVersion || active.versions[0].percentage !== 100) {
+    throw new Error('replacement Admin serving deployment differs from the predeployment snapshot');
+  }
+}
+
+async function verifyAdminInventory({pins,current,releaseSha,token,fetchImpl}) {
+  // An earlier unacknowledged upload can exist at zero traffic. Reconcile it
+  // before another upload, even when the serving deployment has not moved.
+  const versionsPath = `/accounts/${TARGET.account}/workers/workers/${pins.workerId}/versions`;
+  const pages = Array.from({length:10},(_,i) => versionsPath + '?per_page=100&page=' + (i+1));
+  const inventoryClient = createReadOnlyClient(token,fetchImpl,false,new Set(pages));
+  const versions = [];
+  const validCount = value => Number.isSafeInteger(value) && value >= 0;
+  let total, totalPages;
+  for (const [index,path] of pages.entries()) {
+    const page = index + 1;
+    const {result, result_info:info} = await inventoryClient.get(path);
+    if (!Array.isArray(result) || !info || info.page !== page || (info.count !== undefined && info.count !== result.length) ||
+      (!validCount(info.total_count) && !validCount(info.total_pages)) ||
+      (info.total_count !== undefined && !validCount(info.total_count)) || (info.total_pages !== undefined && !validCount(info.total_pages)) ||
+      (index > 0 && (info.total_count !== total || info.total_pages !== totalPages))) throw new Error('Admin version inventory pagination is unverified');
+    total = info.total_count;
+    totalPages = info.total_pages;
+    versions.push(...result);
+    const countComplete = total === undefined ? undefined : versions.length === total;
+    const pagesComplete = totalPages === undefined ? undefined : page === Math.max(1,totalPages);
+    if ((countComplete !== undefined && pagesComplete !== undefined && countComplete !== pagesComplete) ||
+      (total !== undefined && versions.length > total) || (totalPages !== undefined && page > Math.max(1,totalPages))) throw new Error('Admin version inventory counts do not reconcile');
+    if (countComplete || pagesComplete) break;
+    if (!result.length || page === pages.length) throw new Error('Admin version inventory is incomplete');
+  }
+  const latest = versions.find(row => row.id === current.versionId);
+  if (!latest || !Number.isSafeInteger(latest.number) || latest.number <= 0 ||
+    !versions.every(row => versionPattern.test(row.id) && Number.isSafeInteger(row.number) && row.number > 0 &&
+      row.number <= latest.number && row.annotations?.['workers/tag'] !== releaseSha) ||
+    new Set(versions.map(row => row.number)).size !== versions.length || new Set(versions.map(row => row.id)).size !== versions.length) {
+    throw new Error('previous Admin version upload requires read-only reconciliation');
+  }
+}
+
+// Never inherit from the latest upload. Every full release explicitly references
+// the immutable subject-key binding whose staged request and activation were verified.
+export async function prepareReplacementAdminUpload({config, secretNames, snapshot, releaseSha, token,
+  fetchImpl = fetch, destination = transition.destination}) {
+  const pins = validateIsolatedVersions(destination);
+  const containsKey = value => value === subjectKey || (value && typeof value === 'object' &&
+    Object.entries(value).some(([key, item]) => key === subjectKey || containsKey(item)));
+  if (config.name !== TARGET.worker || (config.account_id !== undefined && config.account_id !== TARGET.account) || config.main !== 'src/control-worker.ts' ||
+    config.keep_vars !== false || !accessSettingsMatch(name => config.vars?.[name],destination) || !Array.isArray(secretNames) || !secretNames.every(name => uploadSecrets.includes(name)) ||
+    !['DATABASE_READINESS_TOKEN','CLOUDFLARE_ACCOUNT_ID'].every(name => secretNames.includes(name)) ||
+    config.unsafe !== undefined || containsKey(config) || !/^[a-f0-9]{40}$/.test(releaseSha)) {
+    throw new Error('replacement Admin upload configuration or subject-key override is unverified');
+  }
+  const current = soleAdminBefore(snapshot);
+  const inherit = (name,versionId) => ({name,type:'inherit',version_id:versionId});
+  const inherited = [inherit(subjectKey,pins.servingVersionId)];
+  const previousDeploymentId = snapshot.observedDeployment?.id;
+  assertStillServing([snapshot.observedDeployment],current.versionId,previousDeploymentId);
+  if (current.versionId === pins.servingVersionId) {
+    if (!piiKeys.every(name => secretNames.includes(name))) throw new Error('first full Admin upload requires the existing protected PII bindings');
+    if (current.sourceSha !== pins.repairSourceSha || previousDeploymentId !== pins.servingDeploymentId) throw new Error('isolated Admin snapshot source differs from the promotion receipt');
+    await inspectPromotionSource({token,expectedVersion:current.versionId,fetchImpl,destination});
+  } else {
+    if (secretNames.some(name => piiKeys.includes(name))) throw new Error('existing replacement Admin PII bindings must be inherited');
+    inherited.push(...piiKeys.map(name => inherit(name,current.versionId)));
+    // Following promotion, require a previously staged full-handler version
+    // carrying our exact inheritance marker and both destination bindings.
+    const script = `/accounts/${TARGET.account}/workers/scripts/${TARGET.worker}`;
+    const deploymentsPath = script + '/deployments';
+    const versionPath = script + '/versions/' + current.versionId;
+    const client = createReadOnlyClient(token,fetchImpl,false,new Set([deploymentsPath,versionPath]));
+    const {result:deployments} = await client.get(deploymentsPath);
+    assertStillServing(deployments,current.versionId,previousDeploymentId);
+    const {result:version} = await client.get(versionPath);
+    assertFullAdminVersion(version,version?.resources?.bindings,current.versionId,current.sourceSha,destination,config);
+  }
+  await verifyAdminInventory({pins,current,releaseSha,token,fetchImpl});
+  return {config:{...config,account_id:TARGET.account,unsafe:{bindings:inherited}},
+    message:fullAdminMessage(pins.servingVersionId,previousDeploymentId)};
+}
+
+// Confirm the version identified by the upload acknowledgement on both the
+// immutable Worker and named script before any candidate traffic operation.
+export async function verifyReplacementAdminUpload({versionId, releaseSha, snapshot, config, token, resumeZeroTraffic = false,
+  fetchImpl = fetch, destination = transition.destination}) {
+  const pins = validateIsolatedVersions(destination);
+  const current = soleAdminBefore(snapshot);
+  if (!versionPattern.test(versionId) || !/^[a-f0-9]{40}$/.test(releaseSha) ||
+    [pins.parentVersionId,pins.childVersionId,pins.servingVersionId,current.versionId].includes(versionId)) {
+    throw new Error('exact replacement Admin upload acknowledgement required');
+  }
+  const account = '/accounts/' + TARGET.account;
+  const script = account + '/workers/scripts/' + TARGET.worker;
+  const immutable = account + '/workers/workers/' + pins.workerId + '/versions/' + versionId;
+  const classic = script + '/versions/' + versionId;
+  const deploymentsPath = script + '/deployments';
+  const client = createReadOnlyClient(token,fetchImpl,false,new Set([immutable,classic,deploymentsPath]));
+  const {result:version} = await client.get(immutable);
+  const predecessor = assertFullAdminVersion(version,version?.bindings,versionId,releaseSha,destination,config);
+  const {result:scriptVersion} = await client.get(classic);
+  if (assertFullAdminVersion(scriptVersion,scriptVersion?.resources?.bindings,versionId,releaseSha,destination,config) !== predecessor ||
+    (current.versionId === pins.servingVersionId && predecessor !== pins.servingDeploymentId)) {
+    throw new Error('replacement Admin version predecessor differs between receipts');
+  }
+  const {result:deployments} = await client.get(deploymentsPath);
+  const history = Array.isArray(deployments) ? deployments : deployments?.deployments;
+  const active = history?.[0];
+  if (!versionPattern.test(snapshot.observedDeployment?.id) || active?.id !== snapshot.observedDeployment.id) {
+    throw new Error('replacement Admin serving deployment differs from the same-run observation');
+  }
+  if (resumeZeroTraffic && active?.versions?.length === 2) {
+    const staged = active.versions.find(v => v.version_id === versionId && v.percentage === 0);
+    const serving = active.versions.find(v => v.version_id === current.versionId && v.percentage === 100);
+    if (!staged || !serving || !versionPattern.test(active.id) || active.id === history[1]?.id ||
+      active.annotations?.['workers/message'] !== 'Stage reviewed Lythaus admin candidate at zero traffic' ||
+      !(Date.parse(active.created_on) > Date.parse(history[1]?.created_on))) throw new Error('replacement Admin zero-traffic stage differs from prior acceptance');
+    assertStillServing(history.slice(1),current.versionId,predecessor);
+  } else {
+    assertStillServing(deployments,current.versionId,predecessor);
+  }
+  return {status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:pins.workerId,versionId,sourceSha:releaseSha,
+    subjectKeySourceVersionId:pins.servingVersionId,servingVersionId:current.versionId,previousDeploymentId:predecessor};
 }
 
 export function validateProductionDatabaseMap(manifest, configs, plan = transition, requireDestination = false, releaseAdminWorker) {

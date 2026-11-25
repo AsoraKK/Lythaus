@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { transition, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from './production-database-cutover.mjs';
+import { transition, prepareReplacementAdminUpload, verifyReplacementAdminUpload, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from './production-database-cutover.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json');
@@ -230,8 +230,42 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const workerArg = process.argv.indexOf('--release-admin-worker');
   const releaseAdminWorker = workerArg < 0 ? undefined : process.argv[workerArg + 1];
   if (workerArg >= 0 && !releaseAdminWorker) throw new Error('canonical release Admin Worker missing');
-  const target = validateProductionDatabaseMap(manifest, productionConfigs(), transition, requireDestination, releaseAdminWorker);
-  if (process.argv.includes('--rollback-database')) {
+  const configs = productionConfigs();
+  const target = validateProductionDatabaseMap(manifest, configs, transition, requireDestination, releaseAdminWorker);
+  const uploadArg = process.argv.indexOf('--prepare-admin-upload');
+  const verifyArg = process.argv.indexOf('--verify-admin-upload');
+  if (uploadArg >= 0 || verifyArg >= 0) {
+    if (uploadArg >= 0 && verifyArg >= 0) throw new Error('Admin candidate operation is ambiguous');
+    const canonicalPath = 'apps/lythaus-admin-api/wrangler.jsonc';
+    const releaseSha = process.env.RELEASE_SHA;
+    if (!releaseAdminWorker || !/^[a-f0-9]{40}$/.test(releaseSha ?? '')) throw new Error('canonical Admin upload release is unverified');
+    if (target === transition.rollback) {
+      if (uploadArg >= 0) console.log(JSON.stringify({configPath:canonicalPath,message:`Lythaus candidate ${releaseSha}`,temporary:false}));
+    } else {
+      const dir = path.join(process.env.RUNNER_TEMP,'production-cutover');
+      const readJson = file => JSON.parse(fs.readFileSync(file,'utf8'));
+      const snapshot = {
+        observedDeployment:readJson(path.join(dir,'admin-observed-deployment.json')),
+        deployment:readJson(path.join(dir,'admin-before.json')),
+        versions:readJson(path.join(dir,'admin-before-versions.json')),
+      };
+      const options = {releaseSha,snapshot,config:configs.get(canonicalPath),token:process.env.CLOUDFLARE_API_TOKEN};
+      if (verifyArg >= 0) {
+        console.log(JSON.stringify(await verifyReplacementAdminUpload({...options,versionId:process.argv[verifyArg + 1],
+          resumeZeroTraffic:Boolean(process.env.ACCEPTANCE_RUN_SUMMARY_PATH)})));
+      } else {
+        let secretFile;
+        try { secretFile = readJson(process.argv[uploadArg + 1]); } catch { throw new Error('Admin candidate secret input is unreadable'); }
+        if (!secretFile || Object.getPrototypeOf(secretFile) !== Object.prototype ||
+          !Object.values(secretFile).every(value => typeof value === 'string' && value.trim().length > 0)) throw new Error('Admin candidate secret input is unverified');
+        const prepared = await prepareReplacementAdminUpload({...options,secretNames:Object.keys(secretFile)});
+        // Keep relative assets and entry points rooted at the original config location.
+        const configPath = path.join(path.dirname(canonicalPath),`.wrangler-admin-${crypto.randomUUID()}.json`);
+        fs.writeFileSync(configPath,JSON.stringify(prepared.config),{flag:'wx',mode:0o600});
+        console.log(JSON.stringify({configPath,message:prepared.message,temporary:true}));
+      }
+    }
+  } else if (process.argv.includes('--rollback-database')) {
     if (target === transition.destination) {
       const dir = path.join(process.env.RUNNER_TEMP, 'production-cutover');
       const read = file => JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));

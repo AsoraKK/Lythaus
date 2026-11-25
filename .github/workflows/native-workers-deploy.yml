@@ -571,6 +571,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/production-cutover"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before.json"
+          cp "$RUNNER_TEMP/production-cutover/admin-before.json" "$RUNNER_TEMP/production-cutover/admin-observed-deployment.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
@@ -876,8 +877,10 @@ jobs:
           diagnostic_policy_module='apps/lythaus-admin-api/src/solo-recovery/diagnostic-policy.generated.ts'
           diagnostic_policy_backup="$RUNNER_TEMP/production-cutover/diagnostic-policy.generated.original.ts"
           diagnostic_policy_output="$RUNNER_TEMP/production-cutover/subject-diagnostic-policy.json"
+          temporary_admin_config=''
           if component_changed public; then test -s "$turnstile_secret_file"; fi
           cleanup_candidate_upload() {
+            if [[ -n "$temporary_admin_config" ]]; then rm -f "$temporary_admin_config"; fi
             rm -f "$RUNNER_TEMP/admin-diagnostic-human.json" "$RUNNER_TEMP/admin-diagnostic-candidate.json"
             if [[ -f "$diagnostic_policy_backup" ]]; then cp "$diagnostic_policy_backup" "$diagnostic_policy_module" || true; fi
             rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output" "$coordinator_response_file" "$diagnostic_policy_backup" "$diagnostic_policy_output"
@@ -953,7 +956,8 @@ jobs:
             local prefix="$2"
             local output="$3"
             local secrets_file="$4"
-            npx --yes wrangler@4.123.0 versions upload --config "$config" --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file" 2>&1 | tee "$output"
+            local message="${5:-Lythaus candidate $RELEASE_SHA}"
+            npx --yes wrangler@4.123.0 versions upload --config "$config" --tag "$RELEASE_SHA" --message "$message" --secrets-file "$secrets_file" 2>&1 | tee "$output"
             node scripts/ci/resolve-worker-version-state.mjs upload "$output" "$RELEASE_SHA" "$prefix"
           }
           if [[ "${AUTHENTICITY_BETA_RUNTIME_PREPARED:-false}" == true ]]; then
@@ -979,7 +983,15 @@ jobs:
               echo "SUBJECT_DIAGNOSTIC_NOT_BEFORE=$diagnostic_not_before"
             } >> "$GITHUB_ENV"
           fi
-          if component_changed admin; then upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$admin_secrets_file"; fi
+          if component_changed admin; then
+            admin_upload="$(node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --prepare-admin-upload "$admin_secrets_file" --release-admin-worker lythaus-admin-api-development)"
+            admin_config="$(jq -er '.configPath' <<< "$admin_upload")"
+            if jq -e '.temporary == true' <<< "$admin_upload" >/dev/null; then
+              temporary_admin_config="$admin_config"
+              echo 'REPLACEMENT_ADMIN_UPLOAD=true' >> "$GITHUB_ENV"
+            fi
+            upload_candidate "$admin_config" ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$admin_secrets_file" "$(jq -er '.message' <<< "$admin_upload")"
+          fi
           if component_changed jobs; then upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"; fi
           if coordinator_managed; then upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"; fi
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
@@ -1022,6 +1034,14 @@ jobs:
               if [[ -n "$expected_candidate_id" ]]; then
                 test "$(jq -r --arg component "$component" '.candidateDependencies[$component].status // empty' "$ACCEPTANCE_RUN_SUMMARY_PATH")" = NEW_CANDIDATE
               fi
+            fi
+            if [[ "$component" == admin ]]; then
+              if [[ "${REPLACEMENT_ADMIN_UPLOAD:-false}" == true ]]; then
+                test -n "${ADMIN_WORKER_VERSION_ID:-}"
+                test -z "$expected_candidate_id" || test "$expected_candidate_id" = "$ADMIN_WORKER_VERSION_ID"
+                expected_candidate_id="$ADMIN_WORKER_VERSION_ID"
+              fi
+              node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --verify-admin-upload "$expected_candidate_id" --release-admin-worker "$worker_name"
             fi
             if [[ -n "$expected_candidate_id" ]]; then
               node scripts/ci/resolve-worker-version-state.mjs candidate "$versions_file" "$RELEASE_SHA" "$prefix" "$expected_candidate_id"

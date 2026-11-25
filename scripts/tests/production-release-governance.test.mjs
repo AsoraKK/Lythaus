@@ -648,7 +648,9 @@ test('Admin-only Worker changes prepare and verify the Admin candidate secret bo
     workersWorkflow.indexOf('- name: Resolve changed candidates and reused production versions'),
   );
   assert.match(uploadSegment, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| coordinator_managed/);
-  assert.match(uploadSegment, /if component_changed admin; then upload_candidate apps\/lythaus-admin-api\/wrangler\.jsonc/);
+  assert.match(uploadSegment, /if component_changed admin; then\n\s+admin_upload=.*--prepare-admin-upload "\$admin_secrets_file"[\s\S]*?upload_candidate "\$admin_config" ADMIN/);
+  const resolveSegment = workersWorkflow.slice(workersWorkflow.indexOf('- name: Resolve changed candidates'),workersWorkflow.indexOf('- name: Stage candidate Worker versions'));
+  assert.match(resolveSegment,/REPLACEMENT_ADMIN_UPLOAD[\s\S]*?expected_candidate_id="\$ADMIN_WORKER_VERSION_ID"[\s\S]*?--verify-admin-upload "\$expected_candidate_id"[\s\S]*?candidate "\$versions_file" "\$RELEASE_SHA" "\$prefix" "\$expected_candidate_id"/);
   assert.match(uploadSegment, /verify-scoped-worker-secret-bindings\.mjs/);
   assert.match(workersWorkflow, /if component_changed public \|\| component_changed jobs \|\| coordinator_managed; then\n\s+test -s "\$scoped_key_evidence"/);
   assert.match(workersWorkflow, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| coordinator_managed; then\n\s+test -s "\$scoped_binding_evidence"/);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { inspectPromotionSource, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
+import { inspectPromotionSource, prepareReplacementAdminUpload, verifyReplacementAdminUpload, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
 import { inspectProductionConnectors, TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
 import { coversHost, inspectControlRouting } from '../ci/control-host-routing.mjs';
 import { createControlWorker } from '../../apps/lythaus-admin-api/src/control-worker.ts';
@@ -51,7 +51,8 @@ function fixture(destination = false) {
     const admin = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
     Object.assign(admin, {name:TARGET.worker, main:'src/control-worker.ts', assets:{binding:'ASSETS',run_worker_first:true}});
     Object.assign(admin.vars, {EXPECTED_HOSTNAMES:'control.lythaus.co',CORS_ALLOWED_ORIGINS:'https://control.lythaus.co',ACCESS_REQUIRE_SIGNED_SUBJECT:'true'});
-    Object.assign(admin.vars, {CONTROL_ACCESS_ISSUER_SHA256:target.ownerAccess.issuerSha256,CONTROL_ACCESS_AUDIENCE_SHA256:target.ownerAccess.audienceSha256});
+    Object.assign(admin.vars, {ACCESS_TEAM_DOMAIN:'fixture.cloudflareaccess.com',ACCESS_AUDIENCES:'a'.repeat(64),
+      ACCESS_JWKS_URL:'https://fixture.cloudflareaccess.com/cdn-cgi/access/certs',CONTROL_ACCESS_ISSUER_SHA256:target.ownerAccess.issuerSha256,CONTROL_ACCESS_AUDIENCE_SHA256:target.ownerAccess.audienceSha256});
     for (const [i, role] of Object.keys(target.connectors).entries()) target.connectors[role] = String(i + 1).repeat(32);
     Object.assign(manifest, { planetScaleDatabase:target.database, planetScaleDatabaseId:target.databaseId,
       productionBranchId:target.branchId, expectedMainOriginFingerprint:target.originSha256 });
@@ -215,6 +216,113 @@ test('the protected pre-promotion inspection reads the pinned metadata and repor
   assert.deepEqual(receipt,{status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:d.pins.workerId,
     versionId:d.pins.servingVersionId,deploymentId:d.pins.servingDeploymentId,sourceSha:d.pins.repairSourceSha});
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
+});
+
+test('the canonical full Admin upload binds the attested key without reading it', async () => {
+  const d = isolatedEvidence();
+  const {configs} = fixture(true);
+  const config = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
+  const account = 'https://api.cloudflare.com/client/v4/accounts/' + TARGET.account;
+  let countOverride;
+  const fetchImpl = async (url,init) => {
+    assert.equal(init.method,'GET');
+    assert.ok(url.startsWith(account + '/'));
+    const result = await d.read(url.slice(account.length));
+    return Response.json({success:true,result,...(Array.isArray(result) ? {result_info:{page:1,total_pages:1,count:result.length,
+      total_count:countOverride ?? result.length}} : {})});
+  };
+  const snapshot = (id,sha,deploymentId=d.pins.servingDeploymentId) => ({
+    observedDeployment:{id:deploymentId,versions:[{version_id:id,percentage:100}]},
+    deployment:{versions:[{version_id:id,percentage:100,source_sha:sha,created_on:'2026-11-25T17:00:00Z'}]}});
+  const secretNames = ['DATABASE_READINESS_TOKEN','CLOUDFLARE_ACCOUNT_ID','PII_ENCRYPTION_KEY_V1','PII_HMAC_KEY_V1'];
+  const args = {config,destination:d.destination,releaseSha:'f'.repeat(40),token:'fixture',fetchImpl,secretNames,
+    snapshot:snapshot(d.pins.servingVersionId,d.pins.repairSourceSha)};
+  const immutable = '/workers/workers/' + d.pins.workerId + '/versions';
+  const list = d.rows.map(row => ({id:row.id,number:row.number,annotations:row.annotations}));
+  d.replies.set(immutable + '?per_page=100&page=1',list);
+  const upload = await prepareReplacementAdminUpload(args);
+  const anchor = {name:'ACCESS_SUBJECT_HMAC_KEY',type:'inherit',version_id:d.pins.servingVersionId};
+  assert.deepEqual(upload.config.unsafe.bindings,[anchor]);
+  assert.equal(upload.config.account_id,TARGET.account);
+  assert.equal(upload.config.main,'src/control-worker.ts');
+  assert.equal(config.unsafe,undefined);
+  assert.equal(upload.message,'lythaus-admin ' + d.pins.servingVersionId + ' ' + d.pins.servingDeploymentId);
+  countOverride = 41;
+  await assert.rejects(prepareReplacementAdminUpload(args),/inventory/);
+  countOverride = undefined;
+  for (const overrides of [
+    {secretNames:[...secretNames,anchor.name]}, {secretNames:[...secretNames,'JWT_PRIVATE_KEY']}, {secretNames:[]},
+    {config:{...config,name:'other-script'}}, {config:{...config,account_id:'other-account'}},
+    {config:{...config,vars:{...config.vars,[anchor.name]:'fixture'}}},
+    {config:{...config,unsafe:{bindings:[{...anchor,version_id:'latest'}]}}},
+    {config:{...config,unsafe:{metadata:{bindings:[]}}}}, {config:{...config,main:'src/new-core-test-worker.ts'}},
+    {snapshot:snapshot(d.pins.servingVersionId,'0'.repeat(40))}, {config:{...config,vars:{...config.vars,ACCESS_AUDIENCES:'old-audience'}}},
+  ]) await assert.rejects(prepareReplacementAdminUpload({...args,...overrides}));
+
+  const id = '55555555-5555-4555-8555-555555555555';
+  const path = '/workers/scripts/' + TARGET.worker;
+  const bindings = [{name:'DB_ADMIN_FRESH',type:'hyperdrive',id:d.destination.connectors.lythaus_admin},
+    {name:'DB_PRIVACY_FRESH',type:'hyperdrive',id:d.destination.connectors.lythaus_privacy},
+    {name:'ASSETS',type:'assets'}, {name:'WORKER_VERSION',type:'version_metadata'},
+    {name:'AUTH_EMAIL_ENVELOPE',type:'service',service:config.services[0].service,entrypoint:'AuthEmailEnvelope'},
+    ...config.r2_buckets.map(b => ({name:b.binding,type:'r2_bucket',bucket_name:b.bucket_name})),
+    ...Object.entries({EXPECTED_HOSTNAMES:'control.lythaus.co',ACCESS_REQUIRE_SIGNED_SUBJECT:'true',CORS_ALLOWED_ORIGINS:'https://control.lythaus.co',
+      ACCESS_TEAM_DOMAIN:d.org.auth_domain,ACCESS_JWKS_URL:'https://' + d.org.auth_domain + '/cdn-cgi/access/certs',ACCESS_AUDIENCES:d.app.aud,
+      CONTROL_ACCESS_AUDIENCE_SHA256:d.destination.ownerAccess.audienceSha256,
+      CONTROL_ACCESS_ISSUER_SHA256:d.destination.ownerAccess.issuerSha256}).map(([name,text]) => ({name,text,type:'plain_text'})),
+    ...[anchor.name,...secretNames].map(name => ({name,type:'secret_text'}))];
+  const version = {id,metadata:{annotations:{'workers/tag':args.releaseSha,'workers/message':upload.message}},resources:{bindings}};
+  d.replies.set(path + '/versions/' + id,version);
+  const ack = {id,number:list.length+1,bindings:structuredClone(bindings),annotations:{...version.metadata.annotations}};
+  list.push(ack);
+  d.replies.set(immutable + '/' + id,ack);
+  const verify = {...args,versionId:id};
+  assert.deepEqual(await verifyReplacementAdminUpload(verify),{status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:d.pins.workerId,
+    versionId:id,sourceSha:args.releaseSha,subjectKeySourceVersionId:d.pins.servingVersionId,servingVersionId:d.pins.servingVersionId,previousDeploymentId:d.pins.servingDeploymentId});
+  await assert.rejects(prepareReplacementAdminUpload(args),/read-only reconciliation/);
+  for (const other of ['',d.pins.servingVersionId,d.pins.childVersionId]) {
+    await assert.rejects(verifyReplacementAdminUpload({...verify,versionId:other}),/acknowledgement/);
+  }
+  for (const name of ['AUTH_EMAIL_ENVELOPE','PRIVATE_EXPORTS','AUDIT_ARCHIVE','ACCESS_AUDIENCES','DATABASE_READINESS_TOKEN']) {
+    const bindings = ack.bindings;
+    ack.bindings = bindings.filter(b => b.name !== name);
+    await assert.rejects(verifyReplacementAdminUpload(verify),/bindings are unverified/);
+    ack.bindings = bindings;
+  }
+  ack.bindings.push({name:'JWT_PRIVATE_KEY',type:'secret_text'});
+  await assert.rejects(verifyReplacementAdminUpload(verify),/bindings are unverified/);
+  ack.bindings.pop();
+  const savedKey = ack.bindings.find(b => b.name === anchor.name);
+  savedKey.type = 'inherit';
+  await assert.rejects(verifyReplacementAdminUpload(verify),/inheritance/);
+  savedKey.type = 'secret_text';
+  version.metadata.annotations['workers/message'] = 'other';
+  await assert.rejects(verifyReplacementAdminUpload(verify),/inheritance/);
+  version.metadata.annotations['workers/message'] = upload.message;
+  const staged = {id:'77777777-7777-4777-8777-777777777777',created_on:'2026-11-25T17:01:00Z',
+    annotations:{'workers/message':'Stage reviewed Lythaus admin candidate at zero traffic'},
+    versions:[{version_id:id,percentage:0},{version_id:d.pins.servingVersionId,percentage:100}]};
+  d.deployments.unshift(staged);
+  await assert.rejects(verifyReplacementAdminUpload(verify), /serving deployment/);
+  const resume = {...verify,resumeZeroTraffic:true,snapshot:{...verify.snapshot,observedDeployment:staged}};
+  assert.equal((await verifyReplacementAdminUpload(resume)).versionId,id);
+  staged.versions[0].percentage = 1;
+  await assert.rejects(verifyReplacementAdminUpload(resume), /zero-traffic stage/);
+  staged.versions[0].percentage = 0;
+  staged.versions[0].version_id = d.pins.childVersionId;
+  await assert.rejects(verifyReplacementAdminUpload(resume), /zero-traffic stage/);
+  d.deployments.shift();
+  const fullDeployment = {id:staged.id,versions:[{version_id:id,percentage:100}]};
+  d.replies.set(path + '/deployments',{deployments:[fullDeployment]});
+  await assert.rejects(verifyReplacementAdminUpload(verify), /serving deployment/);
+  const next = {...args,releaseSha:'c'.repeat(40),snapshot:snapshot(id,args.releaseSha,fullDeployment.id),secretNames:['DATABASE_READINESS_TOKEN','CLOUDFLARE_ACCOUNT_ID']};
+  assert.deepEqual((await prepareReplacementAdminUpload(next)).config.unsafe.bindings,[anchor,
+    ...['PII_ENCRYPTION_KEY_V1','PII_HMAC_KEY_V1'].map(name => ({name,type:'inherit',version_id:id}))]);
+  await assert.rejects(prepareReplacementAdminUpload({...next,secretNames}),/PII bindings must be inherited/);
+  list[0].annotations['workers/tag'] = next.releaseSha;
+  await assert.rejects(prepareReplacementAdminUpload(next),/reconciliation/);
+  version.metadata.annotations['workers/message'] = 'unverified candidate';
+  await assert.rejects(prepareReplacementAdminUpload(next), /replacement Admin version/);
 });
 
 test('historical verification rechecks each source, parent, intent, redacted key and database on the same Worker', async () => {
