@@ -126,6 +126,28 @@ Only after both pass does it stage the pinned build and attach the isolated site
 under the existing checks. It does not recreate the Worker or Access app,
 reconfigure or restart Hyperdrive, or bootstrap any user.
 
+### Verify an interrupted first upload before any retry
+
+The [successful Lythaus Admin release](https://github.com/AsoraKK/Lythaus/actions/runs/36693424861/job/109874000726)
+staged on an existing serving Worker, verified the exact uploaded version,
+and then assigned traffic. Keep those stages separate. Do not copy the
+Wrangler upload command to an empty Worker: [Cloudflare documents the first-upload limitation](https://developers.cloudflare.com/workers/versions-and-deployments/deployment-management/#first-upload).
+Use the [Worker-ID version API](https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/subresources/versions/methods/create/)
+and the [asset completion-token flow](https://developers.cloudflare.com/workers/static-assets/direct-upload/)
+as the first-upload contract. Do not substitute a command that deploys as a side effect.
+
+[Run 45542341904](https://github.com/AsoraKK/Lythaus/actions/runs/45542341904)
+completed the asset uploads, then received HTTP 400 on the first version POST.
+It did not acknowledge a version or reach activation, DNS or routing.
+The HTTP status alone does not establish Cloudflare's rejection reason or prove
+the Worker version list is empty. Use the protected read-only `inspect` mode
+before another write. If a version, deployment, route, or custom domain exists,
+stop for reconciliation; do not overwrite, delete, or generate another key.
+If a fresh upload is reviewed, a provider 4xx receipt identifies `initial` or
+`inherit` and, for a supported error response, the numeric provider code and a
+fixed field category. A missing category or code is not grounds to guess at a
+payload change. Do not print provider message text, raw pointers, tokens or bindings.
+
 Keep the owner policy in place, the subject-mapping secret in its Worker, and
 the previous production resources available. Reusing the same secret and
 immutable Worker version matters once an owner membership is created.

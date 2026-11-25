@@ -9,6 +9,33 @@ export const RECORDED_WORKER = `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}
 export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/;
 const API = 'https://api.cloudflare.com/client/v4';
 export const requireSetup = (condition, code) => { if (!condition) throw new Error(`setup_${code}`); };
+
+// Only the provider's numeric error code and a fixed request-field category may
+// reach the public run log. Never emit its text, pointer, body, or request data.
+const versionFields = new Map([
+  ['annotations','annotations'], ['main_module','modules'], ['modules','modules'],
+  ['bindings','bindings'], ['compatibility_date','compatibility'],
+  ['compatibility_flags','compatibility'], ['assets','assets'], ['deploy','deploy'],
+]);
+async function stageRejection(response, phase) {
+  const prefix = `stage_version_${phase}_http_${response.status}`;
+  if (!response.body || !/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) return prefix;
+  try {
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of response.body) {
+      size += chunk.byteLength;
+      if (size > 16 * 1024) return prefix;
+      chunks.push(chunk);
+    }
+    const error = JSON.parse(Buffer.concat(chunks).toString())?.errors?.[0];
+    const code = error?.code;
+    if (!Number.isInteger(code) || code < 1000 || code > 999999) return prefix;
+    const first = typeof error.source?.pointer === 'string'
+      ? /^\/([a-z_]+)(?:\/|$)/.exec(error.source.pointer)?.[1] : undefined;
+    return `${prefix}_cf_${code}_${versionFields.get(first) ?? 'unknown_field'}`;
+  } catch { return prefix; }
+}
 export function avoidDeniedReadRetries(fetchImpl = fetch) {
   const denied = new Map();
   return async (url, init) => {
@@ -35,6 +62,7 @@ const writes = new Map([
 export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false}) {
   const owned = { workerId:null, parentVersionId:null, versionId:null };
   let sawRecordedUndeployedWorker = false;
+  let stageResultUnverified = false;
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
   const page = '(?:\\?per_page=100&page=(?:[1-9]|10))?';
   const reads = [
@@ -70,6 +98,7 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   }
   async function call(path, {method='GET',body,headers={}} = {}) {
     const stage = operation(method,path);
+    requireSetup(method === 'GET' || !stageResultUnverified, 'stage_version_reconciliation_required');
     if (stage === 'create_worker') requireSetup(body?.name === TARGET.worker && body.subdomain?.enabled === false
       && body.subdomain.previews_enabled === false, 'worker_create_target');
     if (stage === 'create_access') requireSetup(body?.type === 'self_hosted' && body.domain === TARGET.hostname
@@ -108,9 +137,14 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
     }
     h.set('accept', 'application/json');
     let response, payload;
+    if (stage === 'stage_version') stageResultUnverified = true;
     try {
       response = await fetchImpl(API + path,{method,body,headers:h,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(45000)});
-      requireSetup(response.ok && !response.redirected && (!response.url || response.url === API + path), `${stage}_http_${Number(response.status)}`);
+      const expectedResponse = !response.redirected && (!response.url || response.url === API + path);
+      if (expectedResponse && stage === 'stage_version' && response.status >= 400 && response.status < 500) {
+        throw new Error(`setup_${await stageRejection(response, owned.parentVersionId ? 'inherit' : 'initial')}`);
+      }
+      requireSetup(response.ok && expectedResponse, `${stage}_http_${Number(response.status)}`);
       const parts = []; let size = 0;
       for await (const part of response.body) {
         size += part.byteLength;
@@ -138,6 +172,7 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
         requireSetup(id !== owned.parentVersionId,'inherited_version_identity');
         if (!owned.parentVersionId) owned.parentVersionId = id;
         else owned.versionId = id;
+        stageResultUnverified = false;
       }
     }
     return payload;

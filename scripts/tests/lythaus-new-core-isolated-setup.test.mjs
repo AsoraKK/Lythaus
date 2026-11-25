@@ -161,6 +161,52 @@ test('version activation is pinned to the version returned for the newly created
   assert.doesNotMatch(JSON.stringify(journal),/private-output|private-fixture-token/);
 });
 
+test('first-version rejection exposes only a safe diagnosis and blocks further writes', async()=>{
+  let posts=0;
+  const journal=[];
+  const api=createSetupClient({token:fixtureToken,record:entry=>journal.push(entry),fetchImpl:async(url,init)=>{
+    const path=new URL(url).pathname;
+    if (init.method === 'GET') return Response.json({success:true,result:[]});
+    posts++;
+    if (path.endsWith('/workers/workers')) return Response.json({success:true,result:{id:workerId,name:TARGET.worker}});
+    return Response.json({success:false,errors:[{code:10021,message:'fixture-secret',
+      source:{pointer:'/bindings/11/text/fixture-secret'},documentation_url:'https://fixture-secret.invalid'}]}, {status:400});
+  }});
+  await api.request(`${ACCOUNT}/workers/workers`,{method:'POST',body:workerCreate});
+  const upload={method:'POST',body:{bindings:[{name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text',text:Buffer.alloc(32).toString('base64')}]}};
+  await assert.rejects(api.request(stagePath,upload),{message:'setup_stage_version_initial_http_400_cf_10021_bindings'});
+  await assert.rejects(api.request(stagePath,upload),{message:'setup_stage_version_reconciliation_required'});
+  await assert.rejects(api.request(`${SCRIPT}/deployments`,activate(versionId)),{message:'setup_stage_version_reconciliation_required'});
+  assert.deepEqual(await api.request(stagePath.split('?')[0]),[]);
+  assert.equal(posts,2);
+  assert.deepEqual(journal.map(row=>row.operation),['create_worker']);
+});
+
+test('inheritance rejection handles malformed, oversized and unexpected provider errors without logging them', async()=>{
+  const parent='cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
+  const variants=[
+    [()=>Response.json({errors:[{code:10999,source:{pointer:'/fixture_secret/value'}}]},{status:400}), '_cf_10999_unknown_field'],
+    [()=>Response.json({errors:[{code:'fixture-secret'}]},{status:400}), ''],
+    [()=>new Response('{fixture-secret',{status:400,headers:{'content-type':'application/json'}}), ''],
+    [()=>Response.json({errors:[{code:10999,message:'x'.repeat(20_000)}]},{status:400}), ''],
+    [()=>new Response('fixture-secret',{status:400}), ''],
+  ];
+  for (const [response,suffix] of variants) {
+    let sent=0;
+    const api=createSetupClient({token:fixtureToken,record:()=>{},fetchImpl:async()=>{
+      if (++sent === 1) return Response.json({success:true,result:{id:workerId,name:TARGET.worker}});
+      if (sent === 2) return Response.json({success:true,result:{id:parent}});
+      return response();
+    }});
+    await api.request(`${ACCOUNT}/workers/workers`,{method:'POST',body:workerCreate});
+    const stage=binding=>api.request(stagePath,{method:'POST',body:{bindings:[{name:'ACCESS_SUBJECT_HMAC_KEY',...binding}]}});
+    await stage({type:'secret_text',text:Buffer.alloc(32).toString('base64')});
+    await assert.rejects(stage({type:'inherit',version_id:parent}),{message:'setup_stage_version_inherit_http_400'+suffix});
+    await assert.rejects(stage({type:'inherit',version_id:parent}),{message:'setup_stage_version_reconciliation_required'});
+    assert.equal(sent,3);
+  }
+});
+
 test('provider denial has an operation and status without private content or retry', async()=>{
   let called=0;
   const api=createSetupClient({token:fixtureToken,record:()=>assert.fail(),fetchImpl:async()=>{

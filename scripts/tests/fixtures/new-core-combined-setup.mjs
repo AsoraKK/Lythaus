@@ -157,7 +157,13 @@ globalThis.fetch = async (url,init)=>{
     if(state.fault!=='restart_readback')state.drive.restarted_on='2026-11-17T00:00:00Z';
     result=state.drive;
   } else if(path.endsWith('/workers/workers')) result={id:workerId,name:TARGET.worker};
-  else if(path.endsWith('/versions')) result={id:body.bindings[0].type==='inherit' ? versionId : parentVersionId};
+  else if(path.endsWith('/versions')) {
+    assert.equal(method,'POST');
+    assert.equal(u.search,'?deploy=false');
+    if (state.fault==='recorded_worker_resume_upload_rejected') return Response.json({success:false,
+      errors:[{code:10021,source:{pointer:'/modules/0'},message:'private-provider-data'}]}, {status:400});
+    result={id:body.bindings[0].type==='inherit' ? versionId : parentVersionId};
+  }
   else if(path.endsWith('/subdomain')) result={enabled:false,previews_enabled:false};
   else if(path.endsWith('/deployments')) {
     if(method==='POST'){assert.equal(body.versions[0].version_id,versionId);assert.equal(state.stagedReads,1);
@@ -173,7 +179,7 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
   ...Object.keys(rejectedCookieShapes),'resume_cookie_path_destination','resume_cookie_private_destination',
   'resume_cookie_destination_override','resume_cookie_duplicate_destination','resume_audience_drift','resume_duplicate_audience',
   'resume_wrong_owner','resume_list_conflict','recorded_worker_partial','recorded_worker_strict_pass',
-  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_script_uncertain',
+  'recorded_worker_resume_success','recorded_worker_resume_drift','recorded_worker_resume_script_uncertain','recorded_worker_resume_upload_rejected',
   'recorded_worker_resume_script_enabled','recorded_worker_resume_script_child_enabled','recorded_worker_resume_script_null',
   'recorded_worker_resume_worker_logs_enabled','recorded_worker_resume_worker_logs_missing',
   'recorded_worker_resume_worker_child_null','recorded_worker_resume_worker_export']) {
@@ -197,11 +203,14 @@ for (const fault of ['none','overlap','later_pages_collision','missing_pages_met
         assert.deepEqual(journal.map(j=>j.operation),['stage_version','stage_version',
           'activate_version','create_test_dns','create_test_route']);
       } else {
-        const expected = /_script_(enabled|child_enabled)$/.test(fault)
-          ? /recorded_worker_script_logging_readback_changed/ : /recorded_worker_checkpoint_changed/;
+        const expected = fault.endsWith('_upload_rejected') ? {message:'setup_stage_version_initial_http_400_cf_10021_modules'}
+          : /_script_(enabled|child_enabled)$/.test(fault)
+            ? /recorded_worker_script_logging_readback_changed/ : /recorded_worker_checkpoint_changed/;
         await assert.rejects(runIsolatedSetup(resume),expected);
         assert.deepEqual(journal,[]);
         assert.equal(state.deployed,false);
+        assert.equal(state.dns,undefined);
+        assert.equal(state.route,undefined);
       }
       continue;
     }
