@@ -109,13 +109,17 @@ function hasReadinessAuthorization(request: Request, env: Env): boolean {
 async function lookupAdmin(request: Request, env: Env, isolatedRead: boolean): Promise<AdminActor> {
   if (!env.ACCESS_SUBJECT_HMAC_KEY) throw new Error('admin_subject_key_not_configured');
   const subject = await verifiedAccessSubject(request, env);
+  let stage: 'subject_hmac' | 'binding' = 'subject_hmac';
   let subjectHmac: string;
+  let binding: HyperdriveBinding;
   try {
     subjectHmac = hmacLookup(subject, env.ACCESS_SUBJECT_HMAC_KEY);
+    stage = 'binding';
+    binding = env.DB_ADMIN_FRESH;
   } catch (error) {
-    throw isolatedRead ? new IsolatedAdminReadFailure('subject_hmac', error) : error;
+    throw isolatedRead ? new IsolatedAdminReadFailure(stage, error) : error;
   }
-  const result = await query<{ user_id: string; role: string }>(env.DB_ADMIN_FRESH,
+  const result = await query<{ user_id: string; role: string }>(binding,
     `SELECT user_id, role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true`,
     [subjectHmac], isolatedRead ? (stage, error) => new IsolatedAdminReadFailure(stage, error) : undefined,
   );
@@ -1405,4 +1409,5 @@ function createAdminFetch(isolatedRead: boolean) {
   };
 }
 
-export default { fetch: createAdminFetch(false), fetchIsolatedRead: createAdminFetch(true) };
+export const fetchIsolatedAdminRead = createAdminFetch(true);
+export default { fetch: createAdminFetch(false) };

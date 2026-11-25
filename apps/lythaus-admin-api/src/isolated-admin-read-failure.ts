@@ -28,6 +28,14 @@ function category(stage: Stage, error: unknown) {
     ? error.code : '';
   if (/^08[0-9A-Z]{3}$/.test(code)) return 'connection_failure';
   switch (code) {
+    case '58000':
+      // Hyperdrive also forwards origin SQLSTATEs. Match only documented wire messages.
+      switch (error instanceof Error ? error.message : '') {
+        case 'Failed to acquire a connection from the pool.': return 'pool_acquire_failed';
+        case 'Server connection attempt failed: connection_refused': return 'server_connection_refused';
+        case 'Internal error.': return 'upstream_internal_error';
+        default: return 'database_system_error';
+      }
     case 'ECONNREFUSED': case 'ECONNRESET': case 'ETIMEDOUT': case 'ENOTFOUND':
     case 'EAI_AGAIN': case 'ENETUNREACH': case 'EHOSTUNREACH': case 'EPIPE':
       return 'connection_failure';
