@@ -89,7 +89,7 @@ export function createNewCoreTestWorker(dependencies: Dependencies) {
 }
 
 const worker = createNewCoreTestWorker({
-  adminFetch: (request, env) => adminWorker.fetch(request, env as Parameters<typeof adminWorker.fetch>[1]),
+  adminFetch: (request, env) => adminWorker.fetchIsolatedRead(request, env as Parameters<typeof adminWorker.fetch>[1]),
   bootstrap: (request, env) => handleFirstAdminBootstrap(request, env),
   verifyAccess: async (request, env) => {
     try {
