@@ -8,9 +8,9 @@ import blake3 from 'blake3-wasm';
 import { scriptLoggingEvidence,workerBoundaryEvidence } from './new-core-isolated-worker-boundary.mjs';
 import { RECORDED_WORKER_ID,SCRIPT } from './new-core-isolated-cloudflare.mjs';
 
-const sourceSha = '3fbaea846f67fe5ad452d53c456b5355069757ca';
-const workerSha = '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3';
-const assetsSha = '5c3969463149d5611e50b73fc030e1ae46e84aa08b27222c3122f9a17a9565c0';
+import {originalArtifactPins} from './new-core-isolated-repair-state.mjs';
+export {originalArtifactPins} from './new-core-isolated-repair-state.mjs';
+const {sourceSha,workerSha,assetsSha} = originalArtifactPins;
 const configSha = '0056b85f1b4b2ab10c01db76ea7a587744ef6224ff274afdfc835d5fa3c4a6ac';
 const moduleName = 'new-core-test-worker.js';
 const entryName = 'isolated-entry.js';
@@ -32,9 +32,9 @@ function requireGate(condition, code) {
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 
-async function sourceConfig(sourceDir) {
+async function sourceConfig(sourceDir, pins) {
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceDir, encoding: 'utf8' }).trim();
-  requireGate(head === sourceSha, 'WORKER_SOURCE_PIN');
+  requireGate(head === pins.sourceSha, 'WORKER_SOURCE_PIN');
   const bytes = await readFile(join(sourceDir, configPath));
   requireGate(sha256(bytes) === configSha, 'WORKER_CONFIG_PIN');
   return bytes;
@@ -54,29 +54,29 @@ async function readAssets(dir, prefix = '') {
   return entries;
 }
 
-function checkArtifactBytes({ worker, assets }) {
-  requireGate(Buffer.isBuffer(worker) && worker.length === 649612 && sha256(worker) === workerSha, 'WORKER_JS_PIN');
-  requireGate(assets instanceof Map && assets.size === 30, 'UI_ASSET_COUNT');
+function checkArtifactBytes({ worker, assets }, pins) {
+  requireGate(Buffer.isBuffer(worker) && worker.length === pins.workerBytes && sha256(worker) === pins.workerSha, 'WORKER_JS_PIN');
+  requireGate(assets instanceof Map && assets.size === pins.assetCount, 'UI_ASSET_COUNT');
   const files = [...assets].sort(([a], [b]) => a.localeCompare(b, 'en-US'))
     .map(([path, bytes]) => ({ path, bytes: bytes.length, sha256: sha256(bytes) }));
-  requireGate(files.reduce((sum, file) => sum + file.bytes, 0) === 392398 &&
-    sha256(JSON.stringify(files) + '\n') === assetsSha, 'UI_ASSET_MANIFEST_PIN');
+  requireGate(files.reduce((sum, file) => sum + file.bytes, 0) === pins.assetBytes &&
+    sha256(JSON.stringify(files) + '\n') === pins.assetsSha, 'UI_ASSET_MANIFEST_PIN');
 }
 
-export async function loadArtifacts({ sourceDir, artifactDir }) {
-  await sourceConfig(sourceDir);
+export async function loadArtifacts({ sourceDir, artifactDir, pins = originalArtifactPins }) {
+  await sourceConfig(sourceDir,pins);
   const js = join(artifactDir, 'portable-worker', moduleName);
   const ui = join(artifactDir, 'assets');
   requireGate((await lstat(js)).isFile() && (await lstat(ui)).isDirectory(), 'SEALED_ARTIFACT_LAYOUT');
   const artifacts = { worker: await readFile(js), assets: new Map(await readAssets(ui)) };
-  checkArtifactBytes(artifacts);
+  checkArtifactBytes(artifacts,pins);
   return artifacts;
 }
 
-export async function prepareArtifacts({ sourceDir, artifactDir }) {
+export async function prepareArtifacts({ sourceDir, artifactDir, pins = originalArtifactPins }) {
   sourceDir = await realpath(sourceDir);
   artifactDir = resolve(artifactDir);
-  await sourceConfig(sourceDir);
+  await sourceConfig(sourceDir,pins);
   execFileSync('git', ['diff', '--exit-code', 'HEAD', '--'], { cwd: sourceDir, stdio: 'ignore' });
   requireGate(execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:sourceDir}).length === 0,'WORKER_SOURCE_DIRTY');
   requireGate(process.versions.node === '22.23.4', 'WORKER_BUILD_NODE_PIN');
@@ -99,17 +99,17 @@ export async function prepareArtifacts({ sourceDir, artifactDir }) {
     requireGate(outputs.every(file=>file.isFile() && [moduleName,moduleName+'.map','README.md'].includes(file.name)),
       'WORKER_UNREVIEWED_MODULE');
     const artifacts = { worker: await readFile(join(bundleDir, moduleName)), assets: new Map(await readAssets(dist)) };
-    checkArtifactBytes(artifacts);
+    checkArtifactBytes(artifacts,pins);
     await mkdir(join(artifactDir, 'portable-worker'));
     await writeFile(join(artifactDir, 'portable-worker', moduleName), artifacts.worker, { flag: 'wx' });
     await cp(dist, join(artifactDir, 'assets'), { recursive: true, force: false, errorOnExist: true });
-    return await loadArtifacts({ sourceDir, artifactDir });
+    return await loadArtifacts({ sourceDir, artifactDir, pins });
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }
 }
 
-function expectedBindings(audience, issuer) {
+export function expectedBindings(audience, issuer) {
   requireGate(typeof audience === 'string' && /^[a-f0-9]{64}$/.test(audience) &&
     typeof issuer === 'string' && /^https:\/\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.cloudflareaccess\.com$/.test(issuer), 'WORKER_ACCESS_BINDING_INPUT');
   const vars = {
@@ -145,7 +145,7 @@ function tokenPayload(token) {
   catch { throw new Error('WORKER_ASSET_TOKEN'); }
 }
 
-async function uploadAssets(assets, request, journal) {
+export async function uploadAssets(assets, request, journal) {
   const manifest = {};
   const blobs = new Map();
   for (const [path, bytes] of assets) {
@@ -195,10 +195,11 @@ function asModule(name, bytes, content_type) {
   return { name, content_type, content_base64: bytes.toString('base64') };
 }
 
-export function workerVersionCode(artifacts) {
-  checkArtifactBytes(artifacts);
+export function workerVersionCode(artifacts, pins = originalArtifactPins) {
+  checkArtifactBytes(artifacts,pins);
   // Pages needs this source file; Workers Assets rejects its sole index rewrite.
   requireGate(sha256(artifacts.assets.get('_redirects')) === controlHashes._redirects, 'WORKER_REDIRECTS_PIN');
+  requireGate(sha256(artifacts.assets.get('_headers')) === controlHashes._headers, 'WORKER_HEADERS_PIN');
   return { main_module: entryName, modules: [
     asModule(entryName, entryBytes, 'application/javascript+module'),
     asModule(moduleName, artifacts.worker, 'application/javascript+module'),
@@ -306,12 +307,12 @@ export async function stageWorker({ artifacts, request, audience, issuer, journa
   return { workerId, parentVersionId:parent.versionId, versionId:child.versionId, tag:sourceSha, checkpoint:'CHILD_CREATED_AND_VERIFIED' };
 }
 
-export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer }) {
+export async function verifyWorkerVersion({ request, workerId, versionId, audience, issuer, pins = originalArtifactPins }) {
   requireGate(workerIdPattern.test(workerId) && uuid.test(versionId), 'WORKER_READBACK_IDS');
   const path = account + '/workers/' + workerId;
   await checkWorker(request, await request(path, { method: 'GET' }), workerId);
   const version = await request(path + '/versions/' + versionId + '?include=modules', { method: 'GET' });
-  requireGate(version?.id === versionId && Number.isSafeInteger(version.number) && version.number > 0 && version.annotations?.['workers/tag'] === sourceSha &&
+  requireGate(version?.id === versionId && Number.isSafeInteger(version.number) && version.number > 0 && version.annotations?.['workers/tag'] === pins.sourceSha &&
     version.main_module === entryName && version.compatibility_date === '2026-07-27' &&
     JSON.stringify(version.compatibility_flags) === '["nodejs_compat"]' &&
     Array.isArray(version.urls) && version.urls.length === 0 &&
@@ -322,14 +323,14 @@ export async function verifyWorkerVersion({ request, workerId, versionId, audien
   requireGate(Array.isArray(actual) && actual.length === expected.length &&
     expected.every(binding => actual.some(value => Object.keys(value).length === Object.keys(binding).length &&
       Object.entries(binding).every(([key, val]) => value[key] === val))), 'WORKER_VERSION_BINDINGS');
-  const expectedModules = { [entryName]: sha256(entryBytes), [moduleName]: workerSha, _headers: controlHashes._headers };
+  const expectedModules = { [entryName]: sha256(entryBytes), [moduleName]: pins.workerSha, _headers: controlHashes._headers };
   requireGate(Array.isArray(version.modules) && version.modules.length === Object.keys(expectedModules).length && Object.entries(expectedModules).every(([name, hash]) =>
     version.modules.some(mod => mod.name === name && mod.content_type === (name === '_headers' ? 'text/plain' : 'application/javascript+module') &&
       typeof mod.content_base64 === 'string' && sha256(Buffer.from(mod.content_base64, 'base64')) === hash)), 'WORKER_VERSION_MODULES');
   const marker = version.annotations?.['workers/message']?.split(' ');
   requireGate(marker?.length === 3 && marker[0] === 'lythaus-isolated' && uuid.test(marker[1]) &&
     (marker[2] === 'parent' || uuid.test(marker[2])), 'WORKER_LINEAGE_AMBIGUOUS');
-  return { workerId, versionId, tag: sourceSha, hmacBindingPresent: true, number:version.number,
+  return { workerId, versionId, tag: pins.sourceSha, hmacBindingPresent: true, number:version.number,
     intentId:marker[1], parentVersionId:marker[2] === 'parent' ? undefined : marker[2] };
 }
 

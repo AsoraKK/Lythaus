@@ -47,6 +47,7 @@ mock.module('jose', { cache: true, namedExports: { ...jose, createRemoteJWKSet(u
 mock.method(globalThis, 'fetch', async () => { throw new Error('unexpected_external_request'); });
 const isolated = (await import('../src/new-core-test-worker.ts')).default;
 const production = (await import('../src/index.ts')).default;
+const { IsolatedAdminReadFailure } = await import('../src/isolated-admin-read-failure.ts');
 
 const env = {
   EXPECTED_HOSTNAMES: host, CORS_ALLOWED_ORIGINS: 'https://' + host,
@@ -68,10 +69,10 @@ beforeEach(() => {
   for (const spy of [log, warn, error]) spy.mock.resetCalls();
 });
 
-async function read(worker, path, { bindings = env, token = assertion } = {}) {
+async function read(worker, path, { bindings = env, token = assertion, context } = {}) {
   const headers = token ? { 'cf-access-jwt-assertion': token } : {};
   const request = new Request('https://' + bindings.EXPECTED_HOSTNAMES + path, { headers });
-  const response = await worker.fetch(request, bindings);
+  const response = await worker.fetch(request, bindings, context);
   const body = await response.json();
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
   assert.match(body.correlationId, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
@@ -178,8 +179,9 @@ test('the full Admin handler keeps the ordinary response under the same signed l
   failure = { stage: 'query', code: '42501' };
   const productionHost = 'admin.lythaus.co';
   const bindings = { ...env, EXPECTED_HOSTNAMES: productionHost, CORS_ALLOWED_ORIGINS: 'https://' + productionHost };
+  const context = { waitUntil() {}, passThroughOnException() {}, ReadFailure: IsolatedAdminReadFailure };
   for (const path of routes) {
-    const result = await read(production, path, { bindings });
+    const result = await read(production, path, { bindings, context });
     assert.equal(result.status, 500);
     assert.deepEqual(result.body, { error: 'admin_request_failed', correlationId: result.body.correlationId });
     for (const value of secrets) assert.equal(JSON.stringify(result).includes(value), false);

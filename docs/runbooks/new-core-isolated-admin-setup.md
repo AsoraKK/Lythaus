@@ -210,7 +210,24 @@ immutable Worker version matters once an owner membership is created.
 
 The protected activation verified the isolated route on 25 November. The owner then received `admin_request_failed` during the pre-bootstrap check. The deployed Admin handler uses HTTP 500 for that code. An empty membership query ordinarily returns `403 admin_role_required`. Keep bootstrap paused while investigating this response. [Activation receipt](https://github.com/AsoraKK/Lythaus/actions/runs/45611431085)
 
-For this incident, select `diagnose-admin-read` on protected main with prior run `45611431085`. The job rechecks the deployed child, Access application, database role and read-only session. It exercises the application's membership SELECT with a fixed synthetic value using the existing scoped Admin login. It also requests aggregate complete and error counts for the isolated Hyperdrive between 12:19:30 and 13:00 UTC on 25 November. The authenticated browser request has no per-request identifier in those aggregate counts. The receipt distinguishes an empty dataset, unavailable telemetry, a denied SQL read and a successful read with zero rows. The probe emits no membership rows or subject identifiers. It leaves deployment, credentials, logging and bootstrap untouched.
+On 25 November, `diagnose-admin-read` verified the serving child, the intended owner selector, the scoped Admin login and the clean bootstrap state. The application's membership SELECT returned zero rows for a synthetic subject, over verified TLS in a read-only session. Cloudflare returned no Hyperdrive samples between 12:19:30 and 13:00 UTC. These independent observations leave the cause of the owner's live HTTP 500 open. [Protected diagnostic](https://github.com/AsoraKK/Lythaus/actions/runs/45628704670)
+
+### One inherited repair version
+
+Protected application commit `78747f85d02c69efa8a1b6f86b73b08947cdce0b` produced the following artifacts in a clean rebuild.
+
+| Artifact | SHA-256 | Size |
+| --- | --- | --- |
+| Isolated Worker | `81409a2b4c022dfec37c1d4ef0f0842cec85e94a8cb646aa3c1677954980266b` | 653,531 bytes |
+| Control-panel asset manifest | `f2ff945764193e34e32d781b08efb32d09b7dfe6090ac338c13da5e32e8ed69a` | 30 files totalling 393,797 bytes |
+
+Use the replacement version to distinguish failures inside the existing signed health and moderation reads. On a lookup failure the isolated Worker returns a fixed stage and category with the request reference. A fresh normal visit to `https://admin-new-core-test.lythaus.co/flags` displays those fields for a qualifying health response. A signed nonmember should receive `403 admin_role_required`. A generic failure outside the instrumented lookup can still return only a reference. [Application change](https://github.com/AsoraKK/Lythaus/pull/1193)
+
+1. Dispatch `stage-isolated-repair` from the reviewed protected controller, with prior activation run `45611431085`. Review the source and artifact pins in that controller. The stage may upload sealed assets and one nonserving version on immutable Worker `89391a349e454b3994bd43299c6386ed`. It inherits the subject key specifically from child `37f36eb4-911d-4c51-b723-751329cd1b92`. The stage receipt must show that child still serving 100% through deployment `307f3dcc-41f3-42e2-be4b-ad2a519ec51c`.
+2. Use the successful verified stage receipt for a separate `activate-isolated-repair` review. Check the exact version ID in the approval summary. Activation assigns that version 100% of the isolated Worker's traffic. Compare both provider views of the serving version, the Access policy, the anonymous challenge, the scoped database, the route and the production snapshot. Keep the owner session private. Share only the returned HTTP status, fixed diagnostic fields and request reference.
+3. If a provider acknowledgement is lost or readback differs, use `reconcile-isolated-repair` with the recorded run. It reads the existing immutable versions and deployment history. An unconfirmed outcome leaves further writes paused. A corrected attempt can receive a fresh approval when the protected receipt proves the earlier run stopped before sending the version or deployment request. Preserve both the original deployment and the protected receipts.
+
+If the activated version regresses, the rollback target is the original verified child on this same Worker. Before a separately approved rollback, confirm the live deployment and route, the unused bootstrap, and absence of accepted writes or external effects. Restore 100% of the isolated Worker's traffic to that exact child, retain both immutable versions, and verify provider readback, owner-only Access and anonymous denial. If any write outcome is uncertain, reconcile it first. Bootstrap and production remain separate decisions.
 
 Setup stops before the one-time bootstrap. Under its own approval the owner
 first establishes that a verified nonmember receives 403 on the moderation API.
