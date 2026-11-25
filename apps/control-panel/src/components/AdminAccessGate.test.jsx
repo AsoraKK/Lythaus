@@ -49,13 +49,18 @@ const readFailure = {
   diagnostic: { stage: 'db_connect', category: 'pool_acquire_failed', detail: privateDetail },
 };
 
-it('shows the two reviewed error codes and request reference on the isolated panel', async () => {
+it.each([
+  ['db_connect','pool_acquire_failed'],
+  ['db_binding','binding_missing'],
+  ['db_binding','binding_unavailable'],
+  ['db_binding','client_initialization_failed'],
+])('shows the reviewed %s/%s and request reference on the isolated panel', async (stage, category) => {
   globalThis.jsdom.reconfigure({ url: isolatedOrigin + '/flags' });
-  adminRequest.mockRejectedValue({ status: 500, payload: readFailure });
+  adminRequest.mockRejectedValue({ status: 500, payload: {...readFailure, diagnostic:{stage,category,detail:privateDetail}} });
   render(<AdminAccessGate>Panel content</AdminAccessGate>);
   const alert = await screen.findByRole('alert');
-  expect(alert).toHaveTextContent(/Request stage db_connect/);
-  expect(alert).toHaveTextContent(/Failure category pool_acquire_failed/);
+  expect(alert).toHaveTextContent('Request stage ' + stage);
+  expect(alert).toHaveTextContent('Failure category ' + category);
   expect(alert).toHaveTextContent(reference);
   expect(alert).not.toHaveTextContent(privateDetail);
   expect(screen.queryByText('Panel content')).not.toBeInTheDocument();

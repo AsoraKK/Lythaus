@@ -1,10 +1,62 @@
 import { Client, type QueryResult, type QueryResultRow } from 'pg';
 
 export type DatabaseClient = Client;
-export type DatabaseQueryStage = 'binding' | 'connect' | 'query' | 'close';
+export type DatabaseQueryStage = 'binding' | 'client' | 'connect' | 'query' | 'close';
 
 export interface HyperdriveBinding {
   connectionString: string;
+  readonly connect?: () => unknown;
+  readonly host?: string;
+  readonly port?: number;
+  readonly user?: string;
+  readonly password?: string;
+  readonly database?: string;
+}
+
+type BindingFailure = 'binding_missing' | 'binding_unavailable' | 'invalid_binding';
+
+export class DatabaseBindingError extends Error {
+  readonly category: BindingFailure;
+
+  constructor(category: BindingFailure) {
+    super(category);
+    this.category = category;
+  }
+}
+
+const nativeBindingFields = ['connect', 'host', 'port', 'user', 'password', 'database'] as const;
+const managedHostname = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*hyperdrive\.local$/i;
+
+type DatabaseClientConfig = { connectionString: string } | {
+  host: string; port: number; user: string; password: string; database: string; ssl: false;
+};
+
+export function databaseClientConfig(binding: HyperdriveBinding): DatabaseClientConfig {
+  if (!binding || typeof binding !== 'object') throw new DatabaseBindingError('binding_missing');
+  let connectionString: string;
+  try {
+    if (nativeBindingFields.some(key => key in binding) || 'ip' in binding) {
+      if (!nativeBindingFields.every(key => key in binding) || typeof binding.connect !== 'function') {
+        throw new DatabaseBindingError('binding_missing');
+      }
+      const { host, port, user, password, database } = binding;
+      if (typeof host !== 'string' || host.length > 253 || !managedHostname.test(host)
+        || typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535
+        || typeof user !== 'string' || !user || user.includes('\0')
+        || typeof password !== 'string' || !password || password.includes('\0')
+        || typeof database !== 'string' || !database || database.includes('\0')) {
+        throw new DatabaseBindingError('invalid_binding');
+      }
+      // This host is a workerd-local socket handle. Hyperdrive verifies TLS on its separate origin connection.
+      return { host, port, user, password, database, ssl: false };
+    }
+    connectionString = binding.connectionString;
+  } catch (error) {
+    if (error instanceof DatabaseBindingError) throw error;
+    throw new DatabaseBindingError('binding_unavailable');
+  }
+  if (typeof connectionString !== 'string' || !connectionString) throw new DatabaseBindingError('binding_missing');
+  return { connectionString: verifyFullConnectionString(connectionString) };
 }
 
 export interface DatabaseEnv {
@@ -71,8 +123,9 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
 ): Promise<QueryResult<T>> {
   let stage: DatabaseQueryStage = 'binding';
   try {
-    const connectionString = verifyFullConnectionString(binding.connectionString);
-    const client = new Client({ connectionString });
+    const config = databaseClientConfig(binding);
+    stage = 'client';
+    const client = new Client(config);
     stage = 'connect';
     await client.connect();
     stage = 'query';
@@ -92,8 +145,7 @@ export async function transaction<T>(
   work: (client: Client) => Promise<T>,
   verification?: typeof VERIFIED_FAILURE_CLEANUP,
 ): Promise<T> {
-  const connectionString = verifyFullConnectionString(binding.connectionString);
-  const client = new Client({ connectionString });
+  const client = new Client(databaseClientConfig(binding));
   const verifyFailureCleanup = verification === VERIFIED_FAILURE_CLEANUP;
   let connectionFailed = false;
   let beginVerified = false, commitAttempted = false, rollbackVerified = false, closeVerified = false;

@@ -1,5 +1,5 @@
 import { Client, DatabaseError, type QueryResult, type QueryResultRow } from 'pg';
-import { verifyFullConnectionString, type HyperdriveBinding } from './index.ts';
+import { DatabaseBindingError, databaseClientConfig, type HyperdriveBinding } from './index.ts';
 
 const AUTOCOMMIT_TIMEOUTS: Readonly<Record<string, number>> = Object.freeze({
   statement_timeout: 15_000, query_timeout: 16_000,
@@ -121,11 +121,14 @@ export async function closeDedicatedClient(
 
 /** Own every connection; never accept or expose a caller's transaction client. */
 export function createDedicatedAutocommitClient(binding: HyperdriveBinding): DedicatedAutocommitClient {
-  if (!binding || typeof binding.connectionString !== 'string' || !binding.connectionString)
-    throw new Error('database_autocommit_binding_required');
-  const connectionString = verifyFullConnectionString(binding.connectionString);
-  const parameters = new URL(connectionString).searchParams;
-  parameters.forEach((value, key) => {
+  let config: ReturnType<typeof databaseClientConfig>;
+  try { config = databaseClientConfig(binding); }
+  catch (error) {
+    if (error instanceof DatabaseBindingError && error.category === 'binding_missing')
+      throw new Error('database_autocommit_binding_required');
+    throw error;
+  }
+  if ('connectionString' in config) new URL(config.connectionString).searchParams.forEach((value, key) => {
     const name = key.toLowerCase();
     if ((Object.hasOwn(AUTOCOMMIT_TIMEOUTS, name) && value !== String(AUTOCOMMIT_TIMEOUTS[name]))
       || (name === 'options' && /statement_timeout|query_timeout/i.test(value.replace(/\\/g, '').replace(/-/g, '_'))))
@@ -144,7 +147,7 @@ export function createDedicatedAutocommitClient(binding: HyperdriveBinding): Ded
         && typeof value !== 'string' && typeof value !== 'boolean'
         && !(typeof value === 'number' && Number.isFinite(value))))
         throw new Error('database_autocommit_scalar_parameters_required');
-      const client = new Client({ connectionString, connectionTimeoutMillis: 15_000,
+      const client = new Client({ ...config, connectionTimeoutMillis: 15_000,
         ...AUTOCOMMIT_TIMEOUTS });
       let connectionFailed = false, submitted = false, acknowledged = false, failed = false;
       let primaryError: unknown;

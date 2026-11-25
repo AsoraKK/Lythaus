@@ -1,8 +1,10 @@
-import { classifyDatabaseIdentityError, type DatabaseQueryStage } from '@lythaus/db';
+import { classifyDatabaseIdentityError, DatabaseBindingError, type DatabaseQueryStage } from '@lythaus/db';
 
 const stages = {
   subject_hmac: 'subject_hmac',
+  binding_access: 'db_binding',
   binding: 'db_binding',
+  client: 'db_binding',
   connect: 'db_connect',
   query: 'membership_query',
   close: 'db_close',
@@ -19,11 +21,19 @@ const sqlCategories = {
   undefined_table: 'missing_relation',
 } as const;
 
-type Stage = DatabaseQueryStage | 'subject_hmac';
+type Stage = DatabaseQueryStage | 'subject_hmac' | 'binding_access';
 
 function category(stage: Stage, error: unknown) {
   if (stage === 'subject_hmac') return 'unclassified';
-  if (stage === 'binding') return 'invalid_binding';
+  if (stage === 'binding_access') return 'binding_unavailable';
+  if (stage === 'binding') {
+    if (error instanceof DatabaseBindingError) {
+      if (error.category === 'binding_missing') return 'binding_missing';
+      if (error.category === 'binding_unavailable') return 'binding_unavailable';
+    }
+    return 'invalid_binding';
+  }
+  if (stage === 'client') return 'client_initialization_failed';
   const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
     ? error.code : '';
   if (/^08[0-9A-Z]{3}$/.test(code)) return 'connection_failure';
