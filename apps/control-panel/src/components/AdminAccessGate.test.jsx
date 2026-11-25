@@ -42,7 +42,7 @@ it('keeps the panel closed on a successful HTTP response with an unexpected body
 });
 
 const isolatedOrigin = 'https://admin-new-core-test.lythaus.co';
-const reference = 'feb56351-190d-41c7-972b-6508caa0016c';
+const reference = '01900000-0000-7000-8000-000000000042';
 const privateDetail = 'private-provider-message';
 const readFailure = {
   error: 'admin_request_failed', correlationId: reference,
