@@ -4,6 +4,7 @@ import { adminRequest } from '../api/adminApi.js';
 const isolatedOrigin = 'https://admin-new-core-test.lythaus.co';
 const lookupStages = new Set(['subject_hmac', 'db_binding', 'db_connect', 'membership_query', 'db_close']);
 const failureCategories = new Set([
+  'binding_missing', 'binding_unavailable', 'client_initialization_failed',
   'invalid_binding', 'connection_failure', 'authentication_failed', 'permission_denied', 'missing_relation',
   'missing_column', 'query_canceled', 'unclassified', 'invalid_catalog', 'tls_verification_failed',
   'database_system_error', 'pool_acquire_failed', 'server_connection_refused', 'upstream_internal_error',
