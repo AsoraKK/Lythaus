@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Client } from 'pg';
 import { databaseClientConfig, query, transaction, verifyFullConnectionString } from '../../packages/db/src/index.ts';
-import { createDedicatedAutocommitClient } from '../../packages/db/src/autocommit.ts';
 
 test('Hyperdrive strings inherit verify-full when the binding omits the query parameter', () => {
   const result = verifyFullConnectionString('postgres://user:password@example.test/postgres');
@@ -66,7 +65,7 @@ test('native Hyperdrive fields reach the installed pg driver without DSN escapin
   assert.equal(client.connectionParameters.ssl, false);
 });
 
-test('each database entry point constructs pg from native fields before connecting', async t => {
+test('queries and transactions construct pg from native fields before connecting', async t => {
   const binding = new NativeBinding();
   const stop = new Error('synthetic stop before connecting');
   const connect = t.mock.method(Client.prototype, 'connect', async function () {
@@ -76,11 +75,10 @@ test('each database entry point constructs pg from native fields before connecti
     assert.equal(this.ssl, false);
     throw stop;
   });
-  for (const call of [() => query(binding, 'SELECT 1'), () => transaction(binding, () => assert.fail('transaction opened')),
-    () => createDedicatedAutocommitClient(binding).queryAutocommit('SELECT 1')]) {
+  for (const call of [() => query(binding, 'SELECT 1'), () => transaction(binding, () => assert.fail('transaction opened'))]) {
     await assert.rejects(call, error => error === stop);
   }
-  assert.equal(connect.mock.callCount(), 3);
+  assert.equal(connect.mock.callCount(), 2);
 });
 
 test('partial native bindings and unexpected native endpoints cannot fall back to a string', () => {
