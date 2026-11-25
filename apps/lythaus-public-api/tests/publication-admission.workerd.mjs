@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
 import { before, beforeEach, after, test } from 'node:test';
 import pg from 'pg';
-import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
+import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
+import { createAccessIssuer } from '../../../scripts/tests/fixtures/cloudflare-access-assertions.mjs';
 import { signAccessToken, hmacLookup, uuidv7 } from '@lythaus/security';
 import { APPEAL_POLICY } from '../../../packages/contracts/src/appeal-policy.ts';
 import { recordReputationSignal } from '../../../packages/db/src/reputation.ts';
@@ -26,17 +27,17 @@ before(async () => {
   const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
   privateKeyPem = await exportPKCS8(privateKey);
   const subject = 'synthetic-publication-admin', hmacKey = randomBytes(32).toString('base64');
+  const access = await createAccessIssuer('https://synthetic-access.invalid', 'synthetic-admission');
   fixture = await publicationAdmissionFixture(connectionString, {
     ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://api.lythaus.test',
     JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }),
     ACCESS_SUBJECT_HMAC_KEY: hmacKey, ACCESS_JWKS_URL: 'https://synthetic-access.invalid/jwks',
     ACCESS_AUDIENCES: 'synthetic-admission', ACCESS_TEAM_DOMAIN: 'synthetic-access.invalid',
-  });
+  }, access.jwks);
   adminId = (await actor()).id;
   await client.query("INSERT INTO identity.admin_memberships(user_id,access_subject_hmac,role,active) VALUES($1,decode($2,'base64'),'owner',true)",
     [adminId, hmacLookup(subject, hmacKey)]);
-  accessToken = await new SignJWT({}).setProtectedHeader({ alg: 'ES256', kid: keyId }).setSubject(subject)
-    .setAudience('synthetic-admission').setIssuer('https://synthetic-access.invalid').setIssuedAt().setExpirationTime('1h').sign(privateKey);
+  accessToken = await access.issue(subject);
   const owner = await actor();
   parentPost = await create(owner, 'post', { body: 'Synthetic permitted thread', declaredCreationMode: 'human' });
   await allow(await reviewCase(parentPost));

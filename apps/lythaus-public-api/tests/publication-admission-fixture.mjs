@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { installReputationLockFunctionFixture } from '../../../apps/lythaus-jobs/tests/helpers/install-reputation-lock-fixture.mjs';
 
-export async function publicationAdmissionFixture(connectionString, bindings) {
+export async function publicationAdmissionFixture(connectionString, bindings, accessJwks) {
   const target = new URL(connectionString);
   assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
   assert.match(target.pathname, /^\/lythaus_auth_test_post_[a-z0-9_]+$/);
@@ -104,7 +104,7 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
     outboundService: request => {
       outbound.push(request.url);
       assert.equal(request.url, 'https://synthetic-access.invalid/jwks', 'fixture refuses every other outbound request');
-      return Response.json(JSON.parse(bindings.JWT_PUBLIC_JWKS));
+      return Response.json(accessJwks);
     },
     serviceBindings: { DISPOSABLE_POSTGRES: async request => {
       const input = await request.json();
