@@ -13,6 +13,7 @@ const consumers = {
 };
 
 const versionPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const intentPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 function validateIsolatedVersions(destination) {
   const pins = destination.isolatedAdminVersions;
   const access = destination.ownerAccess;
@@ -20,6 +21,7 @@ function validateIsolatedVersions(destination) {
     || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new Error('isolated owner Access receipt pins required');
   if (!pins || (!versionPattern.test(pins.workerId) && !/^[a-f0-9]{32}$/.test(pins.workerId))
     || !versionPattern.test(pins.parentVersionId) || !versionPattern.test(pins.servingVersionId)
+    || !intentPattern.test(pins.parentIntent) || !intentPattern.test(pins.childIntent) || pins.parentIntent === pins.childIntent
     || pins.parentVersionId === pins.servingVersionId || !/^[a-f0-9]{40}$/.test(pins.sourceSha)) {
     throw new Error('replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
   }
@@ -40,20 +42,27 @@ export async function verifyIsolatedAdminVersions(destination, read) {
   const worker = await read(path);
   if (worker?.id !== pins.workerId || worker.name !== TARGET.worker || worker.subdomain?.enabled !== false
     || worker.subdomain?.previews_enabled !== false) throw new Error('isolated Admin Worker identity or exposure changed');
-  for (const [index, id] of [pins.parentVersionId,pins.servingVersionId].entries()) {
+  let previousNumber = 0;
+  for (const [id, intent, parent] of [
+    [pins.parentVersionId, pins.parentIntent, 'parent'],
+    [pins.servingVersionId, pins.childIntent, pins.parentVersionId],
+  ]) {
     const version = await read(path + '/versions/' + id);
     const bindings = version?.bindings;
     const databases = Array.isArray(bindings) ? databaseBindings({bindings}) : [];
     const keys = bindings?.filter(binding=>binding.name === 'ACCESS_SUBJECT_HMAC_KEY') ?? [];
     const exactText = (name,text) => bindings?.filter(binding=>binding.name===name).length === 1
       && bindings.some(binding=>binding.name===name && binding.type==='plain_text' && binding.text===text);
-    if (version?.id !== id || version.number !== index + 1 || version.annotations?.['workers/tag'] !== pins.sourceSha
+    if (version?.id !== id || !Number.isSafeInteger(version.number) || version.number <= previousNumber
+      || version.annotations?.['workers/tag'] !== pins.sourceSha
+      || version.annotations?.['workers/message'] !== `lythaus-isolated ${intent} ${parent}`
       || databases.length !== 1 || databases[0].name !== 'DB_ADMIN_FRESH' || databases[0].id !== destination.isolatedAdminConnector
       || keys.length !== 1 || keys[0].type !== 'secret_text' || Object.keys(keys[0]).length !== 2
       || !exactText('NEW_CORE_ACCESS_ISSUER','https://' + team) || !exactText('ACCESS_AUDIENCES',app.aud)
       || !exactText('NEW_CORE_ACCESS_AUDIENCE_SHA256',access.audienceSha256)) {
       throw new Error('isolated Admin version, source, subject-key binding or database differs from the reviewed receipt');
     }
+    previousNumber = version.number;
   }
 }
 

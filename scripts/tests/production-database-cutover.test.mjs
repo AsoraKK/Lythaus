@@ -46,7 +46,8 @@ function fixture(destination = false) {
       issuerSha256:createHash('sha256').update('https://fixture.cloudflareaccess.com').digest('hex'),
       audienceSha256:createHash('sha256').update('a'.repeat(64)).digest('hex')});
     Object.assign(target.isolatedAdminVersions,{workerId:'d'.repeat(32),parentVersionId:'11111111-1111-4111-8111-111111111111',
-      servingVersionId:'22222222-2222-4222-8222-222222222222'});
+      servingVersionId:'22222222-2222-4222-8222-222222222222',
+      parentIntent:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',childIntent:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'});
     const admin = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
     Object.assign(admin, {name:TARGET.worker, main:'src/control-worker.ts', assets:{binding:'ASSETS',run_worker_first:true}});
     Object.assign(admin.vars, {EXPECTED_HOSTNAMES:'control.lythaus.co',CORS_ALLOWED_ORIGINS:'https://control.lythaus.co',ACCESS_REQUIRE_SIGNED_SUBJECT:'true'});
@@ -84,6 +85,8 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
     ({manifest}) => { manifest.bindings[0].expectedRoleKey = 'lythaus_admin'; },
     ({plan}) => { plan.destination.connectors.lythaus_runtime = null; },
     ({plan}) => { plan.destination.isolatedAdminVersions.workerId = null; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.childIntent = null; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.childIntent = plan.destination.isolatedAdminVersions.parentIntent; },
     ({plan}) => { plan.destination.connectors.lythaus_jobs = plan.destination.connectors.lythaus_privacy; },
     ({plan}) => { plan.destination.connectors.lythaus_admin = plan.destination.isolatedAdminConnector; },
     ({plan}) => { plan.destination.connectors.lythaus_jobs = plan.rollback.connectors.lythaus_jobs; },
@@ -104,7 +107,8 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
 test('replacement reads the immutable Worker and both previously staged versions', async () => {
   const {plan:{destination}} = fixture(true);
   const pins = destination.isolatedAdminVersions;
-  for (const fault of ['none','wrong_service','wrong_source','extra_db','missing_key','swapped_version','new_access_app','issuer_drift','isolated_audience_drift']) {
+  for (const fault of ['none','wrong_service','wrong_source','extra_db','missing_key','swapped_version','wrong_parent',
+    'wrong_intent','unmarked_parent','new_access_app','issuer_drift','isolated_audience_drift']) {
     const seen = [];
     const check = () => verifyIsolatedAdminVersions(destination,async path=>{
       seen.push(path);
@@ -120,8 +124,13 @@ test('replacement reads the immutable Worker and both previously staged versions
         {name:'NEW_CORE_ACCESS_AUDIENCE_SHA256',type:'plain_text',text:destination.ownerAccess.audienceSha256});
       if (fault !== 'missing_key') bindings.push({name:'ACCESS_SUBJECT_HMAC_KEY',type:'secret_text'});
       if (fault === 'extra_db') bindings.push({name:'DB_OTHER',type:'hyperdrive',id:'0'.repeat(32)});
-      return {id,number:fault==='swapped_version'?2:id===pins.parentVersionId?1:2,
-        annotations:{'workers/tag':fault==='wrong_source'?'other':pins.sourceSha},bindings};
+      const isParent = id === pins.parentVersionId;
+      const number = isParent ? 7 : fault === 'swapped_version' ? 6 : 12;
+      const intent = isParent || fault === 'wrong_intent' ? pins.parentIntent : pins.childIntent;
+      const parent = isParent || fault === 'wrong_parent' ? 'parent' : pins.parentVersionId;
+      const annotations = {'workers/tag':fault==='wrong_source'?'other':pins.sourceSha};
+      if (!isParent || fault !== 'unmarked_parent') annotations['workers/message'] = `lythaus-isolated ${intent} ${parent}`;
+      return {id,number,annotations,bindings};
     });
     if (fault === 'none') { await check(); assert.equal(seen.length,5); }
     else await assert.rejects(check,/isolated (Admin|owner Access)/);
