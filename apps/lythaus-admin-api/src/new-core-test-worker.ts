@@ -1,6 +1,6 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { parseAccessAudiences, verifiedAccessSubject } from './admin-access-runtime-policy.ts';
-import { createAdminFetch } from './index.ts';
+import adminWorker, { createIsolatedAdminReadContext } from './index.ts';
 import { IsolatedAdminReadFailure } from './isolated-admin-read-failure.ts';
 import { handleFirstAdminBootstrap, type FirstAdminBootstrapEnv } from './first-admin-bootstrap-handler.ts';
 
@@ -89,9 +89,9 @@ export function createNewCoreTestWorker(dependencies: Dependencies) {
   };
 }
 
-const fetchIsolatedAdminRead = createAdminFetch(IsolatedAdminReadFailure);
+const readContext = createIsolatedAdminReadContext(IsolatedAdminReadFailure);
 const worker = createNewCoreTestWorker({
-  adminFetch: (request, env) => fetchIsolatedAdminRead(request, env as Parameters<typeof fetchIsolatedAdminRead>[1]),
+  adminFetch: (request, env) => adminWorker.fetch(request, env as Parameters<typeof adminWorker.fetch>[1], readContext),
   bootstrap: (request, env) => handleFirstAdminBootstrap(request, env),
   verifyAccess: async (request, env) => {
     try {

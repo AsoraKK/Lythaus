@@ -1161,9 +1161,22 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
 
 import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
 
-export function createAdminFetch(ReadFailure?: typeof IsolatedAdminReadFailure) {
-  const requireAdmin = (request: Request, env: Env) => lookupAdmin(request, env, ReadFailure);
-  return async function fetch(request: Request, env: Env): Promise<Response> {
+class IsolatedAdminReadContext {
+  readonly ReadFailure: typeof IsolatedAdminReadFailure;
+
+  constructor(ReadFailure: typeof IsolatedAdminReadFailure) {
+    this.ReadFailure = ReadFailure;
+  }
+}
+
+export function createIsolatedAdminReadContext(ReadFailure: typeof IsolatedAdminReadFailure) {
+  return Object.freeze(new IsolatedAdminReadContext(ReadFailure));
+}
+
+export default {
+  async fetch(request: Request, env: Env, context?: unknown): Promise<Response> {
+    const ReadFailure = context instanceof IsolatedAdminReadContext ? context.ReadFailure : undefined;
+    const requireAdmin = (request: Request, env: Env) => lookupAdmin(request, env, ReadFailure);
     const id = correlationId(request);
     const cors = (response: Response) => withAdminCors(request, env.CORS_ALLOWED_ORIGINS, response);
     try {
@@ -1406,7 +1419,5 @@ export function createAdminFetch(ReadFailure?: typeof IsolatedAdminReadFailure) 
         { status: classified.status, headers: { 'cache-control': 'private, no-store', 'x-correlation-id': id } },
       ));
     }
-  };
-}
-
-export default { fetch: createAdminFetch() };
+  },
+};
