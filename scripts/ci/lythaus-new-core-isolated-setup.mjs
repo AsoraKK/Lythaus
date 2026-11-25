@@ -311,6 +311,71 @@ async function inspectRecordedWorker({api, expectedOwner, token, fetchImpl, ca, 
     deploymentsEmpty:deploymentRead ? deployment === null : null,
     deployment,subdomain,logging,routing,routingEmpty,customDomainEmpty,hyperdrive,productionBaselineMatches,errors:[...new Set(errors)].sort()};
 }
+
+export function createRepairBoundary({env, authorize, prior, sourceDir, record}) {
+  const operation = env.REQUESTED_OPERATION;
+  check(['stage-isolated-repair','activate-isolated-repair','reconcile-isolated-repair'].includes(operation)
+    && typeof authorize === 'function' && typeof record === 'function', 'repair_entrypoint_required');
+  const fetchImpl = avoidDeniedReadRetries();
+  const api = createSetupClient({token:env.CLOUDFLARE_API_TOKEN, fetchImpl, record, repairOperation:operation});
+  const get = (url, init) => {
+    check(init?.method === 'GET','inspect_read_only');
+    return fetchImpl(url,init);
+  };
+  let firstAccountState, previousInputs;
+
+  async function checkBoundary() {
+    const approval = await authorize();
+    check(approval.privateCredentialConfirmed, 'repair_private_custody_unconfirmed');
+    const context = await accessSnapshot(api);
+    const owner = resolveOwner(env,approval,context);
+    check(email(owner) && owner.toLowerCase() === context.owner, 'private_owner_selector_mismatch');
+    const app = await readTestAccess(api,context,RESUME_ACCESS_ID,owner,true);
+    check(sha(context.issuer) === '3f706c248a4d0dc0950dd428a993ab52eddc52ae0e93e42376a9a11b3386bdd8'
+      && sha(app.aud) === '41aefd1d7abc6594af51c0e1e2d7f01b1842d051b0eeb4ab84ae9ab5fc4b0a9e',
+    'repair_access_identity_changed');
+
+    const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');
+    let ca;
+    const inputs = await collectAdminInputs({env, sourceDir, expectedOwner:owner, fetchImpl:get, previousInputs,
+      privateCredentialConfirmed:true, existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true,
+      probeMembershipRead:true, onVerifiedCa:value=>{ca=value;}});
+    check(inputs.ready && inputs.admin?.syntheticMembershipRead === 'no_match'
+      && inputs.verifier?.bootstrapClean === true && ca?.id, 'repair_database_boundary_unverified');
+    const drive = await api.request(DRIVE);
+    checkOrigin(drive,await readCa(api,ca,ca.id));
+    check(Number.isFinite(Date.parse(drive.restarted_on)), 'repair_pool_restart_unverified');
+    const route = await routingCheckpoint(api);
+    check(route.dnsId === prior.dnsId && route.routeId === prior.routeId
+      && route.dnsId === 'f934c861412f949f274856fd0282e328' && route.routeId === 'dab9759ef67e45b7bafa07e25817f7f2',
+    'repair_routing_changed');
+
+    const worker = await api.request(RECORDED_WORKER);
+    const boundary = workerBoundaryEvidence(worker,RECORDED_WORKER_ID,TARGET.worker);
+    const logging = scriptLoggingEvidence(await api.request(`${SCRIPT}/script-settings`),boundary);
+    check(checksPass(boundary.checks) && logging.disabled && Number.isFinite(Date.parse(worker.deployed_on))
+      && boundary.fieldShapes.traces === 'false' && boundary.fieldShapes.agents === 'omitted'
+      && boundary.fieldShapes.issues === 'omitted', 'repair_exposure_or_logging_changed');
+    const snapshot = await inspectIsolation({token:env.CLOUDFLARE_API_TOKEN,expectedOwner:owner,fetchImpl:get});
+    checkSnapshot(snapshot,[TARGET.worker]);
+    // The repair controller matches this independent observation to its exact immutable version and source.
+    const servingChecksPass = Object.entries(snapshot.checks).every(([name,value]) => name === 'workerVersion' || value === true);
+    check(servingChecksPass && ID.test(snapshot.worker?.servingVersionId ?? '')
+      && /^[a-f0-9]{40}$/.test(snapshot.worker.servingSourceTag ?? ''), 'repair_serving_boundary_unverified');
+    const network = await networkSnapshot(api);
+    const accountState = {network, productionAccess:context.live, idps:context.idps, caId:ca.id,
+      caSha256:ca.sha256, lastPoolRestart:drive.restarted_on};
+    if (firstAccountState) check(equal(firstAccountState,accountState),'repair_provider_boundary_changed');
+    else firstAccountState = accountState;
+    const {verifyAnonymousTestGate} = await import('./new-core-test-access-probe.mjs');
+    await verifyAnonymousTestGate(context.issuer);
+    previousInputs = inputs;
+    return {audience:app.aud,issuer:context.issuer,servingVersionId:snapshot.worker.servingVersionId,
+      servingSourceSha:snapshot.worker.servingSourceTag};
+  }
+  return {api,checkBoundary};
+}
+
 export async function inspectSetupInputs({env, sourceDir, authorize, prior={}}) {
   const approval = await authorize();
   const {collectAdminInputs} = await import('./lythaus-new-core-admin-inputs.mjs');

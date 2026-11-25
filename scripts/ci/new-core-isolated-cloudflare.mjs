@@ -5,6 +5,7 @@ export const ZONE = `/zones/${TARGET.zone}`;
 export const SCRIPT = `${ACCOUNT}/workers/scripts/${TARGET.worker}`;
 export const DRIVE = `${ACCOUNT}/hyperdrive/configs/${TARGET.hyperdrive}`;
 export const RECORDED_WORKER_ID = '89391a349e454b3994bd43299c6386ed';
+export const ROUTED_CHILD_ID = '37f36eb4-911d-4c51-b723-751329cd1b92';
 export const RECORDED_WORKER = `${ACCOUNT}/workers/workers/${RECORDED_WORKER_ID}`;
 export const ID = /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/;
 const API = 'https://api.cloudflare.com/client/v4';
@@ -68,10 +69,16 @@ const writes = new Map([
   [`POST ${ZONE}/workers/routes`, 'create_test_route'],
 ]);
 
-export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false, singleStage=false}) {
+export function createSetupClient({token, fetchImpl = fetch, record, resumeWorker=false, singleStage=false, repairOperation}) {
+  if (repairOperation !== undefined) {
+    requireSetup(['stage-isolated-repair','activate-isolated-repair','reconcile-isolated-repair'].includes(repairOperation),
+      'repair_operation_unknown');
+    resumeWorker = true;
+  }
   const owned = { workerId:null, parentVersionId:null, versionId:null };
   let sawRecordedWorker = false;
   let stageCount = 0;
+  let repairActivationAttempted = false;
   const observedVersions = new Set();
   let stageResultUnverified = false;
   const idSegment = '(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})';
@@ -111,6 +118,17 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   async function call(path, {method='GET',body,headers={}} = {}) {
     const stage = operation(method,path);
     requireSetup(method === 'GET' || !stageResultUnverified, 'stage_version_reconciliation_required');
+    if (repairOperation && method !== 'GET') {
+      const staging = repairOperation === 'stage-isolated-repair' && !stageCount && !owned.versionId &&
+        ['open_assets_session','upload_assets','stage_version'].includes(stage);
+      const activating = repairOperation === 'activate-isolated-repair' && !repairActivationAttempted &&
+        stage === 'activate_version' && owned.versionId && owned.versionId !== ROUTED_CHILD_ID &&
+        Object.keys(body ?? {}).sort().join() === 'annotations,strategy,versions' &&
+        Object.keys(body.annotations ?? {}).join() === 'workers/message' &&
+        /^lythaus-isolated-repair [a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(body.annotations['workers/message']);
+      requireSetup(owned.workerId === RECORDED_WORKER_ID && owned.parentVersionId === ROUTED_CHILD_ID &&
+        (staging || activating), 'repair_provider_scope');
+    }
     if (singleStage && method !== 'GET') requireSetup(resumeWorker && !stageCount &&
       ['open_assets_session','upload_assets','stage_version'].includes(stage), 'nonserving_stage_scope');
     if (stage === 'create_worker') requireSetup(body?.name === TARGET.worker && body.subdomain?.enabled === false
@@ -152,6 +170,7 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
     h.set('accept', 'application/json');
     let response, payload;
     if (stage === 'stage_version') { stageResultUnverified = true; stageCount++; }
+    if (repairOperation && stage === 'activate_version') repairActivationAttempted = true;
     try {
       response = await fetchImpl(API + path,{method,body,headers:h,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(45000)});
       const expectedResponse = !response.redirected && (!response.url || response.url === API + path);
@@ -270,6 +289,9 @@ export function createSetupClient({token, fetchImpl = fetch, record, resumeWorke
   function selectLineage(parent,child) {
     requireSetup(resumeWorker && owned.workerId === RECORDED_WORKER_ID && !owned.parentVersionId && !stageCount &&
       observedVersions.has(parent) && (!child || child !== parent && observedVersions.has(child)), 'recorded_lineage_not_verified');
+    if (repairOperation) requireSetup(parent === ROUTED_CHILD_ID &&
+      (repairOperation === 'stage-isolated-repair' ? !child : repairOperation === 'activate-isolated-repair' && !!child),
+      'repair_lineage_selection');
     owned.parentVersionId = parent;
     owned.versionId = child ?? null;
   }

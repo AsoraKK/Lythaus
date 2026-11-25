@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process';
+import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { PINS, REPOSITORY as repository, verifyEnvironment, verifyOwnerReview } from './lythaus-new-core-schema-install-control.mjs';
+import { isRepairOperation, verifyRepairControl } from './new-core-repair-control.mjs';
+import { REPAIR_PINS } from './new-core-isolated-repair-pins.mjs';
 
 const workflow = '.github/workflows/new-core-isolated-setup.yml';
 export const credentialAttestation = 'The current protected Admin credential has stayed private.';
@@ -14,14 +17,18 @@ const workerReceipt = ['45460021762','9ea7d93145c7c297cc70c65f810071d37f67c049',
 
 function githubGet(path) {
   // Pass only the job's GitHub token to gh. All request paths are fixed here.
-  const json = execFileSync('gh', ['api', '--method', 'GET', 'repos/' + repository + '/' + path], {
+  const query = path.startsWith('actions/workflows/new-core-isolated-setup.yml/runs?')
+    ? ['--jq','{total_count,workflow_runs:[.workflow_runs[]|{id,display_title,status,conclusion}]}']
+    : path.startsWith('compare/') ? ['--jq','{merge_base_commit:{sha:.merge_base_commit.sha}}'] : [];
+  const json = execFileSync('gh', ['api', '--method', 'GET', 'repos/' + repository + '/' + path,...query], {
     env: { PATH: process.env.PATH, HOME: process.env.HOME, GH_TOKEN: process.env.GH_TOKEN },
     stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', timeout: 20000, maxBuffer: 512 * 1024,
   });
   return JSON.parse(json);
 }
 
-export async function authorizeSetup({ env = process.env, get = githubGet, afterReview = true } = {}) {
+export async function authorizeSetup({ env = process.env, get = githubGet, afterReview = true, repairPins = REPAIR_PINS } = {}) {
+  const repair = isRepairOperation(env.REQUESTED_OPERATION);
   if (env.GITHUB_ACTIONS !== 'true' || env.GITHUB_EVENT_NAME !== 'workflow_dispatch'
     || env.GITHUB_REF_PROTECTED !== 'true' || env.GITHUB_REF !== 'refs/heads/main'
     || env.GITHUB_REPOSITORY !== repository || env.GITHUB_REPOSITORY_ID !== '1010752912'
@@ -29,10 +36,10 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
     || env.GITHUB_ACTOR_ID !== String(PINS.ownerId) || env.GITHUB_ACTOR !== env.GITHUB_TRIGGERING_ACTOR
     || env.GITHUB_RUN_ATTEMPT !== '1' || !/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID ?? '')
     || env.REQUESTED_CONTROL_SHA !== env.GITHUB_SHA || !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? '')
-    || !['inspect', 'diagnose-admin-read', 'setup', 'resume-access', 'resume-worker-script-settings', 'stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)
+    || (!repair && !['inspect', 'diagnose-admin-read', 'setup', 'resume-access', 'resume-worker-script-settings', 'stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION))
     || (env.REQUESTED_OPERATION === 'diagnose-admin-read' && env.PRIOR_RUN !== '45611431085')
     || (env.PRIOR_RUN && (!/^[1-9]\d{0,18}$/.test(env.PRIOR_RUN) || env.PRIOR_RUN === env.GITHUB_RUN_ID ||
-      !['inspect','diagnose-admin-read','resume-worker-script-settings','stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION)))
+      (!repair && !['inspect','diagnose-admin-read','resume-worker-script-settings','stage-one-nonserving-version'].includes(env.REQUESTED_OPERATION))))
     || env.NODE_OPTIONS || env.NODE_DEBUG || env.RUNNER_DEBUG === '1') throw new Error('setup_dispatch_changed');
   const main = await get('branches/main');
   if (!main.protected || main.commit.sha !== env.GITHUB_SHA) throw new Error('setup_main_changed');
@@ -49,7 +56,11 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
   let attested = false;
   let privateCredentialConfirmed = false;
   let priorRunSha;
-  if (env.PRIOR_RUN) {
+  let repairPrior;
+  const beforeRequestRuns = [];
+  if (repair) {
+    repairPrior = await verifyRepairControl({env,get,pins:repairPins,onVerifiedNoRequest:id=>beforeRequestRuns.push(id)});
+  } else if (env.PRIOR_RUN) {
     const run = await get('actions/runs/'+env.PRIOR_RUN);
     const title = run.display_title;
     if (env.REQUESTED_OPERATION === 'diagnose-admin-read' &&
@@ -76,16 +87,39 @@ export async function authorizeSetup({ env = process.env, get = githubGet, after
       && review.environments?.some(item => item.id === PINS.environmentId)).map(review => review.comment?.trim());
     attested = ownerComments.includes(planAttestation);
     privateCredentialConfirmed = attested || ownerComments.includes(credentialAttestation);
+    if (repair && !attested) throw new Error('setup_repair_owner_attestation_missing');
   }
   return { existingPlanConfirmedByOwner: attested, ownerSelectorConfirmedByOwner: attested, privateCredentialConfirmed,
-    ...(priorRunSha ? {priorRunSha} : {}) };
+    ...(priorRunSha ? {priorRunSha} : {}), ...(repairPrior ? {repairPrior} : {}),
+    ...(beforeRequestRuns.length ? {beforeRequestRuns} : {}) };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const phase = process.argv[2];
   try {
     if (!['before-review', 'after-review'].includes(phase)) throw new Error('setup_phase_invalid');
-    await authorizeSetup({ afterReview: phase === 'after-review' });
+    const env = process.env;
+    const gate = await authorizeSetup({ afterReview: phase === 'after-review' });
+    if (phase === 'before-review' && isRepairOperation(env.REQUESTED_OPERATION)) {
+      const {loadRepairReceipt} = await import('./new-core-repair-receipt.mjs');
+      const state = loadRepairReceipt(env,gate.repairPrior,REPAIR_PINS);
+      const purpose = {
+        'stage-isolated-repair':'Stage one non-serving version inheriting the current identity key.',
+        'activate-isolated-repair':'Activate the verified staged version on the isolated hostname.',
+        'reconcile-isolated-repair':'Read immutable versions, traffic and the prior write intent.',
+      }[env.REQUESTED_OPERATION];
+      const summary = [
+        purpose, 'Worker: `lythaus-admin-api-new-core-test` (`89391a349e454b3994bd43299c6386ed`).',
+        'Before the repair, isolated deployment `307f3dcc-41f3-42e2-be4b-ad2a519ec51c` served version `37f36eb4-911d-4c51-b723-751329cd1b92` at 100%. Preserve this rollback reference.',
+        'Candidate application: `' + REPAIR_PINS.sourceSha + '`. Worker SHA-256: `' + REPAIR_PINS.workerSha + '`. Assets SHA-256: `' + REPAIR_PINS.assetsSha + '`.',
+        'Prior run: `' + env.PRIOR_RUN + '`.' + (state?.versionId ? ' Repair version: `' + state.versionId + '`.' : ''),
+        ...(gate.beforeRequestRuns ? ['Prior protected runs with verified receipts showing no version or deployment request: '+gate.beforeRequestRuns.join(', ')+'.'] : []),
+        'Abort on changed serving state, owner Access, routing, key lineage or database target. Reconcile uncertain writes before another mutation.',
+        'Use the following review comment if accurate:', '`' + planAttestation + '`',
+      ].join('\n\n');
+      console.log(summary);
+      if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY,summary+'\n');
+    }
     console.log('Verified protected main, completed receipts and owner gate.');
   } catch {
     console.error('Setup stopped at the source, receipt or owner approval check.');

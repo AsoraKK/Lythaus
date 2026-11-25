@@ -4,11 +4,15 @@ import { authorizeSetup } from './new-core-setup-control.mjs';
 import { inspectSetupInputs, runIsolatedSetup } from './lythaus-new-core-isolated-setup.mjs';
 import {loadPriorStageReceipt,recordStageReceipt} from './new-core-stage-receipt.mjs';
 import {readAdminHyperdriveMetrics} from './new-core-admin-read-diagnostic.mjs';
+import {isRepairOperation,routedRun,routedHead} from './new-core-repair-control.mjs';
+import {REPAIR_PINS} from './new-core-isolated-repair-pins.mjs';
+import {loadRepairReceipt,recordRepairBeforeRequest,recordRepairState,requireRecordedRepairIntent} from './new-core-repair-receipt.mjs';
 
 const env = process.env;
 const authorize = () => authorizeSetup({ env, afterReview: true });
 const diagnoseRead = env.REQUESTED_OPERATION === 'diagnose-admin-read';
 const inspecting = env.REQUESTED_OPERATION === 'inspect' || diagnoseRead;
+const repairing = isRepairOperation(env.REQUESTED_OPERATION);
 const sourceDir = resolve(inspecting ? 'worker-source' : 'application-source');
 let lineage;
 
@@ -24,16 +28,32 @@ function record(entry) {
     row[key] = entry[key];
   }
   const line = JSON.stringify(row);
-  recordStageReceipt(lineage,row,env);
+  if (!repairing) recordStageReceipt(lineage,row,env);
   console.log(line);
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, '- `' + line + '`\n');
 }
 
 try {
+  if (repairing && env.REQUESTED_OPERATION !== 'reconcile-isolated-repair') recordRepairBeforeRequest(env,REPAIR_PINS);
   const gate = await authorize();
-  const prior = loadPriorStageReceipt(env,gate.priorRunSha);
+  const prior = repairing ? loadPriorStageReceipt({...env,PRIOR_RUN:routedRun},routedHead) : loadPriorStageReceipt(env,gate.priorRunSha);
   lineage = {...prior};
-  if (inspecting) {
+  if (repairing) {
+    const pins=REPAIR_PINS;
+    const {runIsolatedRepair} = await import('./new-core-isolated-repair.mjs');
+    const {createRepairBoundary} = await import('./lythaus-new-core-isolated-setup.mjs');
+    const repairReceipt = loadRepairReceipt(env,gate.repairPrior,pins);
+    const {api,checkBoundary} = await createRepairBoundary({env,authorize,prior,sourceDir:resolve('worker-source'),record});
+    const {loadArtifacts} = await import('./new-core-isolated-worker.mjs');
+    const operation = env.REQUESTED_OPERATION;
+    const artifacts = operation === 'stage-isolated-repair' ? await loadArtifacts({
+      sourceDir:resolve('application-source'),artifactDir:join(env.RUNNER_TEMP,'new-core-artifacts'),pins,
+    }) : undefined;
+    const result = await runIsolatedRepair({operation,api:requireRecordedRepairIntent(api,env,pins),artifacts,pins,prior,repairReceipt,checkBoundary,
+      journal:state=>recordRepairState(env,state,pins)});
+    console.log(JSON.stringify(result));
+    if (!['REPAIR_BASELINE_VERIFIED','REPAIR_STAGED_NONSERVING','REPAIR_ACTIVE_OWNER_TEST_PENDING'].includes(result.status)) process.exitCode = 1;
+  } else if (inspecting) {
     if (diagnoseRead && (!gate.privateCredentialConfirmed || prior.activationTarget !== '37f36eb4-911d-4c51-b723-751329cd1b92'
       || prior.ackChild !== prior.activationTarget || prior.deploymentId !== '307f3dcc-41f3-42e2-be4b-ad2a519ec51c'
       || prior.routeId !== 'dab9759ef67e45b7bafa07e25817f7f2')) throw new Error('setup_serving_receipt_changed');
