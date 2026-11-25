@@ -31,15 +31,15 @@
     "isolatedAdminConnector": "7e39fc4a286147988ed12df7a6322616",
     "ownerAccess": {
       "applicationId": "edd1c92d-bb85-4cd3-b31b-5971a7b12d13",
-      "issuerSha256": null,
-      "audienceSha256": null
+      "issuerSha256": "3f706c248a4d0dc0950dd428a993ab52eddc52ae0e93e42376a9a11b3386bdd8",
+      "audienceSha256": "41aefd1d7abc6594af51c0e1e2d7f01b1842d051b0eeb4ab84ae9ab5fc4b0a9e"
     },
     "isolatedAdminVersions": {
       "workerId": "89391a349e454b3994bd43299c6386ed",
-      "parentIntent": null,
-      "childIntent": null,
-      "parentVersionId": null,
-      "servingVersionId": null,
+      "parentIntent": "d340cb66-cb62-4c87-ab64-400a7cf79c01",
+      "childIntent": "49503582-9aff-4d20-a6f2-888d10d1a92a",
+      "parentVersionId": "44cd6e04-15d7-467c-9d93-ff59d5d4fe0c",
+      "servingVersionId": "37f36eb4-911d-4c51-b723-751329cd1b92",
       "sourceSha": "3fbaea846f67fe5ad452d53c456b5355069757ca"
     },
     "connectors": {
