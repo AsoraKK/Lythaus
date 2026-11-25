@@ -341,6 +341,7 @@ export async function inspectSetupInputs({env, sourceDir, authorize, prior={}}) 
   } catch (error) { errors.push(safeSetupCode(error,'setup_test_access_unverified')); }
   let ca;
   const result = await collectAdminInputs({env,sourceDir,expectedOwner:owner,fetchImpl:get,onVerifiedCa:result=>{ca=result;},
+    probeMembershipRead:env.REQUESTED_OPERATION === 'diagnose-admin-read',
     privateCredentialConfirmed:approval.privateCredentialConfirmed,
     existingPlanConfirmedByOwner:approval.existingPlanConfirmedByOwner === true});
   const recordedWorker = api ? await inspectRecordedWorker({api,expectedOwner:owner,token:env.CLOUDFLARE_API_TOKEN,fetchImpl:get,ca,

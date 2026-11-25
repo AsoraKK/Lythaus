@@ -98,6 +98,20 @@ async function inspectDatabase(raw, role, deps) {
     report.functionBoundaryVerified = row?.bootstrap_execute === isAdmin && row?.verifier_execute === !isAdmin;
     requireCheck(report.authenticated && report.readOnly && report.restrictedRole && report.ddlDenied
       && report.directIdentityInsertsDenied && report.functionBoundaryVerified, 'database_boundary_mismatch');
+    if (isAdmin && deps.probeMembershipRead) {
+      try {
+        const result = await client.query(
+          "SELECT user_id, role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true",
+          [Buffer.alloc(32).toString('base64')],
+        );
+        report.syntheticMembershipRead = result.rowCount === 0 ? 'no_match' : 'unexpected_rows';
+      } catch (error) {
+        const categories = { '42501':'permission_denied', '42P01':'missing_relation', '42703':'missing_column',
+          '57014':'query_canceled', '08006':'connection_failure', '22P02':'invalid_representation' };
+        report.syntheticMembershipRead = Object.hasOwn(categories, error?.code) ? categories[error.code] : 'query_failed';
+      }
+      requireCheck(report.syntheticMembershipRead === 'no_match', 'membership_read_failed');
+    }
     if (!isAdmin) {
       const readers = deps.fingerprintReaders ?? await loadReaders();
       const catalog = await readers.schemaDefinitionFingerprint(client);
@@ -238,8 +252,8 @@ function capacityCheck(rows, now, subscription) {
 
 export async function collectAdminInputs({ env, createClient=createPg, parseTarget=branchQualifiedDatabaseTarget,
   readIssuers=verifiedOriginIssuers, fingerprintReaders, fetchImpl=fetch, now=Date.now(), expectedOwner=env.LYTHAUS_NEW_CORE_OWNER_EMAIL,
-  existingPlanConfirmedByOwner=false, privateCredentialConfirmed=false, previousInputs, onVerifiedCa, onVerifiedCaId } = {}) {
-  const deps = {createClient,parseTarget,readIssuers,fingerprintReaders,privateCredentialConfirmed};
+  existingPlanConfirmedByOwner=false, privateCredentialConfirmed=false, previousInputs, onVerifiedCa, onVerifiedCaId, probeMembershipRead=false } = {}) {
+  const deps = {createClient,parseTarget,readIssuers,fingerprintReaders,privateCredentialConfirmed,probeMembershipRead};
   const admin = await inspectDatabase(env.LYTHAUS_NEW_CORE_ADMIN_DATABASE_URL, 'lythaus_admin', deps);
   const verifier = await inspectDatabase(env.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL, 'lythaus_verifier', deps);
   const errors = [admin.error && 'admin_'+admin.error, verifier.error && 'verifier_'+verifier.error].filter(Boolean);
