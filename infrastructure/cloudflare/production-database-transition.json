@@ -49,9 +49,9 @@
       "priorRepairDeploymentId": "85526c44-7551-41b0-805f-dd6270f05c2d",
       "repairSourceSha": "78958d886d72eecc6ea01001d808f1d8c505046d",
       "repairIntent": "a1bba168-fcda-4240-9170-c8e7b13a3dee",
-      "servingVersionId": null,
-      "activationIntent": null,
-      "servingDeploymentId": null
+      "servingVersionId": "1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f",
+      "activationIntent": "d1f74bb7-a728-46fd-9ddb-f3fe941a82c4",
+      "servingDeploymentId": "0993b439-654e-4243-9340-a810f727f142"
     },
     "connectors": {
       "lythaus_runtime": null,

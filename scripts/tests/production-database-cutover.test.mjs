@@ -42,10 +42,6 @@ function fixture(destination = false) {
   }
   if (destination) {
     const target = plan.destination;
-    Object.assign(target.isolatedAdminVersions, {
-      servingVersionId:'40000000-0000-4000-8000-000000000001', repairIntent:'40000000-0000-4000-8000-000000000002',
-      activationIntent:'40000000-0000-4000-8000-000000000003', servingDeploymentId:'40000000-0000-4000-8000-000000000004',
-    });
     Object.assign(target.ownerAccess,{issuerSha256:createHash('sha256').update('https://fixture.cloudflareaccess.com').digest('hex'),
       audienceSha256:createHash('sha256').update('a'.repeat(64)).digest('hex')});
     const admin = configs.get('apps/lythaus-admin-api/wrangler.jsonc');
@@ -164,6 +160,8 @@ test('initial promotion requires all four isolated versions and the binding fix 
   assert.equal(d.pins.priorRepairVersionId,'193c3dcb-9238-4adc-8eab-48707fdd8b7e');
   assert.equal(d.pins.priorRepairSourceSha,'78747f85d02c69efa8a1b6f86b73b08947cdce0b');
   assert.equal(d.pins.repairSourceSha,'78958d886d72eecc6ea01001d808f1d8c505046d');
+  assert.equal(d.pins.servingVersionId,'1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f');
+  assert.equal(d.pins.servingDeploymentId,'0993b439-654e-4243-9340-a810f727f142');
   await verifyIsolatedAdminBeforePromotion(d.destination,d.read);
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
   const unrelated = '77777777-7777-4777-8777-777777777777';
