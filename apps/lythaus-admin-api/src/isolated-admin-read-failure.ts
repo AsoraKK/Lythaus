@@ -1,4 +1,4 @@
-import { classifyDatabaseIdentityError, DatabaseBindingError, type DatabaseQueryStage } from '@lythaus/db';
+import { classifyDatabaseIdentityError, DatabaseBindingError, databaseBindingDiagnostic, type DatabaseQueryStage } from '@lythaus/db';
 
 const stages = {
   subject_hmac: 'subject_hmac',
@@ -27,6 +27,8 @@ function category(stage: Stage, error: unknown) {
   if (stage === 'subject_hmac') return 'unclassified';
   if (stage === 'binding_access') return 'binding_unavailable';
   if (stage === 'binding') {
+    const diagnostic = databaseBindingDiagnostic(error);
+    if (diagnostic) return diagnostic;
     if (error instanceof DatabaseBindingError) {
       if (error.category === 'binding_missing') return 'binding_missing';
       if (error.category === 'binding_unavailable') return 'binding_unavailable';

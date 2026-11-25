@@ -6,6 +6,7 @@ export type DatabaseQueryStage = 'binding' | 'client' | 'connect' | 'query' | 'c
 export interface HyperdriveBinding {
   connectionString: string;
   readonly connect?: () => unknown;
+  readonly scheme?: string;
   readonly host?: string;
   readonly port?: number;
   readonly user?: string;
@@ -14,6 +15,19 @@ export interface HyperdriveBinding {
 }
 
 type BindingFailure = 'binding_missing' | 'binding_unavailable' | 'invalid_binding';
+type NativeBindingDiagnostic = 'native_host_rejected' | 'native_port_rejected' | 'native_scheme_rejected'
+  | 'native_user_rejected' | 'native_password_rejected' | 'native_database_rejected';
+type BindingDiagnostic = NativeBindingDiagnostic | 'legacy_url_invalid' | 'legacy_tls_policy_rejected';
+const bindingDiagnostics = new WeakMap<Error, BindingDiagnostic>();
+
+export function databaseBindingDiagnostic(error: unknown): BindingDiagnostic | undefined {
+  return error instanceof Error ? bindingDiagnostics.get(error) : undefined;
+}
+
+function recordBindingDiagnostic(error: Error, diagnostic: BindingDiagnostic): Error {
+  bindingDiagnostics.set(error, diagnostic);
+  return error;
+}
 
 export class DatabaseBindingError extends Error {
   readonly category: BindingFailure;
@@ -26,6 +40,15 @@ export class DatabaseBindingError extends Error {
 
 const nativeBindingFields = ['connect', 'host', 'port', 'user', 'password', 'database'] as const;
 const managedHostname = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*hyperdrive\.local$/i;
+const virtualPostgresHostname = /^[0-9a-f]{32}\.workers\.alt$/;
+
+function invalidNativeBinding(diagnostic: NativeBindingDiagnostic): Error {
+  return recordBindingDiagnostic(new DatabaseBindingError('invalid_binding'), diagnostic);
+}
+
+function validSessionField(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && !value.includes('\0');
+}
 
 type DatabaseClientConfig = { connectionString: string } | {
   host: string; port: number; user: string; password: string; database: string; ssl: false;
@@ -35,18 +58,22 @@ export function databaseClientConfig(binding: HyperdriveBinding): DatabaseClient
   if (!binding || typeof binding !== 'object') throw new DatabaseBindingError('binding_missing');
   let connectionString: string;
   try {
-    if (nativeBindingFields.some(key => key in binding) || 'ip' in binding) {
+    if (nativeBindingFields.some(key => key in binding) || 'ip' in binding || 'scheme' in binding) {
       if (!nativeBindingFields.every(key => key in binding) || typeof binding.connect !== 'function') {
         throw new DatabaseBindingError('binding_missing');
       }
       const { host, port, user, password, database } = binding;
-      if (typeof host !== 'string' || host.length > 253 || !managedHostname.test(host)
-        || typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535
-        || typeof user !== 'string' || !user || user.includes('\0')
-        || typeof password !== 'string' || !password || password.includes('\0')
-        || typeof database !== 'string' || !database || database.includes('\0')) {
-        throw new DatabaseBindingError('invalid_binding');
+      const virtual = typeof host === 'string' && virtualPostgresHostname.test(host);
+      if (typeof host !== 'string' || host.length > 253 || !(managedHostname.test(host) || virtual)) {
+        throw invalidNativeBinding('native_host_rejected');
       }
+      if (typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535 || (virtual && port !== 5432)) {
+        throw invalidNativeBinding('native_port_rejected');
+      }
+      if (virtual && binding.scheme !== 'postgresql') throw invalidNativeBinding('native_scheme_rejected');
+      if (!validSessionField(user)) throw invalidNativeBinding('native_user_rejected');
+      if (!validSessionField(password)) throw invalidNativeBinding('native_password_rejected');
+      if (!validSessionField(database)) throw invalidNativeBinding('native_database_rejected');
       // This host is a workerd-local socket handle. Hyperdrive verifies TLS on its separate origin connection.
       return { host, port, user, password, database, ssl: false };
     }
@@ -212,7 +239,7 @@ export async function transaction<T>(
 }
 
 export function assertVerifyFull(connectionString: string): void {
-  const url = new URL(connectionString);
+  const url = parseBindingUrl(connectionString);
   const sslmode = url.searchParams.get('sslmode');
   // Cloudflare injects a local Hyperdrive connection string into a Worker.
   // The Worker-to-Hyperdrive hop is represented as `sslmode=disable`; TLS
@@ -224,7 +251,15 @@ export function assertVerifyFull(connectionString: string): void {
     return;
   }
   if (sslmode !== 'verify-full') {
-    throw new Error('hyperdrive_requires_sslmode_verify_full');
+    throw recordBindingDiagnostic(new Error('hyperdrive_requires_sslmode_verify_full'), 'legacy_tls_policy_rejected');
+  }
+}
+
+function parseBindingUrl(connectionString: string): URL {
+  try { return new URL(connectionString); }
+  catch (error) {
+    if (error instanceof Error) recordBindingDiagnostic(error, 'legacy_url_invalid');
+    throw error;
   }
 }
 
@@ -235,7 +270,7 @@ export function assertVerifyFull(connectionString: string): void {
  * connection reflect the configured `verify-full` policy.
  */
 export function verifyFullConnectionString(connectionString: string): string {
-  const url = new URL(connectionString);
+  const url = parseBindingUrl(connectionString);
   const configuredMode = url.searchParams.get('sslmode');
   const isPlatformLocalBinding =
     url.hostname === 'hyperdrive.local' || url.hostname.endsWith('.hyperdrive.local');
@@ -244,13 +279,13 @@ export function verifyFullConnectionString(connectionString: string): string {
 
   if (isPlatformLocalBinding) {
     if (configuredMode !== 'disable') {
-      throw new Error('hyperdrive_requires_platform_local_sslmode_disable');
+      throw recordBindingDiagnostic(new Error('hyperdrive_requires_platform_local_sslmode_disable'), 'legacy_tls_policy_rejected');
     }
     return url.toString();
   }
 
   if (configuredMode && configuredMode !== 'verify-full' && !isPlatformGeneratedRequire) {
-    throw new Error('hyperdrive_requires_sslmode_verify_full');
+    throw recordBindingDiagnostic(new Error('hyperdrive_requires_sslmode_verify_full'), 'legacy_tls_policy_rejected');
   }
   if (!configuredMode || isPlatformGeneratedRequire) url.searchParams.set('sslmode', 'verify-full');
   const verifiedConnectionString = url.toString();
