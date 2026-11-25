@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - inspect
+          - diagnose-admin-read
           - setup
           - resume-access
           - resume-worker-script-settings
@@ -75,7 +76,7 @@ jobs:
       - name: Install locked dependencies without provider credentials
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Prepare the pinned Worker and assets without provider credentials
-        if: inputs.operation != 'inspect'
+        if: inputs.operation != 'inspect' && inputs.operation != 'diagnose-admin-read'
         env:
           WRANGLER_SEND_METRICS: 'false'
         run: |
@@ -104,7 +105,7 @@ jobs:
           LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL }}
         run: node scripts/ci/run-new-core-setup.mjs
       - name: Retain the sanitized Worker lineage receipt
-        if: always() && inputs.operation != 'inspect'
+        if: always() && inputs.operation != 'inspect' && inputs.operation != 'diagnose-admin-read'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: isolated-worker-lineage-${{ github.run_id }}-1

@@ -3,10 +3,13 @@ import { join, resolve } from 'node:path';
 import { authorizeSetup } from './new-core-setup-control.mjs';
 import { inspectSetupInputs, runIsolatedSetup } from './lythaus-new-core-isolated-setup.mjs';
 import {loadPriorStageReceipt,recordStageReceipt} from './new-core-stage-receipt.mjs';
+import {readAdminHyperdriveMetrics} from './new-core-admin-read-diagnostic.mjs';
 
 const env = process.env;
 const authorize = () => authorizeSetup({ env, afterReview: true });
-const sourceDir = resolve(env.REQUESTED_OPERATION === 'inspect' ? 'worker-source' : 'application-source');
+const diagnoseRead = env.REQUESTED_OPERATION === 'diagnose-admin-read';
+const inspecting = env.REQUESTED_OPERATION === 'inspect' || diagnoseRead;
+const sourceDir = resolve(inspecting ? 'worker-source' : 'application-source');
 let lineage;
 
 function record(entry) {
@@ -30,8 +33,16 @@ try {
   const gate = await authorize();
   const prior = loadPriorStageReceipt(env,gate.priorRunSha);
   lineage = {...prior};
-  if (env.REQUESTED_OPERATION === 'inspect') {
+  if (inspecting) {
+    if (diagnoseRead && (!gate.privateCredentialConfirmed || prior.activationTarget !== '37f36eb4-911d-4c51-b723-751329cd1b92'
+      || prior.ackChild !== prior.activationTarget || prior.deploymentId !== '307f3dcc-41f3-42e2-be4b-ad2a519ec51c'
+      || prior.routeId !== 'dab9759ef67e45b7bafa07e25817f7f2')) throw new Error('setup_serving_receipt_changed');
     const result = await inspectSetupInputs({ env, sourceDir, authorize, prior });
+    if (diagnoseRead) {
+      result.hyperdriveQueryMetrics = await readAdminHyperdriveMetrics(env.CLOUDFLARE_API_TOKEN);
+      if (result.recordedWorker?.checkpoint !== 'ACTIVATED_VERIFIED_CHILD'
+        || !['observed', 'no_samples'].includes(result.hyperdriveQueryMetrics.status)) result.ready = false;
+    }
     console.log(JSON.stringify(result));
     if (!result.ready) process.exitCode = 1;
   } else {

@@ -41,7 +41,7 @@ try {
     await page.route('https://fonts.gstatic.com/**', route => route.fulfill({ body: '' }));
     await page.route('**/api/admin/**', async route => {
       const url = new URL(route.request().url()); requests.push(url.pathname);
-      if (url.pathname === '/api/admin/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'synthetic_ui_fixture_only' }) });
+      if (url.pathname === '/api/admin/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', fixture: 'synthetic_ui_fixture_only' }) });
       if (url.pathname === '/api/admin/activity-measurement') return route.fulfill({ status: forbidden ? 403 : 200, contentType: 'application/json', headers: { 'cache-control': 'private, no-store' }, body: JSON.stringify(forbidden ? { error: 'activity_owner_required' } : fixture.snapshot) });
       return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'synthetic_unavailable_source' }) });
     });

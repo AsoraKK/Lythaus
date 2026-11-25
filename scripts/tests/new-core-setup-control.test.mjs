@@ -79,6 +79,20 @@ test('resume is a fresh protected dispatch and requires the normal owner review'
   await assert.rejects(authorizeSetup({env:resume,get:path=>sources([])[path]}));
   await assert.rejects(authorizeSetup({env:{...resume,GITHUB_RUN_ATTEMPT:'2'},get}));
 });
+test('diagnosing the Admin read requires the exact successful serving receipt', async () => {
+  const id = '45611431085', head = 'd4cf5bb1229383f736b0287101096482ca9a535e';
+  const diagnostic = {...env, REQUESTED_OPERATION:'diagnose-admin-read', PRIOR_RUN:id};
+  const run = {id:Number(id), head_sha:head, repository:{id:1010752912}, head_branch:'main', run_attempt:1,
+    path:'.github/workflows/new-core-isolated-setup.yml', event:'workflow_dispatch', status:'completed', conclusion:'success',
+    actor:{id:owner}, triggering_actor:{id:owner}, display_title:'resume-worker-script-settings admin-new-core-test.lythaus.co at '+head};
+  const map = {...sources([approval]), ['actions/runs/'+id]:run, ['actions/runs/'+id+'/approvals']:[approval],
+    ['compare/'+head+'...'+sha]:{merge_base_commit:{sha:head}}};
+  assert.equal((await authorizeSetup({env:diagnostic, get:path=>map[path]})).priorRunSha, head);
+  for (const prior of ['', '123']) await assert.rejects(authorizeSetup({env:{...diagnostic,PRIOR_RUN:prior},get:path=>map[path]}));
+  run.conclusion = 'failure';
+  await assert.rejects(authorizeSetup({env:diagnostic,get:path=>map[path]}), /serving_receipt_changed/);
+});
+
 test('Worker resume requires the exact prior read-only receipt and owner review', async () => {
   const id=45460021762, head_sha='9ea7d93145c7c297cc70c65f810071d37f67c049';
   const resume={...env,REQUESTED_OPERATION:'resume-worker-script-settings'};

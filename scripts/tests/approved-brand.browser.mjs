@@ -296,7 +296,11 @@ try {
       page.on('pageerror', error => errors.push(error.message));
       await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ contentType: 'text/css', body: '' }));
       await page.route('https://fonts.gstatic.com/**', route => route.fulfill({ body: '' }));
-      await page.route('**/api/admin/**', route => route.fulfill({ contentType: 'application/json', body: '{"items":[],"status":"synthetic"}' }));
+      await page.route('**/api/admin/**', route => route.fulfill({
+        contentType: 'application/json',
+        body: new URL(route.request().url()).pathname === '/api/admin/health'
+          ? '{"status":"ok","fixture":"synthetic"}' : '{"items":[],"status":"synthetic"}',
+      }));
       try {
         await page.goto(adminServer.origin + '/flags');
         await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
