@@ -17,8 +17,9 @@ let failure;
 let statements;
 
 function failAt(stage) {
-  if (failure?.stage === stage) {
-    throw Object.assign(new Error(rawMessage), { code: failure.code, detail: subject, hint: key });
+  const code = stage === failure?.stage ? failure.code : stage === 'end' ? failure?.endCode : undefined;
+  if (code) {
+    throw Object.assign(new Error(rawMessage), { code, detail: subject, hint: key });
   }
 }
 
@@ -114,7 +115,7 @@ test('missing or malformed assertions produce no diagnostic and never reach Post
 for (const [stage, code, expectedStage, category] of [
   ['connect', 'ECONNREFUSED', 'db_connect', 'connection_failure'],
   ['connect', '08006', 'db_connect', 'connection_failure'],
-  ['connect', 'CERT_HAS_EXPIRED', 'db_connect', 'tls_verification_failed'],
+  ['connect', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'db_connect', 'tls_verification_failed'],
   ['connect', '28P01', 'db_connect', 'authentication_failed'],
   ['connect', '3D000', 'db_connect', 'invalid_catalog'],
   ['query', '42501', 'membership_query', 'permission_denied'],
@@ -133,6 +134,11 @@ for (const [stage, code, expectedStage, category] of [
     }
   });
 }
+
+test('a cleanup error that supersedes a failed read reports the cleanup stage and its own category', async () => {
+  failure = { stage: 'query', code: '42501', endCode: 'ECONNRESET' };
+  for (const path of routes) assertFailure(await read(isolated, path), 'db_close', 'connection_failure');
+});
 
 test('unusable scoped binding and failed subject derivation expose only the operation and its category', async () => {
   const badKey = { toString() { throw new Error(rawMessage); } };
