@@ -82,6 +82,7 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
     ({manifest}) => { manifest.bindings.push(manifest.bindings[0]); },
     ({manifest,plan}) => { manifest.productionBranchId = plan.rollback.branchId; },
     ({manifest}) => { manifest.planetScaleDatabaseId = 'other'; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.sourceSha = 'f'.repeat(40); },
     ({manifest}) => { manifest.bindings[0].expectedRoleKey = 'lythaus_admin'; },
     ({plan}) => { plan.destination.connectors.lythaus_runtime = null; },
     ({plan}) => { plan.destination.isolatedAdminVersions.workerId = null; },

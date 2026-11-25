@@ -22,7 +22,7 @@ function validateIsolatedVersions(destination) {
   if (!pins || (!versionPattern.test(pins.workerId) && !/^[a-f0-9]{32}$/.test(pins.workerId))
     || !versionPattern.test(pins.parentVersionId) || !versionPattern.test(pins.servingVersionId)
     || !intentPattern.test(pins.parentIntent) || !intentPattern.test(pins.childIntent) || pins.parentIntent === pins.childIntent
-    || pins.parentVersionId === pins.servingVersionId || !/^[a-f0-9]{40}$/.test(pins.sourceSha)) {
+    || pins.parentVersionId === pins.servingVersionId || pins.sourceSha !== TARGET.candidate) {
     throw new Error('replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
   }
   return pins;

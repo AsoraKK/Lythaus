@@ -9,7 +9,7 @@ export const TARGET = Object.freeze({
   hostname: 'admin-new-core-test.lythaus.co', worker: 'lythaus-admin-api-new-core-test',
   hyperdrive: '7e39fc4a286147988ed12df7a6322616', branch: 'xwkb9quljkzd',
   origin: '30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558',
-  candidate: '3dc46d098242d9dcbca7a98f3272935a34942d3a',
+  candidate: '3fbaea846f67fe5ad452d53c456b5355069757ca',
 });
 const API = 'https://api.cloudflare.com/client/v4';
 const ACCOUNT = `/accounts/${TARGET.account}`;
