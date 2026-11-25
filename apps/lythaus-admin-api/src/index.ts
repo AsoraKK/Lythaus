@@ -1163,19 +1163,22 @@ import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
 
 class IsolatedAdminReadContext {
   readonly ReadFailure: typeof IsolatedAdminReadFailure;
+  readonly identifyResponse: (response: Response, env: Env) => Response;
 
-  constructor(ReadFailure: typeof IsolatedAdminReadFailure) {
+  constructor(ReadFailure: typeof IsolatedAdminReadFailure, identifyResponse: IsolatedAdminReadContext['identifyResponse']) {
     this.ReadFailure = ReadFailure;
+    this.identifyResponse = identifyResponse;
   }
 }
 
-export function createIsolatedAdminReadContext(ReadFailure: typeof IsolatedAdminReadFailure) {
-  return Object.freeze(new IsolatedAdminReadContext(ReadFailure));
+export function createIsolatedAdminReadContext(ReadFailure: typeof IsolatedAdminReadFailure, identifyResponse: IsolatedAdminReadContext['identifyResponse']) {
+  return Object.freeze(new IsolatedAdminReadContext(ReadFailure, identifyResponse));
 }
 
 export default {
   async fetch(request: Request, env: Env, context?: unknown): Promise<Response> {
-    const ReadFailure = context instanceof IsolatedAdminReadContext ? context.ReadFailure : undefined;
+    const isolated = context instanceof IsolatedAdminReadContext ? context : undefined;
+    const ReadFailure = isolated?.ReadFailure;
     const requireAdmin = (request: Request, env: Env) => lookupAdmin(request, env, ReadFailure);
     const id = correlationId(request);
     const cors = (response: Response) => withAdminCors(request, env.CORS_ALLOWED_ORIGINS, response);
@@ -1414,10 +1417,12 @@ export default {
         internalErrorCode: classified.internalCode,
         route: new URL(request.url).pathname,
       });
-      return cors(json(
+      const response = cors(json(
         { error: classified.exposedCode, correlationId: id, ...(diagnostic ? {diagnostic} : {}) },
         { status: classified.status, headers: { 'cache-control': 'private, no-store', 'x-correlation-id': id } },
       ));
+      return isolated && (diagnostic || classified.exposedCode === 'admin_role_required')
+        ? isolated.identifyResponse(response, env) : response;
     }
   },
 };
