@@ -117,3 +117,24 @@ test('Worker resume requires the exact prior read-only receipt and owner review'
   map['actions/runs/765/approvals']=[];
   await assert.rejects(authorizeSetup({env:resume,get}));
 });
+
+test('repair approval requires the existing private credential and owner-selector attestation for this run',async()=>{
+  const prior='45611431085',diagnostic='45628704670',app='b'.repeat(40);
+  const scope={...env,REQUESTED_OPERATION:'stage-isolated-repair',PRIOR_RUN:prior};
+  const repairPins={sourceSha:app,workerSha:'c'.repeat(64),assetsSha:'d'.repeat(64),workerBytes:123,assetBytes:345,assetCount:3};
+  const map=sources([approval]);
+  for(const [id,head,operation] of [[prior,'d4cf5bb1229383f736b0287101096482ca9a535e','resume-worker-script-settings'],
+    [diagnostic,'a8f65d6ecbe107346598847a1c5c82b92a3ee9cd','diagnose-admin-read']]) {
+    map['actions/runs/'+id]={id:Number(id),head_sha:head,repository:{id:1010752912},
+      path:'.github/workflows/new-core-isolated-setup.yml',head_branch:'main',run_attempt:1,status:'completed',conclusion:'success',
+      actor:{id:owner},triggering_actor:{id:owner},event:'workflow_dispatch',display_title:operation+' admin-new-core-test.lythaus.co at '+head};
+    map['actions/runs/'+id+'/approvals']=[approval];
+    map['compare/'+head+'...'+sha]={merge_base_commit:{sha:head}};
+  }
+  map['compare/'+app+'...'+sha]={merge_base_commit:{sha:app}};
+  const get=path=>path.startsWith('actions/workflows/')?{total_count:1,workflow_runs:[{id:765}]}:map[path];
+  assert.equal((await authorizeSetup({env:scope,get,repairPins})).existingPlanConfirmedByOwner,true);
+  map['actions/runs/765/approvals']=[{...approval,comment:''}];
+  await assert.rejects(authorizeSetup({env:scope,get,repairPins}),/repair_owner_attestation_missing/);
+  assert.equal((await authorizeSetup({env:scope,get,afterReview:false,repairPins})).privateCredentialConfirmed,false);
+});

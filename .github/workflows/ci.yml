@@ -94,7 +94,7 @@ jobs:
       - name: Validate the isolated admin metadata inspector without credentials
         run: node --test scripts/tests/lythaus-new-core-isolation-review.test.mjs
       - name: Validate the combined isolated setup without credentials
-        run: node --test scripts/tests/lythaus-new-core-admin-inputs.test.mjs scripts/tests/lythaus-new-core-isolated-setup.test.mjs scripts/tests/new-core-setup-control.test.mjs scripts/tests/new-core-admin-read-diagnostic.test.mjs
+        run: node --experimental-test-module-mocks --test scripts/tests/lythaus-new-core-admin-inputs.test.mjs scripts/tests/lythaus-new-core-isolated-setup.test.mjs scripts/tests/new-core-setup-control.test.mjs scripts/tests/new-core-admin-read-diagnostic.test.mjs scripts/tests/new-core-isolated-repair.test.mjs scripts/tests/new-core-repair-control.test.mjs scripts/tests/new-core-repair-receipt.test.mjs
 
   native_runtime:
     name: Native Workers and PlanetScale
@@ -279,6 +279,7 @@ jobs:
         run: >-
           node --experimental-test-module-mocks --experimental-strip-types --test
           apps/lythaus-admin-api/tests/solo-recovery-diagnostic.test.mjs
+          apps/lythaus-admin-api/tests/new-core-admin-read-errors.test.mjs
           scripts/tests/prepare-subject-diagnostic-policy.test.mjs
           scripts/tests/subject-diagnostic-release-contract.test.mjs
           scripts/tests/admin-runtime-target-pass-fail.test.mjs

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if (( $# != 2 )); then
-  echo 'Usage: bash new-core-isolated-pg-test.sh APP_CHECKOUT SEALED_ARTIFACTS' >&2
+if (( $# < 2 || $# > 3 )) || [[ "${3:-}" != '' && "${3:-}" != '--repair' ]]; then
+  echo 'Usage: bash new-core-isolated-pg-test.sh APP_CHECKOUT SEALED_ARTIFACTS [--repair]' >&2
   exit 2
 fi
 app_dir=$(realpath -- "$1")
@@ -43,12 +43,22 @@ docker exec "$fixture_container" pg_isready -h 127.0.0.1 -U postgres -d postgres
 )
 docker exec "$fixture_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres \
   -c "ALTER ROLE lythaus_admin LOGIN PASSWORD 'disposable_role_only'" > /dev/null
-(
+run_runtime() (
   cd "$fixture_dir"
   env -i PATH="$PATH" HOME="$fixture_dir" CI=true WRANGLER_SEND_METRICS=false \
     LOCAL_SCOPED_PG_FIXTURE="postgresql://lythaus_admin:disposable_role_only@$endpoint/postgres" \
-    node "$runtime_test" "$app_dir" "$artifacts_dir" --local-pg
+    node "$runtime_test" "$app_dir" "$artifacts_dir" --local-pg "$@"
 )
+if [[ "${3:-}" == '--repair' ]]; then
+  docker exec "$fixture_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres \
+    -c "REVOKE SELECT ON identity.admin_memberships FROM lythaus_admin" >/dev/null
+  run_runtime --repair --denied-membership-read
+  docker exec "$fixture_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres \
+    -c "GRANT SELECT ON identity.admin_memberships TO lythaus_admin" >/dev/null
+  run_runtime --repair
+else
+  run_runtime
+fi
 postconditions=$(docker exec "$fixture_container" psql -XAt -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
   SELECT count(*) = 1 AND count(*) FILTER (WHERE m.active AND m.role = 'administrator' AND u.status = 'locked') = 1
     AND (SELECT enabled FROM system.feature_flags WHERE flag_key = 'identity.first_admin_bootstrap_consumed')

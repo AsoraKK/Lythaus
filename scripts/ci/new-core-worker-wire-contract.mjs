@@ -13,17 +13,21 @@ import { loadArtifacts, stageWorker } from './new-core-isolated-worker.mjs';
 //   packages/workers-shared/utils/tests/parseRedirects.invalid.test.ts:288
 // cloudflare/cloudflare-docs@ba6cea1c73a2f88328b6325d90c3fd3dcc618778
 //   workers/platform/infrastructure-as-code.mdx:592; static-assets/direct-upload.mdx:142
-const [sourceDir, artifactDir] = process.argv.slice(2);
-assert.ok(sourceDir && artifactDir, 'Pass pinned source and prepared artifact directories');
-const artifacts = await loadArtifacts({ sourceDir, artifactDir });
+const [sourceDir, artifactDir, mode] = process.argv.slice(2);
+assert.ok(sourceDir && artifactDir && process.argv.length <= 5 && (!mode || mode === '--repair'),
+  'Pass pinned source and prepared artifact directories, optionally followed by --repair');
+const repair = mode === '--repair';
+const pins = repair ? (await import('./new-core-isolated-repair-pins.mjs')).REPAIR_PINS : undefined;
+if (repair) assert.ok(pins, 'Repair source and artifacts require a reviewed pin');
+const artifacts = await loadArtifacts({ sourceDir, artifactDir, pins });
 const sha = value => createHash('sha256').update(value).digest('hex');
-const tag = '3fbaea846f67fe5ad452d53c456b5355069757ca';
+const tag = pins?.sourceSha ?? '3fbaea846f67fe5ad452d53c456b5355069757ca';
 const issuer = 'https://fixture.cloudflareaccess.com';
 const audience = 'a'.repeat(64);
 const hostname = 'admin-new-core-test.lythaus.co';
 const workerName = 'lythaus-admin-api-new-core-test';
-const workerId = 'd'.repeat(32);
-const parentId = '22222222-2222-4222-b222-222222222222';
+const workerId = repair ? '89391a349e454b3994bd43299c6386ed' : 'd'.repeat(32);
+const parentId = repair ? '37f36eb4-911d-4c51-b723-751329cd1b92' : '22222222-2222-4222-b222-222222222222';
 const childId = '33333333-3333-4333-b333-333333333333';
 const api = 'https://api.cloudflare.com/client/v4/accounts/e5b7ae46e04698f507b7e4b3d4ef1af0/workers';
 const versions = `${api}/workers/${workerId}/versions`;
@@ -38,7 +42,7 @@ const moduleBodies = new Map([
   [entry, Buffer.from("export { default } from './new-core-test-worker.js';\n")],
   [app, artifacts.worker], ['_headers', artifacts.assets.get('_headers')],
 ]);
-assert.equal(sha(moduleBodies.get(app)), '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3');
+assert.equal(sha(moduleBodies.get(app)), pins?.workerSha ?? '6a276e4b4ed3883b2c00c8b089149b7b14cfebf3ce3811f0a799ff686e9101b3');
 assert.equal(sha(moduleBodies.get('_headers')), '7ac87b1130bcb67b1a6c6a8064e0b64b73ef5f561af7fe474c9bab7575b427b1');
 assert.equal(artifacts.assets.get('_redirects').toString(), '/* /index.html 200\n');
 const modules = [...moduleBodies].map(([name, bytes]) => ({
@@ -95,10 +99,12 @@ let indexHash;
 let lastAsset = 'none';
 let wireFailure;
 const versionMessages = new Map();
-const apiClient = createSetupClient({ token: accountToken, record: async () => {}, fetchImpl: async (url, request) => {
+const apiClient = createSetupClient({ token: accountToken, record: async () => {},
+  ...(repair ? {repairOperation: 'stage-isolated-repair'} : {}), fetchImpl: async (url, request) => {
   try {
     if (request.method === 'GET') {
-      if (url === `${api}/workers/${workerId}`) return reply(shell);
+      if (url === `${api}/workers/${workerId}`) return reply(repair ? {...shell, deployed_on: '2026-11-25T12:19:30Z'} : shell);
+      if (repair && url === `${versions}/${parentId}?include=modules`) return reply({id: parentId});
       if (url === versions) return reply([...versionMessages.keys()].map(id=>({id})));
       const id = [parentId,childId].find(id => url === `${versions}/${id}?include=modules`);
       if (id && versionMessages.has(id)) return reply({
@@ -106,12 +112,22 @@ const apiClient = createSetupClient({ token: accountToken, record: async () => {
         modules, bindings, assets: { config: assetsConfig }, compatibility_date: '2026-07-27', compatibility_flags: ['nodejs_compat'],
       });
     }
-    if (request.method === 'POST' && url === `${api}/workers`) return reply(shell);
+    if (!repair && request.method === 'POST' && url === `${api}/workers`) return reply(shell);
     if (request.method === 'POST' && url === `${api}/scripts/${workerName}/assets-upload-session`) {
       const {manifest} = JSON.parse(request.body);
       requireWire(!Object.hasOwn(manifest, '/_headers') && !Object.hasOwn(manifest, '/_redirects'), 'control_files_in_asset_manifest');
       const rows = Object.keys(manifest).sort().map(k => [k, manifest[k].hash, manifest[k].size]);
-      requireWire(sha(JSON.stringify(rows)) === 'b291534c78b20cbf9d9937ba80cb8ef1df5d8b2fb42fc47596dfb0c006445bff', 'static_manifest');
+      if (repair) {
+        const {default: blake3} = await import('blake3-wasm');
+        const expected = [...artifacts.assets.keys()].filter(path => !['_headers','_redirects'].includes(path)).sort().map(path => {
+          const bytes = artifacts.assets.get(path);
+          const hash = blake3.hash(bytes.toString('base64') + path.split('.').at(-1)).toString('hex').slice(0, 32);
+          return ['/' + path, hash, bytes.length];
+        });
+        assert.deepEqual(rows, expected);
+      } else {
+        requireWire(sha(JSON.stringify(rows)) === 'b291534c78b20cbf9d9937ba80cb8ef1df5d8b2fb42fc47596dfb0c006445bff', 'static_manifest');
+      }
       indexHash = manifest['/index.html'].hash;
       lastAsset = 'session';
       return reply({ jwt: sessionToken, buckets: [[indexHash]] });
@@ -125,8 +141,8 @@ const apiClient = createSetupClient({ token: accountToken, record: async () => {
       return Response.json({ success: true, result: { jwt: completedToken } }, { status: 201 });
     }
     if (request.method === 'POST' && url.startsWith(versions)) {
-      requireWire(lastAsset === 'complete' && versionCount < 2, 'stage_sequence');
-      const child = versionCount === 1;
+      requireWire(lastAsset === 'complete' && versionCount < (repair ? 1 : 2), 'stage_sequence');
+      const child = repair || versionCount === 1;
       verifyWire(url, request, child);
       const message = JSON.parse(request.body).annotations['workers/message'];
       assert.match(message, new RegExp('^lythaus-isolated [a-f0-9-]{36} ' + (child ? parentId : 'parent') + '$'));
@@ -154,7 +170,21 @@ const apiClient = createSetupClient({ token: accountToken, record: async () => {
   }
 } });
 try {
-  await stageWorker({ artifacts, request: apiClient.request, audience, issuer, journal: async () => {} });
+  if (repair) {
+    const {uploadAssets} = await import('./new-core-isolated-worker.mjs');
+    const {repairVersionBody} = await import('./new-core-isolated-repair.mjs');
+    const workerPath = '/accounts/e5b7ae46e04698f507b7e4b3d4ef1af0/workers/workers/' + workerId;
+    await apiClient.request(workerPath);
+    await apiClient.request(workerPath + '/versions/' + parentId + '?include=modules');
+    apiClient.selectRecordedWorker();
+    apiClient.selectLineage(parentId);
+    const jwt = await uploadAssets(artifacts.assets, apiClient.request, async () => {});
+    const body = repairVersionBody({artifacts, pins, audience, issuer, intentId:'44444444-4444-4444-8444-444444444444', jwt});
+    await apiClient.request(workerPath + '/versions?deploy=false', {method:'POST', body});
+  } else {
+    await stageWorker({ artifacts, request: apiClient.request, audience, issuer, journal: async () => {} });
+  }
 } catch (error) { throw wireFailure ?? error; }
-assert.equal(versionCount, 2);
-console.log('Worker write-contract test passed for the serialized parent and inherited child. Provider requests: 0.');
+assert.equal(versionCount, repair ? 1 : 2);
+console.log(repair ? 'Verified the serialized repair upload inherited the serving child key. Provider requests: 0.' :
+  'Worker write-contract test passed for the serialized parent and inherited child. Provider requests: 0.');

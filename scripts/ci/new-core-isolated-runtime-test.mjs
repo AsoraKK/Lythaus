@@ -6,17 +6,26 @@ import { join, resolve } from 'node:path';
 
 import { loadArtifacts, workerVersionCode } from './new-core-isolated-worker.mjs';
 
-const [sourceDir, artifactDir] = process.argv.slice(2).map(path => resolve(path));
+const [source, directory, ...options] = process.argv.slice(2);
+assert.ok(source && directory && options.length === new Set(options).size &&
+  options.every(value => ['--repair', '--local-pg', '--denied-membership-read'].includes(value)));
+const sourceDir = resolve(source);
+const artifactDir = resolve(directory);
+const repair = options.includes('--repair');
+const databaseTest = options.includes('--local-pg');
+const deniedRead = options.includes('--denied-membership-read');
+assert.ok(!deniedRead || repair && databaseTest);
+const pins = repair ? (await import('./new-core-isolated-repair-pins.mjs')).REPAIR_PINS : undefined;
+if (repair) assert.ok(pins, 'Repair source and artifacts require a reviewed pin');
 const require = createRequire(join(sourceDir, 'node_modules/wrangler/package.json'));
 const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
 const configBytes = await readFile(join(sourceDir, 'apps/lythaus-admin-api/wrangler.new-core-test.jsonc'));
 const digest = data => createHash('sha256').update(data).digest('hex');
 assert.equal(digest(configBytes), '0056b85f1b4b2ab10c01db76ea7a587744ef6224ff274afdfc835d5fa3c4a6ac');
 const config = JSON.parse(configBytes);
-const code = workerVersionCode(await loadArtifacts({ sourceDir, artifactDir }));
+const code = workerVersionCode(await loadArtifacts({ sourceDir, artifactDir, pins }), pins);
 const indexBytes = await readFile(join(artifactDir, 'assets/index.html'));
 const host = config.vars.EXPECTED_HOSTNAMES;
-const databaseTest = process.argv[4] === '--local-pg';
 let localPg;
 if (databaseTest) {
   localPg = new URL(process.env.LOCAL_SCOPED_PG_FIXTURE);
@@ -101,7 +110,18 @@ try {
   assert.equal(assetReads, 1);
   assert.ok(jwksReads > 0);
   assert.equal(unexpectedOutbound, 0);
-  if (databaseTest) {
+  if (deniedRead) {
+    for (const path of ['/api/admin/health','/api/admin/moderation/cases']) {
+      const response = await local.dispatchFetch('https://' + host + path, { headers });
+      assert.equal(response.status, 500);
+      assert.match(response.headers.get('content-type'), /application\/json/);
+      const body = await response.json();
+      assert.deepEqual(Object.keys(body).sort(), ['correlationId','diagnostic','error']);
+      assert.equal(body.error, 'admin_request_failed');
+      assert.deepEqual(body.diagnostic, {stage:'membership_query',category:'permission_denied'});
+      assert.match(body.correlationId, /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/);
+    }
+  } else if (databaseTest) {
     const read = async (label,path,expected) => {
       const r = await local.dispatchFetch('https://' + host + path, { headers });
       assert.equal(r.status, expected, label);
@@ -109,7 +129,8 @@ try {
       const data = await r.json();
       if (expected === 403) assert.equal(data.error, 'admin_role_required');
     };
-    await read('nonmember', '/api/admin/moderation/cases', 403);
+    await read('nonmember health', '/api/admin/health', 403);
+    await read('nonmember moderation', '/api/admin/moderation/cases', 403);
     const bootstrap = () => local.dispatchFetch('https://' + host + '/api/admin/bootstrap/first-administrator', {
       method: 'POST', headers: {...headers, origin:'https://' + host, 'content-type':'application/json'},
       body: JSON.stringify({confirmation:'BOOTSTRAP FIRST ADMINISTRATOR'}),
@@ -125,7 +146,8 @@ try {
     assert.equal(unexpectedOutbound,0);
   }
   console.log(JSON.stringify({ workerdStartup: true, deniedAssertions: invalidAssertions.length, deniedOrigins: 3,
-    verifiedSignedAsset: true, externalRequests: 0, localDatabaseTest:databaseTest }));
+    verifiedSignedAsset: true, externalRequests: unexpectedOutbound, localDatabaseTest:databaseTest, deniedRead }));
+  assert.equal(unexpectedOutbound, 0);
 } finally {
   await local.dispose();
 }

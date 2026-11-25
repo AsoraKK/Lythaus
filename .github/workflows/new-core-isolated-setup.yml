@@ -1,5 +1,5 @@
 name: New-core isolated Admin setup
-run-name: ${{ inputs.operation }} admin-new-core-test.lythaus.co at ${{ inputs.control_sha }}
+run-name: ${{ inputs.operation }} admin-new-core-test.lythaus.co at ${{ inputs.control_sha }}${{ endsWith(inputs.operation, '-isolated-repair') && format(' from {0}', inputs.prior_run) || '' }}
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +14,9 @@ on:
           - resume-access
           - resume-worker-script-settings
           - stage-one-nonserving-version
+          - stage-isolated-repair
+          - activate-isolated-repair
+          - reconcile-isolated-repair
       prior_run:
         description: Prior protected setup run containing the cumulative isolated Worker receipt
         required: false
@@ -53,6 +56,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci/new-core-setup-control.mjs before-review
+      - name: Verify the repair application is a separate protected-main commit
+        if: endsWith(inputs.operation, '-isolated-repair')
+        run: |
+          pin=$(node scripts/ci/new-core-isolated-repair-pins.mjs source)
+          git rev-list --first-parent "$GITHUB_SHA" | grep -Fx "$pin"
 
   isolated:
     name: Owner review for isolated setup
@@ -76,7 +84,7 @@ jobs:
       - name: Install locked dependencies without provider credentials
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Prepare the pinned Worker and assets without provider credentials
-        if: inputs.operation != 'inspect' && inputs.operation != 'diagnose-admin-read'
+        if: inputs.operation != 'inspect' && inputs.operation != 'diagnose-admin-read' && !endsWith(inputs.operation, '-isolated-repair')
         env:
           WRANGLER_SEND_METRICS: 'false'
         run: |
@@ -92,11 +100,28 @@ jobs:
           node scripts/ci/new-core-isolated-worker-rehearsal.mjs application-source "$RUNNER_TEMP/new-core-artifacts"
           node scripts/ci/new-core-worker-wire-contract.mjs application-source "$RUNNER_TEMP/new-core-artifacts"
           bash scripts/ci/new-core-isolated-pg-test.sh application-source "$RUNNER_TEMP/new-core-artifacts"
+      - name: Build and rehearse the sealed repair application without provider credentials
+        if: inputs.operation == 'stage-isolated-repair'
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          pin=$(node scripts/ci/new-core-isolated-repair-pins.mjs source)
+          git worktree add --detach application-source "$pin"
+          npm --prefix application-source ci --ignore-scripts --no-audit --no-fund
+          npm --prefix application-source/apps/control-panel ci --ignore-scripts --no-audit --no-fund
+          node scripts/check-npm-audit.js application-source
+          node scripts/check-npm-audit.js application-source/apps/control-panel
+          (cd application-source && node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-admin-api/tests/new-core-admin-read-errors.test.mjs apps/lythaus-admin-api/tests/admin-access-runtime-policy.test.mjs apps/lythaus-admin-api/tests/new-core-test-worker.test.mjs apps/lythaus-admin-api/tests/first-admin-bootstrap.test.mjs)
+          node scripts/ci/new-core-isolated-repair-pins.mjs prepare application-source "$RUNNER_TEMP/new-core-artifacts"
+          node scripts/ci/new-core-worker-wire-contract.mjs application-source "$RUNNER_TEMP/new-core-artifacts" --repair
+          node scripts/ci/new-core-isolated-runtime-test.mjs application-source "$RUNNER_TEMP/new-core-artifacts" --repair
+          bash scripts/ci/new-core-isolated-pg-test.sh application-source "$RUNNER_TEMP/new-core-artifacts" --repair
       - name: Require actual owner approval and current protected main
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci/new-core-setup-control.mjs after-review
       - name: Perform only the selected operation on the isolated target
+        id: provider
         env:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -105,10 +130,18 @@ jobs:
           LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL: ${{ secrets.LYTHAUS_NEW_CORE_VERIFIER_DATABASE_URL }}
         run: node scripts/ci/run-new-core-setup.mjs
       - name: Retain the sanitized Worker lineage receipt
-        if: always() && inputs.operation != 'inspect' && inputs.operation != 'diagnose-admin-read'
+        if: always() && inputs.operation != 'inspect' && inputs.operation != 'diagnose-admin-read' && !endsWith(inputs.operation, '-isolated-repair')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: isolated-worker-lineage-${{ github.run_id }}-1
           path: ${{ runner.temp }}/isolated-worker-lineage.json
           if-no-files-found: ignore
+          retention-days: 30
+      - name: Retain the separate sanitized isolated repair receipt
+        if: always() && endsWith(inputs.operation, '-isolated-repair') && steps.provider.outcome != 'skipped' && !(inputs.operation == 'reconcile-isolated-repair' && inputs.prior_run == '45611431085')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isolated-worker-repair-${{ github.run_id }}-1
+          path: ${{ runner.temp }}/isolated-worker-repair.json
+          if-no-files-found: error
           retention-days: 30
