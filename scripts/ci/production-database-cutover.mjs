@@ -207,7 +207,7 @@ function assertStillServing(deployments, expectedVersion, expectedDeployment) {
   }
 }
 
-async function verifyAdminInventory({pins,current,releaseSha,token,fetchImpl}) {
+async function verifyAdminInventory({pins,current,releaseSha,acknowledged,token,fetchImpl}) {
   // An earlier unacknowledged upload can exist at zero traffic. Reconcile it
   // before another upload, even when the serving deployment has not moved.
   const versionsPath = `/accounts/${TARGET.account}/workers/workers/${pins.workerId}/versions`;
@@ -222,29 +222,42 @@ async function verifyAdminInventory({pins,current,releaseSha,token,fetchImpl}) {
     if (!Array.isArray(result) || !info || info.page !== page || (info.count !== undefined && info.count !== result.length) ||
       (!validCount(info.total_count) && !validCount(info.total_pages)) ||
       (info.total_count !== undefined && !validCount(info.total_count)) || (info.total_pages !== undefined && !validCount(info.total_pages)) ||
-      (index > 0 && (info.total_count !== total || info.total_pages !== totalPages))) throw new Error('Admin version inventory pagination is unverified');
+      (index > 0 && (info.total_count !== total || info.total_pages !== totalPages))) {
+      throw new PromotionSourceError('admin_version_inventory_unverified','Admin version inventory pagination is unverified');
+    }
     total = info.total_count;
     totalPages = info.total_pages;
     versions.push(...result);
     const countComplete = total === undefined ? undefined : versions.length === total;
     const pagesComplete = totalPages === undefined ? undefined : page === Math.max(1,totalPages);
     if ((countComplete !== undefined && pagesComplete !== undefined && countComplete !== pagesComplete) ||
-      (total !== undefined && versions.length > total) || (totalPages !== undefined && page > Math.max(1,totalPages))) throw new Error('Admin version inventory counts do not reconcile');
+      (total !== undefined && versions.length > total) || (totalPages !== undefined && page > Math.max(1,totalPages))) {
+      throw new PromotionSourceError('admin_version_inventory_unverified','Admin version inventory counts do not reconcile');
+    }
     if (countComplete || pagesComplete) break;
-    if (!result.length || page === pages.length) throw new Error('Admin version inventory is incomplete');
+    if (!result.length || page === pages.length) throw new PromotionSourceError('admin_version_inventory_unverified','Admin version inventory is incomplete');
   }
-  const latest = versions.find(row => row.id === current.versionId);
-  if (current.versionId === pins.servingVersionId) {
+  const serving = versions.find(row => row?.id === current.versionId);
+  const firstPromotion = current.versionId === pins.servingVersionId;
+  if (firstPromotion) {
     const expected = [pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId];
-    if (versions.length !== expected.length || !expected.every(id => versions.some(row => row.id === id))) {
-      throw new Error('isolated Admin version inventory requires read-only reconciliation');
+    if (acknowledged) expected.push(acknowledged.id);
+    if (versions.length !== expected.length || !expected.every(id => versions.some(row => row?.id === id))) {
+      throw new PromotionSourceError('isolated_inventory_reconciliation_required','isolated Admin version inventory requires read-only reconciliation');
     }
   }
-  if (!latest || !Number.isSafeInteger(latest.number) || latest.number <= 0 ||
-    !versions.every(row => WORKER_VERSION_ID.test(row.id) && Number.isSafeInteger(row.number) && row.number > 0 &&
-      row.number <= latest.number && (!releaseSha || row.annotations?.['workers/tag'] !== releaseSha)) ||
+  const listedUpload = acknowledged && versions.find(row => row?.id === acknowledged.id);
+  if (!serving || !Number.isSafeInteger(serving.number) || serving.number <= 0 ||
+    (acknowledged && (!listedUpload || listedUpload.number !== acknowledged.number || listedUpload.number <= serving.number)) ||
+    !versions.every(row => {
+      if (!WORKER_VERSION_ID.test(row?.id) || !Number.isSafeInteger(row.number) || row.number <= 0) return false;
+      const tag = row.annotations?.['workers/tag'];
+      if (row === listedUpload) return tag === undefined || tag === releaseSha;
+      return row.number <= serving.number && (!releaseSha || tag !== releaseSha);
+    }) ||
     new Set(versions.map(row => row.number)).size !== versions.length || new Set(versions.map(row => row.id)).size !== versions.length) {
-    throw new Error('previous Admin version upload requires read-only reconciliation');
+    throw new PromotionSourceError(firstPromotion ? 'isolated_inventory_reconciliation_required' : 'admin_version_reconciliation_required',
+      'previous Admin version upload requires read-only reconciliation');
   }
 }
 
@@ -292,7 +305,7 @@ export async function prepareReplacementAdminUpload({config, secretNames, snapsh
 // Confirm the version identified by the upload acknowledgement on both the
 // immutable Worker and named script before any candidate traffic operation.
 export async function verifyReplacementAdminUpload({versionId, releaseSha, snapshot, config, token, resumeZeroTraffic = false,
-  fetchImpl = fetch, destination = transition.destination}) {
+  requireZeroTraffic = false, fetchImpl = fetch, destination = transition.destination}) {
   const pins = validateIsolatedVersions(destination);
   const current = soleAdminBefore(snapshot);
   if (!WORKER_VERSION_ID.test(versionId) || !/^[a-f0-9]{40}$/.test(releaseSha) ||
@@ -318,7 +331,8 @@ export async function verifyReplacementAdminUpload({versionId, releaseSha, snaps
   if (!WORKER_VERSION_ID.test(snapshot.observedDeployment?.id) || active?.id !== snapshot.observedDeployment.id) {
     throw new Error('replacement Admin serving deployment differs from the same-run observation');
   }
-  if (resumeZeroTraffic && active?.versions?.length === 2) {
+  if (requireZeroTraffic && active.versions?.length !== 2) throw new Error('replacement Admin zero-traffic stage is required before activation');
+  if ((requireZeroTraffic || resumeZeroTraffic) && active.versions?.length === 2) {
     const staged = active.versions.find(v => v.version_id === versionId && v.percentage === 0);
     const serving = active.versions.find(v => v.version_id === current.versionId && v.percentage === 100);
     if (!staged || !serving || !WORKER_VERSION_ID.test(active.id) || active.id === history[1]?.id ||
@@ -328,6 +342,7 @@ export async function verifyReplacementAdminUpload({versionId, releaseSha, snaps
   } else {
     assertStillServing(deployments,current.versionId,predecessor);
   }
+  await verifyAdminInventory({pins,current,releaseSha,acknowledged:{id:versionId,number:version.number},token,fetchImpl});
   return {status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:pins.workerId,versionId,sourceSha:releaseSha,
     subjectKeySourceVersionId:pins.servingVersionId,servingVersionId:current.versionId,previousDeploymentId:predecessor};
 }

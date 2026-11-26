@@ -222,9 +222,10 @@ test('the protected pre-promotion inspection reads the pinned metadata and repor
     versionId:d.pins.servingVersionId,deploymentId:d.pins.servingDeploymentId,sourceSha:d.pins.repairSourceSha});
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
   listed.push({id:'55555555-5555-4555-8555-555555555555',number:5});
-  await assert.rejects(inspectPromotionSource(options),/inventory requires read-only reconciliation/);
+  const unrecognized = {code:'isolated_inventory_reconciliation_required',message:'isolated Admin version inventory requires read-only reconciliation'};
+  await assert.rejects(inspectPromotionSource(options),unrecognized);
   listed.splice(0,1);
-  await assert.rejects(inspectPromotionSource(options),/inventory requires read-only reconciliation/);
+  await assert.rejects(inspectPromotionSource(options),unrecognized);
 });
 
 test('the canonical full Admin upload binds the attested key without reading it', async () => {
@@ -257,10 +258,10 @@ test('the canonical full Admin upload binds the attested key without reading it'
   assert.equal(config.unsafe,undefined);
   assert.equal(upload.message,'lythaus-admin ' + d.pins.servingVersionId + ' ' + d.pins.servingDeploymentId);
   countOverride = 41;
-  await assert.rejects(prepareReplacementAdminUpload(args),/inventory/);
+  await assert.rejects(prepareReplacementAdminUpload(args),{code:'admin_version_inventory_unverified'});
   countOverride = undefined;
   list.push({id:'55555555-5555-4555-8555-555555555555',number:5});
-  await assert.rejects(prepareReplacementAdminUpload(args),/inventory requires read-only reconciliation/);
+  await assert.rejects(prepareReplacementAdminUpload(args),{code:'isolated_inventory_reconciliation_required'});
   list.pop();
   for (const overrides of [
     {secretNames:[...secretNames,anchor.name]}, {secretNames:[...secretNames,'JWT_PRIVATE_KEY']}, {secretNames:[]},
@@ -291,6 +292,11 @@ test('the canonical full Admin upload binds the attested key without reading it'
   const verify = {...args,versionId:id};
   assert.deepEqual(await verifyReplacementAdminUpload(verify),{status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:d.pins.workerId,
     versionId:id,sourceSha:args.releaseSha,subjectKeySourceVersionId:d.pins.servingVersionId,servingVersionId:d.pins.servingVersionId,previousDeploymentId:d.pins.servingDeploymentId});
+  await assert.rejects(verifyReplacementAdminUpload({...verify,requireZeroTraffic:true}), /zero-traffic stage is required/);
+  const sibling = {id:'66666666-6666-4666-8666-666666666666',number:6};
+  list.push(sibling);
+  await assert.rejects(verifyReplacementAdminUpload(verify),{code:'isolated_inventory_reconciliation_required'});
+  list.pop();
   await assert.rejects(prepareReplacementAdminUpload(args),/read-only reconciliation/);
   for (const other of ['',d.pins.servingVersionId,d.pins.childVersionId]) {
     await assert.rejects(verifyReplacementAdminUpload({...verify,versionId:other}),/acknowledgement/);
@@ -318,8 +324,18 @@ test('the canonical full Admin upload binds the attested key without reading it'
   await assert.rejects(verifyReplacementAdminUpload(verify), /serving deployment/);
   const resume = {...verify,resumeZeroTraffic:true,snapshot:{...verify.snapshot,observedDeployment:staged}};
   assert.equal((await verifyReplacementAdminUpload(resume)).versionId,id);
+  const beforeActivation = {...verify,requireZeroTraffic:true,snapshot:{...verify.snapshot,observedDeployment:{id:staged.id}}};
+  assert.equal((await verifyReplacementAdminUpload(beforeActivation)).versionId,id);
+  staged.id = '99999999-9999-4999-8999-999999999999';
+  await assert.rejects(verifyReplacementAdminUpload(beforeActivation), /serving deployment differs/);
+  staged.id = beforeActivation.snapshot.observedDeployment.id;
+  list.push(sibling);
+  await assert.rejects(verifyReplacementAdminUpload(resume),{code:'isolated_inventory_reconciliation_required'});
+  await assert.rejects(verifyReplacementAdminUpload(beforeActivation),{code:'isolated_inventory_reconciliation_required'});
+  list.pop();
   staged.versions[0].percentage = 1;
   await assert.rejects(verifyReplacementAdminUpload(resume), /zero-traffic stage/);
+  await assert.rejects(verifyReplacementAdminUpload(beforeActivation), /zero-traffic stage/);
   staged.versions[0].percentage = 0;
   staged.versions[0].version_id = d.pins.childVersionId;
   await assert.rejects(verifyReplacementAdminUpload(resume), /zero-traffic stage/);
@@ -330,6 +346,24 @@ test('the canonical full Admin upload binds the attested key without reading it'
   const next = {...args,releaseSha:'c'.repeat(40),snapshot:snapshot(id,args.releaseSha,fullDeployment.id),secretNames:['DATABASE_READINESS_TOKEN','CLOUDFLARE_ACCOUNT_ID']};
   assert.deepEqual((await prepareReplacementAdminUpload(next)).config.unsafe.bindings,[anchor,
     ...['PII_ENCRYPTION_KEY_V1','PII_HMAC_KEY_V1'].map(name => ({name,type:'inherit',version_id:id}))]);
+  const nextAnnotations = {'workers/tag':next.releaseSha,'workers/message':'lythaus-admin ' + anchor.version_id + ' ' + fullDeployment.id};
+  const nextAck = {...sibling,annotations:nextAnnotations,bindings};
+  d.replies.set(immutable + '/' + nextAck.id,nextAck);
+  d.replies.set(path + '/versions/' + nextAck.id,{id:nextAck.id,metadata:{annotations:nextAnnotations},resources:{bindings}});
+  list.push(nextAck);
+  const nextVerify = {...next,versionId:nextAck.id};
+  assert.equal((await verifyReplacementAdminUpload(nextVerify)).versionId,nextAck.id);
+  list.push({id:'88888888-8888-4888-8888-888888888888',number:7});
+  await assert.rejects(verifyReplacementAdminUpload(nextVerify),{code:'admin_version_reconciliation_required'});
+  nextAck.number = 8;
+  await assert.rejects(verifyReplacementAdminUpload(nextVerify),{code:'admin_version_reconciliation_required'});
+  list.pop();
+  const originalTag = list[0].annotations['workers/tag'];
+  list[0].annotations['workers/tag'] = next.releaseSha;
+  await assert.rejects(verifyReplacementAdminUpload(nextVerify),{code:'admin_version_reconciliation_required'});
+  list[0].annotations['workers/tag'] = originalTag;
+  list.pop();
+  await assert.rejects(verifyReplacementAdminUpload(nextVerify),{code:'admin_version_reconciliation_required'});
   await assert.rejects(prepareReplacementAdminUpload({...next,secretNames}),/PII bindings must be inherited/);
   list[0].annotations['workers/tag'] = next.releaseSha;
   await assert.rejects(prepareReplacementAdminUpload(next),/reconciliation/);
