@@ -230,11 +230,17 @@ The reviewed application is protected commit `fc1dce9683219edee3312cf339526b2850
 
 Staging run `45727589224` verified the fifth version `260d15e3-dd61-47db-bbf4-5dd3839141a5` at zero traffic on the existing Worker. The new version inherited the subject key from the fourth version `1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f`, which retained all isolated traffic during staging. [Protected stage](https://github.com/AsoraKK/Lythaus/actions/runs/45727589224)
 
-Activation run `45758911466` subsequently verified deployment `9a2ebdb2-33e2-4c8c-8315-010140aeb6c0` serving the fifth version at 100% on the isolated host. The next check requires a fresh owner Access session on the flags page and moderation endpoint. Verify that the authenticated moderation read returns the expected nonmember denial before separately approving bootstrap. [Protected activation](https://github.com/AsoraKK/Lythaus/actions/runs/45758911466)
+Activation run `45758911466` subsequently verified deployment `9a2ebdb2-33e2-4c8c-8315-010140aeb6c0` serving the fifth version at 100% on the isolated host. The owner subsequently verified the expected signed nonmember denial on this version. [Protected activation](https://github.com/AsoraKK/Lythaus/actions/runs/45758911466)
 
 If an acknowledgement is lost or readback differs, use `reconcile-isolated-repair` with the run that recorded the intent. Keep further writes paused while the outcome is uncertain.
 
 The immediate rollback target for this correction is version `1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f` on the same isolated Worker. A separately approved rollback requires a fresh check of the serving deployment, route, owner-only Access, bootstrap latch and any accepted or uncertain writes. Preserve all versions and receipts. Before production promotion, reconcile the final serving lineage in the cutover draft and rehearse the full handler and routing under the write fence.
+
+### Check final hostname and connector metadata before bootstrap
+
+On 26 November the owner’s fresh session on version `260d15e3-dd61-47db-bbf4-5dd3839141a5` displayed “This account has no active administrator membership.” The moderation API returned `admin_role_required`. This satisfies the signed nonmember check on the isolated hostname. [Verified activation](https://github.com/AsoraKK/Lythaus/actions/runs/45758911466)
+
+The owner selected `control.lythaus.co` as the dedicated Admin hostname, with the panel at `/flags`. Keep public sites, APIs and callbacks on their current destinations. To verify actual hostname ownership and connector candidates before any routing change, dispatch **New-core isolated admin read-only review** from protected main with its exact current `control_sha`, `confirm_read_only=true` and `production_connector_discovery_only=true`. Leave the worker source input at its workflow default and keep the separate promotion-source mode off. The production environment owner reviews the bounded Cloudflare metadata GETs. A partial inventory identifies the read or scope that needs reconciliation. Treat returned connector matches as configuration evidence. Verify SQL logins, path ownership, identity-provider continuity and the full handler’s explicit key inheritance separately before the one-time grant. Bootstrap and production routing retain their own approvals.
 
 Setup stops before the one-time bootstrap. Under its own approval the owner
 first establishes that a verified nonmember receives 403 on the moderation API.
@@ -252,7 +258,7 @@ In that fresh signed-in browser, the acceptance harness can call `verifyFlagsSes
 
 The acceptance operator can start the headed browser with `node scripts/ci/verify-new-core-flags-session.mjs HOSTNAME VERSION_ID SOURCE_SHA ISSUER`. Supply the four nonsecret fields from the reviewed deployment and Access organization readback. The browser starts with a fresh cookie store, checks the challenge against that issuer and leaves sign-in to the owner.
 
-The isolated Access application has one exact hostname, a one-hour session, HttpOnly, SameSite=Lax and the provider's hostname cookie scope. Both UI and API use that hostname. The setup reads those attributes back before configuring Hyperdrive or staging a Worker. On a shared final hostname, first prove the approved routing and cookie scope keep public requests separate. A fresh session at the final URL remains mandatory.
+The isolated Access application has one exact hostname, a one-hour session, HttpOnly, SameSite=Lax and the provider's hostname cookie scope. Both UI and API use that hostname. The setup reads those attributes back before configuring Hyperdrive or staging a Worker. Verify host-scoped cookies and the approved owner-only routing on the dedicated final Admin hostname. Keep public requests on their existing hosts. A fresh session at the final URL remains mandatory.
 
 Production uses its own approval. Fence data writers and asynchronous work
 before changing databases. Admin, Public, Jobs, Privacy and the coordinator

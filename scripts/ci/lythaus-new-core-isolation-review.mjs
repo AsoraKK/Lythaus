@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { verifyExistingGate } from './lythaus-new-core-secret-preflight.mjs';
 import { inspectControlRouting } from './control-host-routing.mjs';
+import { verifyExistingGate } from './lythaus-new-core-secret-preflight.mjs';
 
 export const TARGET = Object.freeze({
   account: 'e5b7ae46e04698f507b7e4b3d4ef1af0', zone: '7bc572c8b7cd3c00be9c655176c29382',
@@ -119,12 +119,19 @@ export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscover
   };
   return { get, list, reads };
 }
+function hasConnectorIdentity(origin) {
+  const nonempty = value => typeof value === 'string' && value.trim().length > 0;
+  const login = origin?.user ?? origin?.username;
+  if (nonempty(login) && (origin.user === undefined || origin.username === undefined || origin.user === origin.username)) return true;
+  const port = typeof origin?.port === 'string' && /^\d+$/.test(origin.port) ? Number(origin.port) : origin?.port;
+  return [origin?.host,origin?.scheme,origin?.database].every(nonempty) && Number.isInteger(port) && port >= 1 && port <= 65535;
+}
 
 export async function inspectProductionConnectors({ token, fetchImpl = fetch }) {
   const api = createReadOnlyClient(token, fetchImpl, true);
   const ids = new Set();
   let inventoryComplete = false;
-  let total;
+  let total, totalPages;
   for (let page = 1; page <= 10; page++) {
     const payload = await api.get(ACCOUNT + '/hyperdrive/configs?per_page=100&page=' + page);
     if (!Array.isArray(payload.result)) fail('connector_inventory_invalid');
@@ -137,38 +144,92 @@ export async function inspectProductionConnectors({ token, fetchImpl = fetch }) 
     if (info.page !== page || info.total_count < 0 || (total !== undefined && info.total_count !== total)
       || info.count !== undefined && info.count !== payload.result.length) fail('connector_inventory_pagination_changed');
     total = info.total_count;
+    if (info.total_pages !== undefined) {
+      if (!Number.isInteger(info.total_pages) || info.total_pages < 0 ||
+          (totalPages !== undefined && info.total_pages !== totalPages) ||
+          (ids.size === total ? info.total_pages !== page && !(total === 0 && info.total_pages === 0) : info.total_pages <= page)) {
+        fail('connector_inventory_pagination_changed');
+      }
+      totalPages = info.total_pages;
+    } else if (totalPages !== undefined) fail('connector_inventory_pagination_changed');
     if (ids.size === total) { inventoryComplete = true; break; }
     if (ids.size > total || !payload.result.length) fail('connector_inventory_count_mismatch');
   }
   const matches = [];
+  let unclassifiedConnectorCount = 0;
   for (const id of ids) {
     const config = (await api.get(ACCOUNT + '/hyperdrive/configs/' + id)).result;
     if (config?.id !== id) fail('connector_detail_id_changed');
+    if (!hasConnectorIdentity(config.origin)) {
+      unclassifiedConnectorCount++;
+      inventoryComplete = false;
+    }
     const evidence = hyperdriveEvidence(config);
     if (!(evidence.originMatches || evidence.branchMatches || id === TARGET.hyperdrive)) continue;
     matches.push({ id, reservedForIsolation:id === TARGET.hyperdrive, exactOrigin:evidence.originMatches,
       exactBranch:evidence.branchMatches, role:evidence.scopedRole, cacheOff:evidence.cacheDisabled,
       verifyFullWithCa:evidence.verifyFullAndCaConfigured });
   }
-  const monthlySettings = [];
+  const monthlySettings = [], monthlySettingsErrors = [];
   for (const worker of ['lythaus-public-api-development','lythaus-jobs-development']) {
-    const base = ACCOUNT + '/workers/scripts/' + worker;
-    const deployments = (await api.get(base + '/deployments')).result;
-    const rows = Array.isArray(deployments) ? deployments : deployments?.deployments;
-    if (!Array.isArray(rows) || rows.length < 1 || rows.some(row => !Number.isFinite(Date.parse(row.created_on)))) fail('connector_deployments_invalid');
-    const ordered = [...rows].sort((a,b) => Date.parse(b.created_on) - Date.parse(a.created_on));
-    if (ordered.length > 1 && Date.parse(ordered[0].created_on) === Date.parse(ordered[1].created_on)) fail('connector_deployments_ambiguous');
-    const versions = ordered[0].versions;
-    if (!Array.isArray(versions) || versions.length !== 1 || versions[0].percentage !== 100
-      || !UUID.test(versions[0].version_id)) fail('connector_serving_version_ambiguous');
-    const id = versions[0].version_id;
-    const detail = (await api.get(base + '/versions/' + id)).result;
-    if (detail?.id !== id || !Array.isArray(detail.resources?.bindings)) fail('connector_version_bindings_missing');
-    const selectors = detail.resources.bindings.filter(binding => /^MONTHLY_REPUTATION_.*RULES$/.test(binding.name));
-    monthlySettings.push({worker, versionId:id, monthlyRuleBindingCount:selectors.length});
+    try {
+      monthlySettings.push(await readServingMonthlySettings(api, worker));
+    } catch (error) {
+      const code = connectorErrorCode(error);
+      monthlySettingsErrors.push({worker, code});
+      if (code.endsWith('_http_401') || code.endsWith('_http_429')) break;
+    }
   }
-  return {status:'READ_ONLY_DISCOVERY', inventoryComplete, matches, monthlySettings, mutationCount:0};
+  const status = inventoryComplete && !monthlySettingsErrors.length ? 'READ_ONLY_DISCOVERY' : 'READ_ONLY_DISCOVERY_INCOMPLETE';
+  return {status, inventoryComplete, matches, monthlySettings,
+    ...(unclassifiedConnectorCount ? {unclassifiedConnectorCount} : {}),
+    ...(monthlySettingsErrors.length ? {monthlySettingsErrors} : {}), mutationCount:0};
 }
+
+async function readServingMonthlySettings(api, worker) {
+  const base = ACCOUNT + '/workers/scripts/' + worker;
+  const deployments = (await api.get(base + '/deployments')).result;
+  const rows = Array.isArray(deployments) ? deployments : deployments?.deployments;
+  if (!Array.isArray(rows) || rows.length < 1 || rows.some(row => !Number.isFinite(Date.parse(row.created_on)))) fail('connector_deployments_invalid');
+  const ordered = [...rows].sort((a,b) => Date.parse(b.created_on) - Date.parse(a.created_on));
+  if (ordered.length > 1 && Date.parse(ordered[0].created_on) === Date.parse(ordered[1].created_on)) fail('connector_deployments_ambiguous');
+  const versions = ordered[0].versions;
+  if (!Array.isArray(versions) || versions.length !== 1 || versions[0].percentage !== 100
+    || !UUID.test(versions[0].version_id)) fail('connector_serving_version_ambiguous');
+  const id = versions[0].version_id;
+  const detail = (await api.get(base + '/versions/' + id)).result;
+  if (detail?.id !== id || !Array.isArray(detail.resources?.bindings) ||
+      detail.resources.bindings.some(b => typeof b?.name !== 'string')) fail('connector_version_bindings_missing');
+  const selectors = detail.resources.bindings.filter(binding => /^MONTHLY_REPUTATION_.*RULES$/.test(binding.name));
+  return {worker, versionId:id, monthlyRuleBindingCount:selectors.length};
+}
+
+function connectorErrorCode(error) {
+  const code = error?.message;
+  return /^(?:connector_[a-z_]+|isolation_(?:provider_[a-z0-9_]+|read_scope_blocked))$/.test(code)
+    ? code : 'connector_discovery_failed';
+}
+
+// The two inventories have separate Cloudflare permissions. Retain completed
+// routing observations when a connector read is denied. An account-level
+// authentication failure or rate limit stops further reads on this credential.
+export async function discoverProductionMetadata({token, fetchImpl = fetch}) {
+  const hostRouting = await inspectControlRouting({token, fetchImpl});
+  const stop = hostRouting.incomplete.find(row => row.status === 401 || row.status === 429);
+  let connectors;
+  if (stop) {
+    connectors = {inventoryComplete:false, code:'connector_reads_skipped_after_http_' + stop.status};
+  } else {
+    try {
+      connectors = await inspectProductionConnectors({token, fetchImpl});
+    } catch (error) {
+      connectors = {inventoryComplete:false, code:connectorErrorCode(error)};
+    }
+  }
+  const complete = connectors.inventoryComplete && !connectors.monthlySettingsErrors && hostRouting.incomplete.length === 0;
+  return {...connectors, hostRouting, status:complete ? 'READ_ONLY_DISCOVERY' : 'READ_ONLY_DISCOVERY_INCOMPLETE', mutationCount:0};
+}
+
 export async function inspectIsolation({ token, expectedOwner, expectedVersionId = '', fetchImpl = fetch }) {
   const api = createReadOnlyClient(token, fetchImpl);
   const config = await api.get(`${ACCOUNT}/hyperdrive/configs/${TARGET.hyperdrive}`,true);
@@ -297,15 +358,16 @@ export async function verifyIsolationReviewGate(env, requireApproval) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    if (!['--gate','--inspect','--discover-connectors'].includes(process.argv[2])) fail('isolation_mode_blocked');
-    const review = await verifyIsolationReviewGate(process.env, process.argv[2] !== '--gate');
-    const result = process.argv[2] === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false,
+    const action = process.argv[2];
+    const selected = process.env.CONNECTOR_DISCOVERY_ONLY === 'true' ? '--discover-connectors' : '--inspect';
+    if (process.argv.length !== 3 || (action !== '--gate' && (process.env.PROMOTION_SOURCE_ONLY === 'true' || action !== selected))) fail('isolation_mode_blocked');
+    const review = await verifyIsolationReviewGate(process.env, action !== '--gate');
+    const result = action === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false,
       sourceSha:review.sourceSha,...(review.versionId ? {versionId:review.versionId} : {}) }
-      : process.argv[2] === '--discover-connectors' ? {
-        ...await inspectProductionConnectors({token:process.env.CLOUDFLARE_API_TOKEN}),
-        hostRouting:await inspectControlRouting({token:process.env.CLOUDFLARE_API_TOKEN})}
+      : action === '--discover-connectors' ? await discoverProductionMetadata({token:process.env.CLOUDFLARE_API_TOKEN})
       : await inspectIsolation({token:process.env.CLOUDFLARE_API_TOKEN,expectedOwner:process.env.LYTHAUS_NEW_CORE_OWNER_EMAIL,
         expectedVersionId:process.env.EXPECTED_WORKER_VERSION_ID});
     console.log(JSON.stringify(result));
+    if (result.status === 'READ_ONLY_DISCOVERY_INCOMPLETE') process.exitCode = 1;
   } catch(error) { console.error(JSON.stringify({status:'READ_ONLY_ISOLATION_REVIEW_BLOCKED',code:/^[a-z0-9_]+$/.test(error?.message ?? '') ? error.message : 'isolation_review_failed'})); process.exitCode=1; }
 }

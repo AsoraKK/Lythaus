@@ -21,7 +21,7 @@ on:
         default: false
         type: boolean
       production_connector_discovery_only:
-        description: Inspect connector metadata, monthly settings and control/admin hostname ownership
+        description: Inspect connector metadata, monthly settings and control/admin/admin-api hostname ownership
         required: false
         default: false
         type: boolean

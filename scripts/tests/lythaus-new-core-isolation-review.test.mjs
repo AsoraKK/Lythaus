@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import YAML from 'yaml';
-import {TARGET,accessEvidence,hyperdriveEvidence,createReadOnlyClient,inspectIsolation,isolationReviewPins} from '../ci/lythaus-new-core-isolation-review.mjs';
+import {TARGET,accessEvidence,hyperdriveEvidence,createReadOnlyClient,inspectIsolation,isolationReviewPins,inspectProductionConnectors,discoverProductionMetadata} from '../ci/lythaus-new-core-isolation-review.mjs';
 
 const app={id:'testapp',type:'self_hosted',domain:TARGET.hostname,aud:'synthetic-audience'};
 const policies=[{id:'allow-fixture',decision:'allow',precedence:1,include:[{email:{email:'fixture@example.invalid'}}]},
@@ -27,11 +28,14 @@ test('publication cannot run the inspector and existing owner review precedes Cl
   assert.deepEqual(workflow.permissions,{contents:'read',actions:'read'});assert.equal(workflow.jobs.inspect.needs,'verify-gate');assert.equal(workflow.jobs.inspect.environment,'production');
   const first=JSON.stringify(workflow.jobs['verify-gate']);assert.doesNotMatch(first,/CLOUDFLARE_API_TOKEN|secrets\./);
   const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL','CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_TOKEN']);
-  const discovery=workflow.jobs.inspect.steps.at(-2);
+  const [approval, original, discovery, promotion] = workflow.jobs.inspect.steps.slice(-4);
+  assert.match(approval.run,/verifyExistingGate\(\{env:process.env,requireApproval:true\}\)/);
+  assert.equal(workflow.on.workflow_dispatch.inputs.production_connector_discovery_only.default,false);
+  assert.equal(workflow.on.workflow_dispatch.inputs.worker_source_sha.default,undefined);
+  assert.equal(original.if,'${{ !inputs.production_connector_discovery_only && !inputs.verify_isolated_promotion_source_only }}');
   assert.equal(discovery.if,'${{ inputs.production_connector_discovery_only }}');
   assert.deepEqual(Object.keys(discovery.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
   assert.match(discovery.run,/--discover-connectors$/);
-  const promotion=workflow.jobs.inspect.steps.at(-1);
   assert.equal(workflow.on.workflow_dispatch.inputs.verify_isolated_promotion_source_only.default,false);
   assert.equal(promotion.if,'${{ inputs.verify_isolated_promotion_source_only }}');
   assert.deepEqual(Object.keys(promotion.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
@@ -123,4 +127,142 @@ test('serving version bindings, private owner match and Hyperdrive sharing are e
 test('incomplete or duplicated pagination cannot masquerade as a complete inventory',async()=>{
   const api=createReadOnlyClient('fixture',async()=>Response.json({success:true,result:[{id:'same'}],result_info:{total_pages:2}}));
   await assert.rejects(api.list(`/accounts/${TARGET.account}/access/apps`),/inventory_ambiguous/);
+});
+
+test('discovery uses only GET metadata, distinguishes incomplete listings and hides raw fields', async () => {
+  const version = 'aaaaaaaa-1111-4111-8111-111111111111';
+  for (const pagination of [true,false]) {
+    const fetchImpl = async (url, options) => {
+      assert.equal(options.method, 'GET');
+      assert.equal(options.redirect, 'error');
+      const parsed = new URL(url);
+      assert.equal(parsed.origin, 'https://api.cloudflare.com');
+      assert.ok(parsed.pathname.startsWith('/client/v4/accounts/' + TARGET.account + '/'));
+      let result, result_info;
+      if (parsed.pathname.endsWith('/hyperdrive/configs')) {
+        result = [{id:TARGET.hyperdrive}];
+        if (pagination) result_info = {page:1,count:1,total_count:1};
+      } else if (parsed.pathname.endsWith(TARGET.hyperdrive)) {
+        result = {id:TARGET.hyperdrive,origin:{user:'lythaus_admin.'+TARGET.branch,password:'private-fixture'}};
+      } else if (parsed.pathname.endsWith('/deployments')) {
+        result = [{created_on:'2026-11-18T00:00:00Z',versions:[{version_id:version,percentage:100}]}];
+      } else if (parsed.pathname.endsWith('/versions/'+version)) {
+        result = {id:version,resources:{bindings:[{name:'MONTHLY_REPUTATION_SHADOW_RULES',text:'private-fixture'}]}};
+      } else assert.fail('unexpected discovery request');
+      return Response.json({success:true,result,result_info});
+    };
+    const proof = await inspectProductionConnectors({token:'fixture',fetchImpl});
+    assert.equal(proof.inventoryComplete,pagination);
+    assert.equal(proof.matches[0].reservedForIsolation,true);
+    assert.equal(proof.matches[0].exactOrigin,false);
+    assert.deepEqual(proof.monthlySettings.map(row => row.monthlyRuleBindingCount),[1,1]);
+    assert.ok(!JSON.stringify(proof).includes('private-fixture'));
+  }
+});
+
+test('an unclassifiable connector preserves known matches and makes the consolidated inventory incomplete', async () => {
+  const otherId = 'b'.repeat(32);
+  const version = 'aaaaaaaa-1111-4111-8111-111111111111';
+  const json = (result, result_info) => Response.json({success:true,result,result_info});
+  async function discover(origin) {
+    const fetchImpl = async url => {
+      if (url.includes('/hyperdrive/configs?')) return json([{id:otherId},{id:TARGET.hyperdrive}],{page:1,count:2,total_count:2});
+      if (url.endsWith('/hyperdrive/configs/' + otherId)) return json({id:otherId,origin});
+      if (url.endsWith('/hyperdrive/configs/' + TARGET.hyperdrive)) return json({id:TARGET.hyperdrive,origin:{user:'lythaus_admin.' + TARGET.branch}});
+      if (url.endsWith('/deployments')) return json([{created_on:'2026-11-25T00:00:00Z',versions:[{version_id:version,percentage:100}]}]);
+      if (url.endsWith('/versions/' + version)) return json({id:version,resources:{bindings:[]}});
+      if (url.includes('/rulesets/phases/')) return json({rules:[]});
+      return json([],{page:1,count:0,total_count:0,total_pages:1});
+    };
+    return discoverProductionMetadata({token:'fixture',fetchImpl});
+  }
+  for (const origin of [undefined, {host:'private-fixture',password:'private-fixture'}]) {
+    const report = await discover(origin);
+    assert.equal(report.status,'READ_ONLY_DISCOVERY_INCOMPLETE');
+    assert.equal(report.inventoryComplete,false);
+    assert.equal(report.unclassifiedConnectorCount,1);
+    assert.deepEqual(report.matches.map(row => row.id),[TARGET.hyperdrive]);
+    assert.equal(report.monthlySettings.length,2);
+    assert.deepEqual(report.hostRouting.incomplete,[]);
+    assert.ok(!JSON.stringify(report).includes('private-fixture'));
+  }
+  const report = await discover({scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres'});
+  assert.equal(report.status,'READ_ONLY_DISCOVERY');
+  assert.equal(report.inventoryComplete,true);
+  assert.equal(report.unclassifiedConnectorCount,undefined);
+});
+
+test('contradictory connector pagination cannot certify completeness', async () => {
+  const fetchImpl = async () => Response.json({success:true,result:[{id:TARGET.hyperdrive}],
+    result_info:{page:1,count:1,total_count:1,total_pages:2}});
+  await assert.rejects(inspectProductionConnectors({token:'fixture',fetchImpl}), /connector_inventory_pagination_changed/);
+});
+
+test('monthly settings denial preserves the connector metadata already verified', async () => {
+  const fetchImpl = async url => {
+    if (url.includes('/hyperdrive/configs?')) {
+      return Response.json({success:true,result:[{id:TARGET.hyperdrive}],result_info:{page:1,count:1,total_count:1}});
+    }
+    if (url.endsWith('/hyperdrive/configs/' + TARGET.hyperdrive)) {
+      return Response.json({success:true,result:{id:TARGET.hyperdrive,origin:{user:'lythaus_admin.' + TARGET.branch}}});
+    }
+    assert.match(url,/lythaus-public-api-development\/deployments$/);
+    return new Response('private-denial-body',{status:429});
+  };
+  const report = await inspectProductionConnectors({token:'fixture',fetchImpl});
+  assert.equal(report.inventoryComplete,true);
+  assert.equal(report.matches[0].reservedForIsolation,true);
+  assert.deepEqual(report.monthlySettings,[]);
+  assert.deepEqual(report.monthlySettingsErrors,[{worker:'lythaus-public-api-development',code:'isolation_provider_worker_deployments_http_429'}]);
+});
+
+test('the exact dispatch operation and owner control are required before reads', () => {
+  const command = 'scripts/ci/lythaus-new-core-isolation-review.mjs';
+  for (const [discovery, promotion, action, code] of [
+    ['true','false','--inspect','isolation_mode_blocked'],
+    ['false','false','--discover-connectors','isolation_mode_blocked'],
+    ['true','false','--discover-connectors','preflight_context_blocked'],
+    ['false','true','--inspect','isolation_mode_blocked'],
+    ['false','true','--discover-connectors','isolation_mode_blocked'],
+    ['true','true','--gate','isolation_modes_conflict'],
+  ]) {
+    const result = spawnSync(process.execPath,[command,action],{env:{CONNECTOR_DISCOVERY_ONLY:discovery,PROMOTION_SOURCE_ONLY:promotion},encoding:'utf8'});
+    assert.equal(result.status,1);
+    assert.equal(result.stdout,'');
+    assert.deepEqual(JSON.parse(result.stderr),{status:'READ_ONLY_ISOLATION_REVIEW_BLOCKED',code});
+  }
+});
+
+test('a denied connector read preserves the independent host findings', async () => {
+  const fetchImpl = async (url,init) => {
+    assert.equal(init.method,'GET');
+    assert.equal(init.redirect,'error');
+    if (url.includes('/hyperdrive/configs?')) return new Response('private-denial-body',{status:403});
+    const data = url.includes('/rulesets/phases/') ? {rules:[]} : [];
+    return Response.json({success:true,result:data,...(url.includes('page=') ? {result_info:{page:1,count:0,total_count:0,total_pages:1}} : {})});
+  };
+  const report = await discoverProductionMetadata({token:'private-fixture-token',fetchImpl});
+  assert.equal(report.status,'READ_ONLY_DISCOVERY_INCOMPLETE');
+  assert.equal(report.inventoryComplete,false);
+  assert.equal(report.code,'isolation_provider_hyperdrive_http_403');
+  assert.equal(report.hostRouting.routingDecision,'REHEARSAL_ONLY');
+  assert.ok(report.hostRouting.claims.some(row => row.host === 'control.lythaus.co'));
+  assert.doesNotMatch(JSON.stringify(report),/private-denial-body|private-fixture-token/);
+});
+
+test('an account-wide denial ends the consolidated inspection without new requests', async () => {
+  for (const status of [401,429]) {
+    let calls=0;
+    const fetchImpl = async () => {
+      calls++;
+      return new Response('private-denial-body',{status,headers:{'retry-after':'90'}});
+    };
+    const report = await discoverProductionMetadata({token:'fixture',fetchImpl});
+    assert.equal(calls,1);
+    assert.ok(report.hostRouting.incomplete.some(row => row.status === status));
+    assert.equal(report.code,'connector_reads_skipped_after_http_' + status);
+    assert.equal(report.inventoryComplete,false);
+    assert.equal(report.status,'READ_ONLY_DISCOVERY_INCOMPLETE');
+    assert.doesNotMatch(JSON.stringify(report),/private-denial-body/);
+  }
 });
