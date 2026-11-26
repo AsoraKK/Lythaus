@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { firstFullStage, loadFirstFullAdminReceipt } from '../ci/first-full-admin-receipt.mjs';
 import { stageFullAdminVersion, verifyStageGate } from '../ci/new-core-full-admin-stage.mjs';
+import { PINS, REPOSITORY } from '../ci/lythaus-new-core-schema-install-control.mjs';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { inspectPromotionSource, prepareReplacementAdminUpload, verifyReplacementAdminUpload, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
@@ -246,7 +247,7 @@ test('the protected pre-promotion inspection reads the pinned metadata and repor
 
 test('only an acknowledged owner-reviewed first full upload at this release can become an adoption receipt', async () => {
   const sha = 'f'.repeat(40), runId = '12345', owner = 211295889;
-  const env = {RELEASE_SHA:sha,GITHUB_REPOSITORY:'AsoraKK/Lythaus',GITHUB_REPOSITORY_ID:'1010752912'};
+  const env = {RELEASE_SHA:sha,GITHUB_REPOSITORY:REPOSITORY,GITHUB_REPOSITORY_ID:'1010752912'};
   const receipt = {schema:'lythaus-first-full-admin-stage-v1',runId,runAttempt:1,
     operation:firstFullStage.operation,baselineRun:firstFullStage.baselineRun,sourceSha:sha,status:'REPLACEMENT_ADMIN_NON_SERVING',
     workerId:'1'.repeat(32),versionId:'55555555-5555-4555-8555-555555555555',servingVersionId:transition.destination.isolatedAdminVersions.servingVersionId,
@@ -558,10 +559,11 @@ test('the full Admin stage uploads exactly one version without deployment writes
 test('full Admin staging requires the exact owner, protected main and an approved first attempt', async () => {
   const sha = 'a'.repeat(40);
   const id = 123;
-  const owner = 211295889;
-  const env = {GITHUB_ACTIONS:'true',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REPOSITORY:'AsoraKK/Lythaus',
+  const owner = PINS.ownerId;
+  const actor = REPOSITORY.split('/')[0];
+  const env = {GITHUB_ACTIONS:'true',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REPOSITORY:REPOSITORY,
     GITHUB_REPOSITORY_ID:'1010752912',GITHUB_REF:'refs/heads/main',GITHUB_REF_PROTECTED:'true',GITHUB_RUN_ATTEMPT:'1',
-    GITHUB_ACTOR_ID:String(owner),GITHUB_ACTOR:'AsoraKK',GITHUB_TRIGGERING_ACTOR:'AsoraKK',GITHUB_RUN_ID:String(id),
+    GITHUB_ACTOR_ID:String(owner),GITHUB_ACTOR:actor,GITHUB_TRIGGERING_ACTOR:actor,GITHUB_RUN_ID:String(id),
     GITHUB_SHA:sha,REQUESTED_CONTROL_SHA:sha,CONFIRM_STAGE_ONLY:'true'};
   const runPath = '/actions/runs/' + id;
   const calls = new Map([[runPath,{id,repository:{id:1010752912},path:firstFullStage.workflow,event:'workflow_dispatch',
