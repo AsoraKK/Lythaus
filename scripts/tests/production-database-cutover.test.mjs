@@ -86,6 +86,9 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
     ({manifest}) => { manifest.planetScaleDatabaseId = 'other'; },
     ({plan}) => { plan.destination.isolatedAdminVersions.sourceSha = 'f'.repeat(40); },
     ({plan}) => { plan.destination.isolatedAdminVersions.repairSourceSha = plan.destination.isolatedAdminVersions.sourceSha; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.repairSourceSha = 'fc1dce9683219edee3312cf339526b2850385aa2'; },
+    ...['servingVersionId','repairIntent','activationIntent','servingDeploymentId'].map(field =>
+      ({plan}) => { plan.destination.isolatedAdminVersions[field] = '77777777-7777-4777-8777-777777777777'; }),
     ({manifest}) => { manifest.bindings[0].expectedRoleKey = 'lythaus_admin'; },
     ({plan}) => { plan.destination.isolatedAdminVersions.workerId = null; },
     ({plan}) => { plan.destination.isolatedAdminVersions.workerId = 'e'.repeat(32); },
@@ -201,12 +204,16 @@ test('a missing staging or activation pin blocks promotion before provider acces
 
 test('the protected pre-promotion inspection reads the pinned metadata and reports only the verified identifiers', async () => {
   const d = isolatedEvidence();
+  const listed = d.rows.map(({id,number}) => ({id,number}));
+  d.replies.set('/workers/workers/' + d.pins.workerId + '/versions?per_page=100&page=1',listed);
   const account = 'https://api.cloudflare.com/client/v4/accounts/' + TARGET.account;
   const options = {destination:d.destination,token:'fixture',fetchImpl:async (url,init) => {
     assert.ok(url.startsWith(account + '/'));
     assert.equal(init.method,'GET');
     assert.equal(init.redirect,'error');
-    return Response.json({success:true,result:await d.read(url.slice(account.length))});
+    const result = await d.read(url.slice(account.length));
+    return Response.json({success:true,result,...(result === listed ?
+      {result_info:{page:1,total_pages:1,count:listed.length,total_count:listed.length}} : {})});
   }};
   await assert.rejects(inspectPromotionSource({...options,expectedVersion:d.pins.childVersionId}),/version_mismatch/);
   assert.deepEqual(d.seen,[]);
@@ -214,6 +221,10 @@ test('the protected pre-promotion inspection reads the pinned metadata and repor
   assert.deepEqual(receipt,{status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:d.pins.workerId,
     versionId:d.pins.servingVersionId,deploymentId:d.pins.servingDeploymentId,sourceSha:d.pins.repairSourceSha});
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
+  listed.push({id:'55555555-5555-4555-8555-555555555555',number:5});
+  await assert.rejects(inspectPromotionSource(options),/inventory requires read-only reconciliation/);
+  listed.splice(0,1);
+  await assert.rejects(inspectPromotionSource(options),/inventory requires read-only reconciliation/);
 });
 
 test('the canonical full Admin upload binds the attested key without reading it', async () => {
@@ -248,6 +259,9 @@ test('the canonical full Admin upload binds the attested key without reading it'
   countOverride = 41;
   await assert.rejects(prepareReplacementAdminUpload(args),/inventory/);
   countOverride = undefined;
+  list.push({id:'55555555-5555-4555-8555-555555555555',number:5});
+  await assert.rejects(prepareReplacementAdminUpload(args),/inventory requires read-only reconciliation/);
+  list.pop();
   for (const overrides of [
     {secretNames:[...secretNames,anchor.name]}, {secretNames:[...secretNames,'JWT_PRIVATE_KEY']}, {secretNames:[]},
     {config:{...config,name:'other-script'}}, {config:{...config,account_id:'other-account'}},

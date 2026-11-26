@@ -1,16 +1,27 @@
 import { PINS, verifyOwnerReview } from './lythaus-new-core-schema-install-control.mjs';
-import { assertRepairPins } from './new-core-isolated-repair-state.mjs';
+import { assertRepairPins,bindingRepairState,priorRepairState } from './new-core-isolated-repair-state.mjs';
 
 export const routedRun = '45611431085';
 export const routedHead = 'd4cf5bb1229383f736b0287101096482ca9a535e';
-export const predecessorRun = '45660396889';
-const predecessorStageRun = '45653512950';
-const predecessorHead = 'ae67ee33c2867839b2c65e01a80b0e3bd5d659bc';
+const diagnosticRepairStageRun = '45653512950';
+const diagnosticRepairActivationRun = '45660396889';
+const diagnosticRepairHead = 'ae67ee33c2867839b2c65e01a80b0e3bd5d659bc';
+const predecessorStageRun = '45690056180';
+export const predecessorRun = '45691256887';
+const predecessorHead = 'bfb3eea4eb2e7efbf13356f05397c72a4e789832';
 export const predecessorRuns = Object.freeze([
-  Object.freeze({runId:predecessorStageRun,controllerSha:predecessorHead,operation:'stage-isolated-repair',priorRun:routedRun,
+  Object.freeze({runId:diagnosticRepairStageRun,controllerSha:diagnosticRepairHead,operation:'stage-isolated-repair',priorRun:routedRun,
+    baselineRun:routedRun,activatedState:priorRepairState,
     jobId:139344206170,digest:'sha256:20e3447755ed1d1a0a9ff8fda2771d15031abc3daa49a4197c7775f97d28da86'}),
-  Object.freeze({runId:predecessorRun,controllerSha:predecessorHead,operation:'activate-isolated-repair',priorRun:predecessorStageRun,
+  Object.freeze({runId:diagnosticRepairActivationRun,controllerSha:diagnosticRepairHead,operation:'activate-isolated-repair',priorRun:diagnosticRepairStageRun,
+    baselineRun:routedRun,activatedState:priorRepairState,
     jobId:139368546228,digest:'sha256:88051aec791c1a94bbc9378dd9a4bbcec03c82a39810663915e2e8916a388949'}),
+  Object.freeze({runId:predecessorStageRun,controllerSha:predecessorHead,operation:'stage-isolated-repair',priorRun:diagnosticRepairActivationRun,
+    baselineRun:diagnosticRepairActivationRun,activatedState:bindingRepairState,
+    jobId:139473032036,digest:'sha256:b09b0c6293cf3a5b80726865c44f10ce84d75997658717f667b605db01ce2b79'}),
+  Object.freeze({runId:predecessorRun,controllerSha:predecessorHead,operation:'activate-isolated-repair',priorRun:predecessorStageRun,
+    baselineRun:diagnosticRepairActivationRun,activatedState:bindingRepairState,
+    jobId:139477194418,digest:'sha256:57026cb3746fa8a043876e9e5487653b837d7cd65bcd0355d2442ed796fba868'}),
 ]);
 const diagnosticRun = '45628704670';
 const diagnosticHead = 'a8f65d6ecbe107346598847a1c5c82b92a3ee9cd';
@@ -47,7 +58,7 @@ async function verifyFirstWrite(env, get, pins, verifyNoRequest, onVerifiedNoReq
       check(/^[1-9]\d{0,18}$/.test(id) && !seen.has(id), 'history_unavailable');
       seen.add(id);
       if (id === env.GITHUB_RUN_ID || !run.display_title?.startsWith(operation + host)) continue;
-      // Only these two separately authenticated, completed writes belong to the previous release.
+      // Only the separately authenticated stages and activations of the two earlier releases are exempt.
       if (predecessorRuns.some(predecessor => predecessor.runId === id && predecessor.operation === operation)) continue;
       const jobs = await get('actions/runs/' + id + '/jobs?per_page=100');
       check(Array.isArray(jobs?.jobs) && jobs.total_count === jobs.jobs.length, 'history_unavailable');
@@ -122,8 +133,10 @@ export async function verifyRepairControl({env, get, pins, loadBaseline, verifyN
   for (const scope of predecessorRuns) await verifyPredecessorRun(get,scope);
   await ancestral(diagnosticHead);
   await ancestral(pins.sourceSha);
-  const source = await get('compare/' + predecessorHead + '...' + pins.sourceSha);
-  check(pins.sourceSha !== predecessorHead && source?.merge_base_commit?.sha === predecessorHead, 'ancestry_unverified');
+  for (const head of [diagnosticRepairHead,predecessorHead]) {
+    const source = await get('compare/' + head + '...' + pins.sourceSha);
+    check(pins.sourceSha !== head && source?.merge_base_commit?.sha === head, 'ancestry_unverified');
+  }
   const readBaseline = loadBaseline ?? (await import('./new-core-repair-receipt.mjs')).loadRepairBaseline;
   const repairBaseline = readBaseline(env);
   let prior;

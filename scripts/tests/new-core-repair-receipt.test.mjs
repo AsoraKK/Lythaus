@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {loadRepairBaseline,recordRepairBeforeRequest,recordRepairState,requireRecordedRepairIntent,validateRepairReceipt,verifyNoRepairRequest} from '../ci/new-core-repair-receipt.mjs';
 import {predecessorRun,predecessorRuns,routedRun,routedHead} from '../ci/new-core-repair-control.mjs';
-import {priorRepairState,routed} from '../ci/new-core-isolated-repair-state.mjs';
+import {bindingRepairState,priorRepairState,routed} from '../ci/new-core-isolated-repair-state.mjs';
 import {RECORDED_WORKER,SCRIPT} from '../ci/new-core-isolated-cloudflare.mjs';
 const pins={sourceSha:'b'.repeat(40),workerSha:'c'.repeat(64),assetsSha:'d'.repeat(64),workerBytes:123,assetBytes:345,assetCount:3};
 const expected={runId:'123',controllerSha:'a'.repeat(40),operation:'stage-isolated-repair',priorRun:predecessorRun};
@@ -21,25 +21,34 @@ test('repair artifact binds every scope field and accepts only bounded intent an
     assert.throws(()=>validateRepairReceipt({...envelope,...mutation},expected,pins));
   }
 });
-test('the routed lineage and both completed previous receipts must match and cannot authorize a fresh write',()=>{
+test('both past releases require the exact routed lineage, archived stage and separate activation; neither may authorize a fresh write',()=>{
   const scopes=predecessorRuns.map(({runId,controllerSha,operation,priorRun})=>({runId,controllerSha,operation,priorRun}));
-  const {activationIntent,deploymentId,activationVerified,...staged}=priorRepairState;
-  const archives=scopes.map((scope,index)=>({...scope,schema:1,workerId:envelope.workerId,baselineRun:routedRun,
-    state:index===0?staged:priorRepairState}));
+  assert.deepEqual(scopes.map(row=>row.runId),['45653512950','45660396889','45690056180','45691256887']);
+  const history=[
+    {baselineRun:routedRun,active:priorRepairState},
+    {baselineRun:'45660396889',active:bindingRepairState},
+  ];
+  const archives=history.flatMap(({baselineRun,active},index)=>{
+    const {activationIntent,deploymentId,activationVerified,...stage}=active;
+    return [stage,active].map((state,step)=>({...scopes[index*2+step],schema:1,workerId:envelope.workerId,baselineRun,state}));
+  });
   const readLineage=(env,sha)=>{
     assert.equal(env.PRIOR_RUN,routedRun);
     assert.equal(sha,routedHead);
     return routed;
   };
   const read=(env,scope)=>archives[scopes.findIndex(row=>row.runId===scope.runId)];
-  assert.deepEqual(loadRepairBaseline({},read,readLineage),{prior:routed,predecessor:priorRepairState});
-  assert.throws(()=>loadRepairBaseline({},read,()=>({...routed,ackChild:staged.versionId})));
+  assert.deepEqual(loadRepairBaseline({},read,readLineage),{prior:routed,predecessor:bindingRepairState});
+  assert.throws(()=>loadRepairBaseline({},read,()=>({...routed,ackChild:bindingRepairState.versionId})));
   for(const [index,scope] of scopes.entries()){
     const archive=archives[index];
     assert.throws(()=>validateRepairReceipt(archive,scope,pins));
+    const otherBaseline=history.find(release=>release.baselineRun!==archive.baselineRun).baselineRun;
+    const wrongPhase=archives.find(row=>row.baselineRun===archive.baselineRun && row.operation!==scope.operation);
+    const wrongRelease=archives.find(row=>row.baselineRun===otherBaseline && row.operation===scope.operation);
     for(const change of [{runId:'999'},{priorRun:'999'},{workerId:'9'.repeat(32)},{baselineRun:predecessorRun},
-      {state:{...archive.state,sourceSha:pins.sourceSha}},{state:{...archive.state,versionId:routed.ackChild}},
-      {state:index===0?priorRepairState:staged}]){
+      {baselineRun:otherBaseline},{state:{...archive.state,sourceSha:pins.sourceSha}},
+      {state:{...archive.state,versionId:routed.ackChild}},{state:wrongPhase.state},{state:wrongRelease.state}]){
       archives[index]={...archive,...change};
       assert.throws(()=>loadRepairBaseline({},read,readLineage),/predecessor_receipt/);
     }
@@ -95,13 +104,17 @@ test('the actual version and deployment transport checks the durable intent befo
     const checked=requireRecordedRepairIntent({request:()=>++sent},env,pins);
     const staged='f17c12eb-6a6e-492e-b207-93b99bdf5d5d', activation='7f421fae-43e9-4f65-9bb7-76ff4780d797';
     const isStage=operation==='stage-isolated-repair',path=isStage?RECORDED_WORKER+'/versions?deploy=false':SCRIPT+'/deployments';
-    const marker=isStage?'lythaus-isolated '+state.intentId+' '+priorRepairState.versionId:'lythaus-isolated-repair '+activation;
+    const marker=isStage?'lythaus-isolated '+state.intentId+' '+bindingRepairState.versionId:'lythaus-isolated-repair '+activation;
     const body={annotations:{'workers/message':marker},...(!isStage?{versions:[{version_id:staged,percentage:100}]}:{})};
     try {
       recordRepairBeforeRequest(env,pins);
       assert.throws(()=>checked.request(path,{method:'POST',body}));
       recordRepairState(env,isStage?state:{...state,stageVerified:true,versionId:staged,activationIntent:activation},pins);
       assert.throws(()=>checked.request(path,{method:'POST',body:{...body,annotations:{'workers/message':'wrong'}}}));
+      if (isStage) {
+        const previousMarker='lythaus-isolated '+state.intentId+' '+priorRepairState.versionId;
+        assert.throws(()=>checked.request(path,{method:'POST',body:{...body,annotations:{'workers/message':previousMarker}}}));
+      }
       assert.equal(sent,0);
       checked.request(path,{method:'POST',body});
       assert.equal(sent,1);

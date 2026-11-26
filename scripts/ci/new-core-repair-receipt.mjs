@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { RECORDED_WORKER,RECORDED_WORKER_ID,SCRIPT } from './new-core-isolated-cloudflare.mjs';
 import { REPOSITORY } from './lythaus-new-core-schema-install-control.mjs';
-import { assertRepairPins,assertRepairPredecessor,assertRoutedLineage,priorRepairState,validateRepairState } from './new-core-isolated-repair-state.mjs';
+import { assertRepairPins,assertRepairPredecessor,assertRoutedLineage,bindingRepairState,validateRepairState } from './new-core-isolated-repair-state.mjs';
 import { loadPriorStageReceipt } from './new-core-stage-receipt.mjs';
 import { predecessorRun,predecessorRuns,routedHead,routedRun } from './new-core-repair-control.mjs';
 
@@ -45,7 +45,7 @@ export function requireRecordedRepairIntent(api,env,pins) {
       const marker=options.body?.annotations?.['workers/message'];
       const authorized=version
         ? scope.operation==='stage-isolated-repair' && !state.versionId
-          && marker==='lythaus-isolated '+state.intentId+' '+priorRepairState.versionId
+          && marker==='lythaus-isolated '+state.intentId+' '+bindingRepairState.versionId
         : scope.operation==='activate-isolated-repair' && !state.deploymentId
           && marker==='lythaus-isolated-repair '+state.activationIntent
           && options.body?.versions?.length===1 && options.body.versions[0].version_id===state.versionId;
@@ -82,21 +82,21 @@ function readRepairArtifact(env,expected) {
   finally { rmSync(dir,{recursive:true,force:true}); }
 }
 
-// Historical artifacts use the original baseline and cannot be consumed as current repair intents.
+// Each historical stage and activation is bound to its own verified baseline.
 export function loadRepairBaseline(env,readRepair=readRepairArtifact,readLineage=loadPriorStageReceipt) {
   const prior = readLineage({...env,PRIOR_RUN:routedRun},routedHead);
   assertRoutedLineage(prior);
-  const {sourceSha,workerSha,assetsSha,intentId,versionId,stageVerified} = priorRepairState;
-  const stagedState = {sourceSha,workerSha,assetsSha,intentId,versionId,stageVerified};
   let predecessor;
-  for (const {runId,controllerSha,operation,priorRun} of predecessorRuns) {
+  for (const {runId,controllerSha,operation,priorRun,baselineRun,activatedState} of predecessorRuns) {
     const scope = {runId,controllerSha,operation,priorRun};
     const row = readRepair(env,scope);
-    const state = operation === 'stage-isolated-repair' ? stagedState : priorRepairState;
-    if (!isDeepStrictEqual(row,{schema:1,workerId:RECORDED_WORKER_ID,baselineRun:routedRun,...scope,state})) {
+    const {sourceSha,workerSha,assetsSha,intentId,versionId,stageVerified} = activatedState;
+    const state = operation === 'stage-isolated-repair'
+      ? {sourceSha,workerSha,assetsSha,intentId,versionId,stageVerified} : activatedState;
+    if (!isDeepStrictEqual(row,{schema:1,workerId:RECORDED_WORKER_ID,baselineRun,...scope,state})) {
       throw new Error('setup_repair_predecessor_receipt_unverified');
     }
-    if (operation === 'activate-isolated-repair') predecessor = row.state;
+    if (runId === predecessorRun) predecessor = row.state;
   }
   assertRepairPredecessor(predecessor);
   return {prior,predecessor};

@@ -116,6 +116,7 @@ jobs:
           node scripts/ci/new-core-worker-wire-contract.mjs application-source "$RUNNER_TEMP/new-core-artifacts" --repair
           node scripts/ci/new-core-isolated-runtime-test.mjs application-source "$RUNNER_TEMP/new-core-artifacts" --binding-fix
           bash scripts/ci/new-core-isolated-pg-test.sh application-source "$RUNNER_TEMP/new-core-artifacts" --binding-fix
+          bash scripts/ci/new-core-isolated-wrapped-test.sh application-source "$RUNNER_TEMP/new-core-artifacts"
       - name: Require actual owner approval and current protected main
         env:
           GH_TOKEN: ${{ github.token }}
@@ -138,7 +139,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
       - name: Retain the separate sanitized isolated repair receipt
-        if: always() && endsWith(inputs.operation, '-isolated-repair') && steps.provider.outcome != 'skipped' && !(inputs.operation == 'reconcile-isolated-repair' && inputs.prior_run == '45660396889')
+        if: always() && endsWith(inputs.operation, '-isolated-repair') && steps.provider.outcome != 'skipped' && !(inputs.operation == 'reconcile-isolated-repair' && inputs.prior_run == '45691256887')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: isolated-worker-repair-${{ github.run_id }}-1

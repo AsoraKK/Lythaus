@@ -3,8 +3,7 @@ import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { createReadOnlyClient, databaseBindings, hyperdriveEvidence, TARGET, verifyIsolationReviewGate } from './lythaus-new-core-isolation-review.mjs';
 import { RECORDED_WORKER_ID } from './new-core-isolated-cloudflare.mjs';
-import { REPAIR_PINS } from './new-core-isolated-repair-pins.mjs';
-import { intent, priorRepairState, routed, uuid } from './new-core-isolated-repair-state.mjs';
+import { bindingRepairState, intent, priorRepairState, routed, uuid } from './new-core-isolated-repair-state.mjs';
 import { parseProductionDeploymentState, WORKER_VERSION_ID } from './resolve-production-version-state.mjs';
 
 export const transition = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/production-database-transition.json', import.meta.url)));
@@ -32,7 +31,9 @@ function validateIsolatedVersions(destination) {
   if (!uuid.test(access?.applicationId) || !/^[a-f0-9]{64}$/.test(access?.issuerSha256)
     || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new PromotionSourceError('access_receipt_invalid','isolated owner Access receipt pins required');
   if (!pins || pins.workerId !== RECORDED_WORKER_ID || destination.isolatedAdminConnector !== TARGET.hyperdrive
-    || pins.sourceSha !== TARGET.candidate || pins.repairSourceSha !== REPAIR_PINS.sourceSha
+    || pins.sourceSha !== TARGET.candidate || pins.repairSourceSha !== bindingRepairState.sourceSha
+    || pins.servingVersionId !== bindingRepairState.versionId || pins.repairIntent !== bindingRepairState.intentId
+    || pins.servingDeploymentId !== bindingRepairState.deploymentId || pins.activationIntent !== bindingRepairState.activationIntent
     || pins.parentVersionId !== routed.ackParent || pins.parentIntent !== routed.parentIntent
     || pins.childVersionId !== routed.ackChild || pins.childIntent !== routed.childIntent || pins.childDeploymentId !== routed.deploymentId
     || pins.priorRepairSourceSha !== priorRepairState.sourceSha || pins.priorRepairVersionId !== priorRepairState.versionId
@@ -119,7 +120,7 @@ export async function verifyIsolatedAdminBeforePromotion(destination, read) {
   }
 }
 
-export async function inspectPromotionSource({token, expectedVersion, fetchImpl = fetch, destination = transition.destination}) {
+export async function inspectPromotionSource({token, expectedVersion, releaseSha, fetchImpl = fetch, destination = transition.destination}) {
   const pins = validateIsolatedVersions(destination);
   if (expectedVersion && expectedVersion !== pins.servingVersionId) throw new Error('isolated_promotion_version_mismatch');
   const account = '/accounts/' + TARGET.account;
@@ -132,6 +133,7 @@ export async function inspectPromotionSource({token, expectedVersion, fetchImpl 
   ];
   const client = createReadOnlyClient(token,fetchImpl,false,new Set(paths.map(path => account + path)));
   await verifyIsolatedAdminBeforePromotion(destination,async path => (await client.get(account + path)).result);
+  await verifyAdminInventory({pins,current:{versionId:pins.servingVersionId},releaseSha,token,fetchImpl});
   return {status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:pins.workerId,versionId:pins.servingVersionId,
     deploymentId:pins.servingDeploymentId,sourceSha:pins.repairSourceSha};
 }
@@ -232,9 +234,15 @@ async function verifyAdminInventory({pins,current,releaseSha,token,fetchImpl}) {
     if (!result.length || page === pages.length) throw new Error('Admin version inventory is incomplete');
   }
   const latest = versions.find(row => row.id === current.versionId);
+  if (current.versionId === pins.servingVersionId) {
+    const expected = [pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId];
+    if (versions.length !== expected.length || !expected.every(id => versions.some(row => row.id === id))) {
+      throw new Error('isolated Admin version inventory requires read-only reconciliation');
+    }
+  }
   if (!latest || !Number.isSafeInteger(latest.number) || latest.number <= 0 ||
     !versions.every(row => WORKER_VERSION_ID.test(row.id) && Number.isSafeInteger(row.number) && row.number > 0 &&
-      row.number <= latest.number && row.annotations?.['workers/tag'] !== releaseSha) ||
+      row.number <= latest.number && (!releaseSha || row.annotations?.['workers/tag'] !== releaseSha)) ||
     new Set(versions.map(row => row.number)).size !== versions.length || new Set(versions.map(row => row.id)).size !== versions.length) {
     throw new Error('previous Admin version upload requires read-only reconciliation');
   }
@@ -261,7 +269,7 @@ export async function prepareReplacementAdminUpload({config, secretNames, snapsh
   if (current.versionId === pins.servingVersionId) {
     if (!piiKeys.every(name => secretNames.includes(name))) throw new Error('first full Admin upload requires the existing protected PII bindings');
     if (current.sourceSha !== pins.repairSourceSha || previousDeploymentId !== pins.servingDeploymentId) throw new Error('isolated Admin snapshot source differs from the promotion receipt');
-    await inspectPromotionSource({token,expectedVersion:current.versionId,fetchImpl,destination});
+    await inspectPromotionSource({token,expectedVersion:current.versionId,releaseSha,fetchImpl,destination});
   } else {
     if (secretNames.some(name => piiKeys.includes(name))) throw new Error('existing replacement Admin PII bindings must be inherited');
     inherited.push(...piiKeys.map(name => inherit(name,current.versionId)));
@@ -275,8 +283,8 @@ export async function prepareReplacementAdminUpload({config, secretNames, snapsh
     assertStillServing(deployments,current.versionId,previousDeploymentId);
     const {result:version} = await client.get(versionPath);
     assertFullAdminVersion(version,version?.resources?.bindings,current.versionId,current.sourceSha,destination,config);
+    await verifyAdminInventory({pins,current,releaseSha,token,fetchImpl});
   }
-  await verifyAdminInventory({pins,current,releaseSha,token,fetchImpl});
   return {config:{...config,account_id:TARGET.account,unsafe:{bindings:inherited}},
     message:fullAdminMessage(pins.servingVersionId,previousDeploymentId)};
 }
