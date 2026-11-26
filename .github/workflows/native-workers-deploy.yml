@@ -1840,11 +1840,12 @@ jobs:
           ADMIN_ZERO_STAGE_RECEIPT: ${{ steps.stage_candidates.outputs.admin_zero_stage || steps.resolve_candidates.outputs.admin_zero_stage }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          # shellcheck disable=SC2129
           set -e
-          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=candidate_activation_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=changed candidate activation failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=ACTIVATION'
+            echo 'RELEASE_FAILURE_CODE=candidate_activation_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=changed candidate activation failed'
+          } >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
