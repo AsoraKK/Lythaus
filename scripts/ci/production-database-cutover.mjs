@@ -8,6 +8,15 @@ import { parseProductionDeploymentState, WORKER_VERSION_ID } from './resolve-pro
 
 export const transition = JSON.parse(fs.readFileSync(new URL('../../infrastructure/cloudflare/production-database-transition.json', import.meta.url)));
 
+// Protected stage 45727589224 and 100% isolated activation 45758911466.
+const wrappedRepair = Object.freeze({
+  sourceSha:'fc1dce9683219edee3312cf339526b2850385aa2',
+  versionId:'260d15e3-dd61-47db-bbf4-5dd3839141a5',
+  intentId:'f0a8c80e-b953-45ea-95f2-989d2b54baf8',
+  activationIntent:'217ba70a-1eac-4712-ac15-32020541d2d2',
+  deploymentId:'9a2ebdb2-33e2-4c8c-8315-010140aeb6c0',
+});
+
 const consumers = {
   'lythaus-public-api': { DB_APP_FRESH: 'lythaus_runtime' },
   'lythaus-admin-api': { DB_ADMIN_FRESH: 'lythaus_admin', DB_PRIVACY_FRESH: 'lythaus_privacy' },
@@ -25,23 +34,27 @@ class PromotionSourceError extends Error {
 function distinctIds(ids, pattern) {
   return ids.every(id => typeof id === 'string' && pattern.test(id)) && new Set(ids).size === ids.length;
 }
+function isolatedVersionIds(pins) {
+  return [pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,bindingRepairState.versionId,pins.servingVersionId];
+}
 function validateIsolatedVersions(destination) {
   const pins = destination.isolatedAdminVersions;
   const access = destination.ownerAccess;
   if (!uuid.test(access?.applicationId) || !/^[a-f0-9]{64}$/.test(access?.issuerSha256)
     || !/^[a-f0-9]{64}$/.test(access?.audienceSha256)) throw new PromotionSourceError('access_receipt_invalid','isolated owner Access receipt pins required');
   if (!pins || pins.workerId !== RECORDED_WORKER_ID || destination.isolatedAdminConnector !== TARGET.hyperdrive
-    || pins.sourceSha !== TARGET.candidate || pins.repairSourceSha !== bindingRepairState.sourceSha
-    || pins.servingVersionId !== bindingRepairState.versionId || pins.repairIntent !== bindingRepairState.intentId
-    || pins.servingDeploymentId !== bindingRepairState.deploymentId || pins.activationIntent !== bindingRepairState.activationIntent
+    || pins.sourceSha !== TARGET.candidate || pins.repairSourceSha !== wrappedRepair.sourceSha
+    || pins.servingVersionId !== wrappedRepair.versionId || pins.repairIntent !== wrappedRepair.intentId
+    || pins.servingDeploymentId !== wrappedRepair.deploymentId || pins.activationIntent !== wrappedRepair.activationIntent
     || pins.parentVersionId !== routed.ackParent || pins.parentIntent !== routed.parentIntent
     || pins.childVersionId !== routed.ackChild || pins.childIntent !== routed.childIntent || pins.childDeploymentId !== routed.deploymentId
     || pins.priorRepairSourceSha !== priorRepairState.sourceSha || pins.priorRepairVersionId !== priorRepairState.versionId
     || pins.priorRepairIntent !== priorRepairState.intentId || pins.priorRepairActivationIntent !== priorRepairState.activationIntent
     || pins.priorRepairDeploymentId !== priorRepairState.deploymentId
-    || !distinctIds([pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId],uuid)
-    || !distinctIds([pins.parentIntent,pins.childIntent,pins.priorRepairIntent,pins.priorRepairActivationIntent,pins.repairIntent,pins.activationIntent],intent)
-    || !distinctIds([pins.childDeploymentId,pins.priorRepairDeploymentId,pins.servingDeploymentId],uuid)) {
+    || !distinctIds(isolatedVersionIds(pins),uuid)
+    || !distinctIds([pins.parentIntent,pins.childIntent,pins.priorRepairIntent,pins.priorRepairActivationIntent,
+      bindingRepairState.intentId,bindingRepairState.activationIntent,pins.repairIntent,pins.activationIntent],intent)
+    || !distinctIds([pins.childDeploymentId,pins.priorRepairDeploymentId,bindingRepairState.deploymentId,pins.servingDeploymentId],uuid)) {
     throw new PromotionSourceError('lineage_receipt_invalid','replacement Admin requires the immutable Worker and versions from the isolated setup receipt');
   }
   return pins;
@@ -75,7 +88,8 @@ export async function verifyIsolatedAdminVersions(destination, read) {
     [pins.parentVersionId, pins.parentIntent, 'parent', pins.sourceSha],
     [pins.childVersionId, pins.childIntent, pins.parentVersionId, pins.sourceSha],
     [pins.priorRepairVersionId, pins.priorRepairIntent, pins.childVersionId, pins.priorRepairSourceSha],
-    [pins.servingVersionId, pins.repairIntent, pins.priorRepairVersionId, pins.repairSourceSha],
+    [bindingRepairState.versionId, bindingRepairState.intentId, pins.priorRepairVersionId, bindingRepairState.sourceSha],
+    [pins.servingVersionId, pins.repairIntent, bindingRepairState.versionId, pins.repairSourceSha],
   ]) {
     const version = await read(path + '/versions/' + id);
     const bindings = version?.bindings;
@@ -101,13 +115,17 @@ export async function verifyIsolatedAdminBeforePromotion(destination, read) {
   const rows = Array.isArray(raw) ? raw : raw?.deployments;
   const allTraffic = (row,id,versionId) => row?.id === id && row.versions?.length === 1 &&
     row.versions[0].version_id === versionId && row.versions[0].percentage === 100;
-  if (!Array.isArray(rows) || rows.length !== 3 ||
-    !allTraffic(rows[0],pins.servingDeploymentId,pins.servingVersionId) ||
-    !allTraffic(rows[1],pins.priorRepairDeploymentId,pins.priorRepairVersionId) ||
-    !allTraffic(rows[2],pins.childDeploymentId,pins.childVersionId) ||
-    rows[0].annotations?.['workers/message'] !== 'lythaus-isolated-repair ' + pins.activationIntent ||
-    rows[1].annotations?.['workers/message'] !== 'lythaus-isolated-repair ' + pins.priorRepairActivationIntent ||
-    !(Date.parse(rows[0].created_on) > Date.parse(rows[1].created_on) && Date.parse(rows[1].created_on) > Date.parse(rows[2].created_on))) {
+  const expected = [
+    [pins.servingDeploymentId,pins.servingVersionId,pins.activationIntent],
+    [bindingRepairState.deploymentId,bindingRepairState.versionId,bindingRepairState.activationIntent],
+    [pins.priorRepairDeploymentId,pins.priorRepairVersionId,pins.priorRepairActivationIntent],
+    [pins.childDeploymentId,pins.childVersionId],
+  ];
+  if (!Array.isArray(rows) || rows.length !== expected.length || !expected.every(([id,versionId,activation],index) => {
+    const row = rows[index];
+    return allTraffic(row,id,versionId) && (!activation || row.annotations?.['workers/message'] === 'lythaus-isolated-repair ' + activation)
+      && (index === 0 || Date.parse(rows[index - 1].created_on) > Date.parse(row.created_on));
+  })) {
     throw new PromotionSourceError('serving_deployment_mismatch','isolated Admin serving deployment differs from the activated repair receipt');
   }
   const version = await read(script + '/versions/' + pins.servingVersionId);
@@ -128,7 +146,7 @@ export async function inspectPromotionSource({token, expectedVersion, releaseSha
   const script = '/workers/scripts/' + TARGET.worker;
   const paths = [
     '/access/apps/' + destination.ownerAccess.applicationId, '/access/organizations', worker,
-    ...[pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId].map(id => worker + '/versions/' + id),
+    ...isolatedVersionIds(pins).map(id => worker + '/versions/' + id),
     script + '/deployments', script + '/versions/' + pins.servingVersionId,
   ];
   const client = createReadOnlyClient(token,fetchImpl,false,new Set(paths.map(path => account + path)));
@@ -240,7 +258,7 @@ async function verifyAdminInventory({pins,current,releaseSha,acknowledged,token,
   const serving = versions.find(row => row?.id === current.versionId);
   const firstPromotion = current.versionId === pins.servingVersionId;
   if (firstPromotion) {
-    const expected = [pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId];
+    const expected = isolatedVersionIds(pins);
     if (acknowledged) expected.push(acknowledged.id);
     if (versions.length !== expected.length || !expected.every(id => versions.some(row => row?.id === id))) {
       throw new PromotionSourceError('isolated_inventory_reconciliation_required','isolated Admin version inventory requires read-only reconciliation');
@@ -309,7 +327,7 @@ export async function verifyReplacementAdminUpload({versionId, releaseSha, snaps
   const pins = validateIsolatedVersions(destination);
   const current = soleAdminBefore(snapshot);
   if (!WORKER_VERSION_ID.test(versionId) || !/^[a-f0-9]{40}$/.test(releaseSha) ||
-    [pins.parentVersionId,pins.childVersionId,pins.priorRepairVersionId,pins.servingVersionId,current.versionId].includes(versionId)) {
+    (isolatedVersionIds(pins).includes(versionId) || current.versionId === versionId)) {
     throw new Error('exact replacement Admin upload acknowledgement required');
   }
   const account = '/accounts/' + TARGET.account;

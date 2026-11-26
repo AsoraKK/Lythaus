@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { inspectPromotionSource, prepareReplacementAdminUpload, verifyReplacementAdminUpload, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
 import { verifyAdminZeroStage } from '../ci/verify-cloudflare-hyperdrive-targets.mjs';
+import { bindingRepairState } from '../ci/new-core-isolated-repair-state.mjs';
 import { inspectProductionConnectors, TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
 import { coversHost, inspectControlRouting } from '../ci/control-host-routing.mjs';
 import { createControlWorker } from '../../apps/lythaus-admin-api/src/control-worker.ts';
@@ -87,7 +88,7 @@ test('rejects partial, wrong, ambiguous and unreviewed cutover pins', () => {
     ({manifest}) => { manifest.planetScaleDatabaseId = 'other'; },
     ({plan}) => { plan.destination.isolatedAdminVersions.sourceSha = 'f'.repeat(40); },
     ({plan}) => { plan.destination.isolatedAdminVersions.repairSourceSha = plan.destination.isolatedAdminVersions.sourceSha; },
-    ({plan}) => { plan.destination.isolatedAdminVersions.repairSourceSha = 'fc1dce9683219edee3312cf339526b2850385aa2'; },
+    ({plan}) => { plan.destination.isolatedAdminVersions.repairSourceSha = bindingRepairState.sourceSha; },
     ...['servingVersionId','repairIntent','activationIntent','servingDeploymentId'].map(field =>
       ({plan}) => { plan.destination.isolatedAdminVersions[field] = '77777777-7777-4777-8777-777777777777'; }),
     ({manifest}) => { manifest.bindings[0].expectedRoleKey = 'lythaus_admin'; },
@@ -135,13 +136,16 @@ function isolatedEvidence() {
   const rows = [[pins.parentVersionId,pins.parentIntent,'parent',pins.sourceSha],
     [pins.childVersionId,pins.childIntent,pins.parentVersionId,pins.sourceSha],
     [pins.priorRepairVersionId,pins.priorRepairIntent,pins.childVersionId,pins.priorRepairSourceSha],
-    [pins.servingVersionId,pins.repairIntent,pins.priorRepairVersionId,pins.repairSourceSha]].map(([id,intent,parent,source],i) => ({
+    [bindingRepairState.versionId,bindingRepairState.intentId,pins.priorRepairVersionId,bindingRepairState.sourceSha],
+    [pins.servingVersionId,pins.repairIntent,bindingRepairState.versionId,pins.repairSourceSha]].map(([id,intent,parent,source],i) => ({
       id, number:i+1, bindings:structuredClone(bindings),
       annotations:{'workers/tag':source,'workers/message':`lythaus-isolated ${intent} ${parent}`},
     }));
   const deployments = {deployments:[
-    {id:pins.servingDeploymentId,created_on:'2026-11-25T17:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + pins.activationIntent},
+    {id:pins.servingDeploymentId,created_on:'2026-11-26T08:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + pins.activationIntent},
       versions:[{version_id:pins.servingVersionId,percentage:100}]},
+    {id:bindingRepairState.deploymentId,created_on:'2026-11-25T17:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + bindingRepairState.activationIntent},
+      versions:[{version_id:bindingRepairState.versionId,percentage:100}]},
     {id:pins.priorRepairDeploymentId,created_on:'2026-11-25T15:00:00Z',annotations:{'workers/message':'lythaus-isolated-repair ' + pins.priorRepairActivationIntent},
       versions:[{version_id:pins.priorRepairVersionId,percentage:100}]},
     {id:pins.childDeploymentId,created_on:'2026-11-25T12:19:00Z',versions:[{version_id:pins.childVersionId,percentage:100}]},
@@ -159,13 +163,17 @@ function isolatedEvidence() {
   return {destination,pins,app,org,shell,rows,deployments:deployments.deployments,current,replies,seen,read};
 }
 
-test('initial promotion requires all four isolated versions and the binding fix serving all traffic', async () => {
+test('initial promotion requires five isolated versions and the wrapped binding fix serving all traffic', async () => {
   const d = isolatedEvidence();
   assert.equal(d.pins.priorRepairVersionId,'193c3dcb-9238-4adc-8eab-48707fdd8b7e');
   assert.equal(d.pins.priorRepairSourceSha,'78747f85d02c69efa8a1b6f86b73b08947cdce0b');
-  assert.equal(d.pins.repairSourceSha,'78958d886d72eecc6ea01001d808f1d8c505046d');
-  assert.equal(d.pins.servingVersionId,'1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f');
-  assert.equal(d.pins.servingDeploymentId,'0993b439-654e-4243-9340-a810f727f142');
+  assert.equal(bindingRepairState.versionId,'1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f');
+  assert.equal(bindingRepairState.deploymentId,'0993b439-654e-4243-9340-a810f727f142');
+  assert.equal(d.pins.repairSourceSha,'fc1dce9683219edee3312cf339526b2850385aa2');
+  assert.equal(d.pins.servingVersionId,'260d15e3-dd61-47db-bbf4-5dd3839141a5');
+  assert.equal(d.pins.repairIntent,'f0a8c80e-b953-45ea-95f2-989d2b54baf8');
+  assert.equal(d.pins.activationIntent,'217ba70a-1eac-4712-ac15-32020541d2d2');
+  assert.equal(d.pins.servingDeploymentId,'9a2ebdb2-33e2-4c8c-8315-010140aeb6c0');
   await verifyIsolatedAdminBeforePromotion(d.destination,d.read);
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
   const unrelated = '77777777-7777-4777-8777-777777777777';
@@ -176,12 +184,16 @@ test('initial promotion requires all four isolated versions and the binding fix 
     e => { e.deployments[0].id = unrelated; },
     e => { e.deployments[0].annotations['workers/message'] = 'lythaus-isolated-repair ' + unrelated; },
     e => { e.deployments[0].created_on = e.deployments[1].created_on; },
+    e => { e.deployments[0].versions = [{version_id:e.pins.servingVersionId,percentage:0},{version_id:bindingRepairState.versionId,percentage:100}]; },
     e => { e.deployments[1].versions[0].version_id = e.pins.parentVersionId; },
     e => { e.deployments[1].annotations['workers/message'] = 'lythaus-isolated-repair ' + e.pins.priorRepairIntent; },
     e => { e.deployments[1].versions[0].percentage = 95; },
     e => { e.deployments[1].created_on = e.deployments[2].created_on; },
     e => { e.deployments.splice(1,1); },
     e => { e.deployments[2].id = unrelated; },
+    e => { e.deployments[2].annotations['workers/message'] = 'lythaus-isolated-repair ' + e.pins.activationIntent; },
+    e => { e.deployments[2].created_on = e.deployments[3].created_on; },
+    e => { e.deployments[3].id = unrelated; },
     e => { e.current.id = unrelated; },
     e => { e.current.metadata.annotations['workers/tag'] = e.pins.sourceSha; },
     e => { e.current.metadata.annotations['workers/tag'] = e.pins.priorRepairSourceSha; },
@@ -222,7 +234,7 @@ test('the protected pre-promotion inspection reads the pinned metadata and repor
   assert.deepEqual(receipt,{status:'ISOLATED_PROMOTION_SOURCE_VERIFIED',workerId:d.pins.workerId,
     versionId:d.pins.servingVersionId,deploymentId:d.pins.servingDeploymentId,sourceSha:d.pins.repairSourceSha});
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].sort());
-  listed.push({id:'55555555-5555-4555-8555-555555555555',number:5});
+  listed.push({id:'55555555-5555-4555-8555-555555555555',number:listed.length+1});
   const unrecognized = {code:'isolated_inventory_reconciliation_required',message:'isolated Admin version inventory requires read-only reconciliation'};
   await assert.rejects(inspectPromotionSource(options),unrecognized);
   listed.splice(0,1);
@@ -261,7 +273,7 @@ test('the canonical full Admin upload binds the attested key without reading it'
   countOverride = 41;
   await assert.rejects(prepareReplacementAdminUpload(args),{code:'admin_version_inventory_unverified'});
   countOverride = undefined;
-  list.push({id:'55555555-5555-4555-8555-555555555555',number:5});
+  list.push({id:'55555555-5555-4555-8555-555555555555',number:list.length+1});
   await assert.rejects(prepareReplacementAdminUpload(args),{code:'isolated_inventory_reconciliation_required'});
   list.pop();
   for (const overrides of [
@@ -294,12 +306,12 @@ test('the canonical full Admin upload binds the attested key without reading it'
   assert.deepEqual(await verifyReplacementAdminUpload(verify),{status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:d.pins.workerId,
     versionId:id,sourceSha:args.releaseSha,subjectKeySourceVersionId:d.pins.servingVersionId,servingVersionId:d.pins.servingVersionId,previousDeploymentId:d.pins.servingDeploymentId});
   await assert.rejects(verifyReplacementAdminUpload({...verify,requireZeroTraffic:true}), /zero-traffic stage is required/);
-  const sibling = {id:'66666666-6666-4666-8666-666666666666',number:6};
+  const sibling = {id:'66666666-6666-4666-8666-666666666666',number:ack.number+1};
   list.push(sibling);
   await assert.rejects(verifyReplacementAdminUpload(verify),{code:'isolated_inventory_reconciliation_required'});
   list.pop();
   await assert.rejects(prepareReplacementAdminUpload(args),/read-only reconciliation/);
-  for (const other of ['',d.pins.servingVersionId,d.pins.childVersionId]) {
+  for (const other of ['',...d.rows.map(row => row.id)]) {
     await assert.rejects(verifyReplacementAdminUpload({...verify,versionId:other}),/acknowledgement/);
   }
   for (const name of ['AUTH_EMAIL_ENVELOPE','PRIVATE_EXPORTS','AUDIT_ARCHIVE','ACCESS_AUDIENCES','DATABASE_READINESS_TOKEN']) {
@@ -318,7 +330,7 @@ test('the canonical full Admin upload binds the attested key without reading it'
   version.metadata.annotations['workers/message'] = 'other';
   await assert.rejects(verifyReplacementAdminUpload(verify),/inheritance/);
   version.metadata.annotations['workers/message'] = upload.message;
-  const staged = {id:'77777777-7777-4777-8777-777777777777',created_on:'2026-11-25T17:01:00Z',
+  const staged = {id:'77777777-7777-4777-8777-777777777777',created_on:'2026-11-26T08:01:00Z',
     annotations:{'workers/message':'Stage reviewed Lythaus admin candidate at zero traffic'},
     versions:[{version_id:id,percentage:0},{version_id:d.pins.servingVersionId,percentage:100}]};
   d.deployments.unshift(staged);
@@ -375,9 +387,9 @@ test('the canonical full Admin upload binds the attested key without reading it'
   list.push(nextAck);
   const nextVerify = {...next,versionId:nextAck.id};
   assert.equal((await verifyReplacementAdminUpload(nextVerify)).versionId,nextAck.id);
-  list.push({id:'88888888-8888-4888-8888-888888888888',number:7});
+  list.push({id:'88888888-8888-4888-8888-888888888888',number:nextAck.number+1});
   await assert.rejects(verifyReplacementAdminUpload(nextVerify),{code:'admin_version_reconciliation_required'});
-  nextAck.number = 8;
+  nextAck.number += 2;
   await assert.rejects(verifyReplacementAdminUpload(nextVerify),{code:'admin_version_reconciliation_required'});
   list.pop();
   const originalTag = list[0].annotations['workers/tag'];
@@ -398,7 +410,7 @@ test('historical verification rechecks each source, parent, intent, redacted key
   d.deployments.unshift({id:'77777777-7777-4777-8777-777777777777',versions:[{version_id:'88888888-8888-4888-8888-888888888888',percentage:100}]});
   await verifyIsolatedAdminVersions(d.destination,d.read);
   assert.deepEqual(d.seen.sort(),[...d.replies.keys()].filter(path => !path.startsWith('/workers/scripts/')).sort());
-  for (const i of [0,1,2,3]) {
+  for (const i of d.rows.keys()) {
     for (const change of [
       row => { row.id = '77777777-7777-4777-8777-777777777777'; },
       row => { row.annotations['workers/tag'] = 'f'.repeat(40); },
@@ -419,6 +431,8 @@ test('historical verification rechecks each source, parent, intent, redacted key
     e => { e.rows[2].number = e.rows[1].number; },
     e => { e.rows[3].annotations['workers/message'] = 'lythaus-isolated ' + e.pins.repairIntent + ' ' + e.pins.childVersionId; },
     e => { e.rows[3].number = e.rows[2].number; },
+    e => { e.rows[4].annotations['workers/message'] = 'lythaus-isolated ' + e.pins.repairIntent + ' ' + e.pins.priorRepairVersionId; },
+    e => { e.rows[4].number = e.rows[3].number; },
     e => { e.rows[2].bindings.find(b => b.name === 'ACCESS_AUDIENCES').text = 'b'.repeat(64); },
     e => { e.rows[2].bindings.push({name:'DB_OTHER',type:'hyperdrive',id:'b'.repeat(32)}); },
   ]) {

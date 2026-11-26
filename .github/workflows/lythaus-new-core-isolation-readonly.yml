@@ -26,7 +26,7 @@ on:
         default: false
         type: boolean
       verify_isolated_promotion_source_only:
-        description: Verify all four isolated Worker versions and the active binding fix before promotion
+        description: Verify the isolated Worker version lineage and the activated wrapped binding fix before promotion
         required: false
         default: false
         type: boolean
