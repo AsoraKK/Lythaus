@@ -234,6 +234,12 @@ The reviewed application is protected commit `fc1dce9683219edee3312cf339526b2850
 
 The immediate rollback target for this correction is version `1ac91b08-7caa-4d31-aa7d-ad8e8bd6301f` on the same isolated Worker. A separately approved rollback requires a fresh check of the serving deployment, route, owner-only Access, bootstrap latch and any accepted or uncertain writes. Preserve all versions and receipts. Before production promotion, reconcile the final serving lineage in the cutover draft and rehearse the full handler and routing under the write fence.
 
+### Check final hostname and connector metadata before bootstrap
+
+On 26 November the owner’s fresh session on version `260d15e3-dd61-47db-bbf4-5dd3839141a5` displayed “This account has no active administrator membership.” The moderation API returned `admin_role_required`. This satisfies the signed nonmember check on the isolated hostname. [Verified activation](https://github.com/AsoraKK/Lythaus/actions/runs/45758911466)
+
+To inspect the proposed final routes and connector candidates, dispatch **New-core isolated admin read-only review** from protected main with its exact current `control_sha`, `confirm_read_only=true` and `production_connector_discovery_only=true`. Leave the worker source input at its workflow default. The production environment owner reviews the bounded Cloudflare metadata GETs. A partial inventory identifies the read or scope that needs reconciliation. Treat returned connector matches as configuration evidence. Verify SQL logins, path ownership, identity-provider continuity and the full handler’s explicit key inheritance separately before the one-time grant. Bootstrap and production routing retain their own approvals.
+
 Setup stops before the one-time bootstrap. Under its own approval the owner
 first establishes that a verified nonmember receives 403 on the moderation API.
 After bootstrap a fresh owner session must load the normal `/flags` page and
