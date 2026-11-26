@@ -239,6 +239,7 @@ jobs:
     env:
       OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
       OWNER_TESTING_SUBJECT_DIAGNOSTIC: ${{ inputs.owner_testing_subject_diagnostic }}
+      ADMIN_TRAFFIC_WORKER: lythaus-admin-api-development
       AUTHENTICITY_BETA_RELEASE_RECEIPT_PRESENT: ${{ vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' }}
     outputs:
       public_worker_version: ${{ steps.release_metadata.outputs.public_worker_version }}
@@ -1008,6 +1009,7 @@ jobs:
             node scripts/ci/verify-scoped-worker-secret-bindings.mjs
           fi
       - name: Resolve changed candidates and reused production versions (CANDIDATE gate)
+        id: resolve_candidates
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -1041,7 +1043,11 @@ jobs:
                 test -z "$expected_candidate_id" || test "$expected_candidate_id" = "$ADMIN_WORKER_VERSION_ID"
                 expected_candidate_id="$ADMIN_WORKER_VERSION_ID"
               fi
-              node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --verify-admin-upload "$expected_candidate_id" --release-admin-worker "$worker_name"
+              if [[ -n "${ACCEPTANCE_RUN_SUMMARY_PATH:-}" && "$OWNER_TESTING_DEPLOYMENT" != true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
+                node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --record-admin-zero-stage "$expected_candidate_id" --release-admin-worker "$worker_name" >> "$GITHUB_OUTPUT"
+              else
+                node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --verify-admin-upload "$expected_candidate_id" --release-admin-worker "$worker_name"
+              fi
             fi
             if [[ -n "$expected_candidate_id" ]]; then
               node scripts/ci/resolve-worker-version-state.mjs candidate "$versions_file" "$RELEASE_SHA" "$prefix" "$expected_candidate_id"
@@ -1095,8 +1101,10 @@ jobs:
             } >> "$GITHUB_ENV"
           elif component_changed coordinator; then resolve_candidate coordinator lythaus-auth-acceptance-coordinator-development COORDINATOR; else reuse_production COORDINATOR; fi
       - name: Stage candidate Worker versions at zero traffic (CANDIDATE gate; changed components only)
+        id: stage_candidates
         if: inputs.acceptance_run_id == ''
         env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
@@ -1120,8 +1128,11 @@ jobs:
           if component_changed admin; then
             echo "ADMIN_WORKER_STAGED=true" >> "$GITHUB_ENV"
             npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS "${ADMIN_WORKER_VERSION_ID}@0" \
-              --name lythaus-admin-api-development --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
+              --name "$ADMIN_TRAFFIC_WORKER" --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
             node scripts/ci/wait-for-owner-testing-admin-zero-traffic.mjs
+            if [[ "$OWNER_TESTING_DEPLOYMENT" != true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
+              node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --record-admin-zero-stage "$ADMIN_WORKER_VERSION_ID" --release-admin-worker "$ADMIN_TRAFFIC_WORKER" >> "$GITHUB_OUTPUT"
+            fi
           fi
           # Queue consumers do not accept a per-request Worker-version override.
           # The exact Jobs candidate must therefore be active before any real
@@ -1826,9 +1837,11 @@ jobs:
           AUTH_ACCEPTANCE_DEPENDENCIES_JSON: ${{ env.AUTH_ACCEPTANCE_DEPENDENCIES_JSON }}
           ADMIN_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID }}
           ADMIN_WORKER_SOURCE_SHA: ${{ env.ADMIN_WORKER_SOURCE_SHA }}
+          ADMIN_ZERO_STAGE_RECEIPT: ${{ steps.stage_candidates.outputs.admin_zero_stage || steps.resolve_candidates.outputs.admin_zero_stage }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           # shellcheck disable=SC2129
+          set -e
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=candidate_activation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=changed candidate activation failed' >> "$GITHUB_ENV"
@@ -1837,6 +1850,9 @@ jobs:
           }
           if component_changed admin; then
             node scripts/ci/verify-subject-diagnostic-expiry.mjs
+            if [[ "$OWNER_TESTING_DEPLOYMENT" != true && "$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true ]]; then
+              node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --recheck-admin-zero-stage "$ADMIN_WORKER_VERSION_ID" --release-admin-worker "$ADMIN_TRAFFIC_WORKER"
+            fi
           fi
           if component_changed public; then
             npx --yes wrangler@4.123.0 versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" --name lythaus-public-api-development --yes --message "Activate reviewed Lythaus public release ${{ inputs.release_sha }}"
@@ -1844,7 +1860,7 @@ jobs:
             echo "PUBLIC_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"
           fi
           if component_changed admin; then
-            npx --yes wrangler@4.123.0 versions deploy "${ADMIN_WORKER_VERSION_ID}@100" --name lythaus-admin-api-development --yes --message "Activate reviewed Lythaus admin release ${{ inputs.release_sha }}"
+            npx --yes wrangler@4.123.0 versions deploy "${ADMIN_WORKER_VERSION_ID}@100" --name "$ADMIN_TRAFFIC_WORKER" --yes --message "Activate reviewed Lythaus admin release ${{ inputs.release_sha }}"
             echo "ADMIN_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
             echo "ADMIN_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"
           fi

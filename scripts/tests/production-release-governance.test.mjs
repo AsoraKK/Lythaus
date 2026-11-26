@@ -657,6 +657,24 @@ test('Admin-only Worker changes prepare and verify the Admin candidate secret bo
   assert.match(workersWorkflow, /inputs\.acceptance_run_id != ''.*contains\(steps\.release_plan\.outputs\.changed_components_json, '\"admin\"'\)/s);
 });
 
+test('replacement Admin captures the exact zero deployment on fresh and resumed runs and rechecks before final traffic',()=>{
+  const resolve=workersWorkflow.split('- name: Resolve changed candidates')[1].split('- name: Stage candidate Worker versions')[0];
+  const stage=workersWorkflow.split('- name: Stage candidate Worker versions')[1].split('- name: Prove staged Public')[0];
+  const activate=workersWorkflow.split('- name: Activate exact candidate Worker versions')[1].split('- name: Publish and verify')[0];
+  assert.match(resolve,/id: resolve_candidates/);
+  assert.match(resolve,/if \[\[ -n "\$\{ACCEPTANCE_RUN_SUMMARY_PATH:-\}" && "\$OWNER_TESTING_DEPLOYMENT" != true && "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true [^\n]+\n *node .* --record-admin-zero-stage "\$expected_candidate_id" --release-admin-worker "\$worker_name" >> "\$GITHUB_OUTPUT"/);
+  assert.match(stage,/id: stage_candidates\s+if: inputs.acceptance_run_id == ''/);
+  assert.match(stage,/if component_changed admin; then[\s\S]*?ADMIN_WORKER_VERSION_ID\}@0[\s\S]*?wait-for-owner-testing-admin-zero-traffic[\s\S]*?OWNER_TESTING_DEPLOYMENT" != true && "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true[^\n]+\n *node .* --record-admin-zero-stage "\$ADMIN_WORKER_VERSION_ID".*>> "\$GITHUB_OUTPUT"[\s\S]*?JOBS_WORKER_VERSION_ID\}@100[\s\S]*?COORDINATOR_WORKER_VERSION_ID\}@100/);
+  assert.match(activate,/ADMIN_ZERO_STAGE_RECEIPT: \$\{\{ steps.stage_candidates.outputs.admin_zero_stage \|\| steps.resolve_candidates.outputs.admin_zero_stage \}\}/);
+  const resolvedWorker = /resolve_candidate admin ([\w-]+) ADMIN/.exec(resolve)?.[1];
+  assert.ok(resolvedWorker);
+  assert.equal(/^      ADMIN_TRAFFIC_WORKER: ([\w-]+)$/m.exec(workersWorkflow)?.[1],resolvedWorker);
+  assert.match(stage,/--name "\$ADMIN_TRAFFIC_WORKER" --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"/);
+  assert.match(activate,/if component_changed admin; then\s+node .*verify-subject-diagnostic-expiry[\s\S]*?OWNER_TESTING_DEPLOYMENT" != true && "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true[^\n]+\n *node .* --recheck-admin-zero-stage "\$ADMIN_WORKER_VERSION_ID" --release-admin-worker "\$ADMIN_TRAFFIC_WORKER"/);
+  assert.ok(activate.indexOf('--recheck-admin-zero-stage') < activate.indexOf('versions deploy'));
+  assert.match(activate,/ADMIN_WORKER_VERSION_ID\}@100" --name "\$ADMIN_TRAFFIC_WORKER"/);
+});
+
 test('parent rollback restores only changed components after downstream failure', () => {
   const rollback = workflow.match(/\n  rollback:[\s\S]*?\n  manifest:/)?.[0] ?? '';
   assert.match(rollback, /needs: \[preflight, provider_evidence, marketing, web, admin, workers, production_smoke\]/);

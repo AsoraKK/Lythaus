@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { createReadOnlyClient, TARGET } from './lythaus-new-core-isolation-review.mjs';
+import { WORKER_VERSION_ID } from './resolve-production-version-state.mjs';
 import { pathToFileURL } from 'node:url';
 import { transition, prepareReplacementAdminUpload, verifyReplacementAdminUpload, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from './production-database-cutover.mjs';
 
@@ -225,6 +228,49 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
   return { status: 'pass', targetBranch: 'main', originFingerprint: mainFingerprint, bindings: results };
 }
 
+// A fresh run first observes its newly staged deployment. Resume and final activation must
+// re-read the exact previously observed deployment, without replacing the rollback snapshot.
+export async function verifyAdminZeroStage({action, options, versionId, resumed, receipt, fetchImpl = fetch}) {
+  if (!WORKER_VERSION_ID.test(versionId)) throw new Error('replacement Admin candidate version ID missing');
+  let zeroDeploymentId;
+  if (action === '--record-admin-zero-stage') {
+    if (resumed) {
+      zeroDeploymentId = options.snapshot.observedDeployment?.id;
+    } else {
+      const deploymentsPath = '/accounts/' + TARGET.account + '/workers/scripts/' + TARGET.worker + '/deployments';
+      const client = createReadOnlyClient(options.token, fetchImpl, false, new Set([deploymentsPath]));
+      const {result} = await client.get(deploymentsPath);
+      const rows = Array.isArray(result) ? result : result?.deployments;
+      zeroDeploymentId = rows?.[0]?.id;
+    }
+  } else if (action === '--recheck-admin-zero-stage') {
+    if (receipt?.versionId !== versionId || receipt.sourceSha !== options.releaseSha) {
+      throw new Error('replacement Admin zero-stage receipt differs from candidate');
+    }
+    zeroDeploymentId = receipt.zeroDeploymentId;
+  } else {
+    throw new Error('unknown replacement Admin zero-stage operation');
+  }
+  if (!WORKER_VERSION_ID.test(zeroDeploymentId)) throw new Error('replacement Admin zero-stage deployment ID missing');
+  const snapshot = {...options.snapshot, observedDeployment: {id: zeroDeploymentId}};
+  const verified = await verifyReplacementAdminUpload({...options, versionId, snapshot, requireZeroTraffic: true, fetchImpl});
+  if (action === '--record-admin-zero-stage' && !resumed && verified.previousDeploymentId !== options.snapshot.observedDeployment?.id) {
+    throw new Error('replacement Admin zero-stage predecessor differs from the pre-upload observation');
+  }
+  const current = {
+    workerId: verified.workerId,
+    versionId: verified.versionId,
+    sourceSha: verified.sourceSha,
+    servingVersionId: verified.servingVersionId,
+    previousDeploymentId: verified.previousDeploymentId,
+    zeroDeploymentId,
+  };
+  if (action === '--recheck-admin-zero-stage' && !isDeepStrictEqual(receipt, current)) {
+    throw new Error('replacement Admin zero-stage receipt changed');
+  }
+  return current;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const requireDestination = process.argv.includes('--new-core-candidate');
   const workerArg = process.argv.indexOf('--release-admin-worker');
@@ -232,15 +278,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (workerArg >= 0 && !releaseAdminWorker) throw new Error('canonical release Admin Worker missing');
   const configs = productionConfigs();
   const target = validateProductionDatabaseMap(manifest, configs, transition, requireDestination, releaseAdminWorker);
-  const uploadArg = process.argv.indexOf('--prepare-admin-upload');
-  const verifyArg = process.argv.indexOf('--verify-admin-upload');
-  if (uploadArg >= 0 || verifyArg >= 0) {
-    if (uploadArg >= 0 && verifyArg >= 0) throw new Error('Admin candidate operation is ambiguous');
+  const adminActions = ['--prepare-admin-upload','--verify-admin-upload','--record-admin-zero-stage','--recheck-admin-zero-stage'];
+  const actions = process.argv.filter(arg => adminActions.includes(arg));
+  if (actions.length) {
+    if (actions.length !== 1) throw new Error('Admin candidate operation is ambiguous');
+    const [action] = actions;
+    const argument = process.argv[process.argv.indexOf(action) + 1];
     const canonicalPath = 'apps/lythaus-admin-api/wrangler.jsonc';
     const releaseSha = process.env.RELEASE_SHA;
     if (!releaseAdminWorker || !/^[a-f0-9]{40}$/.test(releaseSha ?? '')) throw new Error('canonical Admin upload release is unverified');
     if (target === transition.rollback) {
-      if (uploadArg >= 0) console.log(JSON.stringify({configPath:canonicalPath,message:`Lythaus candidate ${releaseSha}`,temporary:false}));
+      if (action === '--prepare-admin-upload') console.log(JSON.stringify({configPath:canonicalPath,message:`Lythaus candidate ${releaseSha}`,temporary:false}));
     } else {
       const dir = path.join(process.env.RUNNER_TEMP,'production-cutover');
       const readJson = file => JSON.parse(fs.readFileSync(file,'utf8'));
@@ -250,12 +298,16 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         versions:readJson(path.join(dir,'admin-before-versions.json')),
       };
       const options = {releaseSha,snapshot,config:configs.get(canonicalPath),token:process.env.CLOUDFLARE_API_TOKEN};
-      if (verifyArg >= 0) {
-        console.log(JSON.stringify(await verifyReplacementAdminUpload({...options,versionId:process.argv[verifyArg + 1],
-          resumeZeroTraffic:Boolean(process.env.ACCEPTANCE_RUN_SUMMARY_PATH)})));
+      const resumed = Boolean(process.env.ACCEPTANCE_RUN_SUMMARY_PATH);
+      if (action === '--verify-admin-upload') {
+        console.log(JSON.stringify(await verifyReplacementAdminUpload({...options,versionId:argument,resumeZeroTraffic:resumed})));
+      } else if (action === '--record-admin-zero-stage' || action === '--recheck-admin-zero-stage') {
+        const receipt = action === '--recheck-admin-zero-stage' ? JSON.parse(process.env.ADMIN_ZERO_STAGE_RECEIPT || 'null') : undefined;
+        const verified = await verifyAdminZeroStage({action,options,versionId:argument,resumed,receipt});
+        if (action === '--record-admin-zero-stage') console.log('admin_zero_stage='+JSON.stringify(verified));
       } else {
         let secretFile;
-        try { secretFile = readJson(process.argv[uploadArg + 1]); } catch { throw new Error('Admin candidate secret input is unreadable'); }
+        try { secretFile = readJson(argument); } catch { throw new Error('Admin candidate secret input is unreadable'); }
         if (!secretFile || Object.getPrototypeOf(secretFile) !== Object.prototype ||
           !Object.values(secretFile).every(value => typeof value === 'string' && value.trim().length > 0)) throw new Error('Admin candidate secret input is unverified');
         const prepared = await prepareReplacementAdminUpload({...options,secretNames:Object.keys(secretFile)});

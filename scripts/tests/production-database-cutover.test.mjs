@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { inspectPromotionSource, prepareReplacementAdminUpload, verifyReplacementAdminUpload, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
+import { verifyAdminZeroStage } from '../ci/verify-cloudflare-hyperdrive-targets.mjs';
 import { inspectProductionConnectors, TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
 import { coversHost, inspectControlRouting } from '../ci/control-host-routing.mjs';
 import { createControlWorker } from '../../apps/lythaus-admin-api/src/control-worker.ts';
@@ -324,6 +325,27 @@ test('the canonical full Admin upload binds the attested key without reading it'
   await assert.rejects(verifyReplacementAdminUpload(verify), /serving deployment/);
   const resume = {...verify,resumeZeroTraffic:true,snapshot:{...verify.snapshot,observedDeployment:staged}};
   assert.equal((await verifyReplacementAdminUpload(resume)).versionId,id);
+  for (const resumed of [false, true]) {
+    const options = resumed ? resume : verify;
+    const originalSnapshot = structuredClone(options.snapshot);
+    const scope = {options, versionId: id, resumed, fetchImpl};
+    const receipt = await verifyAdminZeroStage({...scope, action: '--record-admin-zero-stage'});
+    assert.equal(receipt.zeroDeploymentId, staged.id);
+    assert.equal(receipt.previousDeploymentId, d.pins.servingDeploymentId);
+    const final = {...scope, action: '--recheck-admin-zero-stage', receipt};
+    assert.deepEqual(await verifyAdminZeroStage(final), receipt);
+    await assert.rejects(verifyAdminZeroStage({...final, receipt: null}), /receipt differs/);
+    await assert.rejects(verifyAdminZeroStage({...final, receipt: {...receipt, sourceSha: 'a'.repeat(40)}}), /receipt differs/);
+    await assert.rejects(verifyAdminZeroStage({...final, receipt: {...receipt, previousDeploymentId: sibling.id}}), /receipt changed/);
+    list.push(sibling);
+    await assert.rejects(verifyAdminZeroStage(final), {code: 'isolated_inventory_reconciliation_required'});
+    list.pop();
+    const recordedId = staged.id;
+    staged.id = '99999999-9999-4999-8999-999999999999';
+    await assert.rejects(verifyAdminZeroStage(final), /same-run observation/);
+    staged.id = recordedId;
+    assert.deepEqual(options.snapshot, originalSnapshot);
+  }
   const beforeActivation = {...verify,requireZeroTraffic:true,snapshot:{...verify.snapshot,observedDeployment:{id:staged.id}}};
   assert.equal((await verifyReplacementAdminUpload(beforeActivation)).versionId,id);
   staged.id = '99999999-9999-4999-8999-999999999999';
