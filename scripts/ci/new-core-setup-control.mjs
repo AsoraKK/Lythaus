@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { PINS, REPOSITORY as repository, verifyEnvironment, verifyOwnerReview } from './lythaus-new-core-schema-install-control.mjs';
-import { isRepairOperation, verifyRepairControl } from './new-core-repair-control.mjs';
+import { isRepairOperation, predecessorRun, verifyRepairControl } from './new-core-repair-control.mjs';
 import { REPAIR_PINS } from './new-core-isolated-repair-pins.mjs';
 
 const workflow = '.github/workflows/new-core-isolated-setup.yml';
@@ -110,7 +110,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       }[env.REQUESTED_OPERATION];
       const summary = [
         purpose, 'Worker: `lythaus-admin-api-new-core-test` (`89391a349e454b3994bd43299c6386ed`).',
-        'Verified baseline from protected activation `45660396889`: isolated deployment `'+gate.repairBaseline.predecessor.deploymentId+
+        'Verified baseline from protected activation `'+predecessorRun+'`: isolated deployment `'+gate.repairBaseline.predecessor.deploymentId+
           '` served version `'+gate.repairBaseline.predecessor.versionId+'` at 100%. Preserve this rollback reference.',
         'Candidate application: `' + REPAIR_PINS.sourceSha + '`. Worker SHA-256: `' + REPAIR_PINS.workerSha + '`. Assets SHA-256: `' + REPAIR_PINS.assetsSha + '`.',
         'Prior run: `' + env.PRIOR_RUN + '`.' + (state?.versionId ? ' Repair version: `' + state.versionId + '`.' : ''),

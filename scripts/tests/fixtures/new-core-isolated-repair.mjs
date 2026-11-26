@@ -7,7 +7,8 @@ import {
 } from '../../ci/new-core-isolated-cloudflare.mjs';
 import * as sealedWorker from '../../ci/new-core-isolated-worker.mjs';
 import {TARGET} from '../../ci/lythaus-new-core-isolation-review.mjs';
-import {priorRepairPins, priorRepairState as predecessor} from '../../ci/new-core-isolated-repair-state.mjs';
+import {bindingRepairPins, bindingRepairState as predecessor, priorRepairPins, priorRepairState}
+  from '../../ci/new-core-isolated-repair-state.mjs';
 
 const prior = {
   parentIntent:'d340cb66-cb62-4c87-ab64-400a7cf79c01', ackParent:'44cd6e04-15d7-467c-9d93-ff59d5d4fe0c',
@@ -34,21 +35,30 @@ const artifacts = {worker, assets};
 const originalSource = '3fbaea846f67fe5ad452d53c456b5355069757ca';
 const originalDeployment = {id:prior.deploymentId, created_on:'2026-11-25T12:19:00Z',
   annotations:{}, strategy:'percentage', versions:[{version_id:prior.ackChild, percentage:100}]};
-const precedingDeployment = {id:predecessor.deploymentId, created_on:'2026-11-25T19:00:00Z', strategy:'percentage',
-  annotations:{'workers/message':'lythaus-isolated-repair ' + predecessor.activationIntent},
-  versions:[{version_id:predecessor.versionId, percentage:100}]};
-const baseline = [precedingDeployment,originalDeployment];
+function historicalDeployment(state, created_on) {
+  return {id:state.deploymentId, created_on, strategy:'percentage',
+    annotations:{'workers/message':'lythaus-isolated-repair ' + state.activationIntent},
+    versions:[{version_id:state.versionId, percentage:100}]};
+}
+const priorRepairDeployment = historicalDeployment(priorRepairState, '2026-11-25T19:00:00Z');
+const precedingDeployment = historicalDeployment(predecessor, '2026-11-25T23:00:00Z');
+const baseline = [precedingDeployment, priorRepairDeployment, originalDeployment];
 const shell = {id:RECORDED_WORKER_ID, name:TARGET.worker, deployed_on:precedingDeployment.created_on,
   subdomain:{enabled:false, previews_enabled:false}, logpush:false, tail_consumers:[], references:{domains:[]},
   observability:{enabled:false, logs:{enabled:false, invocation_logs:false}, traces:{enabled:false}}};
 
-// Passing the two retained bundles also checks their real historical module hashes.
+// Passing the three retained builds checks the actual historical module hashes.
 const oldWorker = process.argv[2] ? await readFile(process.argv[2]) : null;
-const precedingWorker = process.argv[3] ? await readFile(process.argv[3]) : Buffer.from('synthetic previously activated module');
-if (!oldWorker || !process.argv[3]) mock.module('../../ci/new-core-isolated-worker.mjs', {namedExports:{...sealedWorker,
+const priorWorker = process.argv[3] ? await readFile(process.argv[3]) : Buffer.from('synthetic first repair module');
+const precedingWorker = process.argv[4] ? await readFile(process.argv[4]) : Buffer.from('synthetic binding repair module');
+if (!oldWorker || !process.argv[3] || !process.argv[4]) mock.module('../../ci/new-core-isolated-worker.mjs', {namedExports:{...sealedWorker,
   async verifyWorkerVersion(args) {
-    if (!process.argv[3] && args.versionId === predecessor.versionId) {
+    if (!process.argv[3] && args.versionId === priorRepairState.versionId) {
       assert.deepEqual(args.pins,priorRepairPins);
+      return sealedWorker.verifyWorkerVersion({...args,pins:{...args.pins,workerSha:digest(priorWorker)}});
+    }
+    if (!process.argv[4] && args.versionId === predecessor.versionId) {
+      assert.deepEqual(args.pins,bindingRepairPins);
       return sealedWorker.verifyWorkerVersion({...args,pins:{...args.pins,workerSha:digest(precedingWorker)}});
     }
     return sealedWorker.verifyWorkerVersion(args);
@@ -81,7 +91,9 @@ function fixture() {
   const state = {
     versions:new Map([[prior.ackParent, originalVersion(prior.ackParent, 1, 'lythaus-isolated ' + prior.parentIntent + ' parent')],
       [prior.ackChild, originalVersion(prior.ackChild, 2, 'lythaus-isolated ' + prior.childIntent + ' ' + prior.ackParent)],
-      [predecessor.versionId, originalVersion(predecessor.versionId, 3, 'lythaus-isolated ' + predecessor.intentId + ' ' + prior.ackChild,
+      [priorRepairState.versionId, originalVersion(priorRepairState.versionId, 3, 'lythaus-isolated ' + priorRepairState.intentId + ' ' + prior.ackChild,
+        priorWorker,priorRepairState.sourceSha)],
+      [predecessor.versionId, originalVersion(predecessor.versionId, 4, 'lythaus-isolated ' + predecessor.intentId + ' ' + priorRepairState.versionId,
         precedingWorker,predecessor.sourceSha)]]),
     deployments:structuredClone(baseline), receipts:[], writes:[], boundaries:[], fault:null,
   };
@@ -127,7 +139,7 @@ function fixture() {
         assert.equal(body.main_module, 'isolated-entry.js');
         assert.equal(body.assets.config.run_worker_first, true);
         const bindings = body.bindings.map(binding => binding.name === name ? {name, type:'secret_text'} : binding);
-        const version = {...body, bindings, id:candidate, number:4, urls:[], assets:{config:body.assets.config}};
+        const version = {...body, bindings, id:candidate, number:5, urls:[], assets:{config:body.assets.config}};
         state.versions.set(candidate, version);
         if (state.fault === 'version_ack_lost') throw new Error('private fixture transport detail');
         result = {id:candidate};
@@ -135,7 +147,7 @@ function fixture() {
         assert.deepEqual(body.versions, [{version_id:candidate, percentage:100}]);
         assert.equal(body.strategy, 'percentage');
         assert.match(body.annotations['workers/message'], /^lythaus-isolated-repair [a-f0-9-]{36}$/);
-        state.deployments.unshift({...body, id:deploymentId, created_on:'2026-11-25T20:00:00Z'});
+        state.deployments.unshift({...body, id:deploymentId, created_on:'2026-11-26T03:00:00Z'});
         if (state.fault === 'deployment_ack_lost') throw new Error('private fixture transport detail');
         result = {id:deploymentId};
       } else assert.fail('unexpected repair write ' + path);
@@ -170,12 +182,21 @@ const reconcile = 'reconcile-isolated-repair';
 for (const drift of [
   state => state.versions.set(unexpectedId, {id:unexpectedId}),
   state => { state.versions.delete(prior.ackParent); },
+  state => { state.versions.delete(priorRepairState.versionId); },
+  state => { state.versions.get(priorRepairState.versionId).number = 2; },
+  state => { state.versions.get(priorRepairState.versionId).annotations['workers/message'] = 'lythaus-isolated ' + priorRepairState.intentId + ' ' + prior.ackParent; },
+  state => { state.versions.get(priorRepairState.versionId).modules[1].content_base64 = precedingWorker.toString('base64'); },
   state => { state.versions.delete(predecessor.versionId); },
-  state => { state.versions.get(predecessor.versionId).number = 2; },
-  state => { state.versions.get(predecessor.versionId).annotations['workers/message'] = 'lythaus-isolated ' + predecessor.intentId + ' ' + prior.ackParent; },
+  state => { state.versions.get(predecessor.versionId).number = 3; },
+  state => { state.versions.get(predecessor.versionId).annotations['workers/message'] = 'lythaus-isolated ' + predecessor.intentId + ' ' + prior.ackChild; },
   state => { state.versions.get(predecessor.versionId).annotations['workers/tag'] = originalSource; },
+  state => { state.versions.get(predecessor.versionId).modules[1].content_base64 = priorWorker.toString('base64'); },
   state => { state.deployments[0].annotations['workers/message'] = 'lythaus-isolated-repair ' + unexpectedId; },
-  state => { state.deployments[0].created_on = originalDeployment.created_on; },
+  state => { state.deployments[0].created_on = priorRepairDeployment.created_on; },
+  state => { state.deployments[1].annotations['workers/message'] = 'lythaus-isolated-repair ' + predecessor.activationIntent; },
+  state => { state.deployments[1].created_on = originalDeployment.created_on; },
+  state => { state.deployments[1].versions[0].version_id = predecessor.versionId; },
+  state => { state.deployments.splice(1,1); },
   state => { state.deployments.pop(); },
   state => { state.deployments[0].versions[0].percentage = 99; },
   state => { state.deployments[0].versions[0].version_id = prior.ackParent; },
@@ -193,13 +214,13 @@ assert.doesNotThrow(() => assertRoutedLineage(prior));
 for (const key of Object.keys(prior)) {
   assert.throws(() => assertRoutedLineage({...prior, [key]:unexpectedId}), undefined, 'modified prior ' + key);
 }
-for (const changed of [undefined, {...predecessor,sourceSha:pins.sourceSha}, {...predecessor,versionId:prior.ackChild},
+for (const changed of [undefined, priorRepairState, {...predecessor,sourceSha:pins.sourceSha}, {...predecessor,versionId:prior.ackChild},
   {...predecessor,intentId:prior.childIntent}, {...predecessor,activationVerified:false}]) {
   const {run,state} = fixture();
   await assert.rejects(run(stage, undefined, {predecessor:changed}), /repair_predecessor_receipt/);
   assert.deepEqual(state.writes, []);
 }
-for (const changed of [priorRepairPins, {...pins,workerSha:priorRepairPins.workerSha}]) {
+for (const changed of [priorRepairPins, bindingRepairPins, {...pins,workerSha:priorRepairPins.workerSha}, {...pins,workerSha:bindingRepairPins.workerSha}]) {
   const {run,state} = fixture();
   await assert.rejects(run(stage, undefined, {pins:changed}), /repair_artifact_pins/);
   assert.deepEqual(state.writes, []);
@@ -253,7 +274,7 @@ for (const fault of ['deployment_after_assets', 'inventory_after_assets']) {
   const intent = state.receipts.at(-1);
   assert.ok(intent.intentId);
   assert.ok(!intent.stageVerified);
-  assert.equal(state.versions.size, 4);
+  assert.equal(state.versions.size, 5);
   assert.equal(state.deployments[0].id, predecessor.deploymentId);
   const writes = state.writes.length;
   await assert.rejects(run(activate, intent));
@@ -329,9 +350,9 @@ for (const change of [
 
 for (const mutate of [
   ({state}) => { state.versions.get(candidate).modules[1].content_base64 = Buffer.from('changed').toString('base64'); },
-  ({state}) => { state.versions.get(candidate).number = 2; },
+  ({state}) => { state.versions.get(candidate).number = 4; },
   ({state}) => { state.versions.get(candidate).bindings.find(b => b.name === 'DB_ADMIN_FRESH').id = 'b'.repeat(32); },
-  ({state}) => { state.versions.get(candidate).annotations['workers/message'] = 'lythaus-isolated ' + unexpectedId + ' ' + prior.ackChild; },
+  ({state}) => { state.versions.get(candidate).annotations['workers/message'] = 'lythaus-isolated ' + state.receipts.at(-1).intentId + ' ' + priorRepairState.versionId; },
   ({state}) => { state.versions.set(unexpectedId, {id:unexpectedId}); },
   ({state}) => { state.deployments[0].versions[0].percentage = 50; },
   ({state}) => { state.deployments[0].id = unexpectedId; },
