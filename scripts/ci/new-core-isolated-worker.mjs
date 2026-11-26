@@ -40,7 +40,7 @@ async function sourceConfig(sourceDir, pins) {
   return bytes;
 }
 
-async function readAssets(dir, prefix = '') {
+export async function readAssets(dir, prefix = '') {
   const entries = [];
   for (const file of await readdir(dir, { withFileTypes: true })) {
     const path = prefix + file.name;

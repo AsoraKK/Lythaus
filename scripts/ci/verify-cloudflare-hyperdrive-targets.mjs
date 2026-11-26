@@ -5,7 +5,8 @@ import { isDeepStrictEqual } from 'node:util';
 import { createReadOnlyClient, TARGET } from './lythaus-new-core-isolation-review.mjs';
 import { WORKER_VERSION_ID } from './resolve-production-version-state.mjs';
 import { pathToFileURL } from 'node:url';
-import { transition, prepareReplacementAdminUpload, verifyReplacementAdminUpload, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from './production-database-cutover.mjs';
+import { loadFirstFullAdminReceipt } from './first-full-admin-receipt.mjs';
+import { transition, prepareReplacementAdminUpload, verifyFirstFullStageEvidence, verifyReplacementAdminUpload, validateProductionDatabaseMap, verifyIsolatedAdminVersions, verifyRollbackPlane } from './production-database-cutover.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json');
@@ -65,7 +66,7 @@ function assertManifestAndConfigs() {
   }
 }
 
-function productionConfigs() {
+export function productionConfigs() {
   const configs = new Map();
   for (const entry of fs.readdirSync(path.join(root, 'apps'), { withFileTypes: true })) {
     const file = 'apps/' + entry.name + '/wrangler.jsonc';
@@ -230,7 +231,7 @@ export async function verifyHyperdriveTargets({ environment = process.env, fetch
 
 // A fresh run first observes its newly staged deployment. Resume and final activation must
 // re-read the exact previously observed deployment, without replacing the rollback snapshot.
-export async function verifyAdminZeroStage({action, options, versionId, resumed, receipt, fetchImpl = fetch}) {
+export async function verifyAdminZeroStage({action, options, versionId, resumed, receipt, fetchImpl = fetch, loadFirstFullReceipt}) {
   if (!WORKER_VERSION_ID.test(versionId)) throw new Error('replacement Admin candidate version ID missing');
   let zeroDeploymentId;
   if (action === '--record-admin-zero-stage') {
@@ -254,6 +255,12 @@ export async function verifyAdminZeroStage({action, options, versionId, resumed,
   if (!WORKER_VERSION_ID.test(zeroDeploymentId)) throw new Error('replacement Admin zero-stage deployment ID missing');
   const snapshot = {...options.snapshot, observedDeployment: {id: zeroDeploymentId}};
   const verified = await verifyReplacementAdminUpload({...options, versionId, snapshot, requireZeroTraffic: true, fetchImpl});
+  const destination = options.destination ?? transition.destination;
+  if (action === '--record-admin-zero-stage' && resumed && loadFirstFullReceipt &&
+      verified.servingVersionId === destination.isolatedAdminVersions.servingVersionId) {
+    const first = await loadFirstFullReceipt();
+    if (first) await verifyFirstFullStageEvidence({...options,receipt:first,versionId,snapshot,resumed:true,fetchImpl});
+  }
   if (action === '--record-admin-zero-stage' && !resumed && verified.previousDeploymentId !== options.snapshot.observedDeployment?.id) {
     throw new Error('replacement Admin zero-stage predecessor differs from the pre-upload observation');
   }
@@ -299,22 +306,29 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       };
       const options = {releaseSha,snapshot,config:configs.get(canonicalPath),token:process.env.CLOUDFLARE_API_TOKEN};
       const resumed = Boolean(process.env.ACCEPTANCE_RUN_SUMMARY_PATH);
+      const normalRelease = process.env.OWNER_TESTING_DEPLOYMENT !== 'true' &&
+        process.env.OWNER_TESTING_SUBJECT_DIAGNOSTIC !== 'true' && process.env.ENABLE_SUBJECT_DIAGNOSTIC !== 'true';
+      const loadFirstFullReceipt = normalRelease ? () => loadFirstFullAdminReceipt(process.env) : undefined;
       if (action === '--verify-admin-upload') {
         console.log(JSON.stringify(await verifyReplacementAdminUpload({...options,versionId:argument,resumeZeroTraffic:resumed})));
       } else if (action === '--record-admin-zero-stage' || action === '--recheck-admin-zero-stage') {
         const receipt = action === '--recheck-admin-zero-stage' ? JSON.parse(process.env.ADMIN_ZERO_STAGE_RECEIPT || 'null') : undefined;
-        const verified = await verifyAdminZeroStage({action,options,versionId:argument,resumed,receipt});
+        const verified = await verifyAdminZeroStage({action,options,versionId:argument,resumed,receipt,loadFirstFullReceipt});
         if (action === '--record-admin-zero-stage') console.log('admin_zero_stage='+JSON.stringify(verified));
       } else {
         let secretFile;
         try { secretFile = readJson(argument); } catch { throw new Error('Admin candidate secret input is unreadable'); }
         if (!secretFile || Object.getPrototypeOf(secretFile) !== Object.prototype ||
           !Object.values(secretFile).every(value => typeof value === 'string' && value.trim().length > 0)) throw new Error('Admin candidate secret input is unverified');
-        const prepared = await prepareReplacementAdminUpload({...options,secretNames:Object.keys(secretFile)});
-        // Keep relative assets and entry points rooted at the original config location.
-        const configPath = path.join(path.dirname(canonicalPath),`.wrangler-admin-${crypto.randomUUID()}.json`);
-        fs.writeFileSync(configPath,JSON.stringify(prepared.config),{flag:'wx',mode:0o600});
-        console.log(JSON.stringify({configPath,message:prepared.message,temporary:true}));
+        const prepared = await prepareReplacementAdminUpload({...options,secretNames:Object.keys(secretFile),loadFirstFullReceipt});
+        if (prepared.adoptedVersionId) {
+          console.log(JSON.stringify(prepared));
+        } else {
+          // Keep relative assets and entry points rooted at the original config location.
+          const configPath = path.join(path.dirname(canonicalPath),`.wrangler-admin-${crypto.randomUUID()}.json`);
+          fs.writeFileSync(configPath,JSON.stringify(prepared.config),{flag:'wx',mode:0o600});
+          console.log(JSON.stringify({configPath,message:prepared.message,temporary:true}));
+        }
       }
     }
   } else if (process.argv.includes('--rollback-database')) {

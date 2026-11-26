@@ -107,12 +107,16 @@ export async function verifyIsolatedAdminVersions(destination, read) {
   }
 }
 
-export async function verifyIsolatedAdminBeforePromotion(destination, read) {
+export async function verifyIsolatedAdminBeforePromotion(destination, read, stagedDeploymentId) {
   await verifyIsolatedAdminVersions(destination,read);
   const pins = destination.isolatedAdminVersions;
   const script = '/workers/scripts/' + TARGET.worker;
   const raw = await read(script + '/deployments');
-  const rows = Array.isArray(raw) ? raw : raw?.deployments;
+  const history = Array.isArray(raw) ? raw : raw?.deployments;
+  if (stagedDeploymentId !== undefined && history?.[0]?.id !== stagedDeploymentId) {
+    throw new PromotionSourceError('serving_deployment_mismatch','first full Admin zero stage differs from the observed deployment');
+  }
+  const rows = stagedDeploymentId === undefined ? history : history.slice(1);
   const allTraffic = (row,id,versionId) => row?.id === id && row.versions?.length === 1 &&
     row.versions[0].version_id === versionId && row.versions[0].percentage === 100;
   const expected = [
@@ -282,7 +286,7 @@ async function verifyAdminInventory({pins,current,releaseSha,acknowledged,token,
 // Never inherit from the latest upload. Every full release explicitly references
 // the immutable subject-key binding whose staged request and activation were verified.
 export async function prepareReplacementAdminUpload({config, secretNames, snapshot, releaseSha, token,
-  fetchImpl = fetch, destination = transition.destination}) {
+  fetchImpl = fetch, destination = transition.destination, loadFirstFullReceipt}) {
   const pins = validateIsolatedVersions(destination);
   const containsKey = value => value === subjectKey || (value && typeof value === 'object' &&
     Object.entries(value).some(([key, item]) => key === subjectKey || containsKey(item)));
@@ -298,8 +302,14 @@ export async function prepareReplacementAdminUpload({config, secretNames, snapsh
   const previousDeploymentId = snapshot.observedDeployment?.id;
   assertStillServing([snapshot.observedDeployment],current.versionId,previousDeploymentId);
   if (current.versionId === pins.servingVersionId) {
-    if (!piiKeys.every(name => secretNames.includes(name))) throw new Error('first full Admin upload requires the existing protected PII bindings');
     if (current.sourceSha !== pins.repairSourceSha || previousDeploymentId !== pins.servingDeploymentId) throw new Error('isolated Admin snapshot source differs from the promotion receipt');
+    const receipt = await loadFirstFullReceipt?.();
+    if (receipt) {
+      await verifyFirstFullStageEvidence({receipt, versionId:receipt.versionId, snapshot, releaseSha, token, fetchImpl, destination});
+      const verified = await verifyReplacementAdminUpload({versionId:receipt.versionId, config, snapshot, releaseSha, token, fetchImpl, destination});
+      return {adoptedVersionId:verified.versionId};
+    }
+    if (!piiKeys.every(name => secretNames.includes(name))) throw new Error('first full Admin upload requires the existing protected PII bindings');
     await inspectPromotionSource({token,expectedVersion:current.versionId,releaseSha,fetchImpl,destination});
   } else {
     if (secretNames.some(name => piiKeys.includes(name))) throw new Error('existing replacement Admin PII bindings must be inherited');
@@ -363,6 +373,45 @@ export async function verifyReplacementAdminUpload({versionId, releaseSha, snaps
   await verifyAdminInventory({pins,current,releaseSha,acknowledged:{id:versionId,number:version.number},token,fetchImpl});
   return {status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:pins.workerId,versionId,sourceSha:releaseSha,
     subjectKeySourceVersionId:pins.servingVersionId,servingVersionId:current.versionId,previousDeploymentId:predecessor};
+}
+
+// Only a protected producer can attest the asset upload and the secret-inheritance
+// request. Confirm the candidate bytes, bindings, inventory and original deployment
+// through both provider APIs before adopting its acknowledged version ID.
+export async function verifyFirstFullStageEvidence({receipt, versionId, snapshot, releaseSha, token,
+  resumed = false, fetchImpl = fetch, destination = transition.destination}) {
+  const pins = validateIsolatedVersions(destination);
+  const current = soleAdminBefore(snapshot);
+  if (current.versionId !== pins.servingVersionId || current.sourceSha !== pins.repairSourceSha ||
+      receipt?.status !== 'REPLACEMENT_ADMIN_NON_SERVING' || receipt.sourceSha !== releaseSha ||
+      receipt.workerId !== pins.workerId || receipt.subjectKeySourceVersionId !== pins.servingVersionId ||
+      receipt.servingVersionId !== current.versionId || receipt.servingTrafficPercent !== 100 ||
+      receipt.previousDeploymentId !== pins.servingDeploymentId ||
+      receipt.versionId !== versionId || !WORKER_VERSION_ID.test(versionId) || isolatedVersionIds(pins).includes(versionId) ||
+      !/^[a-f0-9]{64}$/.test(receipt.moduleSha256) || !/^[a-f0-9]{64}$/.test(receipt.assetsSha256)) {
+    throw new Error('first full Admin upload receipt differs from the reviewed replacement');
+  }
+  const account = '/accounts/' + TARGET.account;
+  const worker = '/workers/workers/' + pins.workerId;
+  const script = '/workers/scripts/' + TARGET.worker;
+  const modulesPath = worker + '/versions/' + receipt.versionId + '?include=modules';
+  const paths = ['/access/apps/' + destination.ownerAccess.applicationId,'/access/organizations',worker,
+    ...isolatedVersionIds(pins).map(id => worker + '/versions/' + id),
+    script + '/deployments',script + '/versions/' + pins.servingVersionId,modulesPath];
+  const client = createReadOnlyClient(token,fetchImpl,false,new Set(paths.map(path => account + path)));
+  const read = async path => (await client.get(account + path)).result;
+  await verifyIsolatedAdminBeforePromotion(destination,read,resumed ? snapshot.observedDeployment?.id : undefined);
+  const version = await read(modulesPath);
+  const modules = version?.modules;
+  const entry = Array.isArray(modules) && modules.find(row => row.name === 'control-worker.js');
+  if (version?.id !== receipt.versionId || version.main_module !== 'control-worker.js' ||
+      !entry || new Set(modules.map(row => row.name)).size !== modules.length ||
+      modules.some(row => row !== entry && (!['_headers','_redirects'].includes(row.name) || row.content_type !== 'text/plain')) ||
+      entry.content_type !== 'application/javascript+module' || typeof entry.content_base64 !== 'string' ||
+      createHash('sha256').update(Buffer.from(entry.content_base64,'base64')).digest('hex') !== receipt.moduleSha256 ||
+      version.assets?.config?.run_worker_first !== true) {
+    throw new Error('first full Admin module or assets differ from the acknowledged upload');
+  }
 }
 
 export function validateProductionDatabaseMap(manifest, configs, plan = transition, requireDestination = false, releaseAdminWorker) {

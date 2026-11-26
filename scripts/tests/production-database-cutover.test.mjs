@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { firstFullStage, loadFirstFullAdminReceipt } from '../ci/first-full-admin-receipt.mjs';
+import { stageFullAdminVersion, verifyStageGate } from '../ci/new-core-full-admin-stage.mjs';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { inspectPromotionSource, prepareReplacementAdminUpload, verifyReplacementAdminUpload, transition, validateProductionDatabaseMap, verifyIsolatedAdminBeforePromotion, verifyIsolatedAdminVersions, verifyRollbackPlane } from '../ci/production-database-cutover.mjs';
@@ -241,6 +244,48 @@ test('the protected pre-promotion inspection reads the pinned metadata and repor
   await assert.rejects(inspectPromotionSource(options),unrecognized);
 });
 
+test('only an acknowledged owner-reviewed first full upload at this release can become an adoption receipt', async () => {
+  const sha = 'f'.repeat(40), runId = '12345', owner = 211295889;
+  const env = {RELEASE_SHA:sha,GITHUB_REPOSITORY:'AsoraKK/Lythaus',GITHUB_REPOSITORY_ID:'1010752912'};
+  const receipt = {schema:'lythaus-first-full-admin-stage-v1',runId,runAttempt:1,
+    operation:firstFullStage.operation,baselineRun:firstFullStage.baselineRun,sourceSha:sha,status:'REPLACEMENT_ADMIN_NON_SERVING',
+    workerId:'1'.repeat(32),versionId:'55555555-5555-4555-8555-555555555555',servingVersionId:transition.destination.isolatedAdminVersions.servingVersionId,
+    previousDeploymentId:transition.destination.isolatedAdminVersions.servingDeploymentId,subjectKeySourceVersionId:transition.destination.isolatedAdminVersions.servingVersionId,
+    servingTrafficPercent:100,moduleSha256:'a'.repeat(64),assetsSha256:'b'.repeat(64)};
+  const archive = execFileSync('python3',['-I','-c',`import io,sys,zipfile
+out=io.BytesIO()
+with zipfile.ZipFile(out,'w') as z: z.writestr('first-full-admin.json',sys.stdin.buffer.read())
+sys.stdout.buffer.write(out.getvalue())`],{input:JSON.stringify(receipt)});
+  const run = {id:Number(runId),repository:{id:1010752912},path:firstFullStage.workflow,event:'workflow_dispatch',
+    head_branch:'main',head_sha:sha,status:'completed',conclusion:'success',run_attempt:1,actor:{id:owner},triggering_actor:{id:owner},
+    display_title:firstFullStage.operation+' at '+sha};
+  const history = {total_count:1,workflow_runs:[run]};
+  const approvals = [{state:'approved',user:{id:owner},environments:[{id:18972418184}]}];
+  const jobs = {total_count:1,jobs:[{name:'Stage full Admin without traffic',conclusion:'success',steps:[
+    {name:'Upload the full Admin version without assigning traffic',conclusion:'success'},
+    {name:'Retain the protected first full Admin upload receipt',conclusion:'success'}]}]};
+  const artifacts = {total_count:1,artifacts:[{id:444,expired:false,name:'first-full-admin-'+sha,
+    digest:'sha256:'+createHash('sha256').update(archive).digest('hex')}]};
+  const base = '/actions/runs/'+runId;
+  const routes = new Map([
+    ['/actions/workflows/new-core-full-admin-stage.yml/runs?event=workflow_dispatch&branch=main&head_sha='+sha+'&per_page=100',history],
+    [base,run],[base+'/approvals',approvals],[base+'/attempts/1/jobs?per_page=100',jobs],[base+'/artifacts?per_page=100',artifacts],
+  ]);
+  const load = (map=routes) => loadFirstFullAdminReceipt(env, async path => {
+    assert.ok(map.has(path),'unexpected GitHub request');return map.get(path);
+  }, async options => { assert.deepEqual(options,{artifactId:'444',runId});return archive; });
+  assert.deepEqual(await load(),receipt);
+  const search = [...routes.keys()][0];
+  assert.equal(await load(new Map([[search,{total_count:0,workflow_runs:[]}]])),null);
+  for (const [path,value] of [[search,{total_count:2,workflow_runs:[run]}],[search,{total_count:2,workflow_runs:[run,run]}],
+    [base,{...run,head_sha:'b'.repeat(40)}],[base,{...run,status:'in_progress'}],[base,{...run,conclusion:'failure'}],
+    [base,{...run,run_attempt:2}],[base,{...run,path:'.github/workflows/other.yml'}],[base+'/approvals',[]],
+    [base+'/attempts/1/jobs?per_page=100',{total_count:0,jobs:[]}],[base+'/artifacts?per_page=100',{total_count:0,artifacts:[]}],
+    [base+'/artifacts?per_page=100',{...artifacts,artifacts:[{...artifacts.artifacts[0],digest:'sha256:'+'0'.repeat(64)}]}]]) {
+    await assert.rejects(load(new Map(routes).set(path,value)));
+  }
+});
+
 test('the canonical full Admin upload binds the attested key without reading it', async () => {
   const d = isolatedEvidence();
   const {configs} = fixture(true);
@@ -305,10 +350,31 @@ test('the canonical full Admin upload binds the attested key without reading it'
   const verify = {...args,versionId:id};
   assert.deepEqual(await verifyReplacementAdminUpload(verify),{status:'REPLACEMENT_ADMIN_NON_SERVING',workerId:d.pins.workerId,
     versionId:id,sourceSha:args.releaseSha,subjectKeySourceVersionId:d.pins.servingVersionId,servingVersionId:d.pins.servingVersionId,previousDeploymentId:d.pins.servingDeploymentId});
+  const fullModule = Buffer.from('export default {}');
+  const fullRecord = {...await verifyReplacementAdminUpload(verify),servingTrafficPercent:100,
+    moduleSha256:createHash('sha256').update(fullModule).digest('hex'),assetsSha256:'b'.repeat(64)};
+  const body = {id,main_module:'control-worker.js',modules:[{name:'control-worker.js',content_type:'application/javascript+module',
+    content_base64:fullModule.toString('base64')}],assets:{config:{run_worker_first:true}}};
+  d.replies.set(immutable + '/' + id + '?include=modules',body);
+  const adopt = record => prepareReplacementAdminUpload({...args,secretNames:['DATABASE_READINESS_TOKEN','CLOUDFLARE_ACCOUNT_ID'],
+    loadFirstFullReceipt:async () => record});
+  assert.deepEqual(await adopt(fullRecord),{adoptedVersionId:id});
+  for (const change of [{versionId:d.pins.parentVersionId},{workerId:'1'.repeat(32)},{sourceSha:'c'.repeat(40)},
+    {moduleSha256:'0'.repeat(64)},{previousDeploymentId:d.pins.childDeploymentId},{subjectKeySourceVersionId:d.pins.childVersionId}]) {
+    await assert.rejects(adopt({...fullRecord,...change}));
+  }
+  body.modules.push({...body.modules[0],name:'unverified.js'});
+  await assert.rejects(adopt(fullRecord),/module or assets/);
+  body.modules.pop();
+  const sourceTag = d.rows[0].annotations['workers/tag'];
+  d.rows[0].annotations['workers/tag'] = args.releaseSha;
+  await assert.rejects(adopt(fullRecord),{code:'immutable_version_mismatch'});
+  d.rows[0].annotations['workers/tag'] = sourceTag;
   await assert.rejects(verifyReplacementAdminUpload({...verify,requireZeroTraffic:true}), /zero-traffic stage is required/);
   const sibling = {id:'66666666-6666-4666-8666-666666666666',number:ack.number+1};
   list.push(sibling);
   await assert.rejects(verifyReplacementAdminUpload(verify),{code:'isolated_inventory_reconciliation_required'});
+  await assert.rejects(adopt(fullRecord),{code:'isolated_inventory_reconciliation_required'});
   list.pop();
   await assert.rejects(prepareReplacementAdminUpload(args),/read-only reconciliation/);
   for (const other of ['',...d.rows.map(row => row.id)]) {
@@ -340,7 +406,11 @@ test('the canonical full Admin upload binds the attested key without reading it'
   for (const resumed of [false, true]) {
     const options = resumed ? resume : verify;
     const originalSnapshot = structuredClone(options.snapshot);
-    const scope = {options, versionId: id, resumed, fetchImpl};
+    const scope = {options, versionId: id, resumed, fetchImpl,loadFirstFullReceipt:async () => {
+      assert.equal(resumed,true);return fullRecord;
+    }};
+    if (resumed) await assert.rejects(verifyAdminZeroStage({...scope,action:'--record-admin-zero-stage',
+      loadFirstFullReceipt:async () => ({...fullRecord,versionId:sibling.id})}),/differs from the reviewed/);
     const receipt = await verifyAdminZeroStage({...scope, action: '--record-admin-zero-stage'});
     assert.equal(receipt.zeroDeploymentId, staged.id);
     assert.equal(receipt.previousDeploymentId, d.pins.servingDeploymentId);
@@ -403,6 +473,113 @@ test('the canonical full Admin upload binds the attested key without reading it'
   await assert.rejects(prepareReplacementAdminUpload(next),/reconciliation/);
   version.metadata.annotations['workers/message'] = 'unverified candidate';
   await assert.rejects(prepareReplacementAdminUpload(next), /replacement Admin version/);
+});
+
+test('the full Admin stage uploads exactly one version without deployment writes and refuses a second stage', async () => {
+  const d = isolatedEvidence();
+  const {configs} = fixture(true);
+  const script = '/workers/scripts/' + TARGET.worker;
+  const immutable = '/workers/workers/' + d.pins.workerId + '/versions';
+  const policyPath = '/access/apps/' + d.destination.ownerAccess.applicationId + '/policies?per_page=100&page=1';
+  const owner = 'operator@example.test';
+  Object.assign(d.app,{domain:TARGET.hostname});
+  d.replies.set(policyPath,[{decision:'allow',precedence:1,include:[{email:{email:owner}}]},
+    {decision:'deny',precedence:2,include:[{everyone:{}}]}]);
+  const origin = {scheme:'postgres',host:'fixture.example.test',port:5432,database:'postgres'};
+  d.destination.originSha256 = createHash('sha256').update(JSON.stringify(origin)).digest('hex');
+  for (const role of ['lythaus_admin','lythaus_privacy']) {
+    const id = d.destination.connectors[role];
+    d.replies.set('/hyperdrive/configs/' + id,{id,origin:{...origin,user:role+'.'+d.destination.branchId},
+      caching:{disabled:true},mtls:{sslmode:'verify-full',ca_certificate_id:'a'.repeat(32)}});
+  }
+  const versions = [...d.rows];
+  d.replies.set(immutable + '?per_page=100&page=1',versions);
+  d.replies.set(immutable + '/' + d.pins.servingVersionId + '?include=modules',
+    {...versions.at(-1),created_on:d.deployments[0].created_on});
+  const stageId = '55555555-5555-4555-8555-555555555555';
+  const writes = [];
+  const fetchImpl = async (url,init) => {
+    const path = url.replace('https://api.cloudflare.com/client/v4/accounts/' + TARGET.account,'');
+    assert.equal(init.redirect,'error');
+    if (init.method === 'POST') {
+      writes.push(path);
+      const body = JSON.parse(init.body);
+      if (path === script + '/assets-upload-session') {
+        assert.deepEqual(Object.keys(body.manifest),['/index.html']);
+        return Response.json({success:true,result:{jwt:'eyJ0eXAiOiJKV1QifQ.e30.test',buckets:[]}});
+      }
+      assert.equal(path,immutable+'?deploy=false');
+      assert.deepEqual(body.bindings.filter(b => b.name === 'ACCESS_SUBJECT_HMAC_KEY'),
+        [{type:'inherit',name:'ACCESS_SUBJECT_HMAC_KEY',version_id:d.pins.servingVersionId}]);
+      assert.equal(body.assets.config.run_worker_first,true);
+      assert.equal(body.main_module,'control-worker.js');
+      const bindings = body.bindings.map(b => ['secret_text','inherit'].includes(b.type) ?
+        {type:'secret_text',name:b.name} : b);
+      const recorded = {id:stageId,number:versions.length+1,annotations:body.annotations,bindings};
+      versions.push(recorded);
+      d.replies.set(immutable + '/' + stageId,recorded);
+      d.replies.set(script + '/versions/' + stageId,{id:stageId,metadata:{annotations:body.annotations},resources:{bindings}});
+      d.replies.set(immutable + '/' + stageId + '?include=modules',{
+        ...recorded,main_module:body.main_module,modules:body.modules,assets:{config:body.assets.config},
+      });
+      return Response.json({success:true,result:{id:stageId}},{status:201});
+    }
+    assert.equal(init.method,'GET');
+    const result = await d.read(path);
+    return Response.json({success:true,result,...(Array.isArray(result) ? {
+      result_info:{page:1,per_page:100,total_pages:1,count:result.length,total_count:result.length},
+    } : {})});
+  };
+  const journal = [];
+  const args = {
+    config:configs.get('apps/lythaus-admin-api/wrangler.jsonc'),destination:d.destination,fetchImpl,
+    token:'fixture',expectedOwner:owner,releaseSha:'f'.repeat(40),runId:'123',
+    module:Buffer.from('export default {}'),assets:new Map([['index.html',Buffer.from('<html></html>')],
+      ['_headers',Buffer.from('/*\n  X-Content-Type-Options: nosniff')],['_redirects',Buffer.from('/* /index.html 200')]]),
+    secrets:{CLOUDFLARE_ACCOUNT_ID:TARGET.account,DATABASE_READINESS_TOKEN:'fixture',
+      PII_ENCRYPTION_KEY_V1:'fixture',PII_HMAC_KEY_V1:'fixture'},
+    journal:(status,evidence) => journal.push({status,evidence}),
+  };
+  await assert.rejects(stageFullAdminVersion({...args,expectedOwner:'other@example.test'}),/owner_access_unverified/);
+  assert.deepEqual(writes,[]);
+  const receipt = await stageFullAdminVersion(args);
+  assert.equal(receipt.versionId,stageId);
+  assert.equal(receipt.servingVersionId,d.pins.servingVersionId);
+  assert.equal(receipt.servingTrafficPercent,100);
+  assert.equal(receipt.subjectKeySourceVersionId,d.pins.servingVersionId);
+  assert.equal(journal.at(-2).status,'full_admin_upload_intent');
+  assert.deepEqual(journal.at(-1),{status:'full_admin_provider_acknowledged',
+    evidence:{operation:'stage_version',id:stageId}});
+  assert.deepEqual(writes,[script+'/assets-upload-session',immutable+'?deploy=false']);
+  await assert.rejects(stageFullAdminVersion(args),{code:'isolated_inventory_reconciliation_required'});
+  assert.equal(writes.length,2);
+});
+
+test('full Admin staging requires the exact owner, protected main and an approved first attempt', async () => {
+  const sha = 'a'.repeat(40);
+  const id = 123;
+  const owner = 211295889;
+  const env = {GITHUB_ACTIONS:'true',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REPOSITORY:'AsoraKK/Lythaus',
+    GITHUB_REPOSITORY_ID:'1010752912',GITHUB_REF:'refs/heads/main',GITHUB_REF_PROTECTED:'true',GITHUB_RUN_ATTEMPT:'1',
+    GITHUB_ACTOR_ID:String(owner),GITHUB_ACTOR:'AsoraKK',GITHUB_TRIGGERING_ACTOR:'AsoraKK',GITHUB_RUN_ID:String(id),
+    GITHUB_SHA:sha,REQUESTED_CONTROL_SHA:sha,CONFIRM_STAGE_ONLY:'true'};
+  const runPath = '/actions/runs/' + id;
+  const calls = new Map([[runPath,{id,repository:{id:1010752912},path:firstFullStage.workflow,event:'workflow_dispatch',
+    head_branch:'main',head_sha:sha,run_attempt:1,status:'in_progress',actor:{id:owner},triggering_actor:{id:owner},
+    display_title:firstFullStage.operation+' at '+sha}],
+  ['/branches/main',{protected:true,commit:{sha}}],
+  ['/environments/production',{id:18972418184,name:'production',protection_rules:[
+    {type:'required_reviewers',prevent_self_review:false,reviewers:[{type:'User',reviewer:{id:owner}}]},
+    {type:'branch_policy'}],deployment_branch_policy:{protected_branches:false,custom_branch_policies:true}}],
+  ['/environments/production/deployment-branch-policies?per_page=100',
+    {total_count:1,branch_policies:[{name:'main',type:'branch'}]}],
+  [runPath+'/approvals',[{state:'approved',user:{id:owner},environments:[{id:18972418184}]}]]]);
+  await verifyStageGate(env,async path => calls.get(path));
+  await assert.rejects(verifyStageGate({...env,GITHUB_RUN_ATTEMPT:'2'},async () => assert.fail('unexpected API call')),
+    /protected_context_required/);
+  await assert.rejects(verifyStageGate(env,async path => path==='/branches/main' ? {protected:true,commit:{sha:'b'.repeat(40)}} : calls.get(path)),
+    /protected_run_required/);
+  await assert.rejects(verifyStageGate(env,async path => path.endsWith('/approvals') ? [] : calls.get(path)),/owner_approval_missing/);
 });
 
 test('historical verification rechecks each source, parent, intent, redacted key and database on the same Worker', async () => {

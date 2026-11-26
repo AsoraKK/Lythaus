@@ -666,13 +666,31 @@ test('replacement Admin captures the exact zero deployment on fresh and resumed 
   assert.match(stage,/id: stage_candidates\s+if: inputs.acceptance_run_id == ''/);
   assert.match(stage,/if component_changed admin; then[\s\S]*?ADMIN_WORKER_VERSION_ID\}@0[\s\S]*?wait-for-owner-testing-admin-zero-traffic[\s\S]*?OWNER_TESTING_DEPLOYMENT" != true && "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true[^\n]+\n *node .* --record-admin-zero-stage "\$ADMIN_WORKER_VERSION_ID".*>> "\$GITHUB_OUTPUT"[\s\S]*?JOBS_WORKER_VERSION_ID\}@100[\s\S]*?COORDINATOR_WORKER_VERSION_ID\}@100/);
   assert.match(activate,/ADMIN_ZERO_STAGE_RECEIPT: \$\{\{ steps.stage_candidates.outputs.admin_zero_stage \|\| steps.resolve_candidates.outputs.admin_zero_stage \}\}/);
-  const resolvedWorker = /resolve_candidate admin ([\w-]+) ADMIN/.exec(resolve)?.[1];
-  assert.ok(resolvedWorker);
-  assert.equal(/^      ADMIN_TRAFFIC_WORKER: ([\w-]+)$/m.exec(workersWorkflow)?.[1],resolvedWorker);
+  assert.match(resolve,/resolve_candidate admin "\$ADMIN_TRAFFIC_WORKER" ADMIN/);
+  assert.match(workersWorkflow,/^      ADMIN_TRAFFIC_WORKER: lythaus-[\w-]+$/m);
   assert.match(stage,/--name "\$ADMIN_TRAFFIC_WORKER" --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"/);
   assert.match(activate,/if component_changed admin; then\s+node .*verify-subject-diagnostic-expiry[\s\S]*?OWNER_TESTING_DEPLOYMENT" != true && "\$OWNER_TESTING_SUBJECT_DIAGNOSTIC" != true[^\n]+\n *node .* --recheck-admin-zero-stage "\$ADMIN_WORKER_VERSION_ID" --release-admin-worker "\$ADMIN_TRAFFIC_WORKER"/);
   assert.ok(activate.indexOf('--recheck-admin-zero-stage') < activate.indexOf('versions deploy'));
   assert.match(activate,/ADMIN_WORKER_VERSION_ID\}@100" --name "\$ADMIN_TRAFFIC_WORKER"/);
+});
+
+test('adopting the serialized first full stage bypasses only the confirmed Admin upload', () => {
+  const producer = readFileSync('.github/workflows/new-core-full-admin-stage.yml', 'utf8');
+  assert.match(workersWorkflow,/concurrency:\s+group: lythaus-production-workers\s+cancel-in-progress: false/);
+  assert.match(producer,/group: lythaus-production-workers\s+cancel-in-progress: false/);
+  assert.match(producer,/group: lythaus-new-core-isolated-setup\s+cancel-in-progress: false/);
+  assert.match(producer,/environment: production/);
+  assert.match(producer,/run: node scripts\/ci\/new-core-full-admin-stage\.mjs/);
+  assert.doesNotMatch(producer,/versions deploy|production-release\.yml|native-workers-deploy\.yml/);
+  const start = workersWorkflow.indexOf('if component_changed admin; then\n            admin_upload=');
+  const end = workersWorkflow.indexOf('if component_changed jobs; then upload_candidate',start);
+  const [adopt,upload] = workersWorkflow.slice(start,end).split('\n            else');
+  assert.match(adopt,/--prepare-admin-upload .* --release-admin-worker "\$ADMIN_TRAFFIC_WORKER"/);
+  assert.match(adopt,/has\("adoptedVersionId"\)/);
+  assert.match(adopt,/ADMIN_WORKER_VERSION_ID=.*adoptedVersionId/);
+  assert.match(adopt,/REPLACEMENT_ADMIN_UPLOAD=true/);
+  assert.doesNotMatch(adopt,/upload_candidate |versions deploy/);
+  assert.match(upload,/upload_candidate "\$admin_config" ADMIN/);
 });
 
 test('parent rollback restores only changed components after downstream failure', () => {
