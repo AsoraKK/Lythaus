@@ -116,6 +116,14 @@ export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscover
   };
   return { get, list, reads };
 }
+function hasConnectorIdentity(origin) {
+  const nonempty = value => typeof value === 'string' && value.trim().length > 0;
+  const login = origin?.user ?? origin?.username;
+  if (nonempty(login) && (origin.user === undefined || origin.username === undefined || origin.user === origin.username)) return true;
+  const port = typeof origin?.port === 'string' && /^\d+$/.test(origin.port) ? Number(origin.port) : origin?.port;
+  return [origin?.host,origin?.scheme,origin?.database].every(nonempty) && Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
 export async function inspectProductionConnectors({ token, fetchImpl = fetch }) {
   const api = createReadOnlyClient(token, fetchImpl, true);
   const ids = new Set();
@@ -145,9 +153,14 @@ export async function inspectProductionConnectors({ token, fetchImpl = fetch }) 
     if (ids.size > total || !payload.result.length) fail('connector_inventory_count_mismatch');
   }
   const matches = [];
+  let unclassifiedConnectorCount = 0;
   for (const id of ids) {
     const config = (await api.get(ACCOUNT + '/hyperdrive/configs/' + id)).result;
     if (config?.id !== id) fail('connector_detail_id_changed');
+    if (!hasConnectorIdentity(config.origin)) {
+      unclassifiedConnectorCount++;
+      inventoryComplete = false;
+    }
     const evidence = hyperdriveEvidence(config);
     if (!(evidence.originMatches || evidence.branchMatches || id === TARGET.hyperdrive)) continue;
     matches.push({ id, reservedForIsolation:id === TARGET.hyperdrive, exactOrigin:evidence.originMatches,
@@ -166,6 +179,7 @@ export async function inspectProductionConnectors({ token, fetchImpl = fetch }) 
   }
   const status = inventoryComplete && !monthlySettingsErrors.length ? 'READ_ONLY_DISCOVERY' : 'READ_ONLY_DISCOVERY_INCOMPLETE';
   return {status, inventoryComplete, matches, monthlySettings,
+    ...(unclassifiedConnectorCount ? {unclassifiedConnectorCount} : {}),
     ...(monthlySettingsErrors.length ? {monthlySettingsErrors} : {}), mutationCount:0};
 }
 

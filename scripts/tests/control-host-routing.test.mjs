@@ -264,6 +264,23 @@ test('a full ruleset batch with no terminal evidence cannot establish redirect a
   assert.equal((await check({count:50,total_count:50})).redirects.bulk,0);
 });
 
+test('a ruleset page filled to a smaller provider limit requires terminal evidence', async () => {
+  const rows = [{id:id(92),kind:'custom',phase:'http_request_firewall_custom'}];
+  const noEntrypoint = () => new Response(null,{status:404});
+  const inspect = info => collect({
+    [singleRedirect]:noEntrypoint, [bulkRedirect]:noEntrypoint,
+    [zoneRulesets]:() => response(rows,info), [accountRulesets]:() => response(rows,info),
+  });
+  const {report} = await inspect({count:1,per_page:1});
+  assert.deepEqual(report.redirects,{single:null,bulk:null});
+  assert.deepEqual(report.incomplete.map(row=>row.label).sort(),['bulk','single']);
+  for (const info of [{count:1,per_page:2}, {count:1,per_page:1,total_count:1}, {count:1,per_page:1,cursor:''}]) {
+    const {report:complete} = await inspect(info);
+    assert.deepEqual(complete.redirects,{single:0,bulk:0});
+    assert.deepEqual(complete.incomplete,[]);
+  }
+});
+
 test('a matching wildcard is reported even when policy or Page Rule detail remains unknown', async () => {
   const wildcard = '*.lythaus.co/flags';
   const policyPath = apps + '/' + id(31) + '/policies';

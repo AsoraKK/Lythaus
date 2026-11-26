@@ -139,6 +139,38 @@ test('discovery uses only GET metadata, distinguishes incomplete listings and hi
   }
 });
 
+test('an unclassifiable connector preserves known matches and makes the consolidated inventory incomplete', async () => {
+  const otherId = 'b'.repeat(32);
+  const version = 'aaaaaaaa-1111-4111-8111-111111111111';
+  const json = (result, result_info) => Response.json({success:true,result,result_info});
+  async function discover(origin) {
+    const fetchImpl = async url => {
+      if (url.includes('/hyperdrive/configs?')) return json([{id:otherId},{id:TARGET.hyperdrive}],{page:1,count:2,total_count:2});
+      if (url.endsWith('/hyperdrive/configs/' + otherId)) return json({id:otherId,origin});
+      if (url.endsWith('/hyperdrive/configs/' + TARGET.hyperdrive)) return json({id:TARGET.hyperdrive,origin:{user:'lythaus_admin.' + TARGET.branch}});
+      if (url.endsWith('/deployments')) return json([{created_on:'2026-11-25T00:00:00Z',versions:[{version_id:version,percentage:100}]}]);
+      if (url.endsWith('/versions/' + version)) return json({id:version,resources:{bindings:[]}});
+      if (url.includes('/rulesets/phases/')) return json({rules:[]});
+      return json([],{page:1,count:0,total_count:0,total_pages:1});
+    };
+    return discoverProductionMetadata({token:'fixture',fetchImpl});
+  }
+  for (const origin of [undefined, {host:'private-fixture',password:'private-fixture'}]) {
+    const report = await discover(origin);
+    assert.equal(report.status,'READ_ONLY_DISCOVERY_INCOMPLETE');
+    assert.equal(report.inventoryComplete,false);
+    assert.equal(report.unclassifiedConnectorCount,1);
+    assert.deepEqual(report.matches.map(row => row.id),[TARGET.hyperdrive]);
+    assert.equal(report.monthlySettings.length,2);
+    assert.deepEqual(report.hostRouting.incomplete,[]);
+    assert.ok(!JSON.stringify(report).includes('private-fixture'));
+  }
+  const report = await discover({scheme:'postgres',host:'fixture.invalid',port:5432,database:'postgres'});
+  assert.equal(report.status,'READ_ONLY_DISCOVERY');
+  assert.equal(report.inventoryComplete,true);
+  assert.equal(report.unclassifiedConnectorCount,undefined);
+});
+
 test('contradictory connector pagination cannot certify completeness', async () => {
   const fetchImpl = async () => Response.json({success:true,result:[{id:TARGET.hyperdrive}],
     result_info:{page:1,count:1,total_count:1,total_pages:2}});

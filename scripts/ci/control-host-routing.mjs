@@ -169,6 +169,8 @@ export async function inspectControlRouting({token, fetchImpl = fetch}) {
       const info = data.result_info;
       if (!info || (info.count !== undefined && info.count !== data.result.length) || info.cursors !== undefined ||
         info.total_pages !== undefined || (info.page !== undefined && info.page !== page)) return false;
+      const pageSize = info.per_page === undefined ? 50 : info.per_page;
+      if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50 || data.result.length > pageSize) return false;
       for (const row of data.result) {
         if (!resourceId(row?.id) || ids.has(row.id) || typeof row.phase !== 'string' || !row.phase ||
           !['root','zone','custom','managed'].includes(row.kind) || (row.phase === phase && row.kind === kind)) return false;
@@ -180,7 +182,7 @@ export async function inspectControlRouting({token, fetchImpl = fetch}) {
       cursor = info.cursor;
       if (cursor == null || cursor === '') {
         if (expectedCount !== undefined) return ids.size === expectedCount;
-        return data.result.length < 50 || Object.hasOwn(info,'cursor');
+        return data.result.length < pageSize || Object.hasOwn(info,'cursor');
       }
       if (typeof cursor !== 'string' || cursor.length > 2048 || cursors.has(cursor) || !data.result.length) return false;
       cursors.add(cursor);
