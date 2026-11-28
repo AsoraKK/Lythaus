@@ -1,0 +1,63 @@
+{
+  "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+  "organization": "lythaus",
+  "branch": "main",
+  "logicalDatabase": "postgres",
+  "rollback": {
+    "database": "lythaus-core",
+    "databaseId": "hzhe0cbn6rxi",
+    "branchId": "vqa2g2xc9wsl",
+    "originSha256": "1a6d36f2356945f571c13ad979e60bcd4b5203cd371f0d6e3e293da74c088f3a",
+    "connectors": {
+      "lythaus_runtime": "3e59f07db51345aa896333ca861d1adf",
+      "lythaus_admin": "6bfbb0eab42642e8ad294dbf59294ed3",
+      "lythaus_jobs": "442bb04b99004cb38c6974ec031d65ee",
+      "lythaus_privacy": "bae909aa72e244bfa9b8ca8a948053b6"
+    },
+    "servingVersionsReceipt": "44114706197",
+    "servingVersionsAtInspection": {
+      "lythaus-public-api-development": "7c1fcbea-b02a-4ea8-a34f-3e82a4605526",
+      "lythaus-admin-api-development": "14f1b832-5f0e-45a3-a031-7fe775d53109",
+      "lythaus-jobs-development": "10a22480-a262-4f30-bb62-9a9479357e98",
+      "lythaus-auth-acceptance-coordinator-development": "53692f33-6de6-45cc-8b72-08e14c6998a6"
+    }
+  },
+  "destination": {
+    "database": "lythaus-new-core",
+    "databaseId": "87dbkhprjh30",
+    "branchId": "xwkb9quljkzd",
+    "originSha256": "30458dae9a257fc30c567ae95f44975fc766233fb11fc15d2542399bbdcd3558",
+    "schemaReceipt": "44045540354",
+    "isolatedAdminConnector": "7e39fc4a286147988ed12df7a6322616",
+    "ownerAccess": {
+      "applicationId": "edd1c92d-bb85-4cd3-b31b-5971a7b12d13",
+      "issuerSha256": "3f706c248a4d0dc0950dd428a993ab52eddc52ae0e93e42376a9a11b3386bdd8",
+      "audienceSha256": "41aefd1d7abc6594af51c0e1e2d7f01b1842d051b0eeb4ab84ae9ab5fc4b0a9e"
+    },
+    "isolatedAdminVersions": {
+      "workerId": "89391a349e454b3994bd43299c6386ed",
+      "parentIntent": "d340cb66-cb62-4c87-ab64-400a7cf79c01",
+      "childIntent": "49503582-9aff-4d20-a6f2-888d10d1a92a",
+      "parentVersionId": "44cd6e04-15d7-467c-9d93-ff59d5d4fe0c",
+      "childVersionId": "37f36eb4-911d-4c51-b723-751329cd1b92",
+      "childDeploymentId": "307f3dcc-41f3-42e2-be4b-ad2a519ec51c",
+      "sourceSha": "3fbaea846f67fe5ad452d53c456b5355069757ca",
+      "priorRepairIntent": "c231d250-f91c-4626-bc7e-31fb2c8e1321",
+      "priorRepairSourceSha": "78747f85d02c69efa8a1b6f86b73b08947cdce0b",
+      "priorRepairVersionId": "193c3dcb-9238-4adc-8eab-48707fdd8b7e",
+      "priorRepairActivationIntent": "09d3fcd5-a4fd-477b-86d1-82e3d44769f4",
+      "priorRepairDeploymentId": "85526c44-7551-41b0-805f-dd6270f05c2d",
+      "repairSourceSha": "fc1dce9683219edee3312cf339526b2850385aa2",
+      "repairIntent": "f0a8c80e-b953-45ea-95f2-989d2b54baf8",
+      "servingVersionId": "260d15e3-dd61-47db-bbf4-5dd3839141a5",
+      "activationIntent": "217ba70a-1eac-4712-ac15-32020541d2d2",
+      "servingDeploymentId": "9a2ebdb2-33e2-4c8c-8315-010140aeb6c0"
+    },
+    "connectors": {
+      "lythaus_runtime": null,
+      "lythaus_admin": null,
+      "lythaus_jobs": null,
+      "lythaus_privacy": null
+    }
+  }
+}

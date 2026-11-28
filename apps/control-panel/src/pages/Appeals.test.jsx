@@ -42,7 +42,7 @@ describe('Appeals page', () => {
 
     const user = userEvent.setup();
     await act(async () => {
-      render(<Appeals />);
+      render(<Appeals canAdjudicate />);
     });
 
     const adjudicateButton = await screen.findByRole('button', { name: 'Adjudicate' });
@@ -68,5 +68,13 @@ describe('Appeals page', () => {
     );
     expect(screen.getByText('There is no moderator override or time-based auto-resolution path.')).toBeInTheDocument();
     expect(adminRequest).not.toHaveBeenCalledWith(expect.stringContaining('_admin'), expect.anything());
+  });
+
+  it('lets read-only viewers inspect pending cases without presenting editorial actions', async () => {
+    adminRequest.mockResolvedValue({ items: [{ appeal_id: 'appeal-123', case_id: 'case-123' }] });
+    render(<Appeals canAdjudicate={false} />);
+    expect(await screen.findByText('appeal-123')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Adjudicate' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Record decision' })).not.toBeInTheDocument();
   });
 });

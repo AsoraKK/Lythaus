@@ -1263,11 +1263,19 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/admin/email-health') return cors(await getAdminEmailHealth(request, keeperEnv, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/health') {
         const result = await query(env.DB_ADMIN_FRESH, `SELECT current_timestamp AS database_time`);
-        return cors(json({ status: 'ok', database: result.rows[0] }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
+        return cors(json({ status: 'ok', database: result.rows[0], role: actor.role }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/privacy/requests') {
         const result = await query(env.DB_PRIVACY_FRESH, `SELECT id, subject_id, request_type, state, created_at FROM privacy.requests ORDER BY created_at DESC LIMIT 100`);
         return cors(json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/admin/privacy/summary') {
+        if (!['privacy_operator', 'administrator'].includes(actor.role)) throw new Error('admin_role_required');
+        const result = await query(env.DB_PRIVACY_FRESH,
+          `SELECT current_timestamp AS "sampledAt",
+             (SELECT count(*)::integer FROM privacy.requests) AS "privacyRequests",
+             (SELECT count(*)::integer FROM privacy.legal_holds WHERE active) AS "activeLegalHolds"`);
+        return cors(json(result.rows[0], { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
       const communityTriage = url.pathname.match(/^\/api\/admin\/appeals\/([^/]+)\/triage$/);
       const contextReview = url.pathname.match(/^\/api\/admin\/reputation\/comments\/([^/]+)\/context-review$/);

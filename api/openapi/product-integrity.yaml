@@ -1038,6 +1038,15 @@ components:
       properties:
         status: { type: string, enum: [ok] }
         database: { type: object, additionalProperties: true }
+        role: { type: string, description: Role of the authenticated active administrator membership. }
+    AdminPrivacySummary:
+      type: object
+      additionalProperties: false
+      required: [sampledAt, privacyRequests, activeLegalHolds]
+      properties:
+        sampledAt: { type: string, format: date-time }
+        privacyRequests: { type: integer, minimum: 0 }
+        activeLegalHolds: { type: integer, minimum: 0 }
     AdminMutationConfirmation:
       type: object
       additionalProperties: false
@@ -1399,6 +1408,26 @@ paths:
                 $ref: '#/components/schemas/AdminItems'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /admin/privacy/summary:
+    servers:
+      - url: https://admin-api.lythaus.co/api
+    get:
+      operationId: adminPrivacySummary
+      summary: Read privacy request and active legal hold counts
+      tags: [Admin]
+      security:
+        - cloudflareAccess: []
+      responses:
+        '200':
+          description: Aggregate counts visible to an administrator or privacy operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPrivacySummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/moderation/cases:
     servers:
       - url: https://admin-api.lythaus.co/api

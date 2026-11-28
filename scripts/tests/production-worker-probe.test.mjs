@@ -65,10 +65,15 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
     globalThis.fetch = async (url, options) => {
       if (!['https://admin-api.lythaus.co', 'https://api.lythaus.co'].includes(new URL(url).origin)) throw new Error('Unexpected fixture destination');
       if (options.method && options.method !== 'GET') throw new Error('Unexpected fixture mutation');
+      if (new URL(url).hostname === 'admin-api.lythaus.co' && options.redirect !== 'manual') throw new Error('Admin requests must stop on redirect');
       requests.push({ path: new URL(url).pathname, headers: Object.fromEntries(options.headers) });
       fs.writeFileSync(process.env.PROBE_FIXTURE_REQUESTS, JSON.stringify(requests));
       const readiness = String(url).endsWith('/internal/readiness/database-identity');
-      if (!readiness) return new Response('{}', { status: 200 });
+      if (!readiness) {
+        if (scenario === 'redirect-health') return new Response(null, { status: 302, headers: { location: 'https://fixture.invalid/' } });
+        if (scenario === 'empty-health') return Response.json({});
+        return Response.json({ status: 'ok', service: scenario === 'wrong-health-service' ? 'lythaus-public-api' : 'lythaus-admin-api' });
+      }
       readinessAttempts += 1;
       const body = {
         service: new URL(url).hostname === 'admin-api.lythaus.co' ? 'lythaus-admin-api' : 'lythaus-public-api',
@@ -136,6 +141,11 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
           body.databases.privacy.readyForAuthentication = true;
         }
       }
+      if (scenario === 'wrong-candidate-service') body.service = 'lythaus-public-api';
+      if (scenario === 'failed-aggregate') body.readiness = 'fail';
+      if (scenario === 'flat-admin-report') delete body.databases;
+      if (scenario === 'missing-privacy') delete body.databases.privacy;
+      if (scenario === 'wrong-database-label') { body.databases.other = body.databases.privacy; delete body.databases.privacy; }
       if (scenario.startsWith('unavailable-') && scenario !== 'unavailable-exact-identity') {
         body.error = scenario === 'unavailable-binding' ? 'auth_email_dispatch_unavailable'
           : scenario === 'unavailable-runtime' ? 'admin_request_failed' : 'private-runtime-detail';
@@ -167,7 +177,8 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
       OWNER_TESTING_DEPLOYMENT: ownerTestingDeployment ? 'true' : 'false',
       OWNER_TESTING_CANDIDATE: ownerTestingCandidate ? 'true' : 'false',
       PRODUCTION_WORKER_SCOPE: worker, PRODUCTION_WORKER_VERSION_ID: version, PUBLIC_WORKER_VERSION_ID: publicVersion,
-      PRODUCTION_PUBLIC_API_BASE_URL: 'https://api.lythaus.co', PRODUCTION_ADMIN_API_BASE_URL: 'https://admin-api.lythaus.co',
+      PRODUCTION_PUBLIC_API_BASE_URL: 'https://api.lythaus.co',
+      PRODUCTION_ADMIN_API_BASE_URL: scenario === 'panel-probe-origin' ? 'https://control.lythaus.co' : 'https://admin-api.lythaus.co',
       PRODUCTION_WORKER_EVIDENCE_PATH: output, PROBE_FIXTURE_REQUESTS: requests, PROBE_FIXTURE_SCENARIO: scenario,
       PROBE_FIXTURE_DELAYS: delays,
       PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH: previousState ? previousDeployment : undefined,
@@ -209,6 +220,40 @@ test('matching Admin identity preserves sanitized observations and both exact ov
   }
   assert.equal(requests.at(-1).headers.authorization, `Bearer ${credentials[0]}`);
 });
+
+test('replacement Admin probes bind both exact candidates and require the machine origin', t => {
+  const worker = 'lythaus-admin-api-new-core-test';
+  const { result, evidence, requests } = runProbe(t, 'matching', worker);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(evidence.workers[0].worker, worker);
+  assert.equal(evidence.workers[0].databaseCount, 2);
+  for (const request of requests) {
+    assert.equal(request.headers['cloudflare-workers-version-overrides'], `${worker}="${version}", lythaus-public-api-development="${publicVersion}"`);
+    assert.equal(request.headers['cf-access-client-id'], credentials[1]);
+    assert.equal(request.headers['cf-access-client-secret'], credentials[2]);
+  }
+  for (const scenario of ['missing-privacy', 'wrong-public', 'wrong-version', 'panel-probe-origin']) {
+    const rejected = runProbe(t, scenario, worker);
+    assert.equal(rejected.result.status, 1);
+    assert.equal(rejected.evidence.status, 'fail');
+    if (scenario === 'panel-probe-origin') assert.deepEqual(rejected.requests, []);
+  }
+});
+
+for (const scenario of ['empty-health', 'wrong-health-service', 'redirect-health', 'wrong-candidate-service',
+  'failed-aggregate', 'flat-admin-report', 'missing-privacy', 'wrong-database-label']) {
+  test(`incomplete Admin acceptance fails at the measured route: ${scenario}`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario);
+    assert.equal(result.status, 1);
+    assert.equal(evidence.status, 'fail');
+    assert.deepEqual(evidence.workers, []);
+    assert.deepEqual(delays, []);
+    const healthFailure = ['empty-health', 'wrong-health-service', 'redirect-health'].includes(scenario);
+    assert.equal(requests.length, healthFailure ? 1 : 2);
+    assert.equal(evidence.requests.at(-1).path, healthFailure ? '/health' : '/internal/readiness/database-identity');
+    if (scenario === 'redirect-health') assert.equal(evidence.requests.at(-1).httpStatus, 302);
+  });
+}
 
 test('owner-testing candidate remains structurally ready while authentication readiness stays false', (t) => {
   const { result, evidence } = runProbe(t, 'matching', 'lythaus-admin-api-development', false, true);

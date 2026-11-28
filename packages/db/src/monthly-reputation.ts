@@ -143,6 +143,16 @@ export async function disposablePreparationAllowed(client: Client, context?: Mon
 }
 
 export async function monthlyReputationShadowEnabled(client: Client): Promise<boolean> {
+  const privileges = await client.query<{ readable: boolean }>(
+    `SELECT bool_and(has_column_privilege(current_user, 'system.feature_flags', column_name, 'SELECT')) AS readable
+       FROM unnest(ARRAY['flag_key','enabled','policy_version']) AS needed(column_name)`,
+  );
+  if (privileges.rows[0]?.readable === false) {
+    const schema = await client.query<{ installed: boolean }>(
+      "SELECT to_regclass('trust.monthly_reputation_sources') IS NOT NULL AS installed",
+    );
+    if (schema.rows[0]?.installed === false) return false;
+  }
   const flag = await client.query<{ enabled: boolean; policy_version: string }>(
     'SELECT enabled, policy_version FROM system.feature_flags WHERE flag_key = $1',
     [MONTHLY_REPUTATION_SHADOW_FLAG],

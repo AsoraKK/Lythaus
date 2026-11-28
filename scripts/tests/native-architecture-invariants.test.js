@@ -420,7 +420,8 @@ test('production database identity and budget controls are explicit', () => {
   const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0009_cost_budget_enforcement.sql'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
   const budgetProbe = fs.readFileSync(path.join(root, 'scripts/ci/probe-budget-hard-stop.mjs'), 'utf8');
-  assert.equal(manifest.bindings.length, 5);
+  assert.equal(manifest.bindings.length, 6);
+  assert.ok(manifest.bindings.some(entry => entry.worker === 'lythaus-auth-acceptance-coordinator-development' && entry.binding === 'DB_ADMIN_FRESH'));
   assert.match(manifest.expectedMainOriginFingerprint, /^[a-f0-9]{64}$/);
   assert.match(verifier, /PSCALE_BRANCH_NAME.*main/);
   assert.match(verifier, /originFingerprint/);
@@ -496,7 +497,7 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(workflow, /upload_candidate apps\/lythaus-public-api\/wrangler\.jsonc PUBLIC/);
   assert.match(workflow, /export PRODUCTION_WORKER_VERSION_ID="\$PUBLIC_WORKER_VERSION_ID"/);
   assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development/);
-  assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development/);
+  assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$ADMIN_ROLLBACK_SPECS --name "\$ADMIN_TRAFFIC_WORKER"/);
   assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$JOBS_ROLLBACK_SPECS --name lythaus-jobs-development/);
   assert.ok(workflow.indexOf('Validate final production gates before activation') < workflow.indexOf('Activate exact candidate Worker versions'));
   for (const worker of ['public-api', 'admin-api', 'jobs']) {

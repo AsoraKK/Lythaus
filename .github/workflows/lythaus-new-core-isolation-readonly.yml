@@ -8,12 +8,11 @@ on:
         required: true
         type: string
       worker_source_sha:
-        description: Prepared isolated Worker source candidate; this does not authorize deployment
-        required: true
-        default: 3fbaea846f67fe5ad452d53c456b5355069757ca
+        description: Optional assertion of the reviewed source SHA for the selected operation
+        required: false
         type: string
       worker_version_id:
-        description: Exact reviewed serving version if known; empty remains an explicit pinning blocker
+        description: Optional serving version assertion. Promotion uses the version in the activation receipt.
         required: false
         type: string
       confirm_read_only:
@@ -23,6 +22,16 @@ on:
         type: boolean
       production_connector_discovery_only:
         description: Inspect connector metadata, monthly settings and control/admin/admin-api hostname ownership
+        required: false
+        default: false
+        type: boolean
+      verify_isolated_promotion_source_only:
+        description: Verify the isolated Worker version lineage and the activated wrapped binding fix before promotion
+        required: false
+        default: false
+        type: boolean
+      verify_machine_access_only:
+        description: Compare the Admin API service policy and token metadata with the configured client ID
         required: false
         default: false
         type: boolean
@@ -38,7 +47,9 @@ env:
   EXPECTED_WORKER_SOURCE_SHA: ${{ inputs.worker_source_sha }}
   EXPECTED_WORKER_VERSION_ID: ${{ inputs.worker_version_id }}
   CONFIRM_READ_ONLY: ${{ inputs.confirm_read_only }}
+  PROMOTION_SOURCE_ONLY: ${{ inputs.verify_isolated_promotion_source_only }}
   CONNECTOR_DISCOVERY_ONLY: ${{ inputs.production_connector_discovery_only }}
+  MACHINE_ACCESS_ONLY: ${{ inputs.verify_machine_access_only }}
   NODE_OPTIONS: ''
   NODE_DEBUG: ''
 
@@ -87,7 +98,7 @@ jobs:
           await verifyExistingGate({env:process.env,requireApproval:true});
           JS
       - name: Read only pinned metadata and print only sanitized results
-        if: ${{ !inputs.production_connector_discovery_only }}
+        if: ${{ !inputs.production_connector_discovery_only && !inputs.verify_isolated_promotion_source_only && !inputs.verify_machine_access_only }}
         env:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -99,3 +110,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/ci/lythaus-new-core-isolation-review.mjs --discover-connectors
+      - name: Verify the isolated identity lineage and current serving deployment before promotion
+        if: ${{ inputs.verify_isolated_promotion_source_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/ci/production-database-cutover.mjs --inspect-promotion-source
+      - name: Verify the Admin machine service-token selector and client ID
+        if: ${{ inputs.verify_machine_access_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+        run: node scripts/ci/lythaus-new-core-isolation-review.mjs --inspect-machine-access

@@ -33,7 +33,7 @@ test('enablement stays auth-critical, requires Admin candidate, and rejects owne
 
 test('captured policy is ephemeral, exact-candidate expiry is persisted, and activation checks it', () => {
   const capture = nativeWorkers.indexOf('node --experimental-strip-types scripts/ci/prepare-subject-diagnostic-policy.mjs\n');
-  const upload = nativeWorkers.indexOf('upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN');
+  const upload = nativeWorkers.indexOf('upload_candidate "$admin_config" ADMIN');
   assert.ok(capture >= 0 && capture < upload);
   assert.match(nativeWorkers, /PLANETSCALE_API_TOKEN: \$\{\{ inputs\.enable_subject_diagnostic == true && secrets\.PLANETSCALE_API_TOKEN \|\| '' \}\}/);
   assert.match(nativeWorkers, /PSCALE_ROLE_IDENTIFIERS: .*inputs\.enable_subject_diagnostic == true.*secrets\.PSCALE_ROLE_IDENTIFIERS/);
@@ -59,7 +59,11 @@ test('private human selector is scoped to protected inspection and Admin candida
   assert.match(stage, /enable_subject_diagnostic == true && inputs\.acceptance_run_id == ''/);
   assert.match(stage, /changed_components_json, '"admin"'\)/);
   assert.match(stage, /prepare-subject-diagnostic-policy\.mjs --stage-human/);
-  const uploads = nativeWorkers.split('\n').filter(line => line.includes('then upload_candidate'));
-  assert.deepEqual(uploads.filter(line => line.includes('"$admin_secrets_file"')).map(line => line.trim().split(' ')[2]), ['admin;']);
+  const adminUploads = nativeWorkers.split('\n').filter(line => line.includes('upload_candidate ') && line.includes('"$admin_secrets_file"'));
+  assert.equal(adminUploads.length,1);
+  assert.match(adminUploads[0], /upload_candidate "\$admin_config" ADMIN/);
+  const stageAdmin = nativeWorkers.match(/if component_changed admin; then\n\s*admin_upload=[\s\S]*?upload_candidate "\$admin_config" ADMIN[^\n]*/);
+  assert.ok(stageAdmin);
+  assert.match(stageAdmin[0],/--prepare-admin-upload "\$admin_secrets_file" --release-admin-worker/);
   assert.match(nativeWorkers, /Remove ephemeral production secret files[\s\S]*?if: always\(\)[\s\S]*?admin-diagnostic-human\.json[\s\S]*?admin-diagnostic-candidate\.json/);
 });

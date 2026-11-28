@@ -331,6 +331,8 @@ jobs:
             echo 'historical_branches_reconciled=true'
             echo 'security_checks_verified=true'
           } >> "$GITHUB_OUTPUT"
+      - name: Require the complete production database map before releasing any component
+        run: node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --manifest-only --release-admin-worker lythaus-admin-api-development
       - name: Require fresh protected native recovery and public independent recovery readiness
         id: recovery
         env:
@@ -976,6 +978,14 @@ jobs:
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
+          if component_changed public || component_changed admin || component_changed jobs || component_changed coordinator; then
+            rollback_args=()
+            if component_changed admin; then rollback_args+=(--restore-admin-route); fi
+            if ! admin_traffic_worker="$(node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database "${rollback_args[@]}")"; then
+              echo 'ROLLBACK_FAILED=1' >> "$GITHUB_ENV"
+              exit 1
+            fi
+          fi
           restore_worker() {
             local component="$1"
             local prefix="$2"
@@ -1042,7 +1052,7 @@ jobs:
             restore_worker public PUBLIC lythaus-public-api-development || rollback_failed=1
           fi
           if component_changed admin; then
-            restore_worker admin ADMIN lythaus-admin-api-development || rollback_failed=1
+            restore_worker admin ADMIN "$admin_traffic_worker" || rollback_failed=1
             restore_route "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" 'admin.lythaus.co/api/admin/*' || rollback_failed=1
           fi
           if component_changed jobs; then

@@ -17,5 +17,11 @@ void main() {
       // TODO
     });
 
+    // Role of the authenticated active administrator membership.
+    // String role
+    test('to test the property `role`', () async {
+      // TODO
+    });
+
   });
 }

@@ -205,6 +205,13 @@ void main() {
       // TODO
     });
 
+    // Read privacy request and active legal hold counts
+    //
+    //Future<AdminPrivacySummary> adminPrivacySummary() async
+    test('test adminPrivacySummary', () async {
+      // TODO
+    });
+
     // Set reviewer qualification state
     //
     // Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.

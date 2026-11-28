@@ -131,6 +131,7 @@ jobs:
           } finally { await client.end(); }
           JS
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
+      - run: node --test scripts/tests/production-database-cutover.test.mjs
       - name: Verify migration probe privilege oracle on disposable PG17
         env:
           SYNTHETIC_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres

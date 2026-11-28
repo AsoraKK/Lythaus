@@ -84,11 +84,19 @@ const result = (rows = [], rowCount = rows.length) => ({ rows, rowCount });
 
 mock.module('@lythaus/db', { cache: true, namedExports: {
   ...database,
-  query: async (_binding, sql) => {
+  query: async (binding, sql) => {
     state.queries.push(sql);
     if (sql.includes('identity.admin_memberships')) return state.member
       ? result([{ user_id: actorId, role: state.role }]) : result();
     if (sql.includes('system.rate_limit_windows')) return state.limited ? result() : result([{ request_count: 1 }]);
+    if (sql === 'SELECT current_timestamp AS database_time') return result([{ database_time: '2026-11-28T00:00:00Z' }]);
+    if (sql.includes('AS "activeLegalHolds"')) {
+      assert.equal(binding, env.DB_PRIVACY_FRESH);
+      assert.match(sql, /count\(\*\)::integer FROM privacy\.requests/);
+      assert.match(sql, /count\(\*\)::integer FROM privacy\.legal_holds WHERE active/);
+      assert.doesNotMatch(sql, /subject_id|reason|SELECT \*/);
+      return result([{ sampledAt: '2026-11-28T00:00:00Z', privacyRequests: 0, activeLegalHolds: 1 }]);
+    }
     if (sql.includes('FROM privacy.legal_holds')) return result();
     throw new Error('unexpected_admission_query');
   },
@@ -154,6 +162,49 @@ function assertNoDomainWork() {
   assert.equal(state.queries.filter(sql => !sql.includes('identity.admin_memberships')
     && !sql.includes('system.rate_limit_windows')).length, 0);
 }
+
+test('private health returns the active membership role and the database clock', async () => {
+  const request = new Request('https://admin.lythaus.co/api/admin/health', {
+    headers: { 'cf-access-jwt-assertion': 'synthetic-valid' },
+  });
+  for (const role of ['administrator', 'owner', 'editorial']) {
+    reset({ role });
+    const response = await worker.fetch(request, env);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('cache-control'), /private.*no-store/);
+    assert.deepEqual(await response.json(), { status: 'ok', database: { database_time: '2026-11-28T00:00:00Z' }, role });
+  }
+  state.member = false;
+  const denied = await worker.fetch(request, env);
+  assert.equal(denied.status, 403);
+  const body = await denied.json();
+  assert.equal(body.error, 'admin_role_required');
+  assert.equal('role' in body, false);
+  reset();
+});
+
+test('privacy counts require the legal-hold reader role and return only a private aggregate', async () => {
+  const url = 'https://admin.lythaus.co/api/admin/privacy/summary';
+  const headers = { 'cf-access-jwt-assertion': 'synthetic-valid' };
+  for (const role of ['administrator', 'privacy_operator', 'owner', 'moderator', 'editorial', 'operations']) {
+    reset({ role });
+    const response = await worker.fetch(new Request(url, { headers }), env);
+    if (role === 'administrator' || role === 'privacy_operator') {
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('cache-control'), 'private, no-store');
+      assert.deepEqual(await response.json(), { sampledAt: '2026-11-28T00:00:00Z', privacyRequests: 0, activeLegalHolds: 1 });
+    } else {
+      assert.equal(response.status, 403);
+      assertNoDomainWork();
+    }
+  }
+  reset();
+  assert.equal((await worker.fetch(new Request(url), env)).status, 401);
+  state.member = false;
+  assert.equal((await worker.fetch(new Request(url, { headers }), env)).status, 403);
+  assertNoDomainWork();
+  reset();
+});
 
 test('every legacy admin mutation denies absent, opaque, unconfigured, sibling and external origins before body/domain work', async t => {
   for (const operation of operations) {

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useContext } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Nav from './components/Nav.jsx';
 import Audit from './pages/Audit.jsx';
@@ -10,7 +10,8 @@ import AccountSupport from './pages/AccountSupport.jsx';
 import Waitlist from './pages/Waitlist.jsx';
 import Accounts from './pages/Accounts.jsx';
 import ProductionAuthAcceptance from './pages/ProductionAuthAcceptance.jsx';
-import AdminAccessGate from './components/AdminAccessGate.jsx';
+import AdminAccessGate, { AdminRoleContext } from './components/AdminAccessGate.jsx';
+import PrivacySummary from './pages/PrivacySummary.jsx';
 import AuthenticityBeta from './pages/AuthenticityBeta.jsx';
 import { supportFeedbackEnabled } from './support-feedback-config.js';
 
@@ -33,12 +34,16 @@ function AccountAlias({ to }) {
 }
 
 export function ControlPanelRoutes() {
+  const role = useContext(AdminRoleContext);
+  const administrator = role === 'administrator';
   return <Routes>
-    <Route path="/" element={<Dashboard />} />
+    <Route path="/" element={role === 'privacy_operator'
+      ? <section className="page"><h1>Privacy operations</h1><PrivacySummary /></section>
+      : <Dashboard showOwnerMetrics={role === null || role === 'owner'} showPrivacySummary={administrator} />} />
     <Route path="/flags" element={<Flags />} />
-    <Route path="/appeals" element={<Appeals />} />
-    <Route path="/accounts" element={<Accounts />}>
-      <Route index element={<AccountSupport inWorkspace />} />
+    <Route path="/appeals" element={<Appeals canAdjudicate={role === 'editorial'} />} />
+    <Route path="/accounts" element={<Accounts showSupport={!administrator} />}>
+      <Route index element={administrator ? <AccountAlias to="/accounts/management" /> : <AccountSupport inWorkspace />} />
       <Route path="management" element={<Users inWorkspace />} />
     </Route>
     <Route path="/users" element={<AccountAlias to="/accounts/management" />} />

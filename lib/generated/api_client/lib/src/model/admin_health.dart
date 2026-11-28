@@ -15,6 +15,7 @@ part 'admin_health.g.dart';
 /// Properties:
 /// * [status]
 /// * [database]
+/// * [role] - Role of the authenticated active administrator membership.
 @BuiltValue()
 abstract class AdminHealth implements Built<AdminHealth, AdminHealthBuilder> {
   @BuiltValueField(wireName: r'status')
@@ -23,6 +24,10 @@ abstract class AdminHealth implements Built<AdminHealth, AdminHealthBuilder> {
 
   @BuiltValueField(wireName: r'database')
   BuiltMap<String, JsonObject?> get database;
+
+  /// Role of the authenticated active administrator membership.
+  @BuiltValueField(wireName: r'role')
+  String? get role;
 
   AdminHealth._();
 
@@ -57,6 +62,13 @@ class _$AdminHealthSerializer implements PrimitiveSerializer<AdminHealth> {
       object.database,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.role != null) {
+      yield r'role';
+      yield serializers.serialize(
+        object.role,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -93,6 +105,13 @@ class _$AdminHealthSerializer implements PrimitiveSerializer<AdminHealth> {
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.database.replace(valueDes);
+          break;
+        case r'role':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.role = valueDes;
           break;
         default:
           unhandled.add(key);

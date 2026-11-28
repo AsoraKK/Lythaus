@@ -10,5 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **status** | **String** |  |
 **database** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**role** | **String** | Role of the authenticated active administrator membership. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

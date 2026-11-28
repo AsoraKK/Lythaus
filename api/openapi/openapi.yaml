@@ -1390,6 +1390,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1health'
   /admin/privacy/requests:
     $ref: './product-integrity.yaml#/paths/~1admin~1privacy~1requests'
+  /admin/privacy/summary:
+    $ref: './product-integrity.yaml#/paths/~1admin~1privacy~1summary'
   /admin/moderation/cases:
     $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases'
   /admin/audit:

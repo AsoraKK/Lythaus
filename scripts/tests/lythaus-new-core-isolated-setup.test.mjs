@@ -11,28 +11,49 @@ import { TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
 import { recordStageReceipt,validateStageReceipt } from '../ci/new-core-stage-receipt.mjs';
 import { verifyFlagsSession } from '../ci/verify-new-core-flags-session.mjs';
 
-test('flags acceptance requires the normal page and exact same-origin versioned cases JSON', async () => {
+test('flags acceptance observes the normal page and its exact versioned health and moderation reads', async () => {
   const candidate = {hostname:TARGET.hostname, versionId:'11111111-1111-4111-8111-111111111111', sourceSha:TARGET.candidate};
   const frame = {};
-  const pageUrl = 'https://' + candidate.hostname + '/flags';
-  const response = (url, type) => ({
+  const origin = 'https://' + candidate.hostname;
+  const pageUrl = origin + '/flags';
+  const response = (url, type, body) => ({
     url:()=>url, status:()=>200, fromServiceWorker:()=>false, frame:()=>frame,
     request:()=>({frame:()=>frame, method:()=>'GET', redirectedFrom:()=>null}),
     headerValue:async key => ({'content-type':type, 'x-lythaus-worker-version':candidate.versionId,
-      'x-lythaus-source-sha':candidate.sourceSha})[key], json:async()=>({items:[]}),
+      'x-lythaus-source-sha':candidate.sourceSha})[key], json:async()=>body,
   });
   const doc = response(pageUrl,'text/html');
-  const api = response('https://' + candidate.hostname + '/api/admin/moderation/cases','application/json');
-  const page = {url:()=>pageUrl, mainFrame:()=>frame, reload:async()=>doc,
-    waitForResponse:async pred=>{assert.ok(pred(api)); return api;},
-    getByRole:()=>({waitFor:async()=>{}}), locator:()=>({count:async()=>0})};
-  assert.equal((await verifyFlagsSession(page,candidate)).sameOriginCasesJson,true);
-  for (const bad of [{status:()=>403}, {fromServiceWorker:()=>true}, {json:async()=>({healthy:true})},
-    {url:()=>'https://admin.lythaus.co/api/admin/moderation/cases'},
-    {headerValue:async key => key === 'content-type' ? 'text/html' : api.headerValue(key)},
-    {headerValue:async key => key === 'x-lythaus-worker-version' ? null : api.headerValue(key)}]) {
-    await assert.rejects(verifyFlagsSession({...page, waitForResponse:async()=>({...api,...bad})},candidate));
+  const health = response(origin + '/api/admin/health','application/json',
+    {status:'ok', database:{database_time:'2026-11-28T10:00:00.000Z'}});
+  const cases = response(origin + '/api/admin/moderation/cases','application/json',{items:[]});
+  const pageWith = (...responses) => ({url:()=>pageUrl, mainFrame:()=>frame, reload:async()=>doc,
+    waitForResponse:async predicate => {
+      const match = responses.find(predicate);
+      if (!match) throw new Error('expected browser response missing');
+      return match;
+    },
+    getByRole:()=>({waitFor:async()=>{}}), locator:()=>({count:async()=>0})});
+  assert.deepEqual(await verifyFlagsSession(pageWith(health,cases),candidate), {
+    ...candidate, renderedFlags:true, sameOriginCasesJson:true, apiStatus:200, sameOriginHealthJson:true, healthStatus:200,
+  });
+  for (const [api, other] of [[health,cases], [cases,health]]) {
+    const withHeader = (name, value) => ({headerValue:key => key === name ? value : api.headerValue(key)});
+    for (const bad of [{status:()=>403}, {fromServiceWorker:()=>true}, withHeader('content-type','text/html'),
+      withHeader('x-lythaus-worker-version',null), withHeader('x-lythaus-source-sha','f'.repeat(40)),
+      {request:()=>({...api.request(), redirectedFrom:()=>({})})}]) {
+      await assert.rejects(verifyFlagsSession(pageWith({...api,...bad},other),candidate), /flags_serving_response_mismatch/);
+    }
+    for (const bad of [{url:()=>api.url().replace(candidate.hostname,'admin.lythaus.co')}, {frame:()=>({})},
+      {request:()=>({...api.request(), method:()=>'POST'})}]) {
+      await assert.rejects(verifyFlagsSession(pageWith({...api,...bad},other),candidate), /expected browser response missing/);
+    }
+    await assert.rejects(verifyFlagsSession(pageWith({...api,json:async()=>{throw new SyntaxError();}},other),candidate), /flags_invalid_json/);
   }
+  for (const body of [{status:'ok'}, {status:'error',database:{database_time:'2026-11-28T10:00:00Z'}},
+    {status:'ok',database:{database_time:'invalid'}}, {status:'ok',database:{database_time:'2026'}}]) {
+    await assert.rejects(verifyFlagsSession(pageWith({...health,json:async()=>body},cases),candidate), /flags_health_contract_mismatch/);
+  }
+  await assert.rejects(verifyFlagsSession(pageWith(health,{...cases,json:async()=>({healthy:true})}),candidate), /flags_cases_contract_mismatch/);
 });
 
 const fixtureToken = 'private-fixture-token';

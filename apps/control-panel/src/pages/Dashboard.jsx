@@ -5,6 +5,7 @@ import PageLayout from '../components/PageLayout.jsx';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import ActivityPilotSummary from './ActivityPilotSummary.jsx';
+import PrivacySummary from './PrivacySummary.jsx';
 import { overviewActivityEvidence, overviewCalendarStart, overviewSnapshotFresh } from './overview-activity.js';
 import './overview.css';
 
@@ -46,7 +47,7 @@ function Metric({ label, metric, fresh, comparable }) {
   </article>;
 }
 
-function Dashboard() {
+function Dashboard({ showOwnerMetrics, showPrivacySummary }) {
   const [period, setPeriod] = useState('today');
   const [snapshot, setSnapshot] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,8 @@ function Dashboard() {
     const token = ++version.current;
     setLoading(true); setSnapshot(null); setOperationsExpired(true); setError(''); setCommunityError('');
     const fetchedAt = Date.now();
-    const paths = ['health', 'auth/summary', 'email-health', 'moderation/cases', 'appeals/pending-adjudication', 'audit', 'overview'];
+    const paths = ['health', 'auth/summary', 'email-health', 'moderation/cases', 'appeals/pending-adjudication', 'audit'];
+    if (showOwnerMetrics) paths.push('overview');
     const results = await Promise.allSettled(paths.map(path => path === 'overview' ? adminRequest(path, { query: { period } }) : adminRequest(path)));
     if (token !== version.current) return;
     const data = index => results[index].status === 'fulfilled' ? results[index].value : null;
@@ -68,9 +70,9 @@ function Dashboard() {
       || (results[0].status === 'rejected' && results[0].reason?.status === 403)) {
       setError('Administrator access must be checked again. Reload the control panel.'); setLoading(false); return;
     }
-    const community = data(6);
+    const community = showOwnerMetrics ? data(6) : null;
     const valid = community?.contractVersion === 'overview-v1' && community.period === period && community.timezone === 'UTC';
-    if (!valid) setCommunityError(results[6].status === 'rejected' && results[6].reason?.status === 403
+    if (showOwnerMetrics && !valid) setCommunityError(results[6].status === 'rejected' && results[6].reason?.status === 403
       ? 'Current active owner access is required for community metrics.' : 'Community metrics are unavailable. Refresh to retry.');
     if (results.slice(0, 6).some(result => result.status === 'rejected')) setError('Some operational sources are unavailable. Available sources are shown below.');
     setSnapshot({ fetchedAt, health: data(0)?.status || 'Unknown', databaseTime: data(0)?.database?.database_time,
@@ -79,7 +81,7 @@ function Dashboard() {
       community: valid ? community : null });
     const operationsAge = Date.now() - fetchedAt;
     setOperationsExpired(operationsAge < 0 || operationsAge >= 60000); setLoading(false);
-  }, [period]);
+  }, [period, showOwnerMetrics]);
 
   useEffect(() => { loadSnapshot(); return () => { version.current += 1; }; }, [loadSnapshot]);
   const community = snapshot?.community;
@@ -105,8 +107,11 @@ function Dashboard() {
   const operational = !operationsExpired && operationsAge >= 0 && operationsAge < 60000 ? snapshot : null;
   const activity = overviewActivityEvidence(community, fresh, period);
 
-  return <PageLayout title="Overview" subtitle="Community health, account entitlements and operational sources." guide={GUIDE} className="overview">
-    <LythCard variant="panel">
+  return <PageLayout title="Overview"
+    subtitle={showOwnerMetrics ? 'Community health, account entitlements and operational sources.' : 'Moderation, accounts and service health.'}
+    guide={showOwnerMetrics ? GUIDE : { summary: 'Use the operational snapshot to check service health and open the queues below to review individual records.' }}
+    className="overview">
+    {showOwnerMetrics && <><LythCard variant="panel">
       <div className="panel-header"><h2>Community health</h2><div className="overview-controls">
         <label className="field"><span className="field-label">Reporting period (UTC)</span><select value={period} onChange={event => setPeriod(event.target.value)}>
           <option value="today">Today</option><option value="mtd">Month to date</option><option value="ytd">Year to date</option>
@@ -139,8 +144,10 @@ function Dashboard() {
       {['cloudflare', 'planetscale'].map(provider => <article className="overview-metric" key={provider}><h3>{provider === 'cloudflare' ? 'Cloudflare' : 'PlanetScale'}</h3>
         <strong className="kpi-value">Unavailable</strong><p>{community?.providers?.[provider]?.reason || 'Verified provider telemetry is unavailable.'}</p>
         <p className="muted">Accrued estimate, finalized invoice, currency and accounting period: unavailable.</p></article>)}
-    </div></LythCard>
-    <LythCard variant="panel"><h2>Operational snapshot</h2>
+    </div></LythCard></>}
+    <LythCard variant="panel"><div className="panel-header"><h2>Operational snapshot</h2>
+      {!showOwnerMetrics && <LythButton variant="ghost" type="button" onClick={loadSnapshot} disabled={loading}>Refresh</LythButton>}
+    </div>
       {error ? <div className="notice error" role="alert">{error}</div> : null}
       <p className="muted">Source requests started {timestamp(snapshot?.fetchedAt)} · {operational ? 'Fresh' : 'Stale or unavailable'}. Refresh after 60 seconds.</p>
       <p className="muted">Database clock: {timestamp(snapshot?.databaseTime)}. Queue counts cover the loaded page only.</p>
@@ -159,13 +166,14 @@ function Dashboard() {
         <div><span className="detail-label">Email failures, rows created last 24 hours</span><strong className="kpi-value">{format(operational?.email?.failuresLast24Hours)}</strong></div>
       </div>
     </LythCard>
-    <LythCard variant="panel"><details><summary>Tracking gaps and unavailable metrics</summary><dl className="overview-gaps">
+    {showPrivacySummary && <PrivacySummary />}
+    {showOwnerMetrics && <LythCard variant="panel"><details><summary>Tracking gaps and unavailable metrics</summary><dl className="overview-gaps">
       {Object.entries(GAP_LABELS).map(([key, label]) => <div key={key}><dt>{label}: unavailable</dt><dd>{community?.gaps?.[key] || 'A verified metric source and definition are required.'}</dd></div>)}
-    </dl></details></LythCard>
+    </dl></details></LythCard>}
     <div className="page-grid">
       <LythCard variant="panel"><h2>Moderation</h2><p>Review flags and recorded decisions.</p><Link to="/flags">Open moderation cases</Link></LythCard>
       <LythCard variant="panel"><h2>Appeals</h2><p>Review pending adjudications separately from appeal outcomes.</p><Link to="/appeals">Open pending adjudications</Link></LythCard>
-      <LythCard variant="panel"><h2>Accounts</h2><p>Exact-email support, recorded history and existing account administration.</p><Link to="/accounts">Open Accounts</Link></LythCard>
+      <LythCard variant="panel"><h2>Accounts</h2><p>{showOwnerMetrics ? 'Exact-email support, recorded history and existing account administration.' : 'Manage registered accounts and invitations.'}</p><Link to="/accounts">Open Accounts</Link></LythCard>
       <LythCard variant="panel"><h2>Audit</h2><p>Review recorded administrative events.</p><Link to="/audit">Open audit trail</Link></LythCard>
     </div>
   </PageLayout>;

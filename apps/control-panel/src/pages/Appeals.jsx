@@ -19,7 +19,7 @@ const APPEALS_GUIDE = {
   footnote: 'There is no moderator override or time-based auto-resolution path.'
 };
 
-function Appeals() {
+function Appeals({ canAdjudicate }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,7 +51,7 @@ function Appeals() {
   }, [loadAppeals]);
 
   const submitAdjudication = async () => {
-    if (!selected) return;
+    if (!canAdjudicate || !selected) return;
     const normalizedReason = reasonCode.trim().toUpperCase();
     if (!/^[A-Z0-9_.:-]{2,80}$/.test(normalizedReason)) {
       setMessage('Enter a stable reason code using A-Z, 0-9, dot, underscore, colon, or dash.');
@@ -102,7 +102,7 @@ function Appeals() {
               <span>Panel result</span>
               <span>Adjudicators</span>
               <span>Created</span>
-              <span>Actions</span>
+              {canAdjudicate && <span>Actions</span>}
             </div>
             {items.map((item) => (
               <div key={item.appeal_id} className="data-row">
@@ -118,11 +118,11 @@ function Appeals() {
                 <span>{item.reviewer_panel_decision || '-'}</span>
                 <span>{item.completed_adjudicators}/{item.required_adjudicators}</span>
                 <span>{formatDateTime(item.created_at)}</span>
-                <span>
+                {canAdjudicate && <span>
                   <LythButton variant="ghost" type="button" onClick={() => setSelected(item)}>
                     Adjudicate
                   </LythButton>
-                </span>
+                </span>}
               </div>
             ))}
           </div>
@@ -131,7 +131,7 @@ function Appeals() {
           ) : null}
         </LythCard>
 
-        <LythCard variant="panel">
+        {canAdjudicate && <LythCard variant="panel">
           <div className="panel-header">
             <h2>Record decision</h2>
           </div>
@@ -175,7 +175,7 @@ function Appeals() {
               </div>
             </div>
           )}
-        </LythCard>
+        </LythCard>}
       </div>
     </PageLayout>
   );
