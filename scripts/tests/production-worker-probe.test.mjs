@@ -177,7 +177,8 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
       OWNER_TESTING_DEPLOYMENT: ownerTestingDeployment ? 'true' : 'false',
       OWNER_TESTING_CANDIDATE: ownerTestingCandidate ? 'true' : 'false',
       PRODUCTION_WORKER_SCOPE: worker, PRODUCTION_WORKER_VERSION_ID: version, PUBLIC_WORKER_VERSION_ID: publicVersion,
-      PRODUCTION_PUBLIC_API_BASE_URL: 'https://api.lythaus.co', PRODUCTION_ADMIN_API_BASE_URL: 'https://admin-api.lythaus.co',
+      PRODUCTION_PUBLIC_API_BASE_URL: 'https://api.lythaus.co',
+      PRODUCTION_ADMIN_API_BASE_URL: scenario === 'panel-probe-origin' ? 'https://control.lythaus.co' : 'https://admin-api.lythaus.co',
       PRODUCTION_WORKER_EVIDENCE_PATH: output, PROBE_FIXTURE_REQUESTS: requests, PROBE_FIXTURE_SCENARIO: scenario,
       PROBE_FIXTURE_DELAYS: delays,
       PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH: previousState ? previousDeployment : undefined,
@@ -218,6 +219,25 @@ test('matching Admin identity preserves sanitized observations and both exact ov
     assert.equal(request.headers['cf-access-client-secret'], credentials[2]);
   }
   assert.equal(requests.at(-1).headers.authorization, `Bearer ${credentials[0]}`);
+});
+
+test('replacement Admin probes bind both exact candidates and require the machine origin', t => {
+  const worker = 'lythaus-admin-api-new-core-test';
+  const { result, evidence, requests } = runProbe(t, 'matching', worker);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(evidence.workers[0].worker, worker);
+  assert.equal(evidence.workers[0].databaseCount, 2);
+  for (const request of requests) {
+    assert.equal(request.headers['cloudflare-workers-version-overrides'], `${worker}="${version}", lythaus-public-api-development="${publicVersion}"`);
+    assert.equal(request.headers['cf-access-client-id'], credentials[1]);
+    assert.equal(request.headers['cf-access-client-secret'], credentials[2]);
+  }
+  for (const scenario of ['missing-privacy', 'wrong-public', 'wrong-version', 'panel-probe-origin']) {
+    const rejected = runProbe(t, scenario, worker);
+    assert.equal(rejected.result.status, 1);
+    assert.equal(rejected.evidence.status, 'fail');
+    if (scenario === 'panel-probe-origin') assert.deepEqual(rejected.requests, []);
+  }
 });
 
 for (const scenario of ['empty-health', 'wrong-health-service', 'redirect-health', 'wrong-candidate-service',

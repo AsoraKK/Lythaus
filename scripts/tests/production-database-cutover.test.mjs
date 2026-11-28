@@ -710,15 +710,20 @@ test('both rollback workflows require the prior serving versions to use verified
   const origin = {scheme:'postgres',host:'fixture.psdb.cloud',port:5432,database:'postgres'};
   plan.destination.originSha256 = createHash('sha256').update(JSON.stringify(origin)).digest('hex');
   const id='aaaaaaaa-1111-4111-8111-111111111111';
-  const snapshot = () => ({deployment:{versions:[{version_id:id,percentage:100,source_sha:'a'.repeat(40),created_on:'2026-11-18T00:00:00Z'}]}});
-  for (const scenario of ['valid','old','wrongRole','tls']) {
+  const secondId='bbbbbbbb-1111-4111-8111-111111111111';
+  const snapshot = () => ({deployment:{versions:[id,secondId].map((versionId,index)=>({
+    version_id:versionId,percentage:index===0?99:1,source_sha:'a'.repeat(40),created_on:'2026-11-18T00:00:00Z',
+  }))}});
+  // Each consumer can independently cross planes, even on a 1% predecessor.
+  for (const scenario of ['valid','wrongRole','tls',...manifest.bindings]) {
     const fetchImpl = async (url,options) => {
       assert.equal(options.method,'GET');
       const path = new URL(url).pathname.split('/');
       if (path.at(-2)==='versions') {
         const rows = manifest.bindings.filter(row=>row.worker===path.at(-3));
-        return Response.json({success:true,result:{id,resources:{bindings:rows.map(row=>({type:'hyperdrive',name:row.binding,
-          id:scenario==='old' && row.worker.includes('coordinator') ? plan.rollback.connectors.lythaus_admin : row.hyperdriveId}))}}});
+        const versionId=path.at(-1);
+        return Response.json({success:true,result:{id:versionId,resources:{bindings:rows.map(row=>({type:'hyperdrive',name:row.binding,
+          id:row===scenario && versionId===secondId ? plan.rollback.connectors[row.expectedRoleKey] : row.hyperdriveId}))}}});
       }
       const row=manifest.bindings.find(entry=>entry.hyperdriveId===path.at(-1));
       assert.ok(row);
@@ -726,13 +731,23 @@ test('both rollback workflows require the prior serving versions to use verified
       return Response.json({success:true,result:{id:row.hyperdriveId,origin:{...origin,user:role+'.'+plan.destination.branchId},
         caching:{disabled:true},mtls:{sslmode:scenario==='tls'?'require':'verify-full',ca_certificate_id:'fixture'}}});
     };
-    const exercise=()=>verifyRollbackPlane({manifest,destination:plan.destination,token:'fixture',snapshot,fetchImpl});
+    const exercise=()=>verifyRollbackPlane({manifest,destination:plan.destination,token:'fixture',snapshot,fetchImpl,
+      restoreAdminRoute:{route:{pattern:'admin.lythaus.co/api/admin/*',script:TARGET.worker}}});
     if (scenario==='valid') await exercise();
     else await assert.rejects(exercise,/rollback/);
   }
-  for (const workflow of ['native-workers-deploy','production-release']) {
-    assert.match(fs.readFileSync('.github/workflows/'+workflow+'.yml','utf8'),/if ! node scripts\/ci\/verify-cloudflare-hyperdrive-targets\.mjs --rollback-database/);
+  for (const route of [null,{}, {pattern:'admin.lythaus.co/api/admin/*',script:'lythaus-admin-api-development'},
+    {pattern:'unapproved.lythaus.co/*',script:TARGET.worker}]) {
+    await assert.rejects(verifyRollbackPlane({manifest,destination:plan.destination,snapshot,restoreAdminRoute:{route}}),/rollback route/);
   }
+  const workers=fs.readFileSync('.github/workflows/native-workers-deploy.yml','utf8');
+  assert.match(workers,/deployments status --name "\$ADMIN_TRAFFIC_WORKER" --json > "\$RUNNER_TEMP\/production-cutover\/admin-before\.json"/);
+  assert.match(workers,/if \[\[ "\$ADMIN_TRAFFIC_WORKER" != lythaus-admin-api-development \]\]; then[\s\S]*?enrich_worker_versions legacy-admin lythaus-admin-api-development/);
+  assert.match(workers,/if ! node scripts\/ci\/verify-cloudflare-hyperdrive-targets\.mjs --rollback-database --release-admin-worker "\$ADMIN_TRAFFIC_WORKER"/);
+  const release=fs.readFileSync('.github/workflows/production-release.yml','utf8');
+  assert.match(release,/if component_changed admin; then rollback_args\+=\(--restore-admin-route\)/);
+  assert.match(release,/if ! admin_traffic_worker="\$\(node scripts\/ci\/verify-cloudflare-hyperdrive-targets\.mjs --rollback-database "\$\{rollback_args\[@\]\}"\)"; then[\s\S]*?exit 1/);
+  assert.match(release,/restore_worker admin ADMIN "\$admin_traffic_worker"/);
 });
 
 test('discovery uses only GET metadata, distinguishes incomplete listings and hides raw fields', async () => {

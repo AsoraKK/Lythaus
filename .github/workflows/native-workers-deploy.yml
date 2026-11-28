@@ -560,7 +560,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=production Hyperdrive or database origin validation failed' >> "$GITHUB_ENV"
           set -o pipefail
           mkdir -p "$RUNNER_TEMP/production-cutover"
-          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --release-admin-worker lythaus-admin-api-development | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --release-admin-worker "$ADMIN_TRAFFIC_WORKER" | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
       - name: Capture predeployment Worker state (INFRASTRUCTURE gate)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -574,11 +574,11 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=exact positive serving traffic rollback snapshot failed' >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/production-cutover"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before.json"
-          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before.json"
+          npx --yes wrangler@4.123.0 deployments status --name "$ADMIN_TRAFFIC_WORKER" --json > "$RUNNER_TEMP/production-cutover/admin-before.json"
           cp "$RUNNER_TEMP/production-cutover/admin-before.json" "$RUNNER_TEMP/production-cutover/admin-observed-deployment.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before-versions.json"
-          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name "$ADMIN_TRAFFIC_WORKER" --json > "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before-versions.json"
           enrich_worker_versions() {
             local component="$1"
@@ -599,7 +599,14 @@ jobs:
             mv "$enriched_path" "$listed_path"
           }
           enrich_worker_versions public lythaus-public-api-development
-          enrich_worker_versions admin lythaus-admin-api-development
+          enrich_worker_versions admin "$ADMIN_TRAFFIC_WORKER"
+          if [[ "$ADMIN_TRAFFIC_WORKER" != lythaus-admin-api-development ]]; then
+            # The legacy Worker remains in custody. Its version list cannot restore the replacement.
+            npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/legacy-admin-before.json"
+            npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/legacy-admin-before-versions.json"
+            enrich_worker_versions legacy-admin lythaus-admin-api-development
+            node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/legacy-admin-before.json" LEGACY_ADMIN "$RUNNER_TEMP/production-cutover/legacy-admin-before-versions.json" > "$RUNNER_TEMP/production-cutover/legacy-admin-state.json"
+          fi
           enrich_worker_versions jobs lythaus-jobs-development
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/public-before.json" unused PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/admin-before.json" unused ADMIN
@@ -778,7 +785,7 @@ jobs:
           jobs_inventory="$RUNNER_TEMP/production-cutover/jobs-secret-bindings.json"
           coordinator_inventory="$RUNNER_TEMP/production-cutover/coordinator-secret-bindings.json"
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_inventory"
-          npx --yes wrangler@4.123.0 secret list --name lythaus-admin-api-development --format json > "$admin_inventory"
+          npx --yes wrangler@4.123.0 secret list --name "$ADMIN_TRAFFIC_WORKER" --format json > "$admin_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_inventory"
           if component_changed coordinator; then
             npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_inventory"
@@ -1007,7 +1014,7 @@ jobs:
           if component_changed jobs; then upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"; fi
           if coordinator_managed; then upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"; fi
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
-          npx --yes wrangler@4.123.0 secret list --name lythaus-admin-api-development --format json > "$admin_secret_inventory"
+          npx --yes wrangler@4.123.0 secret list --name "$ADMIN_TRAFFIC_WORKER" --format json > "$admin_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
           if coordinator_managed; then list_coordinator_secrets "$coordinator_secret_inventory"; fi
           if component_changed public || component_changed admin || component_changed jobs || coordinator_managed; then
@@ -1275,7 +1282,7 @@ jobs:
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
           OWNER_TESTING_CANDIDATE: ${{ inputs.owner_testing_deployment && contains(steps.release_plan.outputs.changed_components_json, '"admin"') }}
-          PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
+          PRODUCTION_WORKER_SCOPE: ${{ env.ADMIN_TRAFFIC_WORKER }}
           PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
           PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH: ${{ runner.temp }}/production-cutover/public-before.json
           PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH: ${{ runner.temp }}/production-cutover/public-before-versions.json
@@ -1395,10 +1402,10 @@ jobs:
           done
           candidate_dependencies="$(jq -c -n \
             --arg public_version "$PUBLIC_WORKER_VERSION_ID" --arg public_source "$PUBLIC_WORKER_SOURCE_SHA" --arg public_status "$PUBLIC_WORKER_STATUS" --arg public_provenance "$PUBLIC_WORKER_PROVENANCE" \
-            --arg admin_version "$ADMIN_WORKER_VERSION_ID" --arg admin_source "$ADMIN_WORKER_SOURCE_SHA" --arg admin_status "$ADMIN_WORKER_STATUS" --arg admin_provenance "$ADMIN_WORKER_PROVENANCE" \
+            --arg admin_worker "$ADMIN_TRAFFIC_WORKER" --arg admin_version "$ADMIN_WORKER_VERSION_ID" --arg admin_source "$ADMIN_WORKER_SOURCE_SHA" --arg admin_status "$ADMIN_WORKER_STATUS" --arg admin_provenance "$ADMIN_WORKER_PROVENANCE" \
             --arg jobs_version "$JOBS_WORKER_VERSION_ID" --arg jobs_source "$JOBS_WORKER_SOURCE_SHA" --arg jobs_status "$JOBS_WORKER_STATUS" --arg jobs_provenance "$JOBS_WORKER_PROVENANCE" \
             --arg coordinator_version "$COORDINATOR_WORKER_VERSION_ID" --arg coordinator_source "$COORDINATOR_WORKER_SOURCE_SHA" --arg coordinator_status "$COORDINATOR_WORKER_STATUS" --arg coordinator_provenance "$COORDINATOR_WORKER_PROVENANCE" \
-            '{public:{workerName:"lythaus-public-api-development",versionId:$public_version,sourceSha:$public_source,status:$public_status,provenance:$public_provenance},admin:{workerName:"lythaus-admin-api-development",versionId:$admin_version,sourceSha:$admin_source,status:$admin_status,provenance:$admin_provenance},jobs:{workerName:"lythaus-jobs-development",versionId:$jobs_version,sourceSha:$jobs_source,status:$jobs_status,provenance:$jobs_provenance},coordinator:{workerName:"lythaus-auth-acceptance-coordinator-development",versionId:$coordinator_version,sourceSha:$coordinator_source,status:$coordinator_status,provenance:$coordinator_provenance}}')"
+            '{public:{workerName:"lythaus-public-api-development",versionId:$public_version,sourceSha:$public_source,status:$public_status,provenance:$public_provenance},admin:{workerName:$admin_worker,versionId:$admin_version,sourceSha:$admin_source,status:$admin_status,provenance:$admin_provenance},jobs:{workerName:"lythaus-jobs-development",versionId:$jobs_version,sourceSha:$jobs_source,status:$jobs_status,provenance:$jobs_provenance},coordinator:{workerName:"lythaus-auth-acceptance-coordinator-development",versionId:$coordinator_version,sourceSha:$coordinator_source,status:$coordinator_status,provenance:$coordinator_provenance}}')"
           diagnostic_expiry=''
           if [[ "$ENABLE_SUBJECT_DIAGNOSTIC" == true && -z "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
             diagnostic_expiry="${SUBJECT_DIAGNOSTIC_EXPIRES_AT:-}"
@@ -1720,10 +1727,10 @@ jobs:
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/production-cutover/activation-approval-boundary"
-          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database --release-admin-worker "$ADMIN_TRAFFIC_WORKER"
           mkdir -p "$work"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public.json"
-          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin.json"
+          npx --yes wrangler@4.123.0 deployments status --name "$ADMIN_TRAFFIC_WORKER" --json > "$work/admin.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$work/jobs.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$work/coordinator.json"
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/admin-route.json" 'admin.lythaus.co/api/admin/*'
@@ -1744,7 +1751,7 @@ jobs:
             --name lythaus-auth-acceptance-coordinator-development --yes \
             --message 'Restore exact pre-acceptance Coordinator before owner activation approval'
           npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$work/public-after.json"
-          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$work/admin-after.json"
+          npx --yes wrangler@4.123.0 deployments status --name "$ADMIN_TRAFFIC_WORKER" --json > "$work/admin-after.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$work/jobs-after.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$work/coordinator-after.json"
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$work/admin-route-after.json" 'admin.lythaus.co/api/admin/*'
@@ -2116,7 +2123,9 @@ jobs:
             echo 'ROLLBACK_STATE=PRESERVED_FOR_ACCEPTANCE' >> "$GITHUB_ENV"
             exit 0
           fi
-          if ! node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database; then
+          rollback_args=()
+          if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == true ]]; then rollback_args+=(--restore-admin-route); fi
+          if ! node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --rollback-database --release-admin-worker "$ADMIN_TRAFFIC_WORKER" "${rollback_args[@]}"; then
             echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"
             echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
             exit 1
@@ -2125,7 +2134,7 @@ jobs:
             drift_dir="$RUNNER_TEMP/production-cutover/rollback-drift-check"
             mkdir -p "$drift_dir"
             npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$drift_dir/public.json" || rollback_failed=1
-            npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$drift_dir/admin.json" || rollback_failed=1
+            npx --yes wrangler@4.123.0 deployments status --name "$ADMIN_TRAFFIC_WORKER" --json > "$drift_dir/admin.json" || rollback_failed=1
             npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$drift_dir/jobs.json" || rollback_failed=1
             npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$drift_dir/coordinator.json" || rollback_failed=1
             node scripts/ci/manage-cloudflare-worker-route.mjs snapshot "$drift_dir/admin-route.json" 'admin.lythaus.co/api/admin/*' || rollback_failed=1
@@ -2174,7 +2183,7 @@ jobs:
             npx --yes wrangler@4.123.0 versions deploy $JOBS_ROLLBACK_SPECS --name lythaus-jobs-development --yes --message "Restore exact predeployment Lythaus jobs versions" || rollback_failed=1
           fi
           if [[ "${ADMIN_WORKER_DEPLOYED:-false}" == "true" || "${ADMIN_WORKER_STAGED:-false}" == "true" ]]; then
-            npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development --yes --message "Restore exact predeployment Lythaus admin versions" || rollback_failed=1
+            npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS --name "$ADMIN_TRAFFIC_WORKER" --yes --message "Restore exact predeployment Lythaus admin versions" || rollback_failed=1
           fi
           if [[ "${PUBLIC_WORKER_DEPLOYED:-false}" == "true" || "${PUBLIC_WORKER_STAGED:-false}" == "true" ]]; then
             npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development --yes --message "Restore exact predeployment Lythaus public versions" || rollback_failed=1

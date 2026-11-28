@@ -18,6 +18,9 @@ const authenticatedAcceptanceProven = process.env.AUTHENTICATED_ACCEPTANCE_PROVE
 const ownerTestingDeployment = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
 const ownerTestingCandidate = process.env.OWNER_TESTING_CANDIDATE === 'true';
 const requestedWorker = process.env.PRODUCTION_WORKER_SCOPE ?? 'all';
+const replacementAdmin = 'lythaus-admin-api-new-core-test';
+const adminWorker = requestedWorker === replacementAdmin ? replacementAdmin : 'lythaus-admin-api-development';
+const machineOrigin = 'https://admin-api.lythaus.co';
 const releaseSha = process.env.RELEASE_SHA ?? '';
 const expectedWorkerSourceSha = process.env.EXPECTED_WORKER_SOURCE_SHA ?? releaseSha;
 const expectedWorkerVersionId = process.env.PRODUCTION_WORKER_VERSION_ID ?? '';
@@ -58,7 +61,7 @@ if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
 if (!/^[0-9a-f]{40}$/.test(expectedWorkerSourceSha)) throw new Error('EXPECTED_WORKER_SOURCE_SHA must be a full source SHA');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
-if (requestedWorker === 'lythaus-admin-api-development' && !/^[0-9a-f-]{36}$/.test(expectedPublicVersion)) throw new Error('PUBLIC_WORKER_VERSION_ID is required for the private Admin email binding proof');
+if (requestedWorker === adminWorker && !/^[0-9a-f-]{36}$/.test(expectedPublicVersion)) throw new Error('PUBLIC_WORKER_VERSION_ID is required for the private Admin email binding proof');
 if (expectedSchemaVersion !== REQUIRED_RELEASE_SCHEMA_VERSION) throw new Error(`production probes require ${REQUIRED_RELEASE_SCHEMA_VERSION}`);
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 if (ownerTestingCandidate && !ownerTestingDeployment) throw new Error('OWNER_TESTING_CANDIDATE=true requires OWNER_TESTING_DEPLOYMENT=true');
@@ -73,9 +76,9 @@ const allTargets = [
     anonymousPaths: ['/health', '/ready'],
   },
   {
-    worker: 'lythaus-admin-api-development',
+    worker: adminWorker,
     probe: true,
-    baseUrl: process.env.PRODUCTION_ADMIN_API_BASE_URL || 'https://admin-api.lythaus.co',
+    baseUrl: process.env.PRODUCTION_ADMIN_API_BASE_URL || machineOrigin,
     routePrefix: '',
     anonymousPaths: ['/health'],
   },
@@ -92,7 +95,7 @@ const targets = requestedWorker === 'all'
   ? allTargets
   : allTargets.filter(({ worker }) => worker === requestedWorker);
 if (targets.length === 0) throw new Error(`Unknown PRODUCTION_WORKER_SCOPE: ${requestedWorker}`);
-if (requestedWorker === 'lythaus-admin-api-development' && (!accessClientId || !accessClientSecret)) {
+if (requestedWorker === adminWorker && (!accessClientId || !accessClientSecret)) {
   throw new Error('CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET are required for the admin candidate probe');
 }
 
@@ -102,8 +105,8 @@ if (targets.some(({ probe, baseUrl }) => probe && !baseUrl)) {
 
 async function fetchJson(url, options = {}, service = requestedWorker) {
   const headers = new Headers(options.headers);
-  headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"${requestedWorker === 'lythaus-admin-api-development' ? `, lythaus-public-api-development="${expectedPublicVersion}"` : ''}`);
-  if (requestedWorker === 'lythaus-admin-api-development') {
+  headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"${requestedWorker === adminWorker ? `, lythaus-public-api-development="${expectedPublicVersion}"` : ''}`);
+  if (requestedWorker === adminWorker) {
     headers.set('CF-Access-Client-Id', accessClientId);
     headers.set('CF-Access-Client-Secret', accessClientSecret);
   }
@@ -115,7 +118,7 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
     expected: {
       workerVersionId: expectedWorkerVersionId,
       releaseTag: expectedWorkerSourceSha,
-      ...(service === 'lythaus-admin-api-development' ? { publicWorkerVersion: expectedPublicVersion } : {}),
+      ...(service === adminWorker ? { publicWorkerVersion: expectedPublicVersion } : {}),
     },
     observed: { service: null, workerVersionId: null, releaseTag: null },
   };
@@ -126,7 +129,7 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
   try {
     response = await fetch(url, {
       ...options, headers, signal: AbortSignal.timeout(15_000),
-      ...(service === 'lythaus-admin-api-development' ? { redirect: 'manual' } : {}),
+      ...(service === adminWorker ? { redirect: 'manual' } : {}),
     });
     observation.httpStatus = response.status;
     observation.cfRay = identity(response.headers.get('cf-ray'), /^[a-f0-9]{16}-[A-Z]{3}$/);
@@ -148,7 +151,7 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
     service: identity(body?.service, /^lythaus-(public-api|admin-api|jobs)$/),
     workerVersionId: identity(body?.workerVersionId, /^[0-9a-f-]{36}$/),
     releaseTag: identity(body?.releaseTag, /^[0-9a-f]{40}$/),
-    ...(service === 'lythaus-admin-api-development' ? {
+    ...(service === adminWorker ? {
       emailBinding: {
         bindingVerified: typeof body?.emailBinding?.bindingVerified === 'boolean' ? body.emailBinding.bindingVerified : null,
         publicWorkerVersion: identity(body?.emailBinding?.publicWorkerVersion, /^[0-9a-f-]{36}$/),
@@ -194,7 +197,7 @@ function assertDatabaseReport(report, worker, label, { skipReadinessExpectation 
 }
 
 function assertReadiness(body, target, { knownPreviousServingVersion = false, previousPublicVersions = [] } = {}) {
-  if (target.worker === 'lythaus-admin-api-development') {
+  if (target.worker === adminWorker) {
     if (!knownPreviousServingVersion) {
       if (body.service !== 'lythaus-admin-api' || body.readiness !== 'pass') {
         throw new Error('Admin candidate did not report a ready Admin service');
@@ -245,7 +248,7 @@ function previousServingVersions() {
       fs.readFileSync(previousVersionsPath, 'utf8'),
     ).serving };
   }
-  if (requestedWorker !== 'lythaus-admin-api-development' || suppliedPaths.some((value) => !value)) {
+  if (requestedWorker !== adminWorker || suppliedPaths.some((value) => !value)) {
     throw new Error('Admin propagation retries require exact Admin and Public predeployment snapshot paths');
   }
   const admin = parseProductionDeploymentState(
@@ -268,7 +271,7 @@ async function fetchCandidateReadiness(base, target, previousVersions) {
     observation.attempt = attempt;
     writeEvidence();
     if (body.workerVersionId === expectedWorkerVersionId && body.releaseTag === expectedWorkerSourceSha) return body;
-    const isAdmin = target.worker === 'lythaus-admin-api-development';
+    const isAdmin = target.worker === adminWorker;
     const capturedServingVersions = isAdmin ? previousVersions.admin : previousVersions.public;
     const previousVersion = body.service === (isAdmin ? 'lythaus-admin-api' : 'lythaus-public-api')
       && capturedServingVersions.some(({ versionId, sourceSha }) => body.workerVersionId === versionId && body.releaseTag === sourceSha);
@@ -324,10 +327,13 @@ async function probeTargets() {
       });
       continue;
     }
+    if (target.worker === replacementAdmin && target.baseUrl !== machineOrigin) {
+      throw new Error('Replacement Admin requires its reviewed machine probe origin');
+    }
     const base = `${new URL(target.baseUrl).origin}${target.routePrefix}`;
     for (const path of target.anonymousPaths) {
       const health = await fetchJson(`${base}${path}`, {}, target.worker);
-      if (target.worker === 'lythaus-admin-api-development' && (health.service !== 'lythaus-admin-api' || health.status !== 'ok')) {
+      if (target.worker === adminWorker && (health.service !== 'lythaus-admin-api' || health.status !== 'ok')) {
         throw new Error('Admin candidate health response did not identify a healthy Admin service');
       }
     }
@@ -338,7 +344,7 @@ async function probeTargets() {
       workerVersionId: body.workerVersionId,
       releaseTag: body.releaseTag,
       sourceSha: body.releaseTag,
-      ...(target.worker === 'lythaus-admin-api-development' ? { emailBinding: { bindingVerified: true, publicWorkerVersion: expectedPublicVersion } } : {}),
+      ...(target.worker === adminWorker ? { emailBinding: { bindingVerified: true, publicWorkerVersion: expectedPublicVersion } } : {}),
       baseUrl: base,
       databaseCount: reports.length,
       databaseEnvironment: primaryReport.databaseEnvironment,

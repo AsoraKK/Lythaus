@@ -13,11 +13,7 @@ export async function verifyFlagsSession(page, {hostname, versionId, sourceSha})
   validateCandidate({hostname,versionId,sourceSha});
   const origin = 'https://' + hostname;
   const pageUrl = origin + '/flags';
-  const apiUrl = origin + '/api/admin/moderation/cases';
   if (page.url() !== pageUrl) throw new Error('flags_owner_navigation_required');
-  const pending = page.waitForResponse(response => response.url() === apiUrl
-    && response.request().method() === 'GET' && response.frame() === page.mainFrame(), {timeout:30000});
-  const [api, document] = await Promise.all([pending, page.reload({waitUntil:'domcontentloaded'})]);
   async function exactResponse(response, url, mediaType) {
     if (!response || response.url() !== url || response.status() !== 200 || response.fromServiceWorker()
       || response.request().redirectedFrom() || response.request().frame() !== page.mainFrame()
@@ -27,18 +23,33 @@ export async function verifyFlagsSession(page, {hostname, versionId, sourceSha})
       throw new Error('flags_serving_response_mismatch');
     }
   }
+  async function waitForJson(path) {
+    const url = origin + path;
+    const response = await page.waitForResponse(candidate => candidate.url() === url
+      && candidate.request().method() === 'GET' && candidate.frame() === page.mainFrame(), {timeout:30000});
+    await exactResponse(response, url, 'application/json');
+    try { return await response.json(); } catch { throw new Error('flags_invalid_json'); }
+  }
+  const [health, cases, document] = await Promise.all([
+    waitForJson('/api/admin/health'),
+    waitForJson('/api/admin/moderation/cases'),
+    page.reload({waitUntil:'domcontentloaded'}),
+  ]);
   await exactResponse(document, pageUrl, 'text/html');
-  await exactResponse(api, apiUrl, 'application/json');
-  let data;
-  try { data = await api.json(); } catch { throw new Error('flags_invalid_json'); }
-  if (!Array.isArray(data?.items) || !data.items.every(row =>
+  const databaseTime = health?.database?.database_time;
+  if (health?.status !== 'ok' || typeof databaseTime !== 'string'
+    || !/^\d{4}-\d\d-\d\d[T ]\d\d:\d\d:\d\d/.test(databaseTime) || !Number.isFinite(Date.parse(databaseTime))) {
+    throw new Error('flags_health_contract_mismatch');
+  }
+  if (!Array.isArray(cases?.items) || !cases.items.every(row =>
     typeof row?.id === 'string' && row.id.length > 0 && typeof row.state === 'string')) {
     throw new Error('flags_cases_contract_mismatch');
   }
   await page.getByRole('heading', {name:'Moderation cases', exact:true}).waitFor({state:'visible'});
   await page.getByRole('heading', {name:'Cases', exact:true}).waitFor({state:'visible'});
   if (page.url() !== pageUrl || await page.locator('.notice.error:visible').count()) throw new Error('flags_ui_failed');
-  return {hostname, versionId, sourceSha, renderedFlags:true, sameOriginCasesJson:true, apiStatus:200};
+  return {hostname, versionId, sourceSha, renderedFlags:true, sameOriginCasesJson:true, apiStatus:200,
+    sameOriginHealthJson:true, healthStatus:200};
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -482,7 +482,11 @@ export function validateProductionDatabaseMap(manifest, configs, plan = transiti
   return target;
 }
 
-export async function verifyRollbackPlane({ manifest, snapshot, token, fetchImpl = fetch, destination = transition.destination }) {
+export async function verifyRollbackPlane({ manifest, snapshot, token, restoreAdminRoute, fetchImpl = fetch, destination = transition.destination }) {
+  if (restoreAdminRoute !== undefined && (restoreAdminRoute?.route?.pattern !== 'admin.lythaus.co/api/admin/*'
+      || restoreAdminRoute.route.script !== TARGET.worker)) {
+    throw new Error('rollback route would restore unverified Admin traffic; retain the write fence and reconcile');
+  }
   const api = createReadOnlyClient(token, fetchImpl, true);
   const account = '/accounts/' + transition.accountId;
   const checked = new Set();

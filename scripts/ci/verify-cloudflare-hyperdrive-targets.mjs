@@ -335,10 +335,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (target === transition.destination) {
       const dir = path.join(process.env.RUNNER_TEMP, 'production-cutover');
       const read = file => JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
-      await verifyRollbackPlane({manifest,token:process.env.CLOUDFLARE_API_TOKEN,snapshot:component=>({
+      const restoreAdminRoute = process.argv.includes('--restore-admin-route') ? read('admin-api-route-before.json') : undefined;
+      await verifyRollbackPlane({manifest,token:process.env.CLOUDFLARE_API_TOKEN,restoreAdminRoute,snapshot:component=>({
         deployment:read(component+'-before.json'),versions:read(component+'-before-versions.json'),
       })});
     }
+    // Emit the physical name only after the exact release map and its rollback guards pass.
+    console.log(configs.get('apps/lythaus-admin-api/wrangler.jsonc').name);
   } else if (manifestOnly || requireDestination) {
     assertManifestAndConfigs();
     console.log(`Verified ${manifest.bindings.length} documented production Hyperdrive bindings, IDs and role classes.`);
