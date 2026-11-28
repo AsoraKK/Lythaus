@@ -102,6 +102,7 @@ const runtimeRoutes: RuntimeRoute[] = [
 
   { path: '/admin/health', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/health'" },
   { path: '/admin/privacy/requests', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/requests'" },
+  { path: '/admin/privacy/summary', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/summary'" },
   { path: '/admin/moderation/cases', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/moderation/cases'" },
   { path: '/admin/audit', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/audit'" },
   { path: '/admin/waitlist', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/waitlist'" },

@@ -680,17 +680,20 @@ test('replacement serves checked assets and the ordinary Admin handler behind ex
   assert.equal(flags.headers.get('cache-control'),'private, no-store');
   const cases = await worker.fetch(signed('/api/admin/moderation/cases'),env);
   assert.deepEqual(await cases.json(),{items:[]});
+  const privacy = await worker.fetch(signed('/api/admin/privacy/summary'),env);
+  assert.equal(privacy.status,200);
+  assert.equal(privacy.headers.get('cache-control'),'private, no-store');
   for (const path of ['/api/admin/recovery/subject-rebind','/api/admin/bootstrap/first-administrator','/api/admin/production-auth-acceptance/email','/api/waitlist','/invite/example','/verify-email','/reset-password']) {
     assert.equal((await worker.fetch(signed(path),env)).status,404);
   }
-  for (const path of ['/flags','/api/admin/moderation/cases']) {
+  for (const path of ['/','/flags','/assets/panel.js','/api/admin/moderation/cases','/api/admin/privacy/summary']) {
     assert.equal((await worker.fetch(new Request(origin+path),env)).status,401);
     assert.equal((await worker.fetch(signed(path),{...env,CONTROL_ACCESS_AUDIENCE_SHA256:'b'.repeat(64)})).status,503);
     assert.equal((await worker.fetch(signed(path),{...env,CONTROL_ACCESS_ISSUER_SHA256:'b'.repeat(64)})).status,503);
     assert.equal((await worker.fetch(new Request('https://admin.lythaus.co'+path),env)).status,404);
   }
   assert.deepEqual(ui,[origin+'/flags']);
-  assert.deepEqual(api,[origin+'/api/admin/moderation/cases']);
+  assert.deepEqual(api,[origin+'/api/admin/moderation/cases',origin+'/api/admin/privacy/summary']);
   const req = new Request(origin+'/flags',{headers:{'cf-access-jwt-assertion':'fixture'}});
   for (const configuration of [env, {...env, ACCESS_REQUIRE_SIGNED_SUBJECT: undefined}]) {
     for (const sub of [undefined, '', ' ']) {

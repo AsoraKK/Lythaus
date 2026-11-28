@@ -61,6 +61,7 @@ export 'package:lythaus_api_client/src/model/admin_overview.dart';
 export 'package:lythaus_api_client/src/model/admin_overview_gaps.dart';
 export 'package:lythaus_api_client/src/model/admin_overview_metrics.dart';
 export 'package:lythaus_api_client/src/model/admin_overview_providers.dart';
+export 'package:lythaus_api_client/src/model/admin_privacy_summary.dart';
 export 'package:lythaus_api_client/src/model/admin_user.dart';
 export 'package:lythaus_api_client/src/model/admin_user_deletion_response.dart';
 export 'package:lythaus_api_client/src/model/admin_user_detail200_response.dart';

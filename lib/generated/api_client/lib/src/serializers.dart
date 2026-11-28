@@ -43,6 +43,7 @@ import 'package:lythaus_api_client/src/model/admin_overview.dart';
 import 'package:lythaus_api_client/src/model/admin_overview_gaps.dart';
 import 'package:lythaus_api_client/src/model/admin_overview_metrics.dart';
 import 'package:lythaus_api_client/src/model/admin_overview_providers.dart';
+import 'package:lythaus_api_client/src/model/admin_privacy_summary.dart';
 import 'package:lythaus_api_client/src/model/admin_user.dart';
 import 'package:lythaus_api_client/src/model/admin_user_deletion_response.dart';
 import 'package:lythaus_api_client/src/model/admin_user_detail200_response.dart';
@@ -343,6 +344,7 @@ part 'serializers.g.dart';
   AdminOverviewGaps,
   AdminOverviewMetrics,
   AdminOverviewProviders,
+  AdminPrivacySummary,
   AdminUser,
   AdminUserDeletionResponse,
   AdminUserDetail200Response,

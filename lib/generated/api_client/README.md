@@ -97,6 +97,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminMonthlyContextReview**](doc/AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
 [*AdminApi*](doc/AdminApi.md) | [**adminOverview**](doc/AdminApi.md#adminoverview) | **GET** /admin/overview | Read bounded owner-only community aggregates
 [*AdminApi*](doc/AdminApi.md) | [**adminPrivacyRequestsList**](doc/AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
+[*AdminApi*](doc/AdminApi.md) | [**adminPrivacySummary**](doc/AdminApi.md#adminprivacysummary) | **GET** /admin/privacy/summary | Read privacy request and active legal hold counts
 [*AdminApi*](doc/AdminApi.md) | [**adminReviewerQualificationCreate**](doc/AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
 [*AdminApi*](doc/AdminApi.md) | [**adminReviewerQualificationUpdate**](doc/AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
 [*AdminApi*](doc/AdminApi.md) | [**adminUserDelete**](doc/AdminApi.md#adminuserdelete) | **DELETE** /admin/users/{userId} | Request controlled account deletion
@@ -304,6 +305,7 @@ Class | Method | HTTP request | Description
  - [AdminOverviewGaps](doc/AdminOverviewGaps.md)
  - [AdminOverviewMetrics](doc/AdminOverviewMetrics.md)
  - [AdminOverviewProviders](doc/AdminOverviewProviders.md)
+ - [AdminPrivacySummary](doc/AdminPrivacySummary.md)
  - [AdminUser](doc/AdminUser.md)
  - [AdminUserDeletionResponse](doc/AdminUserDeletionResponse.md)
  - [AdminUserDetail200Response](doc/AdminUserDetail200Response.md)

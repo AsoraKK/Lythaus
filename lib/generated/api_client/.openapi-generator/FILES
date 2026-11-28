@@ -32,6 +32,7 @@ doc/AdminOverview.md
 doc/AdminOverviewGaps.md
 doc/AdminOverviewMetrics.md
 doc/AdminOverviewProviders.md
+doc/AdminPrivacySummary.md
 doc/AdminSupportFeedbackApi.md
 doc/AdminUser.md
 doc/AdminUserDeletionResponse.md
@@ -380,6 +381,7 @@ lib/src/model/admin_overview.dart
 lib/src/model/admin_overview_gaps.dart
 lib/src/model/admin_overview_metrics.dart
 lib/src/model/admin_overview_providers.dart
+lib/src/model/admin_privacy_summary.dart
 lib/src/model/admin_user.dart
 lib/src/model/admin_user_deletion_response.dart
 lib/src/model/admin_user_detail200_response.dart
@@ -681,6 +683,7 @@ test/admin_overview_gaps_test.dart
 test/admin_overview_metrics_test.dart
 test/admin_overview_providers_test.dart
 test/admin_overview_test.dart
+test/admin_privacy_summary_test.dart
 test/admin_support_feedback_api_test.dart
 test/admin_user_deletion_response_test.dart
 test/admin_user_detail200_response_test.dart

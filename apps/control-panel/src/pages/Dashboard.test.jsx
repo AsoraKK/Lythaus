@@ -29,7 +29,7 @@ function sources(path, options) {
   if (path === 'overview') return community(options.query.period);
   throw new Error('Unexpected test route');
 }
-const show = () => render(<MemoryRouter><Dashboard /></MemoryRouter>);
+const show = (showOwnerMetrics = true) => render(<MemoryRouter><Dashboard showOwnerMetrics={showOwnerMetrics} /></MemoryRouter>);
 const card = label => screen.getByRole('heading', { name: label, level: 3 }).closest('article');
 const value = label => card(label).querySelector('strong').textContent;
 const operational = label => screen.getByText(label, { selector: 'span' }).nextSibling.textContent;
@@ -40,6 +40,17 @@ describe('Overview', () => {
     adminRequest.mockReset(); adminRequest.mockImplementation((path, options) => Promise.resolve(sources(path, options)));
   });
   afterEach(() => { vi.useRealTimers(); });
+
+  it('shows live operational sources and refreshes without requesting owner-only metrics for an administrator', async () => {
+    show(false);
+    await waitFor(() => expect(operational('Admin API')).toBe('ok'));
+    expect(screen.queryByRole('heading', { name: 'Community health' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(adminRequest.mock.calls.filter(([path]) => path === 'health')).toHaveLength(2));
+    expect(adminRequest.mock.calls.map(([path]) => path)).not.toContain('overview');
+    expect(adminRequest.mock.calls.map(([path]) => path)).not.toContain('activity-measurement');
+  });
 
   it('loads canonical Worker sources with explicit UTC period and loaded-page labels', async () => {
     show();

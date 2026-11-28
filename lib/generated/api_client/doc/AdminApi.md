@@ -33,6 +33,7 @@ Method | HTTP request | Description
 [**adminMonthlyContextReview**](AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
 [**adminOverview**](AdminApi.md#adminoverview) | **GET** /admin/overview | Read bounded owner-only community aggregates
 [**adminPrivacyRequestsList**](AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
+[**adminPrivacySummary**](AdminApi.md#adminprivacysummary) | **GET** /admin/privacy/summary | Read privacy request and active legal hold counts
 [**adminReviewerQualificationCreate**](AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
 [**adminReviewerQualificationUpdate**](AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
 [**adminUserDelete**](AdminApi.md#adminuserdelete) | **DELETE** /admin/users/{userId} | Request controlled account deletion
@@ -1151,6 +1152,47 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**AdminItems**](AdminItems.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminPrivacySummary**
+> AdminPrivacySummary adminPrivacySummary()
+
+Read privacy request and active legal hold counts
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminPrivacySummary();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminPrivacySummary: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AdminPrivacySummary**](AdminPrivacySummary.md)
 
 ### Authorization
 

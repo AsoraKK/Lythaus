@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import { adminRequest, isolatedAdminOrigin } from '../api/adminApi.js';
 
 const lookupStages = new Set(['subject_hmac', 'db_binding', 'db_connect', 'membership_query', 'db_close']);
@@ -11,8 +11,11 @@ const failureCategories = new Set([
   'database_system_error', 'pool_acquire_failed', 'server_connection_refused', 'upstream_internal_error',
 ]);
 
+export const AdminRoleContext = createContext(null);
+
 function AdminAccessGate({ children }) {
   const [state, setState] = useState('loading');
+  const [role, setRole] = useState(null);
   const [reference, setReference] = useState('');
   const [diagnostic, setDiagnostic] = useState(null);
 
@@ -20,7 +23,9 @@ function AdminAccessGate({ children }) {
     let active = true;
     adminRequest('health')
       .then((health) => {
-        if (active) setState(health?.status === 'ok' ? 'ready' : 'unavailable');
+        if (!active) return;
+        setRole(health?.role ?? null);
+        setState(health?.status === 'ok' ? 'ready' : 'unavailable');
       })
       .catch((error) => {
         if (!active) return;
@@ -45,7 +50,7 @@ function AdminAccessGate({ children }) {
   }, []);
 
   if (state === 'loading') return <main className="main"><section className="page"><p>Checking administrator access...</p></section></main>;
-  if (state === 'ready') return children;
+  if (state === 'ready') return <AdminRoleContext.Provider value={role}>{children}</AdminRoleContext.Provider>;
   return (
     <main className="main">
       <section className="page">

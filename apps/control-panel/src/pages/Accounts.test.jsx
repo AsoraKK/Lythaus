@@ -3,6 +3,7 @@ import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ControlPanelRoutes } from '../App.jsx';
 import Nav from '../components/Nav.jsx';
+import AdminAccessGate from '../components/AdminAccessGate.jsx';
 import { adminRequest } from '../api/adminApi.js';
 
 vi.mock('../api/adminApi.js', () => ({ adminRequest: vi.fn() }));
@@ -47,6 +48,17 @@ describe('Accounts workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     await screen.findByRole('button', { name: 'Look up account' });
     expect(screen.getByLabelText('Current route')).toHaveTextContent('/accounts');
+  });
+
+  it('routes the bootstrap administrator from Accounts to management without an owner lookup', async () => {
+    adminRequest.mockResolvedValueOnce({ status: 'ok', role: 'administrator' });
+    render(<MemoryRouter initialEntries={['/accounts?source=email#review']}><AdminAccessGate>
+      <Location /><ControlPanelRoutes />
+    </AdminAccessGate></MemoryRouter>);
+    await screen.findByText('Unverified member');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('/accounts/management?source=email#review');
+    expect(screen.queryByRole('link', { name: 'Account support' })).not.toBeInTheDocument();
+    expect(adminRequest).not.toHaveBeenCalledWith('account-support/access');
   });
 
   it.each([['/users?source=email#review', '/accounts/management?source=email#review'], ['/account-support?case=example#history', '/accounts?case=example#history']])('retains the legacy alias %s', async (path, expected) => {
