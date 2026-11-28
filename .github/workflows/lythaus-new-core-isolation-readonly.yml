@@ -30,6 +30,11 @@ on:
         required: false
         default: false
         type: boolean
+      verify_machine_access_only:
+        description: Compare the Admin API service policy and token metadata with the configured client ID
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -44,6 +49,7 @@ env:
   CONFIRM_READ_ONLY: ${{ inputs.confirm_read_only }}
   PROMOTION_SOURCE_ONLY: ${{ inputs.verify_isolated_promotion_source_only }}
   CONNECTOR_DISCOVERY_ONLY: ${{ inputs.production_connector_discovery_only }}
+  MACHINE_ACCESS_ONLY: ${{ inputs.verify_machine_access_only }}
   NODE_OPTIONS: ''
   NODE_DEBUG: ''
 
@@ -92,7 +98,7 @@ jobs:
           await verifyExistingGate({env:process.env,requireApproval:true});
           JS
       - name: Read only pinned metadata and print only sanitized results
-        if: ${{ !inputs.production_connector_discovery_only && !inputs.verify_isolated_promotion_source_only }}
+        if: ${{ !inputs.production_connector_discovery_only && !inputs.verify_isolated_promotion_source_only && !inputs.verify_machine_access_only }}
         env:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -110,3 +116,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/ci/production-database-cutover.mjs --inspect-promotion-source
+      - name: Verify the Admin machine service-token selector and client ID
+        if: ${{ inputs.verify_machine_access_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+        run: node scripts/ci/lythaus-new-core-isolation-review.mjs --inspect-machine-access

@@ -85,7 +85,8 @@ export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscover
     if (!token || !permitted || reads.length >= 160) fail('isolation_read_scope_blocked');
     reads.push(path);
     const stage = path.includes('/hyperdrive/') ? 'hyperdrive' : path.includes('/policies?') ? 'access_policies'
-      : path.includes('/access/apps') ? 'access_apps' : path.endsWith('/access/organizations') ? 'access_organization'
+      : path.includes('/access/apps') ? 'access_apps' : path.includes('/access/service_tokens?') ? 'access_service_tokens'
+        : path.endsWith('/access/organizations') ? 'access_organization'
         : path.endsWith('/settings') ? 'worker_settings' : path.endsWith('/deployments') ? 'worker_deployments'
           : path.endsWith('/subdomain') ? 'worker_subdomain' : path.includes('/versions/') ? 'worker_version'
             : path.includes('/workers/workers/') ? 'worker_details'
@@ -118,6 +119,102 @@ export function createReadOnlyClient(token, fetchImpl = fetch, connectorDiscover
     fail('isolation_inventory_incomplete');
   };
   return { get, list, reads };
+}
+
+export async function inspectMachineAccess({token, expectedClientId, fetchImpl = fetch}) {
+  if (!/^[a-f0-9]{32}\.access$/.test(expectedClientId ?? '')) fail('machine_client_id_unavailable');
+  const appId = 'fa6906cc-3daf-4beb-82b5-143e708eca0d';
+  const host = 'admin-api.lythaus.co';
+  const appPath = ACCOUNT + '/access/apps/' + appId;
+  const allowed = new Set([appPath]);
+  const api = createReadOnlyClient(token,fetchImpl,false,allowed);
+  async function inventory(path) {
+    const rows = [], ids = new Set();
+    let total, pageCount;
+    for (let page = 1; page <= 10; page++) {
+      const url = path + '?per_page=100&page=' + page;
+      allowed.add(url);
+      const {result,result_info:info} = await api.get(url);
+      if (!Array.isArray(result) || result.length > 100 || info?.page !== page ||
+        !Number.isSafeInteger(info.total_count) || info.total_count < 0 ||
+        (info.count !== undefined && info.count !== result.length) || (info.per_page !== undefined && info.per_page !== 100) ||
+        (info.total_pages !== undefined && (!Number.isSafeInteger(info.total_pages) || info.total_pages < 0)) ||
+        (page > 1 && (info.total_count !== total || info.total_pages !== pageCount))) fail('machine_inventory_unverified');
+      total = info.total_count;
+      pageCount = info.total_pages;
+      for (const row of result) {
+        if (!UUID.test(row?.id ?? '') || ids.has(row.id)) fail('machine_inventory_ambiguous');
+        ids.add(row.id);
+        rows.push(row);
+      }
+      if (rows.length === total) {
+        if (pageCount !== undefined && page !== Math.max(1,pageCount)) fail('machine_inventory_unverified');
+        return rows;
+      }
+      if (!result.length || rows.length > total || (pageCount !== undefined && page >= pageCount)) break;
+    }
+    fail('machine_inventory_incomplete');
+  }
+  function checkApp(app) {
+    if (app?.id !== appId || app.type !== 'self_hosted' || app.domain !== host ||
+      (app.account_id !== undefined && app.account_id !== TARGET.account) ||
+      domains(app).some(value => value !== host) || !/^[a-f0-9]{64}$/.test(app.aud ?? '') ||
+      !Array.isArray(app.destinations) || app.destinations.length !== 1 ||
+      app.destinations[0]?.type !== 'public' || app.destinations[0].uri !== host) fail('machine_application_unverified');
+  }
+  const app = (await api.get(appPath)).result;
+  checkApp(app);
+  const policies = await inventory(appPath + '/policies');
+  function policySelector(all) {
+    if (!Array.isArray(all) || all.length !== 3 ||
+      all.some(p => !UUID.test(p?.id ?? '') || p.enabled === false || !Array.isArray(p.include) || p.include.length !== 1 ||
+        ![p.require,p.exclude].every(rules => rules == null || (Array.isArray(rules) && rules.length === 0)))) {
+      fail('machine_policy_unverified');
+    }
+    const human = all.find(p => p.decision === 'allow');
+    const deny = all.find(p => p.decision === 'deny');
+    const machine = all.find(p => p.decision === 'non_identity');
+    const rule = machine?.include[0];
+    const everyone = deny?.include[0];
+    const allUsers = everyone?.everyone;
+    if (!emailSelector(human?.include[0]) || !everyone || Object.keys(everyone).length !== 1 ||
+      !(allUsers === true || (allUsers && Object.getPrototypeOf(allUsers) === Object.prototype && Object.keys(allUsers).length === 0)) ||
+      !rule || Object.keys(rule).length !== 1) {
+      fail('machine_policy_unverified');
+    }
+    const selector = rule.service_token;
+    if (!selector || Object.keys(selector).length !== 1) fail('machine_selector_unverified');
+    const id = selector.token_id ?? selector.id;
+    if (!UUID.test(id ?? '')) fail('machine_selector_unverified');
+    return {policyId:machine.id, tokenId:id};
+  }
+  const {policyId,tokenId} = policySelector(policies);
+  function checkAttachedPolicies(snapshot, details) {
+    const selector = policySelector(details);
+    const attached = snapshot.policies;
+    if (snapshot.aud !== app.aud || selector.policyId !== policyId || selector.tokenId !== tokenId ||
+      !Array.isArray(attached) || attached.length !== details.length ||
+      !details.every(policy => policies.some(initial => initial.id === policy.id) &&
+        attached.some(item => item?.id === policy.id && (item.decision === undefined || item.decision === policy.decision)))) {
+      fail('machine_application_changed');
+    }
+    const serviceSummary = attached.find(item => item.id === policyId);
+    if (serviceSummary.include !== undefined &&
+      policySelector(details.map(item => item.id === policyId ? {...item,...serviceSummary} : item)).tokenId !== tokenId) {
+      fail('machine_application_changed');
+    }
+  }
+  checkAttachedPolicies(app,policies);
+  const tokens = await inventory(ACCOUNT + '/access/service_tokens');
+  const matches = tokens.filter(row => row.client_id === expectedClientId);
+  if (matches.length !== 1 || matches[0].id !== tokenId ||
+    !(Date.parse(matches[0].expires_at) > Date.now())) fail('machine_service_token_unverified');
+  const current = (await api.get(appPath)).result;
+  checkApp(current);
+  checkAttachedPolicies(current,await inventory(appPath + '/policies'));
+  return {machineApplicationTargetVerified:true, servicePolicyVerified:true, protectedClientIdMatches:true,
+    audienceSha256:hash(app.aud), servicePolicyIdSha256:hash(policyId), serviceTokenIdSha256:hash(tokenId),
+    serviceClientIdSha256:hash(expectedClientId)};
 }
 function hasConnectorIdentity(origin) {
   const nonempty = value => typeof value === 'string' && value.trim().length > 0;
@@ -329,11 +426,12 @@ export async function inspectIsolation({ token, expectedOwner, expectedVersionId
     caveat:'Metadata tags are source claims and TLS fields show configuration only; artifact provenance, origin TLS/session validation, separate deployment approval and fresh browser acceptance remain required.' };
 }
 export function isolationReviewPins(env, readFile = readFileSync) {
+  const modes = [env.CONNECTOR_DISCOVERY_ONLY,env.PROMOTION_SOURCE_ONLY,env.MACHINE_ACCESS_ONLY];
+  if (modes.filter(mode => mode === 'true').length > 1) fail('isolation_modes_conflict');
   if (env.PROMOTION_SOURCE_ONLY !== 'true') {
     if (env.EXPECTED_WORKER_SOURCE_SHA && env.EXPECTED_WORKER_SOURCE_SHA !== TARGET.candidate) fail('isolation_candidate_changed');
     return {sourceSha:TARGET.candidate};
   }
-  if (env.CONNECTOR_DISCOVERY_ONLY === 'true') fail('isolation_modes_conflict');
   const file = new URL('../../infrastructure/cloudflare/production-database-transition.json',import.meta.url);
   const {repairSourceSha,servingVersionId,repairIntent,activationIntent,servingDeploymentId} = JSON.parse(readFile(file,'utf8')).destination.isolatedAdminVersions;
   if (!/^[a-f0-9]{40}$/.test(repairSourceSha) || ![servingVersionId,repairIntent,activationIntent,servingDeploymentId].every(id => UUID.test(id))) {
@@ -359,12 +457,15 @@ export async function verifyIsolationReviewGate(env, requireApproval) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const action = process.argv[2];
-    const selected = process.env.CONNECTOR_DISCOVERY_ONLY === 'true' ? '--discover-connectors' : '--inspect';
+    const selected = process.env.CONNECTOR_DISCOVERY_ONLY === 'true' ? '--discover-connectors'
+      : process.env.MACHINE_ACCESS_ONLY === 'true' ? '--inspect-machine-access' : '--inspect';
     if (process.argv.length !== 3 || (action !== '--gate' && (process.env.PROMOTION_SOURCE_ONLY === 'true' || action !== selected))) fail('isolation_mode_blocked');
     const review = await verifyIsolationReviewGate(process.env, action !== '--gate');
     const result = action === '--gate' ? { status:'ISOLATION_OWNER_GATE_VERIFIED',providerSecretsAccessed:false,
       sourceSha:review.sourceSha,...(review.versionId ? {versionId:review.versionId} : {}) }
       : action === '--discover-connectors' ? await discoverProductionMetadata({token:process.env.CLOUDFLARE_API_TOKEN})
+      : action === '--inspect-machine-access' ? await inspectMachineAccess({token:process.env.CLOUDFLARE_API_TOKEN,
+        expectedClientId:process.env.CF_ACCESS_CLIENT_ID})
       : await inspectIsolation({token:process.env.CLOUDFLARE_API_TOKEN,expectedOwner:process.env.LYTHAUS_NEW_CORE_OWNER_EMAIL,
         expectedVersionId:process.env.EXPECTED_WORKER_VERSION_ID});
     console.log(JSON.stringify(result));

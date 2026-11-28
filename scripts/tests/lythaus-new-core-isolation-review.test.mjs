@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import YAML from 'yaml';
-import {TARGET,accessEvidence,hyperdriveEvidence,createReadOnlyClient,inspectIsolation,isolationReviewPins,inspectProductionConnectors,discoverProductionMetadata} from '../ci/lythaus-new-core-isolation-review.mjs';
+import {TARGET,accessEvidence,hyperdriveEvidence,createReadOnlyClient,inspectIsolation,isolationReviewPins,inspectProductionConnectors,discoverProductionMetadata,inspectMachineAccess} from '../ci/lythaus-new-core-isolation-review.mjs';
 
 const app={id:'testapp',type:'self_hosted',domain:TARGET.hostname,aud:'synthetic-audience'};
 const policies=[{id:'allow-fixture',decision:'allow',precedence:1,include:[{email:{email:'fixture@example.invalid'}}]},
@@ -27,12 +28,12 @@ test('publication cannot run the inspector and existing owner review precedes Cl
   assert.deepEqual(Object.keys(workflow.on),['workflow_dispatch']);assert.equal(workflow.on.workflow_dispatch.inputs.confirm_read_only.default,false);
   assert.deepEqual(workflow.permissions,{contents:'read',actions:'read'});assert.equal(workflow.jobs.inspect.needs,'verify-gate');assert.equal(workflow.jobs.inspect.environment,'production');
   const first=JSON.stringify(workflow.jobs['verify-gate']);assert.doesNotMatch(first,/CLOUDFLARE_API_TOKEN|secrets\./);
-  const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL','CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_TOKEN']);
-  const [approval, original, discovery, promotion] = workflow.jobs.inspect.steps.slice(-4);
+  const secrets=[...text.matchAll(/secrets\.([A-Z_]+)/g)].map(m=>m[1]);assert.deepEqual(secrets,['CLOUDFLARE_API_TOKEN','LYTHAUS_NEW_CORE_OWNER_EMAIL','CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_TOKEN','CF_ACCESS_CLIENT_ID']);
+  const [approval, original, discovery, promotion, machine] = workflow.jobs.inspect.steps.slice(-5);
   assert.match(approval.run,/verifyExistingGate\(\{env:process.env,requireApproval:true\}\)/);
   assert.equal(workflow.on.workflow_dispatch.inputs.production_connector_discovery_only.default,false);
   assert.equal(workflow.on.workflow_dispatch.inputs.worker_source_sha.default,undefined);
-  assert.equal(original.if,'${{ !inputs.production_connector_discovery_only && !inputs.verify_isolated_promotion_source_only }}');
+  assert.equal(original.if,'${{ !inputs.production_connector_discovery_only && !inputs.verify_isolated_promotion_source_only && !inputs.verify_machine_access_only }}');
   assert.equal(discovery.if,'${{ inputs.production_connector_discovery_only }}');
   assert.deepEqual(Object.keys(discovery.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
   assert.match(discovery.run,/--discover-connectors$/);
@@ -40,6 +41,10 @@ test('publication cannot run the inspector and existing owner review precedes Cl
   assert.equal(promotion.if,'${{ inputs.verify_isolated_promotion_source_only }}');
   assert.deepEqual(Object.keys(promotion.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN']);
   assert.match(promotion.run,/production-database-cutover\.mjs --inspect-promotion-source$/);
+  assert.equal(workflow.on.workflow_dispatch.inputs.verify_machine_access_only.default,false);
+  assert.equal(machine.if,'${{ inputs.verify_machine_access_only }}');
+  assert.deepEqual(Object.keys(machine.env),['GH_TOKEN','CLOUDFLARE_API_TOKEN','CF_ACCESS_CLIENT_ID']);
+  assert.match(machine.run,/--inspect-machine-access$/);
   assert.doesNotMatch(text,/DATABASE_URL|PLANETSCALE_API_TOKEN|wrangler|--apply|secrets: inherit/);
 });
 test('HTTP reads have a fixed scope, never follow redirects and do not leak provider response bodies',async()=>{
@@ -67,6 +72,64 @@ test('the selected operation supplies the reviewed default and rejects a conflic
   assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_SOURCE_SHA:original.sourceSha},file()),/candidate_changed/);
   assert.throws(()=>isolationReviewPins({...mode,EXPECTED_WORKER_VERSION_ID:'unexpected'},file()),/version_mismatch/);
   assert.throws(()=>isolationReviewPins({...mode,CONNECTOR_DISCOVERY_ONLY:'true'}),/modes_conflict/);
+  assert.throws(()=>isolationReviewPins({...mode,MACHINE_ACCESS_ONLY:'true'}),/modes_conflict/);
+  assert.throws(()=>isolationReviewPins({CONNECTOR_DISCOVERY_ONLY:'true',MACHINE_ACCESS_ONLY:'true'}),/modes_conflict/);
+});
+
+test('machine identity attestation joins the sole policy selector to the protected client through complete GET inventories',async()=>{
+  const base = 'https://api.cloudflare.com/client/v4/accounts/' + TARGET.account;
+  const appId = 'fa6906cc-3daf-4beb-82b5-143e708eca0d';
+  const host = 'admin-api.lythaus.co';
+  const path = '/access/apps/' + appId;
+  const id = index => '00000000-0000-4000-8000-' + String(index).padStart(12,'0');
+  const client = '1'.repeat(32) + '.access';
+  const expected = [ {id:id(1),decision:'allow',include:[{email:{email:'owner@example.invalid'}}]},
+    {id:id(2),decision:'non_identity',include:[{service_token:{token_id:id(4)}}]},
+    {id:id(3),decision:'deny',include:[{everyone:{}}]} ];
+  const machine = {id:appId,type:'self_hosted',domain:host,destinations:[{type:'public',uri:host}],aud:'d'.repeat(64),policies:expected};
+  const row = {id:id(4),client_id:client,expires_at:'2099-01-01T00:00:00Z'};
+  async function run({application=machine, after=application, policyRows=expected, finalPolicies=policyRows, tokens=[row],
+    expectedId=client, total=tokens.length, denied=false}={}) {
+    let appReads = 0, policyReads = 0;
+    const calls = [];
+    const fetchImpl = async (url,init) => {
+      assert.equal(init.method,'GET'); assert.equal(init.redirect,'error');
+      assert.equal(init.body,undefined); assert.ok(url.startsWith(base + '/'));
+      const resource = url.slice(base.length); calls.push(resource);
+      if (resource === path) return Response.json({success:true,result:++appReads === 1 ? application : after});
+      const page = resource.endsWith('page=1') ? 1 : 2;
+      const policyRead = resource === path + '/policies?per_page=100&page=1';
+      if (!policyRead) assert.equal(resource,'/access/service_tokens?per_page=100&page=' + page);
+      if (!policyRead && denied) return new Response('provider-private-error',{status:403});
+      const result = policyRead ? (++policyReads === 1 ? policyRows : finalPolicies) : tokens.slice((page-1)*100,page*100);
+      const count = policyRead ? result.length : total;
+      return Response.json({success:true,result,result_info:{page,count:result.length,total_count:count,total_pages:Math.ceil(count/100)}});
+    };
+    const evidence = await inspectMachineAccess({token:'synthetic-reader',expectedClientId:expectedId,fetchImpl});
+    return {evidence,calls};
+  }
+  const others = Array.from({length:100},(_,i)=>({id:id(100+i),client_id:'unrelated-'+i}));
+  const {evidence,calls} = await run({tokens:[...others,row]});
+  assert.deepEqual(calls,[path,path+'/policies?per_page=100&page=1','/access/service_tokens?per_page=100&page=1',
+    '/access/service_tokens?per_page=100&page=2',path,path+'/policies?per_page=100&page=1']);
+  const digest = value => createHash('sha256').update(value).digest('hex');
+  assert.deepEqual(evidence,{machineApplicationTargetVerified:true,servicePolicyVerified:true,protectedClientIdMatches:true,
+    audienceSha256:digest(machine.aud),servicePolicyIdSha256:digest(id(2)),serviceTokenIdSha256:digest(id(4)),serviceClientIdSha256:digest(client)});
+  const summaries = {...machine,policies:expected.map(({id})=>({id}))};
+  assert.deepEqual((await run({application:summaries})).evidence,evidence);
+  for (const bad of [
+    {application:{...machine,id:id(8)}}, {application:{...machine,domain:'control.lythaus.co'}},
+    {application:{...machine,account_id:'0'.repeat(32)}}, {application:{...machine,destinations:[...machine.destinations,{type:'public',uri:'elsewhere.invalid'}]}},
+    {policyRows:[...expected,{...expected[1],id:id(9)}]}, {policyRows:[expected[0],{...expected[1],include:[{any_valid_service_token:{}}]},expected[2]]},
+    {policyRows:[expected[0],{...expected[1],include:[...expected[1].include,{service_token:{token_id:id(8)}}]},expected[2]]},
+    {policyRows:[expected[0],{...expected[1],decision:'bypass'},expected[2]]},
+    {after:{...machine,aud:'e'.repeat(64)}}, {after:{...machine,policies:[expected[0],{...expected[1],id:id(9)},expected[2]]}},
+    {application:summaries,finalPolicies:[expected[0],{...expected[1],include:[{service_token:{token_id:id(8)}}]},expected[2]]},
+    {tokens:[{...row,id:id(8)}]}, {tokens:[row,{...row,id:id(8)}]}, {tokens:[row,row]},
+    {tokens:[{...row,expires_at:'2020-01-01T00:00:00Z'}]}, {expectedId:'2'.repeat(32)+'.access'},
+    {total:101}, {expectedId:''},
+  ]) await assert.rejects(run(bad),/^Error: machine_[a-z_]+$/);
+  await assert.rejects(run({denied:true}),{message:'isolation_provider_access_service_tokens_http_403'});
 });
 test('missing test resources remain blockers while production bindings are snapshotted and never changed',async()=>{
   const account=`/accounts/${TARGET.account}`,zone=`/zones/${TARGET.zone}`,calls=[];
@@ -218,15 +281,20 @@ test('monthly settings denial preserves the connector metadata already verified'
 
 test('the exact dispatch operation and owner control are required before reads', () => {
   const command = 'scripts/ci/lythaus-new-core-isolation-review.mjs';
-  for (const [discovery, promotion, action, code] of [
+  for (const [discovery, promotion, action, code, machine = 'false'] of [
     ['true','false','--inspect','isolation_mode_blocked'],
     ['false','false','--discover-connectors','isolation_mode_blocked'],
     ['true','false','--discover-connectors','preflight_context_blocked'],
     ['false','true','--inspect','isolation_mode_blocked'],
     ['false','true','--discover-connectors','isolation_mode_blocked'],
     ['true','true','--gate','isolation_modes_conflict'],
+    ['false','false','--inspect-machine-access','isolation_mode_blocked'],
+    ['false','false','--inspect','isolation_mode_blocked','true'],
+    ['false','false','--inspect-machine-access','preflight_context_blocked','true'],
+    ['true','false','--gate','isolation_modes_conflict','true'],
+    ['false','true','--gate','isolation_modes_conflict','true'],
   ]) {
-    const result = spawnSync(process.execPath,[command,action],{env:{CONNECTOR_DISCOVERY_ONLY:discovery,PROMOTION_SOURCE_ONLY:promotion},encoding:'utf8'});
+    const result = spawnSync(process.execPath,[command,action],{env:{CONNECTOR_DISCOVERY_ONLY:discovery,PROMOTION_SOURCE_ONLY:promotion,MACHINE_ACCESS_ONLY:machine},encoding:'utf8'});
     assert.equal(result.status,1);
     assert.equal(result.stdout,'');
     assert.deepEqual(JSON.parse(result.stderr),{status:'READ_ONLY_ISOLATION_REVIEW_BLOCKED',code});
