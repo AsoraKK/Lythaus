@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import YAML from 'yaml';
+import { inspectProductionRoles } from '../ci/new-core-production-role-check.mjs';
+import { TARGET } from '../ci/lythaus-new-core-isolation-review.mjs';
+import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
 import { SCHEMA_SHA, INPUTS, assertContext, verifyExistingGate,
   inspectSqlInput, inspectExistingSecrets } from '../ci/lythaus-new-core-secret-preflight.mjs';
 
@@ -116,13 +119,94 @@ test('a successful combined report contains no input values or SQL identities',a
   const serialized=JSON.stringify(result);for(const secret of Object.values(env)) assert.equal(serialized.includes(secret),false);
   assert.doesNotMatch(serialized,/psdb\.cloud|synthetic-private-password|synthetic-value/);
 });
-test('workflow is dispatch-only, gated, limited to read permissions and injects only the three named inputs',()=>{
+test('both inspection modes are dispatch-only and isolate their three secret inputs',()=>{
   const text=fs.readFileSync('.github/workflows/lythaus-new-core-secret-preflight.yml','utf8');
   const workflow=YAML.parse(text);
   assert.deepEqual(Object.keys(workflow.on),['workflow_dispatch']);
   assert.deepEqual(workflow.permissions,{contents:'read',actions:'read'});
   assert.equal(workflow.jobs['inspect-existing-inputs'].needs,'verify-gate');
   assert.equal(workflow.jobs['inspect-existing-inputs'].environment.name,'production');
-  const refs=[...text.matchAll(/secrets\.([A-Z0-9_]+)/g)].map(m=>m[1]);assert.deepEqual(refs,[...INPUTS]);
+  const refs = job => [...JSON.stringify(job).matchAll(/secrets\.([A-Z0-9_]+)/g)].map(m => m[1]);
+  const legacy = workflow.jobs['inspect-existing-inputs'];
+  const production = workflow.jobs['inspect-production-roles'];
+  assert.deepEqual(refs(legacy), [...INPUTS]);
+  assert.equal(legacy.if, "inputs.inspection != 'installed-production-roles'");
+  assert.equal(production.if, "inputs.inspection == 'installed-production-roles'");
+  assert.equal(production.needs, 'verify-gate');
+  assert.equal(production.environment, 'production');
+  assert.match(production.steps.at(-2).run, /requireApproval: true/);
+  assert.deepEqual(refs(production), ['PRIVACY', 'RUNTIME', 'JOBS'].map(name => 'LYTHAUS_NEW_CORE_' + name + '_DATABASE_URL'));
   assert.doesNotMatch(text,/--apply-live|--provision|upload-artifact|secrets: inherit|environment_writer|PROVISIONER_DATABASE_URL/i);
+});
+
+function productionFixture({ changeRow = {}, connectError = false, receipt = true, wrongPeer = false } = {}) {
+  const inputs = Object.fromEntries(['PRIVACY', 'RUNTIME', 'JOBS'].map(name =>
+    ['LYTHAUS_NEW_CORE_' + name + '_DATABASE_URL', url('lythaus_' + name.toLowerCase())]));
+  const calls = [];
+  const clients = [];
+  const deps = {
+    parseTarget(raw) { return { ...branchQualifiedDatabaseTarget(raw), originFingerprint: TARGET.origin }; },
+    createClient(config) {
+      clients.push(config);
+      return {
+        connection: { stream: {} }, on() {}, async end() {},
+        async connect() { if (connectError) throw new Error('driver echoed ' + config.connectionString); },
+        async query(sql, args) {
+          calls.push(sql);
+          if (args) return { rows: [{ identity_matches: true, read_only: true, roles_restricted: true,
+            ddl_restricted: true, sensitive_grants_match: true, ...changeRow }] };
+          return { rows: [], rowCount: 0 };
+        },
+      };
+    },
+    verifyPeer() { if (wrongPeer) throw new Error('private TLS metadata'); },
+    async matchesReceipt() { return receipt; },
+  };
+  return { inputs, calls, clients, deps };
+}
+
+test('post-install validation checks each exact session and performs one zero-row application read per role', async () => {
+  const f = productionFixture();
+  const result = await inspectProductionRoles(f.inputs, f.deps);
+  assert.equal(result.passed, true);
+  assert.equal(f.clients.length, 3);
+  for (const config of f.clients) {
+    assert.equal(config.ssl.rejectUnauthorized, true);
+    assert.match(config.options, /default_transaction_read_only=on/);
+  }
+  assert.deepEqual(f.calls.filter(sql => sql.endsWith('LIMIT 0')), [
+    'SELECT id, active FROM privacy.legal_holds LIMIT 0', 'SELECT id, expires_at FROM identity.auth_sessions LIMIT 0',
+    'SELECT id, dispatched_at FROM system.outbox_events LIMIT 0',
+  ]);
+});
+
+test('a missing password or mismatch of role, origin, branch or TLS mode stops before authentication', async () => {
+  for (const replace of [raw => raw.replace('lythaus_privacy.', 'lythaus_admin.'), raw => raw.replace(TARGET.branch, 'oldbranch'),
+    raw => raw.replace('verify-full', 'disable'), raw => raw.replace(':synthetic-private-password', '')]) {
+    const f = productionFixture();
+    const result = await inspectProductionRoles({ LYTHAUS_NEW_CORE_PRIVACY_DATABASE_URL: replace(f.inputs.LYTHAUS_NEW_CORE_PRIVACY_DATABASE_URL) }, f.deps);
+    assert.equal(result.passed, false);
+    assert.equal(f.clients.length, 0);
+  }
+  const f = productionFixture();
+  await inspectProductionRoles(f.inputs, { ...f.deps, parseTarget: branchQualifiedDatabaseTarget });
+  assert.equal(f.clients.length, 0);
+});
+
+test('peer failure, session drift, excessive privileges or changed receipt prevent application probes', async () => {
+  for (const change of [{ wrongPeer: true }, { receipt: false },
+    ...['identity_matches', 'roles_restricted', 'ddl_restricted', 'read_only', 'sensitive_grants_match'].map(key => ({ changeRow: { [key]: false } }))]) {
+    const f = productionFixture(change);
+    const result = await inspectProductionRoles(f.inputs, f.deps);
+    assert.equal(result.passed, false);
+    assert.ok(!f.calls.some(sql => sql.endsWith('LIMIT 0')));
+  }
+});
+
+test('driver errors on the three production roles produce sanitized booleans only', async () => {
+  const f = productionFixture({ connectError: true });
+  const result = await inspectProductionRoles(f.inputs, f.deps);
+  assert.equal(result.passed, false);
+  assert.ok(Object.values(result.inputs).every(report => Object.values(report).every(v => typeof v === 'boolean')));
+  assert.doesNotMatch(JSON.stringify(result), /fixture|synthetic|postgresql:|driver echoed/);
 });

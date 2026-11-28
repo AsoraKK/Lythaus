@@ -23,6 +23,13 @@ async function loadReaders() {
   return import(pathToFileURL(path.join(directory, 'scripts/ci/lythaus-new-core-clean-install.mjs')).href);
 }
 
+export async function installedSchemaMatchesReceipt(client, readers) {
+  readers ??= await loadReaders();
+  const catalog = await readers.schemaDefinitionFingerprint(client);
+  const acl = await readers.schemaGrantFingerprint(client);
+  return catalog.sha256 === definition && acl.sha256 === grants;
+}
+
 export function verifiedOriginIssuers(stream, host) {
   requireCheck(stream?.encrypted === true && stream.authorized === true, 'tls_unverified');
   const peer = stream.getPeerCertificate(true);
@@ -113,10 +120,7 @@ async function inspectDatabase(raw, role, deps) {
       requireCheck(report.syntheticMembershipRead === 'no_match', 'membership_read_failed');
     }
     if (!isAdmin) {
-      const readers = deps.fingerprintReaders ?? await loadReaders();
-      const catalog = await readers.schemaDefinitionFingerprint(client);
-      const acl = await readers.schemaGrantFingerprint(client);
-      report.receiptFingerprintsMatch = catalog.sha256 === definition && acl.sha256 === grants;
+      report.receiptFingerprintsMatch = await installedSchemaMatchesReceipt(client, deps.fingerprintReaders);
       requireCheck(report.receiptFingerprintsMatch, 'schema_or_grants_changed');
       const state = await client.query(`SELECT membership_count=0 AND active_admin_membership_count=0
         AND active_non_admin_membership_count=0 AND bootstrap_latch_count=1 AND bootstrap_consumed=false
